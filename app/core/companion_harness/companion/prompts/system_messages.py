@@ -101,6 +101,10 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
+from app.core.companion_harness.companion.lwm_experiments import (
+    build_lwm_experiment_autonomy_slices,
+    resolve_lwm_experiment_flags,
+)
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
@@ -1009,6 +1013,13 @@ def build_system_messages_for_inner_tick_autonomy(
             interactive_bootstrap_active=False,
         )
     )
+    lwm_flags = resolve_lwm_experiment_flags(context)
+    for slice_text in build_lwm_experiment_autonomy_slices(
+        store=store,
+        context=context,
+        flags=lwm_flags,
+    ):
+        out.append(_system_message(slice_text))
     return out
 
 

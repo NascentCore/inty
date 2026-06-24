@@ -607,6 +607,39 @@ class AgentConfig(BaseModel):
 
         inner_tick: InnerTickConfig = Field(default_factory=InnerTickConfig)
 
+        class LwmExperimentsConfig(BaseModel):
+            model_config = ConfigDict(extra="ignore")
+
+            experience_state_loop: bool = Field(
+                default=False,
+                description=(
+                    "AUTONOMY: inject recent techno_core_events; require "
+                    "LIFE_CURRENTS to continue prior virtual activity."
+                ),
+            )
+            state_consistency: bool = Field(
+                default=False,
+                description=(
+                    "AUTONOMY: cross-check USER/MEMORY/LIVING_SPHERE before write."
+                ),
+            )
+            mental_simulation: bool = Field(
+                default=False,
+                description=(
+                    "AUTONOMY: require explicit pre-tool outcome prediction."
+                ),
+            )
+            max_techno_core_events_injected: int = Field(
+                default=5,
+                ge=1,
+                le=20,
+                description="Max TechnoCore event lines injected into AUTONOMY.",
+            )
+
+        lwm_experiments: LwmExperimentsConfig = Field(
+            default_factory=LwmExperimentsConfig
+        )
+
         tool_bg_idle_wait_timeout_sec: float = Field(
             default=120.0,
             description=(

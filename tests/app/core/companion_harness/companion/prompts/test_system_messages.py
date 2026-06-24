@@ -371,6 +371,23 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     assert all("系统仍会向用户投递产物" not in c for c in contents)
 
 
+def test_build_system_messages_for_inner_tick_autonomy_includes_lwm_slices(
+    tmp_path,
+) -> None:
+    scope = CompanionScope("u-lwm", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    context = ContextMeta(
+        lwm_experience_state_loop=True,
+        lwm_mental_simulation=True,
+    )
+    messages = build_system_messages_for_inner_tick_autonomy(
+        _make_bundle(), context, store
+    )
+    contents = [str(m["content"]) for m in messages]
+    assert any("经验→状态闭环" in c for c in contents)
+    assert any("mental simulation" in c for c in contents)
+
+
 def _make_bundle() -> PromptBundle:
     return PromptBundle(
         identity="identity\n",

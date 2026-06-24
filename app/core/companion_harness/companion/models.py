@@ -340,6 +340,26 @@ class ContextMeta(BaseModel):
             "optional tone. Mapped to harness context_mode on persist."
         ),
     )
+    lwm_experience_state_loop: bool | None = Field(
+        default=None,
+        description=(
+            "Per-agent override for LWM experiment: inject techno_core_events "
+            "into AUTONOMY (None = use config default)."
+        ),
+    )
+    lwm_state_consistency: bool | None = Field(
+        default=None,
+        description=(
+            "Per-agent override for LWM experiment: consistency checklist "
+            "before LIFE_CURRENTS write."
+        ),
+    )
+    lwm_mental_simulation: bool | None = Field(
+        default=None,
+        description=(
+            "Per-agent override for LWM experiment: pre-tool outcome prediction."
+        ),
+    )
 
     @field_validator("context_mode")
     @classmethod

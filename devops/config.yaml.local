@@ -71,6 +71,12 @@ agent:
       proactive_chat:
         base_idle_seconds: 10
         poll_seconds: 3
+      monolog:
+        min_gap_seconds: 15
+    lwm_experiments:
+      experience_state_loop: false
+      state_consistency: false
+      mental_simulation: false
     user_feedback_github:
       token: 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
   # 模型本地无法访问，IP 被限制
