@@ -12,7 +12,6 @@ from app.core.companion_harness.companion.bootstrap import (
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
-    build_system_messages_for_bootstrap_track,
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -317,42 +316,6 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
     )
     assert load_bootstrap_telegram_profile_slice_text() not in system_text
     assert "仍待自然了解" not in system_text
-
-
-def test_prompt_builder_bootstrap_cohort_slices_match_legacy_track() -> None:
-    user_md = load_user_md_template_text()
-    context = ContextMeta(
-        workspace_bootstrap_user_interactive_completed=False,
-        profile_collection_required=True,
-    )
-    bundle = PromptBundle(
-        identity="identity",
-        soul="soul",
-        user_md=user_md,
-        memory_md="",
-    )
-    legacy_system = "\n".join(
-        str(m.get("content") or "")
-        for m in build_system_messages_for_bootstrap_track(
-            bundle,
-            context,
-            ChannelKind.TELEGRAM,
-        )
-    )
-    builder = _telegram_bootstrap_builder(user_md=user_md)
-    plan = builder.build_bootstrap_user_chat_prompt(
-        transcript_window=[],
-        tail_user_messages=_bootstrap_tail_user(),
-        tools=tuple(build_openai_bootstrap_track_tools()),
-        implicit_sign_on_turn=False,
-        tail_splice_thoughts=(),
-    )
-    prompt_builder_system = _system_text(plan.messages)
-    telegram_slice = load_bootstrap_telegram_profile_slice_text()
-    assert telegram_slice in legacy_system
-    assert telegram_slice in prompt_builder_system
-    assert "仍待自然了解" in legacy_system
-    assert "仍待自然了解" in prompt_builder_system
 
 
 def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (

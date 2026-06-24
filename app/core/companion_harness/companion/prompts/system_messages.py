@@ -34,7 +34,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 
 | Scenario | Function |
 |----------|----------|
-| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``build_system_messages_for_bootstrap_track`` (no Capability package slices) |
+| USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``PromptBuilder.bootstrap_turn_system_dicts`` / ``build_bootstrap_user_chat_prompt`` |
 | ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``prompting/tracks``) |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC monolog inner tick plan + tool leg | ``build_system_messages_for_inner_tick_monolog`` |
@@ -908,43 +908,6 @@ def append_profile_collection_system_messages(
     if probe_hint:
         out.append(_system_message(probe_hint))
     return out
-
-
-def build_system_messages_for_bootstrap_track(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    runtime_channel: ChannelKind,
-) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
-
-    When the session is Telegram bootstrap with profile collection required, also
-    appends the Telegram overlay slice and unfilled-field probe hints.
-
-    TODO(track-compose-unify): Legacy path; unify peripheral append with
-    ``PromptBuilder.bootstrap_turn_system_dicts`` at track compose — #3398.
-    """
-    out = build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        ai_private_text="",
-        async_foreground_chat_stack=False,
-        tool_side_compact=False,
-        # TODO(P3, #3628): Derive from context like ``bootstrap_turn_system_dicts``; legacy path only.
-        interactive_bootstrap_active=True,
-        include_significance_perception_slice=False,
-    )
-    return append_profile_collection_system_messages(
-        out,
-        context=context,
-        runtime_channel=runtime_channel,
-        interactive_bootstrap_active=(
-            not context.workspace_bootstrap_user_interactive_completed
-        ),
-        user_md=bundle.user_md,
-    )
 
 
 # TODO(!3453): Dual-LLM tool-background leg still uses ``build_system_messages_for_tool_track``;
