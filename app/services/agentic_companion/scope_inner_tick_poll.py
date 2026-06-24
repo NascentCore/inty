@@ -17,7 +17,7 @@ from app.services.agentic_companion.inner_tick_scope import (
 from app.services.agentic_companion.scope_inner_tick_fire import (
     try_fire_autonomy_for_scope,
     try_fire_dreaming_for_scope,
-    try_fire_maintenance_for_scope,
+    try_fire_monolog_for_scope,
 )
 from app.services.agentic_companion.scope_inner_tick_persistence import (
     fetch_initialized_companion_scopes,
@@ -33,7 +33,7 @@ async def run_scope_inner_tick_poll_for_scope(
     *,
     scope: CompanionScope,
 ) -> bool:
-    """Run one scope poll wake: maintenance → autonomy → dreaming (#3255)."""
+    """Run one scope poll wake: monolog → autonomy → dreaming (#3255)."""
     coords = InnerTickCoords(
         user_id=scope.user_id,
         agent_id=scope.companion_id,
@@ -45,7 +45,7 @@ async def run_scope_inner_tick_poll_for_scope(
         "chat_resolve_mode": InnerTickChatResolveMode.READ_ONLY,
         "implicit_signal_bundle": None,
     }
-    if await try_fire_maintenance_for_scope(**common):
+    if await try_fire_monolog_for_scope(**common):
         return True
     if await try_fire_autonomy_for_scope(**common):
         return True

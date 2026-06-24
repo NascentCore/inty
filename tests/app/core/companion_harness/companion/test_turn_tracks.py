@@ -21,7 +21,7 @@ from app.core.companion_harness.companion.turn_routes import (
 )
 from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
-    run_companion_inner_tick_maintenance_turn,
+    run_companion_inner_tick_monolog_turn,
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
@@ -289,7 +289,7 @@ async def test_scheduled_inner_tick_track() -> None:
 
 
 @pytest.mark.asyncio
-async def test_maintenance_inner_tick_track() -> None:
+async def test_monolog_inner_tick_track() -> None:
     stub = CompanionTurnResult(
         trace_id="t",
         user_msg_uuid="u",
@@ -300,13 +300,13 @@ async def test_maintenance_inner_tick_track() -> None:
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
-        await run_companion_inner_tick_maintenance_turn(
+        await run_companion_inner_tick_monolog_turn(
             deps=_minimal_turn_deps()
         )
     assert run_turn_mock.await_args is not None
     assert (
         run_turn_mock.await_args.kwargs["track"]
-        == CompanionTurnTrack.INNER_TICK_MAINTENANCE
+        == CompanionTurnTrack.INNER_TICK_MONOLOG
     )
 
 

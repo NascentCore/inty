@@ -11,7 +11,7 @@ from app.services.agentic_companion.downlink import (
     DownlinkKind,
     bootstrap_interim_downlink,
     downlink_delivers_user_visible_text,
-    maintenance_downlink,
+    monolog_downlink,
     proactive_downlink,
     scheduled_downlink,
     tool_background_downlink,
@@ -46,9 +46,9 @@ def test_scheduled_downlink_requires_task_id() -> None:
     assert event.scheduled_task_id == "task-1"
 
 
-def test_maintenance_empty_text_not_user_visible() -> None:
+def test_monolog_empty_text_not_user_visible() -> None:
     turn = CompanionTurnResult(assistant_text="")
-    event = maintenance_downlink(turn=turn, transcript_user_text="（内在节拍）")
+    event = monolog_downlink(turn=turn, transcript_user_text="（内在节拍）")
     assert not downlink_delivers_user_visible_text(event)
 
 

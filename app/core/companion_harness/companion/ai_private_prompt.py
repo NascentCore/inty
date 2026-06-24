@@ -1,4 +1,4 @@
-"""Load and append ``ai_private.jsonl`` monolog material for MAINTENANCE and transcript splice.
+"""Load and append ``ai_private.jsonl`` monolog material for MONOLOG and transcript splice.
 
 ``ai_private.jsonl`` holds **inner thoughts about the user** (feelings, unsaid lines, scene
 beats in the relationship)—not virtual-world activity. Activity in TechnoCore / LivingSphere /
@@ -6,7 +6,8 @@ the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
 
 Structured rows: ``AiPrivateThought`` (``uuid``, ``ts``, ``text``, optional ``after_user_msg_uuid``).
 Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (append-only).
-Kernel maintenance inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``.
+Kernel monolog inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
+``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling).
 """
 
 from __future__ import annotations
@@ -211,7 +212,7 @@ def select_unsurfaced_thoughts_after_anchor(
 def get_ai_private_jsonl_text_for_prompt(
     store: MemoryStore, *, max_chars: int = AI_PRIVATE_INJECT_MAX_CHARS
 ) -> str:
-    """Plain lines for MAINTENANCE system injection (unsurfaced + legacy rows)."""
+    """Plain lines for MONOLOG system injection (unsurfaced + legacy rows)."""
     raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
     if not raw or not raw.strip():
         return ""

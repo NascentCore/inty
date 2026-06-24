@@ -2366,7 +2366,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
     """Regression: ``companion_ws_inner_tick`` task is cancelled in ``finally``; no further polls."""
-    ticks: dict[str, int] = {"proactive": 0, "maintenance": 0, "scheduled": 0}
+    ticks: dict[str, int] = {"proactive": 0, "monolog": 0, "scheduled": 0}
 
     async def spy_scheduled(*_args, **_kwargs):
         ticks["scheduled"] += 1
@@ -2375,7 +2375,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
         ticks["proactive"] += 1
 
     async def spy_maintenance(*_args, **_kwargs):
-        ticks["maintenance"] += 1
+        ticks["monolog"] += 1
 
     async def spy_dreaming(*_args, **_kwargs):
         pass
@@ -2413,7 +2413,7 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
     )
     monkeypatch.setattr(
         inner_tick_fire_mod,
-        "try_fire_maintenance_inner_tick",
+        "try_fire_monolog_inner_tick",
         spy_maintenance,
     )
     monkeypatch.setattr(
@@ -2436,14 +2436,14 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
             assert ack["ok"] is True
             time.sleep(0.2)
             assert (
-                ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"]
+                ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
                 >= 1
             )
 
-    n_at_close = ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"]
+    n_at_close = ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
     time.sleep(0.35)
     assert (
-        ticks["proactive"] + ticks["maintenance"] + ticks["scheduled"]
+        ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
         == n_at_close
     )
 
@@ -2501,7 +2501,7 @@ def test_chat_websocket_companion_inner_tick_scheduled_when_coords_disarmed(
     )
     monkeypatch.setattr(
         inner_tick_fire_mod,
-        "try_fire_maintenance_inner_tick",
+        "try_fire_monolog_inner_tick",
         spy_maintenance,
     )
     monkeypatch.setattr(

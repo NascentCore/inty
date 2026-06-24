@@ -292,6 +292,21 @@ def test_agent_config_companion_harness_settings() -> None:
     assert agent.companion_harness.user_feedback_github.token == "gh_test"
 
 
+def test_companion_harness_inner_tick_monolog_accepts_legacy_maintenance_key() -> (
+    None
+):
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={
+            "inner_tick": {
+                "maintenance": {"min_gap_seconds": 99.0},
+            },
+        },
+    )
+    assert agent.companion_harness.inner_tick.monolog.min_gap_seconds == 99.0
+
+
 def test_companion_harness_config_default_transcript_compaction() -> None:
     agent = AgentConfig(api_key="test", langchain_api_key="test")
     assert agent.companion_harness.transcript.compaction is not None

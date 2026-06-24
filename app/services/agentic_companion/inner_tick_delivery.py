@@ -24,7 +24,7 @@ TelegramAssistantTextSink = Callable[[str], Awaitable[None]]
 class InnerTickDelivery:
     """Which medium should carry a companion-initiated message to the user right now.
 
-    Inner ticks (reminders, proactive outreach, quiet maintenance) are the same on the
+    Inner ticks (reminders, proactive outreach, quiet monolog) are the same on the
     companion side whether the human is in the app, on WeChat, or on Telegram; this
     value only picks the outward-facing shape. One presence session uses one medium
     at a time—never more than one.

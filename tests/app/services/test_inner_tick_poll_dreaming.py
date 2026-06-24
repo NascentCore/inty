@@ -48,7 +48,7 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
         ) as autonomy,
         patch.object(
             inner_tick_poll.inner_tick_fire,
-            "try_fire_maintenance_inner_tick",
+            "try_fire_monolog_inner_tick",
             new_callable=AsyncMock,
         ) as maintenance,
     ):
@@ -119,7 +119,7 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
         ) as autonomy,
         patch.object(
             inner_tick_poll.inner_tick_fire,
-            "try_fire_maintenance_inner_tick",
+            "try_fire_monolog_inner_tick",
             new_callable=AsyncMock,
         ) as maintenance,
     ):
@@ -137,14 +137,14 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_order_maintenance_autonomy_dreaming() -> (
+async def test_run_scope_inner_tick_poll_order_monolog_autonomy_dreaming() -> (
     None
 ):
     scope = CompanionScope("u", "a", "c")
     with (
         patch.object(
             scope_inner_tick_poll,
-            "try_fire_maintenance_for_scope",
+            "try_fire_monolog_for_scope",
             new_callable=AsyncMock,
             return_value=False,
         ) as maintenance,

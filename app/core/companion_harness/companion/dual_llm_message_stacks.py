@@ -14,10 +14,9 @@ from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from .models import ContextMeta, InnerTickActivity
+from .inner_tick_kind import InnerTickKind, inner_tick_spec
 from .prompt_stack import append_runtime_output_format_system_message
 from .prompts.system_messages import (
-    build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_maintenance,
     build_system_messages_for_tool_track,
 )
 from .runtime_channel import TurnRuntimeContext
@@ -55,23 +54,18 @@ def dual_llm_system_message_variants(
         and route_inner_activity != InnerTickActivity.PROACTIVE_CHAT
     ):
         match route_inner_activity:
-            case InnerTickActivity.MAINTENANCE:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_maintenance(
-                        bundle, context, store
-                    )
-                )
+            case InnerTickActivity.MONOLOG:
+                spec = inner_tick_spec(InnerTickKind.MONOLOG)
             case InnerTickActivity.AUTONOMY:
-                tool_system_msgs = (
-                    build_system_messages_for_inner_tick_autonomy(
-                        bundle, context, store
-                    )
-                )
+                spec = inner_tick_spec(InnerTickKind.AUTONOMY)
             case _:
                 raise RuntimeError(
                     "unexpected inner-tick activity for async tool path: "
                     f"{route_inner_activity.value}"
                 )
+        builder = spec.async_tool_prompt_builder
+        assert builder is not None
+        tool_system_msgs = builder(bundle, context, store)
     else:
         tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
     chat_system_msgs = build_settled_user_turn_dual_chat_leg_system_messages(
