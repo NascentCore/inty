@@ -20,8 +20,8 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.models import InnerTickThrottleKind
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -81,7 +81,7 @@ async def _scope_kernel_context(
         model_override=resolved_model,
         throttle=_scope_throttle_snapshot(scope),
         runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
         preset_uid=preset_uid,

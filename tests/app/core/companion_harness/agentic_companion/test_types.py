@@ -16,8 +16,8 @@ from app.core.companion_harness.agentic_companion.types import (
     UserMessageBatch,
     WireId,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 
 
@@ -30,7 +30,7 @@ def test_inbound_wire_message_fields() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     inbound = InboundWireMessage(
         scope=scope,
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         wire_id="wire-1",
         text="hello",
         received_at_utc=datetime.now(UTC),
@@ -48,7 +48,7 @@ def test_input_batch_preserves_order() -> None:
             scope=scope,
             sequence=1,
             status=QueueStatus.CLAIMED,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             wire_id="w1",
             text="a",
             received_at_utc=now,
@@ -58,7 +58,7 @@ def test_input_batch_preserves_order() -> None:
             scope=scope,
             sequence=2,
             status=QueueStatus.CLAIMED,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             wire_id="w1",
             text="b",
             received_at_utc=now,

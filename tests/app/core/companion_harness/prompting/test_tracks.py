@@ -9,8 +9,8 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.experience_profile.experience_directives import (
@@ -27,7 +27,7 @@ from app.core.companion_harness.prompting.tracks import (
 
 def _runtime_context() -> TurnRuntimeContext:
     return TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=None,
     )
 

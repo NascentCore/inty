@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.external_services.twilio_sms import TwilioInboundSms, TwilioSmsSendResult
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.endpoints import resolve_scope
@@ -64,7 +64,7 @@ async def test_sms_transport_start_provisions_guest_scope() -> None:
         get_presence_mock.return_value = mock_presence
         await transport.handle_inbound(inbound)
     scope = await resolve_scope(
-        channel=ChannelKind.SMS,
+        channel=GatewayKind.SMS,
         channel_address="+11234560123",
     )
     assert scope is not None

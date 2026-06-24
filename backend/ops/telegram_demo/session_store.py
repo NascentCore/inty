@@ -5,8 +5,8 @@ from __future__ import annotations
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
@@ -70,7 +70,7 @@ async def activate_telegram_scope(
     )
     await turn_channel_up(
         scope,
-        ChannelKind.TELEGRAM,
+        GatewayKind.TELEGRAM,
         adapter=adapter,
         reason=reason,
     )
@@ -80,7 +80,7 @@ async def activate_telegram_scope(
 async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
     """Reload Telegram endpoints with ACTIVE companion bonds and restart presences."""
     assert api is not None
-    records = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
+    records = await list_endpoints_for_channel(channel=GatewayKind.TELEGRAM)
     restored_count = 0
     skipped_inactive = 0
     for record in records:

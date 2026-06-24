@@ -25,8 +25,8 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -104,7 +104,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
                 repository_only_store_text=False,
                 memory_bootstrap_type="NONE",
                 runtime_context=TurnRuntimeContext(
-                    channel=ChannelKind.APP_WS,
+                    gateway=GatewayKind.APP_WS,
                     implicit_signal_bundle=None,
                 ),
                 background_output_sink=None,
@@ -175,7 +175,7 @@ async def test_bootstrap_without_queue_raises_runtime_error(
                 repository_only_store_text=False,
                 memory_bootstrap_type="USER_INTERACTIVE",
                 runtime_context=TurnRuntimeContext(
-                    channel=ChannelKind.APP_WS,
+                    gateway=GatewayKind.APP_WS,
                     implicit_signal_bundle=None,
                 ),
                 background_output_sink=None,

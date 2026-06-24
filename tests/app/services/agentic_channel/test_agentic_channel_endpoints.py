@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -24,9 +24,7 @@ from app.services.agentic_channel.endpoints import (
     resolve_scope_by_channel_user_id,
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
 )
@@ -34,7 +32,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_user_and_agent() -> AgentScope:
     return await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        gateway=GatewayKind.APP_WS,
         nickname_prefix="endpoint",
         meta_data={"test": True},
     )
@@ -63,18 +61,18 @@ async def test_bind_and_resolve_by_address() -> None:
     try:
         record = await bind_endpoint(
             scope,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=user_id,
         )
         assert record.channel_address == address
         resolved = await resolve_scope(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
         )
         assert resolved == scope
         by_user = await resolve_scope_by_channel_user_id(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_user_id=user_id,
         )
         assert by_user == scope
@@ -90,14 +88,14 @@ async def test_channel_user_id_conflict_rejects_second_user() -> None:
     try:
         await bind_endpoint(
             scope_a,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=f"addr-a-{uuid.uuid4().hex}",
             channel_user_id=shared_user_id,
         )
         with pytest.raises(ChannelEndpointConflictError):
             await bind_endpoint(
                 scope_b,
-                channel=ChannelKind.TELEGRAM,
+                channel=GatewayKind.TELEGRAM,
                 channel_address=f"addr-b-{uuid.uuid4().hex}",
                 channel_user_id=shared_user_id,
             )
@@ -113,23 +111,23 @@ async def test_inbound_channel_user_id_mismatch() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id="111",
         )
         assert await inbound_channel_user_id_matches(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id="111",
         )
         assert not await inbound_channel_user_id_matches(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id="222",
         )
         with pytest.raises(ChannelEndpointConflictError):
             await assert_inbound_endpoint_identity(
-                channel=ChannelKind.TELEGRAM,
+                channel=GatewayKind.TELEGRAM,
                 channel_address=address,
                 channel_user_id="222",
             )

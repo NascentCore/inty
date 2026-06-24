@@ -10,8 +10,8 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -72,7 +72,7 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
     )
     _seed_bootstrap_workspace(store)
     runtime_context = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=None,
     )
     loaded_state = load_companion_turn_state(

@@ -36,8 +36,8 @@ from app.core.companion_harness.companion.models import (
     InnerTickThrottleKind,
     MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.runtime.inner_tick_fire import (
@@ -121,7 +121,7 @@ async def _kernel_context(
         model_override=coords.model_override,
         throttle=_throttle_snapshot(fire_input),
         runtime_context=TurnRuntimeContext(
-            channel=fire_input.delivery.runtime_channel,
+            gateway=fire_input.delivery.runtime_channel,
             implicit_signal_bundle=ws_implicit,
         ),
         preset_uid=preset_uid,
@@ -387,7 +387,7 @@ async def try_fire_autonomy_inner_tick(
     ws_conn_id = fire_input.ws_conn_id
     ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
     autonomy_runtime = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=ws_implicit,
     )
     kernel_input = InnerTickKernelInput(

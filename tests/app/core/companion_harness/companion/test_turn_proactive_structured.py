@@ -18,8 +18,8 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.schedule_queue import (
@@ -88,7 +88,7 @@ def _default_deps(
         repository_only_store_text=False,
         memory_bootstrap_type="NONE",
         runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,

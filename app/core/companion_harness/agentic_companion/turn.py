@@ -44,8 +44,8 @@ from app.core.companion_harness.companion.manager_factory import (
     companion_tool_model_api_id,
 )
 from app.core.companion_harness.companion.models import load_context_meta
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
@@ -203,7 +203,7 @@ async def run_agent_turn(
     scope: AgentScope,
     user_text: str,
     resolved_chat_model: GenAIModel,
-    runtime_channel: ChannelKind,
+    runtime_channel: GatewayKind,
     background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
@@ -239,7 +239,7 @@ async def run_agent_turn(
         background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
-            channel=runtime_channel,
+            gateway=runtime_channel,
             implicit_signal_bundle=implicit_signal_bundle,
         ),
         agentic_output_queue=agentic_output_queue,

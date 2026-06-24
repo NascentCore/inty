@@ -9,8 +9,8 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -21,9 +21,7 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
 )
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.services.agentic_channel.provision import (
     OwnedChannelProvisionInput,
     provision_agent_for_channel_onboard,
@@ -37,7 +35,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_creator_scope() -> AgentScope:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        gateway=GatewayKind.TELEGRAM,
         nickname_prefix="Creator",
         meta_data={"test": True},
     )
@@ -64,13 +62,13 @@ async def test_provision_onboard_idempotent() -> None:
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
     assert first.is_new_user is True
     second = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
@@ -86,7 +84,7 @@ async def test_provision_existing_agent_binds_bonded_scope() -> None:
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_owned_agent_for_channel(
         input=OwnedChannelProvisionInput(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
             scope=creator_scope,
@@ -108,13 +106,13 @@ async def test_provision_onboard_rejects_channel_user_id_mismatch() -> None:
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
     with pytest.raises(ChannelEndpointConflictError):
         await provision_agent_for_channel_onboard(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=f"other-{uuid.uuid4().hex}",
         )
@@ -127,7 +125,7 @@ async def test_telegram_onboard_leaves_readable_id_unset() -> None:
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     result = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
@@ -153,12 +151,12 @@ async def test_concurrent_provision_single_endpoint_no_orphan_users() -> None:
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     results = await asyncio.gather(
         provision_agent_for_channel_onboard(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
         ),
         provision_agent_for_channel_onboard(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
         ),
@@ -190,7 +188,7 @@ async def test_provision_existing_endpoint_requires_active_bond() -> None:
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
@@ -203,7 +201,7 @@ async def test_provision_existing_endpoint_requires_active_bond() -> None:
         await db.commit()
     with pytest.raises(CompanionBondInvariantError):
         await provision_agent_for_channel_onboard(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
         )
@@ -215,12 +213,12 @@ async def test_provision_existing_endpoint_rejects_bond_mismatch() -> None:
     address = f"tg-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     first = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=address,
         channel_user_id=channel_user_id,
     )
     other = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        gateway=GatewayKind.TELEGRAM,
         nickname_prefix="Other",
         meta_data={"test": True},
     )
@@ -235,7 +233,7 @@ async def test_provision_existing_endpoint_rejects_bond_mismatch() -> None:
         await db.commit()
     with pytest.raises(CompanionBondInvariantError):
         await provision_agent_for_channel_onboard(
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
         )

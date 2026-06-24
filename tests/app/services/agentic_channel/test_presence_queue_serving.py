@@ -11,8 +11,8 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.channel_runtime import (
@@ -100,12 +100,12 @@ async def test_handle_user_text_enqueues_and_wakes_without_drain() -> None:
                 ) as drain_mock:
                     reply = await presence.handle_user_text(
                         "hello",
-                        runtime_channel=ChannelKind.TELEGRAM,
+                        runtime_channel=GatewayKind.TELEGRAM,
                     )
 
     assert reply == ""
     enqueue_mock.assert_awaited_once()
-    wake_mock.assert_called_once_with(runtime_channel=ChannelKind.TELEGRAM)
+    wake_mock.assert_called_once_with(runtime_channel=GatewayKind.TELEGRAM)
     drain_mock.assert_not_awaited()
 
 
@@ -234,7 +234,7 @@ async def test_handle_user_text_returns_validation_error_before_enqueue() -> (
         ) as enqueue_mock:
             reply = await presence.handle_user_text(
                 "hello",
-                runtime_channel=ChannelKind.TELEGRAM,
+                runtime_channel=GatewayKind.TELEGRAM,
             )
 
     assert "Could not find your Inty user" in reply
@@ -272,10 +272,10 @@ async def test_telegram_user_chat_enqueues_inbound_in_user_language() -> None:
             ) as enqueue_mock:
                 reply = await presence.handle_user_text(
                     "你好",
-                    runtime_channel=ChannelKind.TELEGRAM,
+                    runtime_channel=GatewayKind.TELEGRAM,
                 )
 
     assert reply == ""
     inbound = enqueue_mock.await_args.args[0]
     assert inbound.text == "你好"
-    wake_mock.assert_called_once_with(runtime_channel=ChannelKind.TELEGRAM)
+    wake_mock.assert_called_once_with(runtime_channel=GatewayKind.TELEGRAM)

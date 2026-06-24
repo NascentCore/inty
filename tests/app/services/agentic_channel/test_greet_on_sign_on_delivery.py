@@ -20,7 +20,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
 )
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
@@ -80,9 +80,9 @@ def _wire_telegram_active_channel(
 ) -> TelegramChannelAdapter:
     adapter = TelegramChannelAdapter(api=api, channel_address=channel_address)
     registry = get_scope_channel_registry(scope)
-    registry.states[ChannelKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
-    registry.adapters[ChannelKind.TELEGRAM] = adapter
-    registry.downlinks[ChannelKind.TELEGRAM] = adapter.as_downlink()
+    registry.states[GatewayKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
+    registry.adapters[GatewayKind.TELEGRAM] = adapter
+    registry.downlinks[GatewayKind.TELEGRAM] = adapter.as_downlink()
     return adapter
 
 
@@ -95,9 +95,9 @@ def _wire_app_ws_active_channel(
 
     adapter = AppWsChannelAdapter(scope=scope, outbound_queue=outbound)
     registry = get_scope_channel_registry(scope)
-    registry.states[ChannelKind.APP_WS] = ChannelRuntimeState.ACTIVE
-    registry.adapters[ChannelKind.APP_WS] = adapter
-    registry.downlinks[ChannelKind.APP_WS] = adapter.as_downlink()
+    registry.states[GatewayKind.APP_WS] = ChannelRuntimeState.ACTIVE
+    registry.adapters[GatewayKind.APP_WS] = adapter
+    registry.downlinks[GatewayKind.APP_WS] = adapter.as_downlink()
 
 
 def _agent_initiated_greeting_message(
@@ -245,7 +245,7 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
                     return_value=repo,
                 ):
                     await presence.greet_on_sign_on(
-                        runtime_channel=ChannelKind.TELEGRAM,
+                        runtime_channel=GatewayKind.TELEGRAM,
                     )
                     await flush_scope_output_queue_ready(
                         scope,
@@ -283,7 +283,7 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
                 return_value=fake_queue,
             ):
                 await presence.greet_on_sign_on(
-                    runtime_channel=ChannelKind.TELEGRAM,
+                    runtime_channel=GatewayKind.TELEGRAM,
                 )
 
     fake_queue.append_visible_message.assert_not_awaited()

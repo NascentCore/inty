@@ -6,7 +6,7 @@ Generated entirely by Cursor agent.
 from __future__ import annotations
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.gateways.sms.downlink import SmsGatewayDownlink
 from app.services.agentic_channel.gateways.sms.inner_tick import sms_inner_tick_delivery
@@ -35,8 +35,8 @@ class SmsGatewayAdapter:
         self._to_number = to_number
 
     @property
-    def channel(self) -> ChannelKind:
-        return ChannelKind.SMS
+    def channel(self) -> GatewayKind:
+        return GatewayKind.SMS
 
     def as_downlink(self) -> ChannelDownlink:
         return SmsGatewayDownlink(

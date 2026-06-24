@@ -14,8 +14,8 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
@@ -25,7 +25,7 @@ class ChannelAdapter(Protocol):
     """Transport-specific hooks for one ``CompanionRuntimeChannel``."""
 
     @property
-    def channel(self) -> ChannelKind: ...
+    def channel(self) -> GatewayKind: ...
 
     def as_downlink(self) -> ChannelDownlink:
         """Return downlink used while this channel is ACTIVE."""

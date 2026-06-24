@@ -22,8 +22,8 @@ from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -144,7 +144,7 @@ def _implicit_greeting_deps(
         store=store,
         llm_client=client,  # type: ignore[arg-type]
         runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=bundle,
         ),
         transcript_compaction=None,

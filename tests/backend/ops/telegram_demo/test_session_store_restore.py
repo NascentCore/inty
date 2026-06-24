@@ -7,8 +7,8 @@ import uuid
 import pytest
 from sqlalchemy import delete
 
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
@@ -70,7 +70,7 @@ async def test_restore_loads_endpoints_into_memory() -> None:
     telegram_chat_id = f"tg-restore-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     provision = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -95,7 +95,7 @@ async def test_restore_skips_inactive_companion_bond() -> None:
     telegram_chat_id = f"tg-inactive-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     provision = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -119,7 +119,7 @@ async def test_activate_telegram_scope_rejects_inactive_bond() -> None:
     telegram_chat_id = f"tg-activate-gate-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     provision = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -130,7 +130,7 @@ async def test_activate_telegram_scope_rejects_inactive_bond() -> None:
     record = EndpointRecord(
         user_id=provision.scope.user_id,
         agent_id=provision.scope.agent_id,
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -151,7 +151,7 @@ async def test_restore_skips_paused_companion_runtime() -> None:
     telegram_chat_id = f"tg-paused-{uuid.uuid4().hex}"
     channel_user_id = f"tu-{uuid.uuid4().hex}"
     provision = await provision_agent_for_channel_onboard(
-        channel=ChannelKind.TELEGRAM,
+        channel=GatewayKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )

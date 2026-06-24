@@ -34,8 +34,8 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 
@@ -230,7 +230,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
         system_messages=messages,
         bundle=bundle,
         runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.WECHAT_WEIXIN,
+            gateway=GatewayKind.WECHAT_WEIXIN,
             implicit_signal_bundle=None,
         ),
     )
@@ -248,7 +248,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     assert contents[im_index].split("\n") == load_template_seed_text(
         OUTPUT_FORMAT_IM_DM_MD
     ).strip().split("\n")
-    assert ChannelKind.WECHAT_WEIXIN.value == "wechat_weixin"
+    assert GatewayKind.WECHAT_WEIXIN.value == "wechat_weixin"
 
 
 def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() -> (
@@ -286,21 +286,21 @@ def test_output_format_slice_resolves_from_runtime_channel() -> None:
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
-            runtime_channel=ChannelKind.WECHAT_WEIXIN,
+            runtime_channel=GatewayKind.WECHAT_WEIXIN,
         )
         == body
     )
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
-            runtime_channel=ChannelKind.TELEGRAM,
+            runtime_channel=GatewayKind.TELEGRAM,
         )
         == body
     )
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
-            runtime_channel=ChannelKind.APP_WS,
+            runtime_channel=GatewayKind.APP_WS,
         )
         == ""
     )

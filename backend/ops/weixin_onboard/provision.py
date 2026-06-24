@@ -17,15 +17,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.core.security import create_access_token
-from app.db.session import AsyncSessionLocal
-from app.models.user import User
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
 from app.services.agentic_channel.companion_bonds import (
     require_active_companion_bond,
 )
@@ -45,7 +40,7 @@ from app.services.agentic_channel.errors import (
     integrity_error_detail,
 )
 
-_WEIXIN_CHANNEL = ChannelKind.WECHAT_WEIXIN
+_WEIXIN_CHANNEL = GatewayKind.WECHAT_WEIXIN
 
 
 @dataclass(frozen=True)
@@ -153,7 +148,7 @@ async def provision_inty_for_ilink_user(
             scope = await provision_guest_scope(
                 db,
                 ProvisionGuestScopeInput(
-                    kind=CompanionGuestAgentKind.WEIXIN,
+                    gateway=GatewayKind.WECHAT_WEIXIN,
                     nickname_prefix="Weixin",
                     meta_data={"ilink_user_id": ilink_user_id},
                 ),

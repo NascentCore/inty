@@ -12,7 +12,7 @@ import asyncio
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.db.session import AsyncSessionLocal
 from app.external_services.twilio_sms import TwilioInboundSms, TwilioSmsApi
 from app.services.agentic_channel.channel_runtime import (
@@ -119,7 +119,7 @@ class SmsTransport:
 
     async def _handle_chat(self, *, inbound: TwilioInboundSms) -> None:
         scope = await resolve_scope(
-            channel=ChannelKind.SMS,
+            channel=GatewayKind.SMS,
             channel_address=inbound.from_e164,
         )
         if scope is None:
@@ -130,7 +130,7 @@ class SmsTransport:
             return
         try:
             await assert_inbound_endpoint_identity(
-                channel=ChannelKind.SMS,
+                channel=GatewayKind.SMS,
                 channel_address=inbound.from_e164,
                 channel_user_id=inbound.from_e164,
             )
@@ -151,7 +151,7 @@ class SmsTransport:
             presence = await ensure_presence(scope)
         channel_error = await presence.handle_user_text(
             inbound.body,
-            runtime_channel=ChannelKind.SMS,
+            runtime_channel=GatewayKind.SMS,
         )
         if channel_error:
             await self._send_platform_sms(
@@ -161,7 +161,7 @@ class SmsTransport:
 
     async def _handle_stop(self, *, inbound: TwilioInboundSms) -> None:
         scope = await resolve_scope(
-            channel=ChannelKind.SMS,
+            channel=GatewayKind.SMS,
             channel_address=inbound.from_e164,
         )
         if scope is None:
@@ -173,7 +173,7 @@ class SmsTransport:
         presence = get_presence(scope)
         if presence is not None:
             await presence.stop()
-        await turn_channel_down(scope, ChannelKind.SMS, reason="sms_stop")
+        await turn_channel_down(scope, GatewayKind.SMS, reason="sms_stop")
         await self._send_platform_sms(
             to_number=inbound.from_e164,
             text=_STOP_CONFIRMATION,
@@ -181,13 +181,13 @@ class SmsTransport:
 
     async def _handle_onboard(self, *, inbound: TwilioInboundSms) -> None:
         existing = await resolve_scope(
-            channel=ChannelKind.SMS,
+            channel=GatewayKind.SMS,
             channel_address=inbound.from_e164,
         )
         if existing is not None:
             try:
                 await assert_inbound_endpoint_identity(
-                    channel=ChannelKind.SMS,
+                    channel=GatewayKind.SMS,
                     channel_address=inbound.from_e164,
                     channel_user_id=inbound.from_e164,
                 )
@@ -212,7 +212,7 @@ class SmsTransport:
             return
         try:
             provision = await provision_agent_for_channel_onboard(
-                channel=ChannelKind.SMS,
+                channel=GatewayKind.SMS,
                 channel_address=inbound.from_e164,
                 channel_user_id=inbound.from_e164,
             )
@@ -264,7 +264,7 @@ class SmsTransport:
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
-            channel=ChannelKind.SMS,
+            channel=GatewayKind.SMS,
             channel_address=provision.channel_address,
             channel_user_id=provision.channel_user_id,
         )
@@ -282,7 +282,7 @@ class SmsTransport:
             text=_ONBOARD_NOTICE_NEW,
         )
         try:
-            await presence.greet_on_sign_on(runtime_channel=ChannelKind.SMS)
+            await presence.greet_on_sign_on(runtime_channel=GatewayKind.SMS)
             adapter = SmsGatewayAdapter(
                 api=self._api,
                 from_number=self._from_number,
@@ -342,7 +342,7 @@ class SmsTransport:
         )
         await turn_channel_up(
             scope,
-            ChannelKind.SMS,
+            GatewayKind.SMS,
             adapter=adapter,
             reason=reason,
         )

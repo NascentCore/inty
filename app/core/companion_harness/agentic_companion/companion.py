@@ -11,8 +11,8 @@ from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
@@ -73,7 +73,7 @@ class AgenticCompanion:
         self,
         *,
         resolved_chat_model: GenAIModel,
-        runtime_channel: ChannelKind,
+        runtime_channel: GatewayKind,
         background_output_sink: BackgroundToolEventSink | None,
         implicit_signal_bundle: ImplicitSignalBundle,
         injected_runtime: InjectedCompanionRuntime | None = None,

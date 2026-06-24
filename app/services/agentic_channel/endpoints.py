@@ -11,8 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -29,7 +29,7 @@ class EndpointRecord(BaseModel):
 
     user_id: str = Field(min_length=1)
     agent_id: str = Field(min_length=1)
-    channel: ChannelKind
+    channel: GatewayKind
     channel_address: str = Field(min_length=1)
     channel_user_id: str = Field(min_length=1)
 
@@ -41,7 +41,7 @@ def _row_to_record(row: AgentChannelEndpoint) -> EndpointRecord:
     return EndpointRecord(
         user_id=row.user_id,
         agent_id=row.agent_id,
-        channel=ChannelKind(row.channel),
+        channel=GatewayKind(row.channel),
         channel_address=row.channel_address,
         channel_user_id=row.channel_user_id,
     )
@@ -50,7 +50,7 @@ def _row_to_record(row: AgentChannelEndpoint) -> EndpointRecord:
 async def _find_by_address(
     db: AsyncSession,
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
 ) -> AgentChannelEndpoint | None:
     result = await db.execute(
@@ -65,7 +65,7 @@ async def _find_by_address(
 async def _find_by_channel_user_id(
     db: AsyncSession,
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_user_id: str,
 ) -> AgentChannelEndpoint | None:
     result = await db.execute(
@@ -81,7 +81,7 @@ async def _find_by_agent_channel(
     db: AsyncSession,
     *,
     agent_id: str,
-    channel: ChannelKind,
+    channel: GatewayKind,
 ) -> AgentChannelEndpoint | None:
     result = await db.execute(
         select(AgentChannelEndpoint).where(
@@ -95,7 +95,7 @@ async def _find_by_agent_channel(
 def _assert_bind_compatible(
     *,
     scope: AgentScope,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
     by_address: AgentChannelEndpoint | None,
@@ -135,7 +135,7 @@ async def upsert_endpoint_in_session(
     db: AsyncSession,
     scope: AgentScope,
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> AgentChannelEndpoint:
@@ -198,7 +198,7 @@ async def upsert_endpoint_in_session(
 async def bind_endpoint(
     scope: AgentScope,
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> EndpointRecord:
@@ -233,7 +233,7 @@ async def bind_endpoint(
 
 async def resolve_scope(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
 ) -> AgentScope | None:
     """Inbound routing: ``channel_address`` → ``AgentScope``."""
@@ -249,7 +249,7 @@ async def resolve_scope(
 
 async def resolve_scope_by_channel_user_id(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_user_id: str,
 ) -> AgentScope | None:
     """Resolve scope by channel-side human id."""
@@ -266,7 +266,7 @@ async def resolve_scope_by_channel_user_id(
 async def get_endpoint_for_scope(
     scope: AgentScope,
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
 ) -> EndpointRecord | None:
     async with AsyncSessionLocal() as db:
         row = await _find_by_agent_channel(
@@ -290,7 +290,7 @@ async def list_endpoints_for_agent(*, agent_id: str) -> list[EndpointRecord]:
 
 async def list_endpoints_for_channel(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
 ) -> list[EndpointRecord]:
     async with AsyncSessionLocal() as db:
         result = await db.execute(
@@ -303,7 +303,7 @@ async def list_endpoints_for_channel(
 
 async def inbound_channel_user_id_matches(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> bool:
@@ -321,7 +321,7 @@ async def inbound_channel_user_id_matches(
 
 async def assert_inbound_endpoint_identity(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> None:

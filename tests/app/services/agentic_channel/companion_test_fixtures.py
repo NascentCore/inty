@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy import delete
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -77,7 +75,7 @@ async def create_guest_user_for_test(
 
 async def create_guest_scope_for_test(
     *,
-    kind: CompanionGuestAgentKind,
+    gateway: GatewayKind,
     nickname_prefix: str,
     meta_data: dict,
 ) -> AgentScope:
@@ -85,7 +83,7 @@ async def create_guest_scope_for_test(
         scope = await provision_guest_scope(
             db,
             ProvisionGuestScopeInput(
-                kind=kind,
+                gateway=gateway,
                 nickname_prefix=nickname_prefix,
                 meta_data=meta_data,
             ),

@@ -20,15 +20,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    companion_guest_agent_kind_for_channel,
-)
 from app.services.agentic_channel.companion_bonds import (
     ensure_active_companion_bond_for_owned_scope,
     require_active_companion_bond,
@@ -53,11 +50,11 @@ from app.services.user_profile_persistence import (
 )
 
 
-def _guest_meta_data_for_channel(channel: ChannelKind) -> dict:
+def _guest_meta_data_for_channel(channel: GatewayKind) -> dict:
     """Guest user meta_data payload for agent-channel onboard."""
     base = {"agent_channel": True}
     match channel:
-        case ChannelKind.TELEGRAM:
+        case GatewayKind.TELEGRAM:
             return {**base, "profile_collection_required": True}
         case _:
             return base
@@ -78,7 +75,7 @@ class ChannelProvisionResult:
 class OwnedChannelProvisionInput:
     """Bundled inputs for owned-scope channel provision (caller-known user + agent)."""
 
-    channel: ChannelKind
+    channel: GatewayKind
     channel_address: str
     channel_user_id: str
     scope: AgentScope
@@ -91,7 +88,7 @@ async def _require_active_bond_for_scope(scope: AgentScope) -> None:
 
 async def _try_finish_existing_channel_provision(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
     expected_scope: AgentScope | None,
@@ -164,7 +161,7 @@ async def _try_finish_existing_channel_provision(
 
 async def _provision_result_after_bind_race(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> ChannelProvisionResult:
@@ -211,7 +208,7 @@ async def _provision_result_after_bind_race(
 
 async def provision_agent_for_channel_onboard(
     *,
-    channel: ChannelKind,
+    channel: GatewayKind,
     channel_address: str,
     channel_user_id: str,
 ) -> ChannelProvisionResult:
@@ -235,7 +232,7 @@ async def provision_agent_for_channel_onboard(
             scope = await provision_guest_scope(
                 db,
                 ProvisionGuestScopeInput(
-                    kind=companion_guest_agent_kind_for_channel(channel),
+                    gateway=channel,
                     nickname_prefix="Guest",
                     meta_data=_guest_meta_data_for_channel(channel),
                 ),
@@ -292,7 +289,7 @@ async def provision_agent_for_channel_onboard(
         scope.agent_id,
     )
     session = await ensure_memory_store_session(scope)
-    if channel == ChannelKind.TELEGRAM:
+    if channel == GatewayKind.TELEGRAM:
         seed_profile_collection_required_in_context(
             session.store,
             required=True,

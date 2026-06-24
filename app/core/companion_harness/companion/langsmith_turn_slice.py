@@ -1,7 +1,7 @@
 """LangSmith observability slice for one companion turn's human-facing channel.
 
 Pure harness module: builds parent RunTree fragments and child ``langsmith_extra``
-dicts from ``ChannelKind``. Session-level resolution lives in
+dicts from ``GatewayKind``. Session-level resolution lives in
 ``app.services.agentic_companion.langsmith_channel_resolve``.
 """
 
@@ -18,8 +18,8 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     invocation_extra,
     tool_call_langsmith_extra,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 
@@ -37,20 +37,20 @@ class LangsmithChannelSource(StrEnum):
 class CompanionTurnLangsmithSlice:
     """Channel tags for companion LangSmith parent runs and LLM child spans."""
 
-    runtime_channel: ChannelKind
+    runtime_channel: GatewayKind
     channel_source: LangsmithChannelSource
 
     @classmethod
     def from_runtime_context(cls, runtime_context: TurnRuntimeContext) -> Self:
         return cls.from_channel(
-            runtime_context.channel,
+            runtime_context.gateway,
             LangsmithChannelSource.EXPLICIT_TURN,
         )
 
     @classmethod
     def from_channel(
         cls,
-        channel: ChannelKind,
+        channel: GatewayKind,
         source: LangsmithChannelSource,
     ) -> Self:
         return cls(runtime_channel=channel, channel_source=source)
@@ -59,7 +59,7 @@ class CompanionTurnLangsmithSlice:
     def app_default(cls) -> Self:
         """Explicit APP slice for tests and callers without ``TurnRuntimeContext``."""
         return cls.from_channel(
-            ChannelKind.APP_WS,
+            GatewayKind.APP_WS,
             LangsmithChannelSource.DEFAULT_APP,
         )
 

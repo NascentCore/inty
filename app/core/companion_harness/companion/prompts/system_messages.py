@@ -87,7 +87,7 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
     profile_collection_active,
 )
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.core.companion_harness.memory.user_md_identity import (
     build_cohort_profile_probe_hint,
 )
@@ -878,7 +878,7 @@ def append_profile_collection_system_messages(
     system_messages: list[dict[str, Any]],
     *,
     context: ContextMeta,
-    runtime_channel: ChannelKind,
+    runtime_channel: GatewayKind,
     interactive_bootstrap_active: bool,
     user_md: str,
 ) -> list[dict[str, Any]]:
@@ -898,7 +898,7 @@ def append_profile_collection_system_messages(
         return system_messages
     if not profile_collection_active(context=context):
         return system_messages
-    if runtime_channel != ChannelKind.TELEGRAM:
+    if runtime_channel != GatewayKind.TELEGRAM:
         return system_messages
     out = [
         *system_messages,
@@ -1086,7 +1086,7 @@ def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
-    runtime_channel: ChannelKind,
+    runtime_channel: GatewayKind,
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     bootstrap_active = _greeting_omit_capability_system_slices(

@@ -12,9 +12,9 @@ from loguru import logger
 from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    is_im_runtime_channel,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
+    is_im_gateway,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -70,14 +70,14 @@ _IM_TURN_FAILED = "Companion turn failed. Please check Ops logs."
 
 
 def _localized_im_channel_message(
-    runtime_channel: ChannelKind,
+    runtime_channel: GatewayKind,
     *,
     english: str,
     chinese: str,
 ) -> str:
     """Return English copy on IM channels; Chinese elsewhere."""
     match runtime_channel:
-        case channel if is_im_runtime_channel(channel):
+        case channel if is_im_gateway(channel):
             return english
         case _:
             return chinese
@@ -160,7 +160,7 @@ class AgentChannelPresence:
         registry = get_scope_channel_registry(self._scope)
         initial_channel = registry.active_channel()
         if initial_channel is None:
-            initial_channel = ChannelKind.APP_WS
+            initial_channel = GatewayKind.APP_WS
         self._queue_serving = ScopeQueueServing(
             self._scope,
             background_output_sink=self._coordinator.background_sink,
@@ -212,7 +212,7 @@ class AgentChannelPresence:
             )
         if ready_output_is_agent_initiated_visible(message):
             # TODO(#3576): Deliver agent-initiated sign-on rows on App-WS via OutputQueue.
-            if not is_im_runtime_channel(active):
+            if not is_im_gateway(active):
                 raise OutputDeliveryUnroutableError(
                     self._scope,
                     message.message_ids,
@@ -229,7 +229,7 @@ class AgentChannelPresence:
             )
         await downlink.deliver(event)
 
-    async def greet_on_sign_on(self, *, runtime_channel: ChannelKind) -> None:
+    async def greet_on_sign_on(self, *, runtime_channel: GatewayKind) -> None:
         """Run implicit sign-on greeting and append visible text to OutputQueue."""
         assert runtime_channel is not None
         model = await resolve_chat_model_for_scope(self._scope)
@@ -279,7 +279,7 @@ class AgentChannelPresence:
         assert user_text.strip() != ""
         inbound = InboundWireMessage(
             scope=self._scope,
-            channel=ChannelKind.APP_WS,
+            channel=GatewayKind.APP_WS,
             wire_id=wire_id,
             text=user_text.strip(),
             received_at_utc=datetime.now(timezone.utc),
@@ -289,7 +289,7 @@ class AgentChannelPresence:
         )
         queue_message_id = await enqueue_inbound_wire_message(inbound)
         assert self._queue_serving is not None
-        self._queue_serving.wake(runtime_channel=ChannelKind.APP_WS)
+        self._queue_serving.wake(runtime_channel=GatewayKind.APP_WS)
         return queue_message_id
 
     async def _on_queue_drain_complete(
@@ -312,7 +312,7 @@ class AgentChannelPresence:
         self,
         user_text: str,
         *,
-        runtime_channel: ChannelKind,
+        runtime_channel: GatewayKind,
     ) -> str:
         """Run one user-chat turn; return Channel error text or ``""`` when delivered via queue."""
         stripped = user_text.strip()
@@ -398,7 +398,7 @@ class AgentChannelPresence:
             ev = await self._coordinator.background_events.get()
             registry = get_scope_channel_registry(self._scope)
             active = registry.active_channel()
-            if active == ChannelKind.APP_WS:
+            if active == GatewayKind.APP_WS:
                 downlink = registry.downlinks.get(active)
                 if downlink is None:
                     continue

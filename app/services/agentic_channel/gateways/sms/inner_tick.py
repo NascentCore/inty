@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 
 PlainTextAssistantSink = Callable[[str], Awaitable[None]]
@@ -26,5 +26,5 @@ def sms_inner_tick_delivery(
         ws_outbound_queue=None,
         weixin_assistant_text=None,
         telegram_assistant_text=assistant_text,
-        runtime_channel=ChannelKind.SMS,
+        runtime_channel=GatewayKind.SMS,
     )

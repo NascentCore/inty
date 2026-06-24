@@ -14,8 +14,8 @@ from app.core.companion_harness.companion.models import (
     TranscriptProjection,
     load_transcript_projection_from_store,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.transcript_anchor import (
@@ -64,7 +64,7 @@ async def _telegram_endpoint_created_at(
         .where(
             AgentChannelEndpoint.user_id == scope.user_id,
             AgentChannelEndpoint.agent_id == scope.agent_id,
-            AgentChannelEndpoint.channel == ChannelKind.TELEGRAM.value,
+            AgentChannelEndpoint.channel == GatewayKind.TELEGRAM.value,
         )
         .order_by(AgentChannelEndpoint.created_at.asc())
         .limit(1)

@@ -22,8 +22,8 @@ from app.core.llms.client import (
     LLM_SCENE_CHAT,
 )
 from app.core.companion_harness.companion.models import InnerTickActivity
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.utils.models_catalog import resolve_chat_text_model
@@ -63,7 +63,7 @@ def _foreground_input(
     chat_model = resolve_chat_text_model("test/chat")
     langsmith_slice = CompanionTurnLangsmithSlice.from_runtime_context(
         TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         )
     )

@@ -37,7 +37,7 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
-from .runtime_channel import ChannelKind, TurnRuntimeContext
+from app.core.companion_harness.agent_channel.gateway import GatewayKind, TurnRuntimeContext
 from .scope import CompanionScope
 from .scope_turn_lock import (
     ScopeTurnLock,
@@ -297,7 +297,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
@@ -327,7 +327,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -349,7 +349,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -371,7 +371,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -393,7 +393,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
@@ -414,7 +414,7 @@ class CompanionManager:
         background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
+            gateway=GatewayKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:

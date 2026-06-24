@@ -20,9 +20,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
@@ -43,8 +41,8 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
     CompanionSession,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.loop.config import (
@@ -93,7 +91,7 @@ async def _build_scripted_manager(
     memory_bootstrap_type: str,
 ) -> tuple[CompanionManager, CompanionSession, FakeOpenAI, AgentScope]:
     scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        gateway=GatewayKind.APP_WS,
         nickname_prefix="harn",
         meta_data={"test": "scripted_llm"},
     )
@@ -128,7 +126,7 @@ def _input_record(
         scope=scope,
         sequence=sequence,
         status=QueueStatus.CLAIMED,
-        channel=ChannelKind.APP_WS,
+        channel=GatewayKind.APP_WS,
         wire_id="wire-1",
         text=text,
         received_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
@@ -180,7 +178,7 @@ async def test_user_chat_no_tools_delivers_foreground_to_output_queue(
                 agentic_output_queue=output_queue,
                 user_message_batch=user_batch,
                 runtime_context=TurnRuntimeContext(
-                    channel=ChannelKind.APP_WS,
+                    gateway=GatewayKind.APP_WS,
                     implicit_signal_bundle=None,
                 ),
             )
@@ -247,7 +245,7 @@ async def test_user_chat_default_multi_batch_persists_each_user_row() -> None:
             user_message_batch=user_batch,
             input_batch=input_batch,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -324,7 +322,7 @@ async def test_user_chat_join_mode_batch_persists_one_user_row() -> None:
             user_message_batch=user_batch,
             input_batch=input_batch,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -368,7 +366,7 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
             agentic_output_queue=output_queue,
             user_message_batch=user_batch,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -413,7 +411,7 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
             agentic_output_queue=output_queue,
             user_message_batch=user_batch,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -455,7 +453,7 @@ async def test_proactive_chat_silent_envelope_skips_assistant_transcript() -> (
         result = await manager.run_inner_tick_proactive_chat_turn(
             session,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -492,7 +490,7 @@ async def test_proactive_chat_visible_then_silent_two_rounds(
         first = await manager.run_inner_tick_proactive_chat_turn(
             session,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -506,7 +504,7 @@ async def test_proactive_chat_visible_then_silent_two_rounds(
         second = await manager.run_inner_tick_proactive_chat_turn(
             session,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -545,7 +543,7 @@ async def test_proactive_chat_returns_assistant_text_and_transcript() -> None:
         result = await manager.run_inner_tick_proactive_chat_turn(
             session,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )
@@ -577,7 +575,7 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
         result = await manager.run_inner_tick_monolog_turn(
             session,
             runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
+                gateway=GatewayKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         )

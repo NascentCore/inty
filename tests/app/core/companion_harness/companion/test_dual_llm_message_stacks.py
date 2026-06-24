@@ -25,8 +25,8 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -70,7 +70,7 @@ def test_dual_llm_system_message_variants_monolog_tool_differs_from_chat(
         repository=None,
     )
     runtime_context = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=None,
     )
     tool_msgs, chat_msgs = dual_llm_system_message_variants(
@@ -106,7 +106,7 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
     bundle = _bundle()
     context = ContextMeta()
     runtime_context = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=None,
     )
     memory_bootstrap_type = CompanionMemoryBootstrapType.NONE.value
@@ -157,7 +157,7 @@ def test_dual_llm_system_message_variants_appends_fixed_reply_language(
     bundle = _bundle()
     context = ContextMeta()
     runtime_context = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
+        gateway=GatewayKind.APP_WS,
         implicit_signal_bundle=None,
     )
     tool_msgs, chat_msgs = dual_llm_system_message_variants(

@@ -17,8 +17,8 @@ from app.core.companion_harness.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
+from app.core.companion_harness.agent_channel.gateway import (
+    GatewayKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_companion.ws_outbound_materialize import (
@@ -32,7 +32,7 @@ def _input_record(scope: AgentScope) -> InputQueueRecord:
         scope=scope,
         sequence=1,
         status=QueueStatus.DELIVERED,
-        channel=ChannelKind.APP_WS,
+        channel=GatewayKind.APP_WS,
         wire_id="app:ws",
         text="hi there",
         received_at_utc=datetime.now(timezone.utc),

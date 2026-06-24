@@ -7,11 +7,9 @@ import uuid
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.guest_agent_kind import (
-    CompanionGuestAgentKind,
-)
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -51,7 +49,7 @@ async def _create_unbonded_scope() -> AgentScope:
         agent = await add_companion_guest_agent_for_user(
             db,
             user_id=user.id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            gateway=GatewayKind.APP_WS,
         )
         await db.commit()
         return AgentScope(user_id=user.id, agent_id=agent.id)
@@ -78,7 +76,7 @@ async def test_provision_owned_creates_bond_endpoint_and_memory() -> None:
     address = scope.registry_key()
     result = await provision_owned_agent_for_channel(
         input=OwnedChannelProvisionInput(
-            channel=ChannelKind.APP_WS,
+            channel=GatewayKind.APP_WS,
             channel_address=address,
             channel_user_id=scope.user_id,
             scope=scope,
@@ -97,7 +95,7 @@ async def test_provision_owned_creates_bond_endpoint_and_memory() -> None:
         assert bond.state == CompanionBondState.ACTIVE
         endpoint_row = await db.execute(
             select(AgentChannelEndpoint).where(
-                AgentChannelEndpoint.channel == ChannelKind.APP_WS.value,
+                AgentChannelEndpoint.channel == GatewayKind.APP_WS.value,
                 AgentChannelEndpoint.channel_address == address,
             )
         )
@@ -112,7 +110,7 @@ async def test_provision_owned_idempotent_second_call() -> None:
     scope = await _create_unbonded_scope()
     address = scope.registry_key()
     owned_input = OwnedChannelProvisionInput(
-        channel=ChannelKind.APP_WS,
+        channel=GatewayKind.APP_WS,
         channel_address=address,
         channel_user_id=scope.user_id,
         scope=scope,
@@ -134,7 +132,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
     first_address = first_scope.registry_key()
     await provision_owned_agent_for_channel(
         input=OwnedChannelProvisionInput(
-            channel=ChannelKind.APP_WS,
+            channel=GatewayKind.APP_WS,
             channel_address=first_address,
             channel_user_id=first_scope.user_id,
             scope=first_scope,
@@ -145,7 +143,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first_scope.user_id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            gateway=GatewayKind.APP_WS,
         )
         await db.commit()
     second_scope = AgentScope(
@@ -154,7 +152,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
     )
     result = await provision_owned_agent_for_channel(
         input=OwnedChannelProvisionInput(
-            channel=ChannelKind.APP_WS,
+            channel=GatewayKind.APP_WS,
             channel_address=second_scope.registry_key(),
             channel_user_id=second_scope.user_id,
             scope=second_scope,
@@ -164,7 +162,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
     async with AsyncSessionLocal() as db:
         endpoint_row = await db.execute(
             select(AgentChannelEndpoint).where(
-                AgentChannelEndpoint.channel == ChannelKind.APP_WS.value,
+                AgentChannelEndpoint.channel == GatewayKind.APP_WS.value,
                 AgentChannelEndpoint.channel_user_id == first_scope.user_id,
             )
         )
@@ -177,7 +175,7 @@ async def test_provision_owned_rebinds_stale_endpoint_for_same_user() -> None:
 @pytest.mark.asyncio
 async def test_provision_owned_rejects_bond_conflict() -> None:
     first_scope = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+        gateway=GatewayKind.APP_WS,
         nickname_prefix="First",
         meta_data={"test": True},
     )
@@ -185,7 +183,7 @@ async def test_provision_owned_rejects_bond_conflict() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first_scope.user_id,
-            kind=CompanionGuestAgentKind.AGENT_CHANNEL,
+            gateway=GatewayKind.APP_WS,
         )
         await db.commit()
     second_scope = AgentScope(
@@ -195,7 +193,7 @@ async def test_provision_owned_rejects_bond_conflict() -> None:
     with pytest.raises(CompanionBondInvariantError):
         await provision_owned_agent_for_channel(
             input=OwnedChannelProvisionInput(
-                channel=ChannelKind.APP_WS,
+                channel=GatewayKind.APP_WS,
                 channel_address=second_scope.registry_key(),
                 channel_user_id=second_scope.user_id,
                 scope=second_scope,
@@ -207,12 +205,12 @@ async def test_provision_owned_rejects_bond_conflict() -> None:
 @pytest.mark.asyncio
 async def test_provision_owned_rejects_endpoint_scope_mismatch() -> None:
     first = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        gateway=GatewayKind.TELEGRAM,
         nickname_prefix="First",
         meta_data={"test": True},
     )
     second = await create_guest_scope_for_test(
-        kind=CompanionGuestAgentKind.TELEGRAM,
+        gateway=GatewayKind.TELEGRAM,
         nickname_prefix="Second",
         meta_data={"test": True},
     )
@@ -222,7 +220,7 @@ async def test_provision_owned_rejects_endpoint_scope_mismatch() -> None:
         await upsert_endpoint_in_session(
             db,
             first,
-            channel=ChannelKind.TELEGRAM,
+            channel=GatewayKind.TELEGRAM,
             channel_address=address,
             channel_user_id=channel_user_id,
         )
@@ -230,7 +228,7 @@ async def test_provision_owned_rejects_endpoint_scope_mismatch() -> None:
     with pytest.raises(ChannelEndpointConflictError):
         await provision_owned_agent_for_channel(
             input=OwnedChannelProvisionInput(
-                channel=ChannelKind.TELEGRAM,
+                channel=GatewayKind.TELEGRAM,
                 channel_address=address,
                 channel_user_id=channel_user_id,
                 scope=second,
