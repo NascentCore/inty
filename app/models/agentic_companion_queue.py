@@ -173,11 +173,11 @@ class AgenticCompanionOutputQueueRow(Base):
         nullable=False,
         comment="Assistant-visible text payload",
     )
-    in_reply_to_input_ids_json = Column(
+    message_ids_json = Column(
         Text,
         nullable=False,
         server_default=sa.text("'[]'"),
-        comment="JSON array of input queue ids",
+        comment="JSON array of input queue message ids",
     )
     trace_id = Column(String, nullable=True)
     langsmith_trace_id = Column(String, nullable=True)

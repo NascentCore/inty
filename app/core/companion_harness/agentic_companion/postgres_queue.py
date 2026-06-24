@@ -95,8 +95,7 @@ def _generated_image_refs_to_json(
 def _output_row_to_record(
     row: AgenticCompanionOutputQueueRow,
 ) -> OutputQueueRecord:
-    # TODO(!3504): Rename DB column ``in_reply_to_input_ids_json`` → ``message_ids_json``.
-    raw_ids = json.loads(row.in_reply_to_input_ids_json or "[]")
+    raw_ids = json.loads(row.message_ids_json or "[]")
     message_ids = tuple(str(x) for x in raw_ids)
     delivery_channel = (
         ChannelKind(row.delivery_channel) if row.delivery_channel else None
@@ -298,7 +297,7 @@ class PostgresOutputQueueRepository:
             batch_id=output.batch_id,
             kind=output.kind.value,
             text=output.text,
-            in_reply_to_input_ids_json=json.dumps(
+            message_ids_json=json.dumps(
                 list(output.message_ids),
                 ensure_ascii=False,
             ),
