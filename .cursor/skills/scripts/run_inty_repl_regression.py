@@ -89,6 +89,7 @@ _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
 _BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 20.0
 _BOOTSTRAP_TURN_SETTLE_MAX_SEC = 300.0
+_SETTLED_TURN_TIMEOUT_SEC = 900.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
 # Match devops/config.yaml.local fast proactive: idle 10s + poll 3s + LLM slack.
 # ``--proactive-wait-sec``: wall-clock listen duration (not capped by min/target rounds).
@@ -813,6 +814,49 @@ LIMIT 1;
 """,
     )
     return raw.strip()
+
+
+def _wait_bootstrap_complete_flag(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    timeout_sec: float,
+    stderr: TextIO,
+) -> bool:
+    """Poll ``context.json`` until interactive bootstrap is marked complete."""
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    deadline = time.monotonic() + timeout_sec
+    last_raw = ""
+    while time.monotonic() < deadline:
+        last_raw = _psql(
+            repo_root,
+            config_path,
+            f"""
+SELECT trim(content)::json->>'workspace_bootstrap_user_interactive_completed'
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = 'context_json'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+        ).strip()
+        if last_raw == "true":
+            print(f"{_TAG} bootstrap_complete flag true", flush=True)
+            return True
+        time.sleep(_EXPERIENCE_PROFILE_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for bootstrap_complete flag (last={last_raw!r})",
+        file=stderr,
+        flush=True,
+    )
+    return False
 
 
 def _poll_context_mode(
@@ -2074,34 +2118,25 @@ def run_regression(
                     ),
                 }
             )
-        if not _wait_ws_turn_settled(
-            bridge,
-            report,
-            label="bootstrap-finish",
-            settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
-            max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            stderr=stderr,
-        ):
-            report["errors"].append(
-                {
-                    "turn": "bootstrap-finish-settled",
-                    "error": (408, "bootstrap-finish ws not settled before settled"),
-                }
-            )
-        if not _wait_output_queue_idle(
+        bootstrap_complete = _wait_bootstrap_complete_flag(
             repo_root,
             config_path,
+            user_id=user_id,
             agent_id=agent_id,
             timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            label="pre-settled",
             stderr=stderr,
-        ):
+        )
+        if not bootstrap_complete:
             report["errors"].append(
                 {
-                    "turn": "pre-settled-output",
-                    "error": (408, "output queue not idle before settled"),
+                    "turn": "bootstrap-finish",
+                    "error": (422, "bootstrap_complete flag still false"),
                 }
             )
+
+        print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
+        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
+
         if not _wait_input_queue_idle(
             repo_root,
             config_path,
@@ -2159,63 +2194,15 @@ def run_regression(
                     flush=True,
                 )
 
-        if not _wait_ws_turn_settled(
-            bridge,
-            report,
-            label="pre-settled",
-            settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
-            max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            stderr=stderr,
-        ):
-            report["errors"].append(
-                {
-                    "turn": "pre-settled",
-                    "error": (408, "ws not settled before settled turn"),
-                }
-            )
-
-        print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
-        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
-        text, meta, err = _wait_downlink_for_user_msg_uuid(
-            bridge,
-            report,
-            expected_user_msg_uuid=settled_msg_uuid,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-            label="settled",
-            trailing_label="settled_mismatch",
-        )
-        if err is not None:
-            report["errors"].append({"turn": "settled", "error": err})
-            print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
-        else:
-            assert text is not None
-            report["turns"].append(
-                {
-                    "kind": "settled",
-                    "user": settled_turn,
-                    "user_msg_uuid": settled_msg_uuid,
-                    "text_preview": text[:120],
-                    "meta": meta,
-                }
-            )
-            print(
-                f"{_TAG} settled reply={text[:80]!r} "
-                f"user_msg_uuid={settled_msg_uuid} "
-                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
-                flush=True,
-            )
-        _drain_turn_trailing_frames(bridge, report, label="settled")
-
-        settled_input_delivered = _wait_input_delivered(
+        if not _wait_input_delivered(
             repo_root,
             config_path,
             agent_id=agent_id,
             client_message_id=settled_msg_uuid,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
             label="settled",
             stderr=stderr,
-        )
-        if not settled_input_delivered:
+        ):
             report["errors"].append(
                 {
                     "turn": "settled-delivered",
@@ -2235,140 +2222,181 @@ def run_regression(
                 github_result
             )
         else:
-            # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
-            # compliance is model eval, not repeatable regression.
-            github_result = _run_github_issue_e2e_phase(
-                bridge=bridge,
-                report=report,
-                repo_root=repo_root,
-                config_path=config_path,
-                agent_id=agent_id,
-                user_id=user_id,
-                turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
-                stderr=stderr,
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
+                bridge,
+                report,
+                expected_user_msg_uuid=settled_msg_uuid,
+                timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
+                label="settled",
+                trailing_label="settled_mismatch",
             )
-            report["github_issue"] = _github_issue_e2e_result_to_report(
-                github_result
-            )
-            if github_result.error is not None:
-                report["errors"].append(
+            if err is not None:
+                report["errors"].append({"turn": "settled", "error": err})
+                print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
+                github_result = GithubIssueE2eResult(
+                    "",
+                    "",
+                    0,
+                    False,
+                    False,
+                    False,
+                    "skipped: settled downlink failed",
+                )
+                report["github_issue"] = _github_issue_e2e_result_to_report(
+                    github_result
+                )
+            else:
+                assert text is not None
+                report["turns"].append(
                     {
-                        "turn": "github_issue_e2e",
-                        "error": (500, github_result.error),
+                        "kind": "settled",
+                        "user": settled_turn,
+                        "user_msg_uuid": settled_msg_uuid,
+                        "text_preview": text[:120],
+                        "meta": meta,
                     }
                 )
-
-            print(
-                f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
-                f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
-                f"idle 10s + poll 3s; after github_issue)...",
-                flush=True,
-            )
-            proactive_deadline = time.monotonic() + proactive_wait_sec
-            while time.monotonic() < proactive_deadline:
-                text, meta, err = _wait_downlink(
-                    bridge,
-                    timeout_sec=min(
-                        _PROACTIVE_RECV_CHUNK_SEC,
-                        proactive_deadline - time.monotonic(),
-                    ),
-                    label="proactive",
+                print(
+                    f"{_TAG} settled reply={text[:80]!r} "
+                    f"user_msg_uuid={settled_msg_uuid} "
+                    f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                    flush=True,
                 )
-                if err is not None and err[0] == 408:
-                    continue
-                if err is not None:
-                    report["errors"].append({"turn": "proactive", "error": err})
-                    break
-                if text is None:
-                    continue
-                if not _is_inner_tick_proactive(meta):
-                    kind = meta.get("source") or meta.get("inner_tick_activity")
+                _drain_turn_trailing_frames(bridge, report, label="settled")
+                # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
+                # compliance is model eval, not repeatable regression.
+                github_result = _run_github_issue_e2e_phase(
+                    bridge=bridge,
+                    report=report,
+                    repo_root=repo_root,
+                    config_path=config_path,
+                    agent_id=agent_id,
+                    user_id=user_id,
+                    turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                    stderr=stderr,
+                )
+                report["github_issue"] = _github_issue_e2e_result_to_report(
+                    github_result
+                )
+                if github_result.error is not None:
+                    report["errors"].append(
+                        {
+                            "turn": "github_issue_e2e",
+                            "error": (500, github_result.error),
+                        }
+                    )
+
+                print(
+                    f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
+                    f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
+                    f"idle 10s + poll 3s; after github_issue)...",
+                    flush=True,
+                )
+                proactive_deadline = time.monotonic() + proactive_wait_sec
+                while time.monotonic() < proactive_deadline:
+                    text, meta, err = _wait_downlink(
+                        bridge,
+                        timeout_sec=min(
+                            _PROACTIVE_RECV_CHUNK_SEC,
+                            proactive_deadline - time.monotonic(),
+                        ),
+                        label="proactive",
+                    )
+                    if err is not None and err[0] == 408:
+                        continue
+                    if err is not None:
+                        report["errors"].append({"turn": "proactive", "error": err})
+                        break
+                    if text is None:
+                        continue
+                    if not _is_inner_tick_proactive(meta):
+                        kind = meta.get("source") or meta.get("inner_tick_activity")
+                        if str(meta.get("source") or "") == "chat":
+                            _record_trailing_downlink(
+                                report,
+                                label="proactive_wait_late",
+                                text=text,
+                                meta=meta,
+                            )
+                        else:
+                            print(
+                                f"{_TAG} ignore non-proactive downlink source={kind!r}",
+                                flush=True,
+                            )
+                        continue
+                    report["proactive"].append(
+                        {
+                            "text_preview": text[:120],
+                            "meta": meta,
+                            "silent": False,
+                        }
+                    )
+                    print(
+                        f"{_TAG} proactive text={text[:80]!r} "
+                        f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
+                        f"round={len(report['proactive']) + 1}",
+                        flush=True,
+                    )
+                print(
+                    f"{_TAG} post-proactive drain "
+                    f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
+                    f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
+                    flush=True,
+                )
+                for text, meta in _drain_until_quiet(
+                    bridge,
+                    quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
+                    max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
+                ):
                     if str(meta.get("source") or "") == "chat":
                         _record_trailing_downlink(
                             report,
-                            label="proactive_wait_late",
+                            label="post_proactive",
                             text=text,
                             meta=meta,
                         )
-                    else:
-                        print(
-                            f"{_TAG} ignore non-proactive downlink source={kind!r}",
-                            flush=True,
-                        )
-                    continue
-                report["proactive"].append(
-                    {
-                        "text_preview": text[:120],
-                        "meta": meta,
-                        "silent": False,
-                    }
-                )
-                print(
-                    f"{_TAG} proactive text={text[:80]!r} "
-                    f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
-                    f"round={len(report['proactive']) + 1}",
-                    flush=True,
-                )
-            print(
-                f"{_TAG} post-proactive drain "
-                f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
-                f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
-                flush=True,
-            )
-            for text, meta in _drain_until_quiet(
-                bridge,
-                quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
-                max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
-            ):
-                if str(meta.get("source") or "") == "chat":
-                    _record_trailing_downlink(
-                        report,
-                        label="post_proactive",
-                        text=text,
-                        meta=meta,
-                    )
 
-            memory_doc = _query_latest_memdoc_version(
-                repo_root,
-                config_path,
-                user_id=user_id,
-                agent_id=agent_id,
-                document_kind="memory",
-            )
-            memory_seq_before_dreaming = (
-                memory_doc.sequence_id if memory_doc else 0
-            )
-            print(
-                f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
-                f"(scope worker; dreaming_idle_seconds=10 in config; "
-                f"memory_sequence_before={memory_seq_before_dreaming})...",
-                flush=True,
-            )
-            dreaming_result = _wait_dreaming_consolidation(
-                repo_root,
-                config_path,
-                user_id=user_id,
-                agent_id=agent_id,
-                memory_sequence_before=memory_seq_before_dreaming,
-                wait_sec=dreaming_wait_sec,
-                stderr=stderr,
-            )
-            report["dreaming"] = {
-                "checkpoint_present": dreaming_result.checkpoint_present,
-                "memory_updated": dreaming_result.memory_updated,
-                "memory_sequence_before": dreaming_result.memory_sequence_before,
-                "memory_sequence_after": dreaming_result.memory_sequence_after,
-                "error": dreaming_result.error,
-            }
-            if dreaming_result.error:
-                report["errors"].append(
-                    {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                memory_doc = _query_latest_memdoc_version(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    document_kind="memory",
+                )
+                memory_seq_before_dreaming = (
+                    memory_doc.sequence_id if memory_doc else 0
                 )
                 print(
-                    f"{_TAG} ERROR dreaming: {dreaming_result.error}",
-                    file=stderr,
+                    f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
+                    f"(scope worker; dreaming_idle_seconds=10 in config; "
+                    f"memory_sequence_before={memory_seq_before_dreaming})...",
                     flush=True,
                 )
+                dreaming_result = _wait_dreaming_consolidation(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    memory_sequence_before=memory_seq_before_dreaming,
+                    wait_sec=dreaming_wait_sec,
+                    stderr=stderr,
+                )
+                report["dreaming"] = {
+                    "checkpoint_present": dreaming_result.checkpoint_present,
+                    "memory_updated": dreaming_result.memory_updated,
+                    "memory_sequence_before": dreaming_result.memory_sequence_before,
+                    "memory_sequence_after": dreaming_result.memory_sequence_after,
+                    "error": dreaming_result.error,
+                }
+                if dreaming_result.error:
+                    report["errors"].append(
+                        {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                    )
+                    print(
+                        f"{_TAG} ERROR dreaming: {dreaming_result.error}",
+                        file=stderr,
+                        flush=True,
+                    )
     finally:
         bridge.stop()
 
