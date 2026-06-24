@@ -3,8 +3,8 @@
 Generated entirely by Cursor agent.
 
 ``greet_on_sign_on`` enqueues with empty ``batch_id``; ``AgentChannelPresence`` only
-routes agent-initiated visible rows on IM channels (#3576). SMS flushes via gateway
-downlink until harness uses ``agent-initiated:`` batch ids for all gateways.
+routes agent-initiated visible rows on IM channels (#3576). SMS flushes via channel
+downlink until harness uses ``agent-initiated:`` batch ids for all channels.
 """
 
 from __future__ import annotations

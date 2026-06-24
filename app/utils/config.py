@@ -411,6 +411,13 @@ class SmsChannelConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     from_number: str = ""
+    webhook_base_url: str = Field(
+        default="",
+        description=(
+            "Public HTTPS origin for Twilio webhook signature validation "
+            "(e.g. https://ops.example.com). Empty uses the inbound request URL."
+        ),
+    )
 
 
 class AgentChannelsConfig(BaseModel):
@@ -434,6 +441,19 @@ def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
 def resolved_sms_from_number(agent: "AgentConfig") -> str:
     """Return ``agent.channels.sms.from_number``."""
     return agent.channels.sms.from_number.strip()
+
+
+def resolved_sms_twilio_webhook_url(
+    agent: "AgentConfig",
+    *,
+    path: str,
+) -> str:
+    """Return configured public webhook URL for Twilio signature validation."""
+    assert path.startswith("/")
+    base = agent.channels.sms.webhook_base_url.strip().rstrip("/")
+    if not base:
+        return ""
+    return f"{base}{path}"
 
 
 def resolved_twilio_messaging_credentials(

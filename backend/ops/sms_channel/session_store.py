@@ -32,6 +32,10 @@ def _phone_key(user_phone_e164: str) -> str:
     return user_phone_e164
 
 
+def get_scope_for_user_phone(user_phone_e164: str) -> AgentScope | None:
+    return _scopes_by_user_phone.get(_phone_key(user_phone_e164))
+
+
 def remember_scope(*, user_phone_e164: str, scope: AgentScope) -> None:
     _scopes_by_user_phone[_phone_key(user_phone_e164)] = scope
 

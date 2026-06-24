@@ -97,6 +97,7 @@ agent:
       bot_token: "8948082813:AAH0VqLbfi52thLv_V0EgjvDrVsYXVMigN4"
     sms:
       from_number: ""
+      webhook_base_url: ""
 
 google_play:
   package_name: "com.ai.intellimate"

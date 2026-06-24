@@ -1,8 +1,6 @@
 """Runtime communication channel selection for companion prompt assembly.
 
-TODO(rename-channel-to-gateway): Rename interim ``ChannelKind`` → ``GatewayKind``; move enum + — #3548
-``TurnRuntimeContext`` to ``agent_channel/gateway.py`` (#3409). Harness traits in
-``agent_channel/gateway_traits.py`` (functions/registry, not class hierarchy).
+``ChannelKind`` is the wire-stable enum for human-facing media (#3661).
 """
 
 from __future__ import annotations

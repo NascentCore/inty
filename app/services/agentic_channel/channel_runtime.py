@@ -1,7 +1,6 @@
 """Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink.
 
-TODO(rename-channel-to-gateway): Rename runtime/registry types to Gateway; key by — #3548
-``ChannelKind`` from ``agent_channel/gateway.py``. Transport only — no harness traits here.
+``ChannelKind`` from ``companion.runtime_channel``. Transport only — no harness traits here.
 """
 
 from __future__ import annotations

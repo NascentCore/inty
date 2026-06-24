@@ -110,6 +110,7 @@ agent:
       bot_token: "8613920909:AAFmhn0Ll7zR7ccw8DrCxF7wDBFoOrG_BzA"
     sms:
       from_number: ""
+      webhook_base_url: ""
 
 google_play:
   package_name: "com.ai.intellimate"
