@@ -87,6 +87,8 @@ _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
+_BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 20.0
+_BOOTSTRAP_TURN_SETTLE_MAX_SEC = 300.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
 # Match devops/config.yaml.local fast proactive: idle 10s + poll 3s + LLM slack.
 # ``--proactive-wait-sec``: wall-clock listen duration (not capped by min/target rounds).
@@ -317,6 +319,49 @@ def _drain_turn_trailing_frames(
     return "".join(parts)
 
 
+def _wait_ws_turn_settled(
+    bridge: Any,
+    report: dict[str, Any],
+    *,
+    label: str,
+    settle_quiet_sec: float,
+    max_sec: float,
+    stderr: TextIO,
+) -> bool:
+    """Keep draining WS downlinks until a multi-round tool turn is fully quiet."""
+    assert settle_quiet_sec > 0.0
+    assert max_sec > 0.0
+    deadline = time.monotonic() + max_sec
+    last_frame_at = time.monotonic()
+    while time.monotonic() < deadline:
+        drained = _drain_until_quiet(
+            bridge,
+            quiet_sec=2.0,
+            max_sec=min(15.0, max(0.0, deadline - time.monotonic())),
+        )
+        if drained:
+            for text, meta in drained:
+                _record_trailing_downlink(
+                    report, label=label, text=text, meta=meta
+                )
+            last_frame_at = time.monotonic()
+        elif time.monotonic() - last_frame_at >= settle_quiet_sec:
+            print(
+                f"{_TAG} ws turn settled ({label}) quiet={settle_quiet_sec}s",
+                flush=True,
+            )
+            return True
+        else:
+            time.sleep(_RECV_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for ws turn settle ({label}) "
+        f"max_sec={max_sec}",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
 def _send_turn(bridge: Any, agent_id: str, text: str) -> str:
     msg_uuid = str(uuid.uuid4())
     bridge.post_turn(agent_id, text, msg_uuid)
@@ -337,6 +382,60 @@ def _parse_input_queue_status_counts(raw: str) -> dict[str, int]:
 def _input_queue_has_in_flight(counts: dict[str, int]) -> bool:
     """True when any InputQueue row is still pending or claimed."""
     return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _output_queue_has_in_flight(counts: dict[str, int]) -> bool:
+    """True when any OutputQueue row is still pending or claimed."""
+    return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _query_output_queue_status_counts(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+) -> dict[str, int]:
+    assert agent_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        "SELECT status, COUNT(*) FROM agentic_companion_output_queue "
+        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    )
+    return _parse_input_queue_status_counts(raw)
+
+
+def _wait_output_queue_idle(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    timeout_sec: float,
+    label: str,
+    stderr: TextIO,
+) -> bool:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        counts = _query_output_queue_status_counts(
+            repo_root, config_path, agent_id=agent_id
+        )
+        if not _output_queue_has_in_flight(counts):
+            print(
+                f"{_TAG} output queue idle ({label}) counts={counts}",
+                flush=True,
+            )
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    counts = _query_output_queue_status_counts(
+        repo_root, config_path, agent_id=agent_id
+    )
+    print(
+        f"{_TAG} ERROR timeout waiting for output queue idle ({label}) "
+        f"counts={counts}",
+        file=stderr,
+        flush=True,
+    )
+    return False
 
 
 def _query_input_queue_status_counts(
@@ -1588,6 +1687,34 @@ def _run_experience_profile_phase(
     stderr: TextIO,
 ) -> bool:
     """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
+    if not _wait_ws_turn_settled(
+        bridge,
+        report,
+        label="pre-experience_profile",
+        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "ws not settled before experience_profile"),
+            }
+        )
+    if not _wait_output_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        label="pre-experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "output queue not idle before experience_profile"),
+            }
+        )
     if not _wait_input_queue_idle(
         repo_root,
         config_path,
@@ -1868,6 +1995,24 @@ def run_regression(
                         "error": (408, f"input not delivered: {bootstrap_msg_uuid}"),
                     }
                 )
+            if idx == len(bootstrap_turns):
+                if not _wait_ws_turn_settled(
+                    bridge,
+                    report,
+                    label=f"bootstrap-{idx}",
+                    settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+                    max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                    stderr=stderr,
+                ):
+                    report["errors"].append(
+                        {
+                            "turn": f"bootstrap-{idx}-settled",
+                            "error": (
+                                408,
+                                f"bootstrap turn {idx} ws not settled before experience_profile",
+                            ),
+                        }
+                    )
 
         experience_profile_ok = _run_experience_profile_phase(
             bridge=bridge,
@@ -1882,11 +2027,14 @@ def run_regression(
         )
 
         print(f"{_TAG} bootstrap finish turn: {bootstrap_finish_turn!r}", flush=True)
-        _send_turn(bridge, agent_id, bootstrap_finish_turn)
-        text, meta, err = _wait_downlink(
+        bootstrap_finish_msg_uuid = _send_turn(bridge, agent_id, bootstrap_finish_turn)
+        text, meta, err = _wait_downlink_for_user_msg_uuid(
             bridge,
+            report,
+            expected_user_msg_uuid=bootstrap_finish_msg_uuid,
             timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
             label="bootstrap-finish",
+            trailing_label="bootstrap-finish_mismatch",
         )
         if err is not None:
             report["errors"].append({"turn": "bootstrap-finish", "error": err})
@@ -1897,6 +2045,7 @@ def run_regression(
                 {
                     "kind": "bootstrap_finish",
                     "user": bootstrap_finish_turn,
+                    "user_msg_uuid": bootstrap_finish_msg_uuid,
                     "text_preview": text[:120],
                     "meta": meta,
                 }
