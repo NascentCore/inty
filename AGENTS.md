@@ -76,6 +76,11 @@ You should only changes and use code in the following dirs:
   P1 for important work requires constant attention
   P2 for secondary issues derived from P0 P1
   P3 for book keeping and speculative works
+  And S0/S1/S2/S3 for severity:
+  S0 for critical impact on core functionality
+  S1 for substantial impcat
+  S2 for minor impact
+  S3 for trivial impact
 
 ## Writing code
 
