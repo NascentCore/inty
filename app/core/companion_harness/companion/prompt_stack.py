@@ -41,7 +41,6 @@ from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
-    is_im_runtime_channel,
 )
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -94,11 +93,14 @@ def output_format_prompt_slice_for_runtime_channel(
     runtime_channel: ChannelKind,
 ) -> str:
     """Resolve channel output-format text from the runtime communication medium."""
-    match runtime_channel:
-        case channel if is_im_runtime_channel(channel):
-            return bundle.output_format_im_dm_md
-        case ChannelKind.APP_WS:
-            return ""
+    from app.core.companion_harness.agent_channel.gateway_traits import (
+        harness_output_format_slice,
+    )
+
+    return harness_output_format_slice(
+        bundle=bundle,
+        runtime_channel=runtime_channel,
+    )
 
 
 def append_runtime_output_format_system_message(

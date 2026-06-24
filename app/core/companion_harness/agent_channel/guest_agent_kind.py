@@ -19,20 +19,16 @@ class CompanionGuestAgentKind(StrEnum):
     AGENT_CHANNEL = "agent_channel"
     TELEGRAM = "telegram"
     WEIXIN = "weixin"
+    SMS = "sms"
 
 
 def companion_guest_agent_kind_for_channel(
     channel: ChannelKind,
 ) -> CompanionGuestAgentKind:
     """Map runtime channel to default onboard agent copy template."""
-    match channel:
-        case ChannelKind.TELEGRAM:
-            return CompanionGuestAgentKind.TELEGRAM
-        case ChannelKind.WECHAT_WEIXIN:
-            return CompanionGuestAgentKind.WEIXIN
-        case ChannelKind.APP_WS:
-            return CompanionGuestAgentKind.AGENT_CHANNEL
-        case _:
-            raise AssertionError(
-                f"unsupported companion runtime channel: {channel!r}"
-            )
+    from app.core.companion_harness.agent_channel.gateway import GatewayKind
+    from app.core.companion_harness.agent_channel.gateway_traits import (
+        guest_agent_kind_for_gateway,
+    )
+
+    return guest_agent_kind_for_gateway(GatewayKind(channel.value))

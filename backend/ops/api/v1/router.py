@@ -14,6 +14,7 @@ from backend.ops.api.v1 import (
     telegram_demo,
     weixin,
 )
+from backend.ops.sms_channel.router import router as sms_channel_router
 from backend.ops.api.v1.shared import shared_router
 
 api_router = APIRouter(prefix=API_V1_PREFIX)
@@ -48,5 +49,10 @@ if global_config_loaded_from_config_yaml.app.debug:
 api_router.include_router(
     agent_channel.router,
     tags=["agent-channel"],
+    include_in_schema=False,
+)
+api_router.include_router(
+    sms_channel_router,
+    tags=["sms-gateway"],
     include_in_schema=False,
 )

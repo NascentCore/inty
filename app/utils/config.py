@@ -405,6 +405,14 @@ class TelegramChannelConfig(BaseModel):
     bot_token: str = ""
 
 
+class SmsChannelConfig(BaseModel):
+    """Ops SMS gateway long code and routing settings."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    from_number: str = ""
+
+
 class AgentChannelsConfig(BaseModel):
     """Per-channel settings under agent (prototype: telegram only + weixin TODO)."""
 
@@ -413,6 +421,7 @@ class AgentChannelsConfig(BaseModel):
     telegram: TelegramChannelConfig = Field(
         default_factory=TelegramChannelConfig
     )
+    sms: SmsChannelConfig = Field(default_factory=SmsChannelConfig)
     # TODO(telegram-demo-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
     # under ``agent.channels.weixin`` for symmetry.
 
@@ -420,6 +429,20 @@ class AgentChannelsConfig(BaseModel):
 def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
     """Return ``agent.channels.telegram.bot_token``."""
     return agent.channels.telegram.bot_token.strip()
+
+
+def resolved_sms_from_number(agent: "AgentConfig") -> str:
+    """Return ``agent.channels.sms.from_number``."""
+    return agent.channels.sms.from_number.strip()
+
+
+def resolved_twilio_messaging_credentials(
+    config: "Config",
+) -> tuple[str, str]:
+    """Return Twilio REST credentials shared by phone-call and SMS gateways."""
+    account_sid = config.phone_call.twilio_account_sid.strip()
+    auth_token = config.phone_call.twilio_auth_token.strip()
+    return account_sid, auth_token
 
 
 class AgentConfig(BaseModel):

@@ -1,34 +1,16 @@
 """Runtime communication channel selection for companion prompt assembly.
 
-TODO(rename-channel-to-gateway): Rename interim ``ChannelKind`` → ``GatewayKind``; move enum + — #3548
-``TurnRuntimeContext`` to ``agent_channel/gateway.py`` (#3409). Harness traits in
-``agent_channel/gateway_traits.py`` (functions/registry, not class hierarchy).
+TODO(rename-channel-to-gateway): Move ``TurnRuntimeContext`` to ``agent_channel/gateway.py`` — #3548
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 
+from app.core.companion_harness.agent_channel.gateway import GatewayKind
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
-
-class ChannelKind(StrEnum):
-    """Human-facing medium between the companion and the human users.
-
-    This enum is used to identify the channel type for the companion turn.
-    Each type of channel ties to a specific Gateway class,
-    which orchestrates the communication between the companion and the human users.
-    """
-
-    # Refer to the websocket channel for connecting iOS and Android apps.
-    APP_WS = "app_ws"
-
-    # Refer to the Weixin/WeChat channel for connecting to Weixin/WeChat apps.
-    WECHAT_WEIXIN = "wechat_weixin"
-
-    # Refer to the Telegram channel for connecting to Telegram apps.
-    TELEGRAM = "telegram"
+ChannelKind = GatewayKind
 
 
 def is_im_runtime_channel(channel: ChannelKind) -> bool:
@@ -36,7 +18,7 @@ def is_im_runtime_channel(channel: ChannelKind) -> bool:
     match channel:
         case ChannelKind.WECHAT_WEIXIN | ChannelKind.TELEGRAM:
             return True
-        case ChannelKind.APP_WS:
+        case ChannelKind.APP_WS | ChannelKind.SMS:
             return False
 
 

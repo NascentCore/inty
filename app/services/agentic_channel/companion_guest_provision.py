@@ -82,6 +82,8 @@ def companion_guest_agent_name(
             return f"telegram-{tag}"
         case CompanionGuestAgentKind.WEIXIN:
             return f"weixin-companion-{tag}"
+        case CompanionGuestAgentKind.SMS:
+            return f"sms-{tag}"
 
 
 async def add_guest_user(db: AsyncSession, input: GuestUserInput) -> User:

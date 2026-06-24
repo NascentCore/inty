@@ -105,6 +105,8 @@ agent:
     telegram:
       # Name: Inty (the AI personal companion)
       bot_token: "8698820835:AAHnkct0luG_MZJpaI_rwWKx15fe5GeHeJU"
+    sms:
+      from_number: ""
 
 google_play:
   package_name: "com.ai.intellimate"

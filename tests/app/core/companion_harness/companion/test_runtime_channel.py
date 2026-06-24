@@ -15,3 +15,7 @@ def test_is_im_runtime_channel_weixin_and_telegram() -> None:
 
 def test_is_im_runtime_channel_app() -> None:
     assert is_im_runtime_channel(ChannelKind.APP_WS) is False
+
+
+def test_is_im_runtime_channel_sms() -> None:
+    assert is_im_runtime_channel(ChannelKind.SMS) is False
