@@ -39,16 +39,6 @@ class QueueMessageId:
 
 
 @dataclass(frozen=True)
-class QueueBatchId:
-    """Non-empty batch id grouping input drain or output turn."""
-
-    value: str
-
-    def __post_init__(self) -> None:
-        assert self.value != ""
-
-
-@dataclass(frozen=True)
 class WireId:
     """Opaque Channel-owned runtime connection id."""
 
@@ -56,16 +46,6 @@ class WireId:
 
     def __post_init__(self) -> None:
         assert self.value != ""
-
-
-@dataclass(frozen=True)
-class QueueSequence:
-    """Monotonic ordering within one AgentScope queue."""
-
-    value: int
-
-    def __post_init__(self) -> None:
-        assert self.value >= 0
 
 
 @dataclass(frozen=True)
@@ -241,16 +221,6 @@ class InboundWireMessage(BaseModel):
         default=None,
         description="Visible-history user row written by App-WS uplink.",
     )
-
-
-class OutboundWireDelivery(BaseModel):
-    """Channel/Wire boundary payload for one outbound assistant message."""
-
-    model_config = ConfigDict(frozen=True)
-
-    record: OutputQueueRecord
-    delivery_channel: ChannelKind
-    delivery_wire_id: str = Field(min_length=1)
 
 
 class AgenticLoopInputBatch(BaseModel):

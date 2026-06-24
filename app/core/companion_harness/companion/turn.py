@@ -192,8 +192,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 def _memory_store_write_allowlist_for_track(
     track: CompanionTurnTrack,
 ) -> frozenset[str]:
-    # TODO(!3369): Wire settled ``USER_CHAT`` in-turn sync via ``run_in_turn_sync_tool_loop``
-    # with this allowlist and track-specific ``after_tool_messages_appended``.
     match track:
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
             return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY

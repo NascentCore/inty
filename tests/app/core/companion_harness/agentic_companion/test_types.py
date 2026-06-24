@@ -11,7 +11,6 @@ from app.core.companion_harness.agentic_companion.types import (
     AgenticCompanionInputBatch,
     InboundWireMessage,
     InputQueueRecord,
-    QueueBatchId,
     QueueMessageId,
     QueueStatus,
     UserMessageBatch,
@@ -71,7 +70,7 @@ def test_input_batch_preserves_order() -> None:
         messages=records,
         claimed_at_utc=now,
     )
-    assert QueueBatchId("b1").value == batch.batch_id
+    assert batch.batch_id == "b1"
     assert WireId("w1").value == records[0].wire_id
     assert [m.text for m in batch.messages] == ["a", "b"]
 

@@ -26,9 +26,6 @@ USER_SIGNED_ON_TRIGGER_USER_TEXT = (
     "- If not in bootstrap phase, continue the conversation naturally with a warm greeting that fits the current conversation context.\n"
 )
 
-MEMORY_DIARY_USER_LINE_FOR_IMPLICIT_SIGN_ON = "（用户上线：隐式客户端信号）"
-
-
 def implicit_user_signed_on_chat_turn(
     *,
     implicit_signal_bundle: ImplicitSignalBundle | None,
