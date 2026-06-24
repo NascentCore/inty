@@ -89,7 +89,12 @@ def seed_profile_collection_required_in_context(
     *,
     required: bool,
 ) -> None:
-    """Persist profile-collection flag into session context after Telegram provision."""
+    """Persist the profile-collection flag into session context after Telegram provision.
+
+    New Telegram guest users are marked so bootstrap turns inject the Telegram
+    overlay slice and soft hints to probe empty identity fields in the user
+    profile document.
+    """
     rel = "context.json"
     raw = store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
