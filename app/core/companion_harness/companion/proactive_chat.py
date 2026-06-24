@@ -10,7 +10,7 @@
 - **Transcript**: proactive rounds mark the synthetic user row with ``proactive_chat: true``
   (for markers and LLM context; not used as a separate scheduling anchor).
 
-Full WS worker / poll / maintenance relationship: ``docs/imate/companion_harness/DESIGN.md``.
+Full WS worker / poll / monolog relationship: ``docs/imate/companion_harness/DESIGN.md``.
 """
 
 from __future__ import annotations

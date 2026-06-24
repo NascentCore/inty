@@ -1,0 +1,43 @@
+# CREATED_BY_AGENT
+# Marks inactive issues stale, then closes them after a grace period.
+# Thresholds align with .cursor/skills/github-issue-consolidate (stale ≥90d).
+name: Close stale issues
+
+on:
+  schedule:
+    # Daily at 03:30 UTC
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  close-stale-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          operations-per-run: 100
+          # Issues only; PRs are triaged manually.
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          days-before-issue-stale: 90
+          days-before-issue-close: 14
+          stale-issue-label: stale
+          exempt-issue-labels: >-
+            p0,
+            security,
+            ready-for-agent,
+            ready-for-human,
+            wontfix
+          stale-issue-message: >-
+            This issue has had no activity for 90 days and has been marked stale.
+            If it is still relevant, comment or update the issue; the stale label
+            will be removed and the timer resets. Otherwise it will be closed in
+            14 days.
+          close-issue-message: >-
+            Closing due to continued inactivity since being marked stale.
+            Reopen or create a new issue if this is still relevant.

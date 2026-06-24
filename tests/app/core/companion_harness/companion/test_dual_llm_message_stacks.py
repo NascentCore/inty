@@ -58,7 +58,7 @@ def test_replace_leading_system_messages_multi_swaps_prefix() -> None:
     ]
 
 
-def test_dual_llm_system_message_variants_maintenance_tool_differs_from_chat(
+def test_dual_llm_system_message_variants_monolog_tool_differs_from_chat(
     tmp_path: Path,
 ) -> None:
     store = MemoryStore(
@@ -75,7 +75,7 @@ def test_dual_llm_system_message_variants_maintenance_tool_differs_from_chat(
         context=ContextMeta(),
         memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         inner_tick_turn=True,
-        route_inner_activity=InnerTickActivity.MAINTENANCE,
+        route_inner_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
     )
     tool_text = "\n".join(
@@ -112,7 +112,7 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
         context=context,
         memory_bootstrap_type=memory_bootstrap_type,
         inner_tick_turn=False,
-        route_inner_activity=InnerTickActivity.MAINTENANCE,
+        route_inner_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
     )
     expected_tool = append_runtime_output_format_system_message(

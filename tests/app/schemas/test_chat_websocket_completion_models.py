@@ -6,10 +6,13 @@ from typing import Any
 
 import pytest
 
+from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
 from app.schemas.chat_websocket import (
     ChatWebSocketQueuedSuccessFrame,
     ChatWsCompanionWireMessageMetaData,
     ChatWsCompletionData,
+    build_inner_tick_wire_meta,
+    dump_chat_ws_companion_wire_meta,
 )
 
 
@@ -152,3 +155,69 @@ def test_chat_ws_companion_wire_meta_partial_significance() -> None:
     )
     assert meta.significance_perception is not None
     assert meta.significance_perception.importance_round == 7
+
+
+def test_chat_ws_companion_wire_meta_monolog_round_trip_and_legacy_input() -> (
+    None
+):
+    meta = ChatWsCompanionWireMessageMetaData(
+        inner_tick=True,
+        companion_monolog_inner_tick=True,
+    )
+    dumped = dump_chat_ws_companion_wire_meta(meta)
+    assert dumped == {
+        "inner_tick": True,
+        "companionMonologInnerTick": True,
+    }
+
+    legacy = ChatWsCompanionWireMessageMetaData.model_validate(
+        {
+            "inner_tick": True,
+            "companion_maintenance_inner_tick": True,
+        }
+    )
+    assert legacy.companion_monolog_inner_tick is True
+    assert dump_chat_ws_companion_wire_meta(legacy) == dumped
+
+
+def test_build_inner_tick_wire_meta_monolog_matches_literal() -> None:
+    built = build_inner_tick_wire_meta(InnerTickKind.MONOLOG)
+    literal = ChatWsCompanionWireMessageMetaData(
+        inner_tick=True,
+        companion_monolog_inner_tick=True,
+    )
+    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
+        literal
+    )
+
+
+def test_build_inner_tick_wire_meta_proactive_matches_literal() -> None:
+    built = build_inner_tick_wire_meta(InnerTickKind.PROACTIVE_CHAT)
+    literal = ChatWsCompanionWireMessageMetaData(
+        inner_tick=True,
+        proactive_chat=True,
+        companion_proactive_chat=True,
+    )
+    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
+        literal
+    )
+
+
+def test_build_inner_tick_wire_meta_scheduled_matches_literal() -> None:
+    built = build_inner_tick_wire_meta(
+        InnerTickKind.SCHEDULED,
+        scheduled_task_id="task-42",
+    )
+    literal = ChatWsCompanionWireMessageMetaData(
+        inner_tick=True,
+        companion_scheduled_reminder=True,
+        scheduled_task_id="task-42",
+    )
+    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
+        literal
+    )
+
+
+def test_build_inner_tick_wire_meta_autonomy_raises() -> None:
+    with pytest.raises(ValueError, match="autonomy inner tick"):
+        build_inner_tick_wire_meta(InnerTickKind.AUTONOMY)

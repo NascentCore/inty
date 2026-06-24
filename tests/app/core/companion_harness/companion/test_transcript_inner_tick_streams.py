@@ -23,7 +23,7 @@ def test_transcript_relative_path_for_turn_persistence() -> None:
     assert (
         transcript_relative_path_for_turn_persistence(
             inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MONOLOG,
         )
         == "transcript.jsonl"
     )
@@ -37,7 +37,7 @@ def test_transcript_relative_path_for_turn_persistence() -> None:
     assert (
         transcript_relative_path_for_turn_persistence(
             inner_tick_turn=True,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MONOLOG,
         )
         == "transcript_inner_tick.jsonl"
     )

@@ -22,7 +22,7 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_maintenance,
+    build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_inner_tick_proactive_chat,
     build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
@@ -158,7 +158,7 @@ def test_contextual_messages_omit_experience_directives_when_unset() -> None:
     assert "EXPERIENCE DIRECTIVES" not in joined
 
 
-def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
+def test_inner_tick_monolog_omits_infer_time_zone_slice() -> None:
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
@@ -171,7 +171,7 @@ def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
         ContextMeta(),
         enable_tools=True,
         inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         ai_private_text="private\n",
         tool_side_compact=True,
     )
@@ -181,7 +181,7 @@ def test_inner_tick_maintenance_omits_infer_time_zone_slice() -> None:
     assert "用户当地时间与作息" not in joined
 
 
-def test_inner_tick_maintenance_is_monolog_only_without_ls_tc_or_memory_store() -> (
+def test_inner_tick_monolog_is_monolog_only_without_ls_tc_or_memory_store() -> (
     None
 ):
     bundle = PromptBundle(
@@ -191,9 +191,9 @@ def test_inner_tick_maintenance_is_monolog_only_without_ls_tc_or_memory_store() 
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages_for_inner_tick_maintenance(
+    messages = build_system_messages_for_inner_tick_monolog(
         store=MemoryStore(
-            scope=CompanionScope("sm", "a", "maintenance-prompt"),
+            scope=CompanionScope("sm", "a", "monolog-prompt"),
             repository=None,
         ),
         bundle=bundle,
@@ -258,7 +258,7 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
         build_system_messages,
         build_settled_user_turn_dual_chat_leg_system_messages,
         build_system_messages_for_tool_track,
-        build_system_messages_for_inner_tick_maintenance,
+        build_system_messages_for_inner_tick_monolog,
         build_system_messages_for_inner_tick_autonomy,
         build_system_messages_for_inner_tick_proactive_chat,
         build_system_messages_for_inner_tick_scheduled,
@@ -333,10 +333,10 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         c for c in contents if c.startswith("本轮（陪伴主动聊天）")
     ]
     assert proactive_blocks == []
-    maintenance_blocks = [
+    monolog_blocks = [
         c for c in contents if c.startswith("本轮（内在节拍）")
     ]
-    assert maintenance_blocks == []
+    assert monolog_blocks == []
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     autonomy_lines = autonomy_blocks[0].split("\n")
     assert (

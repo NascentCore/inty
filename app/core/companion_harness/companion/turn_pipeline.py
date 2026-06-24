@@ -235,7 +235,7 @@ def build_companion_turn_prompt_plan(
             tools_for_turn = companion_tools_for_turn(
                 track=track,
                 inner_tick_turn=False,
-                inner_tick_activity=InnerTickActivity.MAINTENANCE,
+                inner_tick_activity=InnerTickActivity.MONOLOG,
                 implicit_user_signed_on_turn=implicit_sign_on_turn,
             )
             system_messages = PromptBuilder(
@@ -245,7 +245,7 @@ def build_companion_turn_prompt_plan(
             ).bootstrap_turn_system_dicts()
             route_mode = resolve_turn_route_mode(
                 inner_tick_turn=False,
-                inner_tick_activity=InnerTickActivity.MAINTENANCE,
+                inner_tick_activity=InnerTickActivity.MONOLOG,
                 tools_enabled=bool(tools_for_turn),
             )
         case _:

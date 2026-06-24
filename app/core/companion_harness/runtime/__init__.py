@@ -18,7 +18,7 @@ entry points after resolving a ``CompanionSession``.
   ``app.services.agentic_companion.inner_tick_fire`` holds ``turn_lock`` before calling.
 - One signed-on presence per paired user (#3272); user chat and inner-tick
   (including dreaming) serialize on scope ``turn_lock``.
-- Scope inner-tick worker (#3255) runs maintenance, autonomy, dreaming without presence
+- Scope inner-tick worker (#3255) runs monolog, autonomy, dreaming without presence
   via ``scope_inner_tick_poll`` / ``scope_inner_tick_fire``.
 - Postgres advisory lock for multi-process (#3271) remains future work.
 """

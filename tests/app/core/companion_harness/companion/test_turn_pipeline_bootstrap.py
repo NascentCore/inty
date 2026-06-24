@@ -78,7 +78,7 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
     loaded_state = load_companion_turn_state(
         store=store,
         inner_tick_turn=False,
-        route_inner_activity=InnerTickActivity.MAINTENANCE,
+        route_inner_activity=InnerTickActivity.MONOLOG,
         transcript_llm_window_max_messages=None,
     )
     plan = build_companion_turn_prompt_plan(

@@ -62,7 +62,7 @@ def test_settled_single_llm_matches_legacy_build_system_messages() -> None:
         context,
         enable_tools=True,
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
     )
     builder = PromptBuilder(
         bundle=bundle,
@@ -81,7 +81,7 @@ def test_settled_dual_chat_leg_matches_legacy_build_system_messages() -> None:
         context,
         enable_tools=True,
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
     )

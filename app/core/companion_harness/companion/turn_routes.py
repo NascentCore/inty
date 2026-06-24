@@ -6,7 +6,7 @@ awaits the full turn.
 
 When tools are enabled, ``run_turn`` resolves the user-visible assistant string from the **foreground**
 envelope chat before spawning ``tool_background``; the latter's tool-model rounds are not awaited for
-that return value (maintenance inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
+that return value (monolog inner tick skips foreground—see ``turn`` module docstring / companion AGENTS).
 
 TODO(#3398): Debate single-LLM in-turn sync vs dual-LLM (foreground chat + ``tool_background``) for user chat.
 """
@@ -54,8 +54,8 @@ class TurnRouteMode(str, Enum):
     (tools run only in ``tool_background``). Otherwise in-turn sync chat uses
     ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
 
-    TODO(#3401): ``TurnRouteMode`` conflates ``CompanionTurnTrack`` with loop mechanism;
-    introduce ``AgenticLoopMechanism`` and resolve via ``resolve_agentic_loop(track, config)``.
+    TODO(#3401): Slice 3 — split ``TurnRouteMode`` from track semantics vs
+    ``AgenticLoopMechanism``; resolve via ``InnerTickKind`` registry + config.
     """
 
     # TODO(#3401): rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;

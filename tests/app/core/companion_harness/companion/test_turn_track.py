@@ -18,16 +18,16 @@ from app.core.companion_harness.companion.turn_track import (
 @pytest.mark.parametrize(
     "track, expect_inner, expect_activity",
     [
-        (CompanionTurnTrack.USER_CHAT, False, InnerTickActivity.MAINTENANCE),
+        (CompanionTurnTrack.USER_CHAT, False, InnerTickActivity.MONOLOG),
         (
             CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
             False,
-            InnerTickActivity.MAINTENANCE,
+            InnerTickActivity.MONOLOG,
         ),
         (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
             False,
-            InnerTickActivity.MAINTENANCE,
+            InnerTickActivity.MONOLOG,
         ),
         (
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
@@ -40,9 +40,9 @@ from app.core.companion_harness.companion.turn_track import (
             InnerTickActivity.PROACTIVE_CHAT,
         ),
         (
-            CompanionTurnTrack.INNER_TICK_MAINTENANCE,
+            CompanionTurnTrack.INNER_TICK_MONOLOG,
             True,
-            InnerTickActivity.MAINTENANCE,
+            InnerTickActivity.MONOLOG,
         ),
         (
             CompanionTurnTrack.INNER_TICK_AUTONOMY,
@@ -66,7 +66,7 @@ def test_autonomy_suppresses_user_delivery() -> None:
         InnerTickActivity.AUTONOMY
     )
     assert not inner_tick_activity_suppresses_user_delivery(
-        InnerTickActivity.MAINTENANCE
+        InnerTickActivity.MONOLOG
     )
 
 

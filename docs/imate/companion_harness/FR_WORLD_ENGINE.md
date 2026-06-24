@@ -199,7 +199,7 @@ flowchart TB
 
 | 交付物 | 用户可感知点 |
 |---|---|
-| summon/dismiss 工具（maintenance inner-tick） | 间接 |
+| summon/dismiss 工具（monolog inner-tick） | 间接 |
 | Firefly clock 生产激活 | — |
 | Mailbox 感知注入 | companion 可能提萤火虫 |
 | L2 echo → MEMORY | 长期回忆 |

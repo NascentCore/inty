@@ -11,7 +11,7 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
 )
 from app.models.companion_memory_documents import CompanionMemoryDocumentVersion
 
-# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/maintenance — #3423.
+# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/monolog — #3423.
 
 
 async def list_companion_memory_scopes(
