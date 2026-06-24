@@ -71,6 +71,12 @@ from app.core.companion_harness.companion.bootstrap import (
     build_interactive_bootstrap_template_reference_parts,
     interactive_bootstrap_active,
     load_bootstrap_spec_text,
+    load_bootstrap_telegram_profile_slice_text,
+    profile_collection_active,
+)
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.memory.user_md_identity import (
+    build_cohort_profile_probe_hint,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
@@ -855,12 +861,56 @@ def build_system_messages(
     return out
 
 
+def append_profile_collection_system_messages(
+    system_messages: list[dict[str, Any]],
+    *,
+    context: ContextMeta,
+    runtime_channel: ChannelKind,
+    interactive_bootstrap_active: bool,
+    user_md: str,
+) -> list[dict[str, Any]]:
+    """Append Telegram bootstrap overlay and dynamic unfilled-field hints.
+
+    During interactive bootstrap, when profile collection is required and the turn
+    runs on Telegram, append extra system messages after the main bootstrap stack
+    (persona documents, shared bootstrap procedure, tool instructions, template
+    reference):
+
+    1. The Telegram channel overlay (English tone, opening prompts, early identity
+       probing).
+    2. An optional runtime hint listing which identity labels in the user profile
+       document are still empty, so the companion can ask one question at a time.
+
+    Non-Telegram channels, completed bootstrap, or sessions without the
+    profile-collection flag receive the input list unchanged.
+    """
+    if not interactive_bootstrap_active:
+        return system_messages
+    if not profile_collection_active(context=context):
+        return system_messages
+    if runtime_channel != ChannelKind.TELEGRAM:
+        return system_messages
+    out = [
+        *system_messages,
+        _system_message(load_bootstrap_telegram_profile_slice_text()),
+    ]
+    probe_hint = build_cohort_profile_probe_hint(user_md)
+    if probe_hint:
+        out.append(_system_message(probe_hint))
+    return out
+
+
 def build_system_messages_for_bootstrap_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
-    return build_system_messages(
+    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
+
+    When the session is Telegram bootstrap with profile collection required, also
+    appends the Telegram overlay slice and unfilled-field probe hints.
+    """
+    out = build_system_messages(
         bundle,
         context,
         enable_tools=True,
@@ -871,6 +921,13 @@ def build_system_messages_for_bootstrap_track(
         tool_side_compact=False,
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
+    )
+    return append_profile_collection_system_messages(
+        out,
+        context=context,
+        runtime_channel=runtime_channel,
+        interactive_bootstrap_active=True,
+        user_md=bundle.user_md,
     )
 
 
@@ -1050,17 +1107,30 @@ def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
-    return build_system_messages(
+    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts).
+
+    While bootstrap is still active on Telegram with profile collection required,
+    also appends the Telegram overlay slice and unfilled-field probe hints.
+    """
+    bootstrap_active = _greeting_omit_capability_system_slices(
+        context=context,
+        memory_bootstrap_type=memory_bootstrap_type,
+    )
+    out = build_system_messages(
         bundle,
         context,
         enable_tools=False,
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         include_significance_perception_slice=True,
-        interactive_bootstrap_active=_greeting_omit_capability_system_slices(
-            context=context,
-            memory_bootstrap_type=memory_bootstrap_type,
-        ),
+        interactive_bootstrap_active=bootstrap_active,
+    )
+    return append_profile_collection_system_messages(
+        out,
+        context=context,
+        runtime_channel=runtime_channel,
+        interactive_bootstrap_active=bootstrap_active,
+        user_md=bundle.user_md,
     )

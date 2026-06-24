@@ -289,15 +289,48 @@ def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
 
 
 class ContextMeta(BaseModel):
-    # Experience profile id (canonical); JSON field name remains context_mode for persistence.
-    context_mode: str = "intimate"
-    user_id: str = ""
-    companion_id: str = ""
-    chat_id: str = ""
-    # True = skip interactive-bootstrap injection (default for legacy context.json without this key).
-    workspace_bootstrap_user_interactive_completed: bool = True
-    # True = skip inserting the one-shot WS companion session system line (default for legacy / non-interactive).
-    companion_ws_session_system_written: bool = True
+    """Contextual metadata for prompt assembly and runtime.
+
+    They are not directly affect the behavior of the companion, but are used to
+    adjust the behavior of the companion based on secondary context, like Channel kind
+    on WeChat/Weixin or Telegram etc.
+    """
+
+    context_mode: str = Field(
+        default="intimate",
+        description=(
+            "Experience profile id (canonical); JSON field name remains context_mode "
+            "for persistence."
+        ),
+    )
+    user_id: str = Field(default="", description="Paired human user id.")
+    companion_id: str = Field(
+        default="", description="Paired companion agent id."
+    )
+    chat_id: str = Field(default="", description="Active chat session id.")
+    workspace_bootstrap_user_interactive_completed: bool = Field(
+        default=True,
+        description=(
+            "When true, skip interactive-bootstrap injection (default for legacy "
+            "context.json without this key)."
+        ),
+    )
+    companion_ws_session_system_written: bool = Field(
+        default=True,
+        description=(
+            "When true, skip inserting the one-shot WS companion session system line "
+            "(default for legacy / non-interactive)."
+        ),
+    )
+    profile_collection_required: bool = Field(
+        default=False,
+        description=(
+            "When true during interactive bootstrap on Telegram, the prompt stack "
+            "appends the Telegram overlay slice (English tone, early identity probing) "
+            "and runtime hints for unfilled user profile identity fields. Set for "
+            "paid-ad cohort guests at channel provision."
+        ),
+    )
     experience_directives: ExperienceDirectives = Field(
         default_factory=ExperienceDirectives,
         description=(

@@ -1,8 +1,12 @@
-from datetime import datetime
-from enum import Enum
-from typing import Optional
+"""User profile schemas for user identity and metadata."""
 
-from pydantic import BaseModel, Field, validator
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum, StrEnum
+from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from pydantic import BaseModel, Field, field_validator, validator
 
 from app.models.user import AuthType, Gender
 
@@ -33,10 +37,35 @@ MBTI_TYPES = {
 }
 
 
+class UserAgeGroup(StrEnum):
+    """Age buckets for profile tool input; mirrors app RegInfoScreen onboarding."""
+
+    AGE_18_25 = "18-25"
+    AGE_26_35 = "26-35"
+    AGE_36_45 = "36-45"
+    AGE_46_55 = "46-55"
+    AGE_ABOVE_55 = "Above 55"
+
+
 class UserMetadata(BaseModel):
-    """用户元数据（用于 users.meta_data 列）。"""
+    """Typed view of users.meta_data JSON; cohort flags and profile fields."""
 
     mbti_type: Optional[str] = None
+    location: Optional[str] = Field(
+        default=None,
+        description="Free-text city or region from user speech.",
+    )
+    iana_timezone: Optional[str] = Field(
+        default=None,
+        description="IANA timezone when inferred from location.",
+    )
+    profile_collection_required: Optional[bool] = Field(
+        default=None,
+        description=(
+            "When true, bootstrap injects soft hints to probe empty USER.md "
+            "identity fields (Telegram paid-ad cohort)."
+        ),
+    )
 
     @validator("mbti_type")
     def validate_mbti_type(cls, v):
@@ -46,6 +75,27 @@ class UserMetadata(BaseModel):
         if normalized not in MBTI_TYPES:
             raise ValueError(f"Unsupported MBTI type: {v}")
         return normalized
+
+    @field_validator("iana_timezone")
+    @classmethod
+    def validate_iana_timezone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        name = v.strip()
+        try:
+            return ZoneInfo(name).key
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"Invalid IANA timezone: {v}") from exc
+
+
+@dataclass(frozen=True)
+class UserProfileSnapshot:
+    """Partial-update payload for one companion_record_user_profile tool call."""
+
+    gender: Gender | None
+    age_group: UserAgeGroup | None
+    location: str | None
+    iana_timezone: str | None
 
 
 class UserBase(BaseModel):
