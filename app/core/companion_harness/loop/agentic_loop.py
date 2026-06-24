@@ -562,6 +562,7 @@ class AgenticLoop:
             inner_tick_turn=context.inner_tick_turn,
             inner_tick_activity=context.inner_tick_activity,
             runtime_context=context.runtime_context,
+            langsmith_slice=context.langsmith.turn_slice,
             companion_turn_track=context.companion_turn_track,
             force_tools_first_round=fg_result.force_tools_first_round,
         )
