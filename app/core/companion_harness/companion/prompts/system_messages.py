@@ -931,6 +931,7 @@ def build_system_messages_for_bootstrap_track(
         ai_private_text="",
         async_foreground_chat_stack=False,
         tool_side_compact=False,
+        # TODO(P3, #3628): Derive from context like ``bootstrap_turn_system_dicts``; legacy path only.
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
     )

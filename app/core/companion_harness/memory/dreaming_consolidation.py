@@ -10,6 +10,8 @@ Only invoked from the dreaming inner-tick path — no awake post-turn updates.
 
 Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — batch
 curation entry is ``consolidate_memory_during_dreaming`` only.
+
+TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
 """
 
 from __future__ import annotations
