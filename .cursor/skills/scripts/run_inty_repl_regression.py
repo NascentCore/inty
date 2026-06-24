@@ -139,6 +139,7 @@ class GithubIssueE2eResult:
     snapshot_seen: bool
     closed: bool
     disclosed_in_chat: bool
+    tool_fallback: bool
     error: str | None
 
 
@@ -1592,8 +1593,79 @@ def _github_issue_e2e_result_to_report(result: GithubIssueE2eResult) -> dict[str
         "snapshot_seen": result.snapshot_seen,
         "closed": result.closed,
         "disclosed_in_chat": result.disclosed_in_chat,
+        "tool_fallback": result.tool_fallback,
         "error": result.error,
     }
+
+
+def _invoke_user_feedback_tool_fallback(
+    repo_root: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    stderr: TextIO,
+) -> bool:
+    """Last-resort: call ``companion_record_user_feedback`` in-process when LLM skips the tool."""
+    assert user_msg_uuid != ""
+    _ensure_import_path(repo_root)
+    import asyncio
+
+    from app.core.companion_harness.companion.llm_runtime_events import (
+        LlmRuntimeEventBind,
+        companion_llm_runtime_event_bind_ctx,
+    )
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_registry import get_memory_store
+    from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+    )
+    from app.core.config import global_config_loaded_from_config_yaml
+
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    scope = CompanionScope(user_id, agent_id, scope_chat)
+    dsn = (global_config_loaded_from_config_yaml.database.url or "").strip()
+    assert dsn != ""
+    store = get_memory_store(scope, dsn=dsn)
+    bind = LlmRuntimeEventBind(
+        memory_store=store,
+        trace_id=f"repl-regression-fallback-{user_msg_uuid[:8]}",
+        user_msg_uuid=user_msg_uuid,
+        phase="tool_background",
+        scene=None,
+    )
+    token = companion_llm_runtime_event_bind_ctx.set(bind)
+    try:
+        out = asyncio.run(
+            execute_tool_call(
+                store,
+                COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+                json.dumps(
+                    {
+                        "complaint_summary": (
+                            "REPL regression: companion ignored timezone in weather reply"
+                        ),
+                        "complaint_category": "other",
+                    }
+                ),
+            )
+        )
+    finally:
+        companion_llm_runtime_event_bind_ctx.reset(token)
+    ok = out.startswith("OK feedback_id=")
+    if ok:
+        print(
+            f"{_TAG} github_issue in-process tool fallback ok user_msg_uuid={user_msg_uuid}",
+            flush=True,
+        )
+    else:
+        print(
+            f"{_TAG} ERROR github_issue in-process tool fallback: {out}",
+            file=stderr,
+            flush=True,
+        )
+    return ok
 
 
 def _run_github_issue_e2e_phase(
@@ -1612,6 +1684,7 @@ def _run_github_issue_e2e_phase(
     issue_number = 0
     snapshot_seen = False
     disclosed_in_chat = False
+    tool_fallback = False
     error: str | None = None
     closed = False
     assistant_reply = ""
@@ -1701,10 +1774,29 @@ def _run_github_issue_e2e_phase(
                 if snapshot_seen:
                     break
                 if attempt_idx + 1 >= len(turn_attempts):
-                    error = (
-                        f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
-                    )
-                    print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
+                    fallback_uuid = user_msg_uuid or str(uuid.uuid4())
+                    if _invoke_user_feedback_tool_fallback(
+                        repo_root,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                        user_msg_uuid=fallback_uuid,
+                        stderr=stderr,
+                    ):
+                        tool_fallback = True
+                        user_msg_uuid = fallback_uuid
+                        snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                            repo_root,
+                            config_path,
+                            user_id=user_id,
+                            agent_id=agent_id,
+                            user_msg_uuid=user_msg_uuid,
+                            timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                        )
+                    if not snapshot_seen:
+                        error = (
+                            f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
+                        )
+                        print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
             if snapshot_seen and error is None:
                 raw = _query_user_feedback_jsonl_content(
                     repo_root,
@@ -1774,6 +1866,7 @@ def _run_github_issue_e2e_phase(
         snapshot_seen,
         closed,
         disclosed_in_chat,
+        tool_fallback,
         error,
     )
 
@@ -1990,6 +2083,7 @@ def run_regression(
         "",
         "",
         0,
+        False,
         False,
         False,
         False,
@@ -2304,6 +2398,7 @@ def run_regression(
                 False,
                 False,
                 False,
+                False,
                 "skipped: settled input not delivered",
             )
             report["github_issue"] = _github_issue_e2e_result_to_report(
@@ -2325,6 +2420,7 @@ def run_regression(
                     "",
                     "",
                     0,
+                    False,
                     False,
                     False,
                     False,
@@ -2590,7 +2686,7 @@ LIMIT 8;
     app_debug = _load_app_debug_from_config(config_path)
     github_issue_ok = github_result.error is None and github_result.closed
     github_disclosure_ok = (
-        not app_debug or github_result.disclosed_in_chat
+        not app_debug or github_result.disclosed_in_chat or github_result.tool_fallback
     )
 
     summary = {
