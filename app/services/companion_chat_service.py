@@ -473,6 +473,12 @@ async def run_user_chat(
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
+    """Run one user-chat turn via maintenance HTTP API.
+
+    Interactive bootstrap (``USER_CHAT_BOOTSTRAP``) requires the queue-serving
+    path with ``agentic_output_queue`` and ``user_message_batch``; this helper
+    does not supply them and will raise at turn execution.
+    """
     return await _run_companion_api_track_turn(
         track_path="user_chat",
         user_id=user_id,

@@ -26,11 +26,6 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools_inner_tick,
     build_openai_repl_tools_inner_tick_autonomy,
 )
-from app.utils.config import CompanionMemoryBootstrapType
-
-from app.core.companion_harness.companion.bootstrap import (
-    interactive_bootstrap_active,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from .models import (
@@ -51,7 +46,6 @@ from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from .prompts.system_messages import (
-    build_system_messages_for_bootstrap_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_maintenance,
@@ -167,7 +161,7 @@ def companion_system_messages_for_track(
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             # TODO(!3463): Compose proactive as overlay on base track prefix — during
-            # bootstrap reuse ``build_system_messages_for_bootstrap_track``, then append
+            # bootstrap use ``PromptBuilder.bootstrap_turn_system_dicts``, then append
             # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
             # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
             # Cohort overlays: same base+overlay pattern — #3628.
@@ -203,10 +197,9 @@ def companion_system_messages_for_track(
                 bundle, context, store
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            out = build_system_messages_for_bootstrap_track(
-                bundle,
-                context,
-                runtime_context.channel,
+            raise RuntimeError(
+                "USER_CHAT_BOOTSTRAP system messages must be composed via "
+                "PromptBuilder.bootstrap_turn_system_dicts (turn_pipeline)"
             )
         case CompanionTurnTrack.USER_CHAT:
             if (
@@ -313,26 +306,10 @@ def refresh_companion_turn_prompt_stack(
     )
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            bootstrap_still_active = interactive_bootstrap_active(
-                feature_enabled=(
-                    memory_bootstrap_type
-                    == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-                ),
-                meta=context,
+            raise RuntimeError(
+                "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
+                "refresh_single_llm_bootstrap_chat_prompt_prefix"
             )
-            if bootstrap_still_active:
-                refreshed = build_system_messages_for_bootstrap_track(
-                    bundle,
-                    context,
-                    runtime_context.channel,
-                )
-            else:
-                refreshed = (
-                    build_settled_user_turn_dual_chat_leg_system_messages(
-                        bundle,
-                        context,
-                    )
-                )
         case CompanionTurnTrack.INNER_TICK_MAINTENANCE:
             refreshed = build_system_messages_for_inner_tick_maintenance(
                 bundle,

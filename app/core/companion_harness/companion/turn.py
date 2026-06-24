@@ -35,14 +35,9 @@ foreground parse. ``start_tool_background_job`` then runs the tool-model loop in
 assistant ``content`` appends to domain ``OutputQueue``. Settled ``USER_CHAT`` queue
 turns dispatch via ``user_turn.llm_loop_mode`` to ``run_single_llm_user_turn`` or
 ``run_dual_llm_user_turn``.
-Non-queue bootstrap still uses ``run_bootstrap_track_sync_tool_loop`` with
-``bootstrap_interim_output_sink`` for tool-round interim WebSocket frames only.
 
 TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink``; retire non-queue ``bootstrap_interim_output_sink``.
 TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
-TODO(!3465, !3466, !3467): Keep new queue-serving AgenticLoop + OutputQueue
-path clean; record non-queue bootstrap as backup-only and avoid letting legacy
-interim WS or transcript-persistence policy shape the shared single-LLM loop API.
 
 TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves — #3123
 ``CompanionSession.tool_bg_idle`` cleared; the next proactive or user ``run_turn`` blocks here
@@ -106,10 +101,6 @@ from .models import (
     CompanionTurnResult,
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
-)
-from .in_turn_sync_tool_loop import (
-    BootstrapInTurnSyncToolLoopInput,
-    run_bootstrap_track_sync_tool_loop,
 )
 from .prompt_stack import refresh_companion_turn_prompt_stack
 from app.core.companion_harness.prompt_builder import (
@@ -512,19 +503,6 @@ async def _run_companion_turn_core(
                         )
                     )
 
-                    async def _agentic_loop_after_tool_round(
-                        messages_with_tool_results: list[dict[str, Any]],
-                    ) -> list[dict[str, Any]]:
-                        return refresh_companion_turn_prompt_stack(
-                            store=store,
-                            memory_bootstrap_type=memory_bootstrap_type,
-                            inner_tick_turn=False,
-                            inner_tick_activity=route_inner_activity,
-                            messages=messages_with_tool_results,
-                            track=track,
-                            runtime_context=runtime_context,
-                        )
-
                     async def _bootstrap_single_llm_after_tool_round(
                         messages_with_tool_results: list[dict[str, Any]],
                     ) -> list[dict[str, Any]]:
@@ -717,53 +695,9 @@ async def _run_companion_turn_core(
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
                 elif track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-                    # TODO(#3588): Inject reply-language runtime clause when this legacy
-                    # bootstrap sync path is migrated to AgenticLoop (see loop/runtime_system_clauses.py).
-                    rel_tr_bootstrap = (
-                        transcript_relative_path_for_turn_persistence(
-                            inner_tick_turn=False,
-                            inner_tick_activity=route_inner_activity,
-                        )
-                    )
-                    bootstrap_loop_result = await run_bootstrap_track_sync_tool_loop(
-                        BootstrapInTurnSyncToolLoopInput(
-                            store=store,
-                            llm_client=llm_client,
-                            messages=tuple(messages),
-                            tools_for_turn=tuple(tools_for_turn),
-                            memory_bootstrap_type=memory_bootstrap_type,
-                            repository_only_store_text=repository_only_store_text,
-                            trace_id=trace_id,
-                            user_text=user_text,
-                            ts_user=ts_user,
-                            user_msg_uuid=user_msg_uuid,
-                            transcript_rel=rel_tr_bootstrap,
-                            tail_user_messages=tail_user_messages,
-                            bootstrap_interim_output_sink=(
-                                bootstrap_interim_output_sink
-                            ),
-                            langsmith_slice=langsmith_slice,
-                        )
-                    )
-                    last_text = bootstrap_loop_result.assistant_text
-                    in_turn_sync_persisted_transcript = (
-                        bootstrap_loop_result.loop_persisted_user_transcript
-                    )
-                    langsmith_trace_acc = (
-                        bootstrap_loop_result.langsmith_trace_id
-                    )
-                    langsmith_llm_run_acc = (
-                        bootstrap_loop_result.langsmith_run_id
-                    )
-                    bootstrap_skip_final_transcript_assistant_row = (
-                        bootstrap_loop_result.skip_final_transcript_assistant_row
-                    )
-                    bootstrap_last_interim_assistant_msg_uuid = (
-                        bootstrap_loop_result.last_interim_assistant_msg_uuid
-                    )
-                    logger.info(
-                        "run_turn loop_done bootstrap_track loop_total_ms={:.0f}",
-                        (time.perf_counter() - t_loop) * 1000.0,
+                    raise RuntimeError(
+                        "USER_CHAT_BOOTSTRAP requires agentic_output_queue "
+                        "and user_message_batch (queue-serving AgenticLoop)"
                     )
                 elif (
                     route_mode

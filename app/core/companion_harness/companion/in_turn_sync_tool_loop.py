@@ -1,8 +1,7 @@
 """In-turn synchronous chat + tool loop (single LLM, no dual-LLM / tool_background).
 
-Shared by production ``AgenticLoop.run`` (settled ``USER_CHAT`` and ``USER_CHAT_BOOTSTRAP``)
-and legacy non-queue bootstrap; callers differ by ``write_allowlist`` /
-``after_tool_messages_appended`` hooks.
+Used by ``AgenticLoop`` for settled ``USER_CHAT`` and ``USER_CHAT_BOOTSTRAP`` queue turns.
+Callers differ by ``write_allowlist`` and ``after_tool_messages_appended`` hooks.
 """
 
 from __future__ import annotations
@@ -18,9 +17,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_BOOTSTRAP_TRACK,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call as repl_execute_tool_call,
@@ -36,8 +32,6 @@ from .llm_chat_runtime import (
     langsmith_trace_id_from_completion,
 )
 from .message_format import openai_assistant_message_dict
-from .models import CompanionTurnTrack, InnerTickActivity
-from .prompt_stack import refresh_companion_turn_prompt_stack
 from .turn_routes import BootstrapInterimOutput, BootstrapInterimOutputSink
 from .turn_tail_user import (
     TurnTailUserMessage,
@@ -98,30 +92,6 @@ class InTurnSyncToolLoopResult:
     last_interim_assistant_msg_uuid: str | None
     loop_persisted_user_transcript: bool
     """True when this loop appended the user transcript row."""
-
-
-@dataclass(frozen=True)
-class BootstrapInTurnSyncToolLoopInput:
-    """Bootstrap-track inputs for :func:`run_bootstrap_track_sync_tool_loop`.
-
-    TODO(!3398): Collapse shared fields into ``InTurnSyncToolLoopInput`` via a builder
-    once bootstrap and settled USER_CHAT share the same call site shape.
-    """
-
-    store: MemoryStore
-    llm_client: LlmClient
-    messages: tuple[dict[str, Any], ...]
-    tools_for_turn: tuple[dict[str, Any], ...]
-    memory_bootstrap_type: str
-    repository_only_store_text: bool
-    trace_id: str
-    user_text: str
-    ts_user: datetime
-    user_msg_uuid: str
-    tail_user_messages: tuple[TurnTailUserMessage, ...]
-    transcript_rel: str
-    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
-    langsmith_slice: CompanionTurnLangsmithSlice
 
 
 async def run_in_turn_sync_tool_loop(
@@ -306,59 +276,3 @@ async def run_in_turn_sync_tool_loop(
         last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
         loop_persisted_user_transcript=persist_user_row_in_loop,
     )
-
-
-async def run_bootstrap_track_sync_tool_loop(
-    loop_input: BootstrapInTurnSyncToolLoopInput,
-) -> InTurnSyncToolLoopResult:
-    """Bootstrap track wrapper around :func:`run_in_turn_sync_tool_loop`."""
-    # TODO(!3466): Treat non-queue bootstrap as backup-only; record discovered
-    # behavior risks, but do not let this path shape the new AgenticLoop API.
-    from app.core.companion_harness.tools.companion_tool_definitions import (
-        MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
-    )
-
-    store = loop_input.store
-    memory_bootstrap_type = loop_input.memory_bootstrap_type
-
-    async def _bootstrap_after_tool_round(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        return refresh_companion_turn_prompt_stack(
-            store=store,
-            memory_bootstrap_type=memory_bootstrap_type,
-            inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
-            messages=messages_with_tool_results,
-            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        )
-
-    result = await run_in_turn_sync_tool_loop(
-        InTurnSyncToolLoopInput(
-            store=store,
-            llm_client=loop_input.llm_client,
-            messages=loop_input.messages,
-            tools_for_turn=loop_input.tools_for_turn,
-            write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
-            langsmith_foreground_source=SOURCE_BOOTSTRAP_TRACK,
-            repository_only_store_text=loop_input.repository_only_store_text,
-            trace_id=loop_input.trace_id,
-            user_text=loop_input.user_text,
-            ts_user=loop_input.ts_user,
-            user_msg_uuid=loop_input.user_msg_uuid,
-            tail_user_messages=loop_input.tail_user_messages,
-            transcript_rel=loop_input.transcript_rel,
-            interim_output_sink=loop_input.bootstrap_interim_output_sink,
-            emit_every_assistant_round=False,
-            langsmith_slice=loop_input.langsmith_slice,
-            max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
-            after_tool_messages_appended=_bootstrap_after_tool_round,
-            caller_persisted_user_transcript=False,
-        )
-    )
-    logger.info(
-        "run_turn bootstrap_track llm_done assistant_chars={} trace_id={}",
-        len(result.assistant_text),
-        loop_input.trace_id,
-    )
-    return result

@@ -16,9 +16,6 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutput,
-)
 from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_maintenance_turn,
@@ -145,10 +142,10 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
 
 
 @pytest.mark.asyncio
-async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(
+async def test_user_chat_turn_plumbs_agentic_output_queue_for_bootstrap(
     tmp_path,
 ) -> None:
-    scope = CompanionScope("turn-tracks-sink", "agent", tmp_path.name)
+    scope = CompanionScope("turn-tracks-queue", "agent", tmp_path.name)
     st = MemoryStore(scope=scope, repository=None)
     st.write_document(
         "context.json",
@@ -166,20 +163,24 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(
     )
     for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
         st.write_document(rel, f"{rel}\n")
-    emitted: list[str] = []
+    from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+        bootstrap_queue_turn_deps,
+    )
+    from tests.app.core.companion_harness.companion.companion_scripted_llm import (
+        companion_llm_client_with_scripted_transport,
+        scripted_harness_llm_config,
+    )
+    from app.external_services.fakes.openai import fake_step_text
 
-    async def _sink(ev: BootstrapInterimOutput) -> None:
-        emitted.append(ev.text)
-
+    client, _ = companion_llm_client_with_scripted_transport(
+        scripted_harness_llm_config(),
+        (fake_step_text("final"),),
+    )
+    deps = bootstrap_queue_turn_deps(st, client)
     stub = CompanionTurnResult(
         trace_id="t",
         user_msg_uuid="u",
         assistant_text="final",
-    )
-    deps = _minimal_turn_deps(
-        store=st,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
-        bootstrap_interim_output_sink=_sink,
     )
     with patch(
         "app.core.companion_harness.companion.turn._run_companion_turn_core",
@@ -188,10 +189,9 @@ async def test_user_chat_turn_plumbs_bootstrap_interim_output_sink(
     ) as run_turn_mock:
         await run_companion_user_chat_turn("hello", deps=deps)
     assert run_turn_mock.await_args is not None
-    assert (
-        run_turn_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink
-        is _sink
-    )
+    passed_deps = run_turn_mock.await_args.kwargs["deps"]
+    assert passed_deps.agentic_output_queue is deps.agentic_output_queue
+    assert passed_deps.user_message_batch is deps.user_message_batch
 
 
 @pytest.mark.asyncio

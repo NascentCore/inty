@@ -2,10 +2,8 @@
 
 Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slices,
 transcript window, optional private-thought splice, time context, and tail user.
-Legacy non-AgenticLoop prompt_stack paths stay unchanged until follow-up migration.
-
-TODO(!3398): Dual-LLM and non-user_turn tracks still use legacy prompt_stack entrypoints.
-https://github.com/NascentCore/inty/issues/3398
+Bootstrap and settled single-LLM user chat compose through this module; dual-LLM
+and inner-tick tracks still use legacy ``prompt_stack`` entrypoints (#3398).
 
 TODO(!3453): Named-slot system slices should use declarative templates instead
 of imperative assembly.
