@@ -10,8 +10,8 @@ Language World Model (LWM): learn **(history, action) → next environment obser
 
 ## Inty mapping (high level)
 
-- **Not the same problem**: paper optimizes **tool/agent environment simulation**; Inty TechnoCore / LivingSphere / AUTONOMY optimize **companionship virtual life** + real tools, explicitly **not** a neural world simulator (`techno_core/DESIGN.md` non-goals).
-- **Useful idea (indirect)**: close **experience → hidden state** feedback (e.g. `techno_core_events.jsonl` reader + curation) — see [`FR_WORLD_ENGINE.md`](./FR_WORLD_ENGINE.md) §1.
+- **Not the same problem**: paper optimizes **tool/agent environment simulation**; Inty TechnoCore / LivingSphere / AUTONOMY optimize **companionship virtual life** + real tools, explicitly **not** a neural world simulator ([`techno_core/DESIGN.md`](../app/techno_core/DESIGN.md) non-goals).
+- **Useful idea (indirect)**: close **experience → hidden state** feedback (e.g. `techno_core_events.jsonl` reader + curation) — see [`FR_WORLD_ENGINE.md`](../docs/imate/companion_harness/FR_WORLD_ENGINE.md) §1.
 - **Paper Consistency** = train-time reward on predicted observations vs trajectory history. **Not** the same as a prompt checklist on `LIFE_CURRENTS.md`.
 
 ## Local REPL experiment (2026-06-24, unmerged prototype)
@@ -34,6 +34,6 @@ Explored three **prompt-only** toggles on inner-tick **AUTONOMY** only (`state_c
 
 ## Related Inty docs
 
-- [`AUTONOMY.md`](./AUTONOMY.md) — AUTONOMY track; MVP: no `USER_CHAT` LIFE_CURRENTS injection
-- [`FR_WORLD_ENGINE.md`](./FR_WORLD_ENGINE.md) — evolvable hidden state; events reader gap
-- [`techno_core/DESIGN.md`](../../app/techno_core/DESIGN.md) — no world simulator non-goals
+- [`AUTONOMY.md`](../docs/imate/companion_harness/AUTONOMY.md) — AUTONOMY track; MVP: no `USER_CHAT` LIFE_CURRENTS injection
+- [`FR_WORLD_ENGINE.md`](../docs/imate/companion_harness/FR_WORLD_ENGINE.md) — evolvable hidden state; events reader gap
+- [`techno_core/DESIGN.md`](../app/techno_core/DESIGN.md) — no world simulator non-goals
