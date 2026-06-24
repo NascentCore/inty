@@ -1894,6 +1894,34 @@ def _run_experience_profile_phase(
                 ),
             }
         )
+    if not _wait_ws_turn_settled(
+        bridge,
+        report,
+        label="experience_profile_post",
+        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile_post",
+                "error": (408, "experience_profile ws not settled"),
+            }
+        )
+    if not _wait_output_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        label="experience_profile_post",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile_post",
+                "error": (408, "output queue not idle after experience_profile"),
+            }
+        )
     return matched
 
 
@@ -2122,7 +2150,7 @@ def run_regression(
             bridge,
             report,
             expected_user_msg_uuid=bootstrap_finish_msg_uuid,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
             label="bootstrap-finish",
             trailing_label="bootstrap-finish_mismatch",
         )
