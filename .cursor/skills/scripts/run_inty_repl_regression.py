@@ -67,8 +67,9 @@ _DEFAULT_BOOTSTRAP_FINISH_TURN = (
 )
 _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
 _DEFAULT_GITHUB_ISSUE_TURN = (
-    "我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
-    "请先用 companion_record_user_feedback 把我的投诉提交成 GitHub issue，再简短回复我。"
+    "【系统回归】我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
+    "你必须先调用 companion_record_user_feedback 提交 GitHub issue，"
+    "成功后再用一句话道歉。不要口头说已记录而不调用 tool。"
 )
 _DEFAULT_EXPERIENCE_PROFILE_TURN = (
     "【系统回归】你必须先调用 companion_set_experience_profile("
@@ -1460,6 +1461,32 @@ def _parse_feedback_github_issue_row(
     return created
 
 
+def _poll_feedback_snapshot_for_user_msg_uuid(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    timeout_sec: float,
+) -> bool:
+    """Poll feedback JSONL until a snapshot row appears for the turn."""
+    assert user_msg_uuid != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        raw = _query_user_feedback_jsonl_content(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+        rows = _parse_feedback_jsonl_rows(raw)
+        if _find_snapshot_for_user_msg_uuid(rows, user_msg_uuid):
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    return False
+
+
 def _poll_feedback_github_issue(
     repo_root: Path,
     config_path: Path,
@@ -1635,6 +1662,28 @@ def _run_github_issue_e2e_phase(
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
                 else:
+                    if not _wait_ws_turn_settled(
+                        bridge,
+                        report,
+                        label="github_issue",
+                        settle_quiet_sec=_TURN_TRAILING_QUIET_SEC,
+                        max_sec=_GITHUB_ISSUE_POLL_SEC,
+                        stderr=stderr,
+                    ):
+                        print(
+                            f"{_TAG} warning: github_issue ws not fully quiet before "
+                            "feedback poll",
+                            file=stderr,
+                            flush=True,
+                        )
+                    snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                        repo_root,
+                        config_path,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                        user_msg_uuid=user_msg_uuid,
+                        timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                    )
                     raw = _query_user_feedback_jsonl_content(
                         repo_root,
                         config_path,
@@ -1642,9 +1691,6 @@ def _run_github_issue_e2e_phase(
                         agent_id=agent_id,
                     )
                     rows = _parse_feedback_jsonl_rows(raw)
-                    snapshot_seen = _find_snapshot_for_user_msg_uuid(
-                        rows, user_msg_uuid
-                    )
                     if not snapshot_seen:
                         error = (
                             f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
