@@ -227,7 +227,7 @@ Currently-supported channels:
 
 ## 成效判断（What "good" looks like）
 
-不是指标，是 relationship 模型应当推动的**定性信号**（current working stance，将由 prototype 修正）；评测机制见 [evaluation/](/evaluation/)。
+不是指标，是 relationship 模型应当推动的**定性信号**（current working stance，将由 prototype 修正）；分层评测方法论见 [EVALUATION.md](./EVALUATION.md)，运营评测台见 [evaluation/](/evaluation/)。
 
 - 用户**跨周回访、持续再投入**（retention，最终代理指标）。
 - Inty **正确回忆并引用过往表露**（penetration depth 在起作用）。
@@ -264,6 +264,7 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 
 ## 文档地图 / See also
 
+- [EVALUATION.md](./EVALUATION.md) — 如何评测 companion：分层框架（L0–L3）、regression vs eval 分层、与三轴映射。
 - [GLOSSARY.md](./GLOSSARY.md) — 术语与方向（上行/下行、前台/后台、节拍/模式）。
 - [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、持久化表。
 - [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md) — prompt 作为版本化 slice 空间的确定性投影。
