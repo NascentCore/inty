@@ -2056,6 +2056,52 @@ def run_regression(
                 flush=True,
             )
         _drain_turn_trailing_frames(bridge, report, label="bootstrap-finish")
+        if not _wait_input_delivered(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            client_message_id=bootstrap_finish_msg_uuid,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            label="bootstrap-finish",
+            stderr=stderr,
+        ):
+            report["errors"].append(
+                {
+                    "turn": "bootstrap-finish-delivered",
+                    "error": (
+                        408,
+                        f"input not delivered: {bootstrap_finish_msg_uuid}",
+                    ),
+                }
+            )
+        if not _wait_ws_turn_settled(
+            bridge,
+            report,
+            label="bootstrap-finish",
+            settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+            max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            stderr=stderr,
+        ):
+            report["errors"].append(
+                {
+                    "turn": "bootstrap-finish-settled",
+                    "error": (408, "bootstrap-finish ws not settled before settled"),
+                }
+            )
+        if not _wait_output_queue_idle(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            label="pre-settled",
+            stderr=stderr,
+        ):
+            report["errors"].append(
+                {
+                    "turn": "pre-settled-output",
+                    "error": (408, "output queue not idle before settled"),
+                }
+            )
         if not _wait_input_queue_idle(
             repo_root,
             config_path,
@@ -2113,16 +2159,19 @@ def run_regression(
                     flush=True,
                 )
 
-        for text, meta in _drain_until_quiet(
+        if not _wait_ws_turn_settled(
             bridge,
-            quiet_sec=_PRE_SETTLED_WS_DRAIN_QUIET_SEC,
-            max_sec=30.0,
+            report,
+            label="pre-settled",
+            settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+            max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            stderr=stderr,
         ):
-            _record_trailing_downlink(
-                report,
-                label="pre_settled",
-                text=text,
-                meta=meta,
+            report["errors"].append(
+                {
+                    "turn": "pre-settled",
+                    "error": (408, "ws not settled before settled turn"),
+                }
             )
 
         print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
