@@ -21,7 +21,7 @@
 
 ## Companion harness prompt assemblage
 
-- Classify each slice by **content category** (Doctrine → Capability → Persona → Output → Contextual, or transcript) and **runtime ordering** (core / runtime / peripheral) per [DESIGN.md](/docs/imate/companion_harness/DESIGN.md) and [prompt_assembly.py](/app/core/companion_harness/prompting/prompt_assembly.py); do not conflate the two axes.
+- Classify each slice by **content category** (Doctrine → Capability → Persona → Output → Contextual, or transcript) and **runtime ordering** (core / runtime / peripheral) per [DESIGN.md](/docs/imate/companion_harness/DESIGN.md); do not conflate the two axes.
 
 ## Antipatterns to avoid
 
