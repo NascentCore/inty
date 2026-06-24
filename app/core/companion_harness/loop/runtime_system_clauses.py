@@ -11,20 +11,11 @@ match-user-message language before the tail-user block when config is unset.
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Any
 
 from app.core.companion_harness.loop.config import (
     resolved_companion_harness_reply_language,
 )
-
-
-class LoopRuntimeSystemClauseKind(StrEnum):
-    """Semantic kinds of harness-internal system text owned by AgenticLoop."""
-
-    REPLY_LANGUAGE = "reply_language"
-    DEBUG_DISCLOSE_GITHUB_ISSUE = "debug_disclose_github_issue"
-
 
 REPLY_IN_USER_LANGUAGE_CLAUSE = (
     "Use the same language as the user's message(s) in this turn for all "

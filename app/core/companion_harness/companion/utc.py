@@ -21,14 +21,6 @@ def utc_iso_ts() -> str:
     return utc_now().isoformat()
 
 
-def utc_date_str() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%d")
-
-
-def local_iso_ts() -> str:
-    return datetime.now().astimezone().isoformat()
-
-
 def local_date_str() -> str:
     return datetime.now().astimezone().date().isoformat()
 
