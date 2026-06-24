@@ -67,7 +67,7 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
   - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
   - `--proactive-min-rounds` (**1** default): **pass gate** — at least this many proactive rounds (WS and/or DB)
   - `--proactive-target-rounds` (**2** default): stretch goal in summary only; **does not fail** the run
-  - `--dreaming-wait-sec` (**90** default): poll Postgres for `.companion_dreaming_state.json` + `MEMORY.md` update after proactive (scope inner-tick worker must be running on Ops)
+  - `--dreaming-wait-sec` (**900** default): poll Postgres for `.companion_dreaming_state.json` + `MEMORY.md` update after proactive (scope inner-tick worker must be running on Ops). Scope-worker dreaming batches can take several minutes; avoid parallel regression runs that backlog the worker.
 - A **silent first proactive** (`output_to_user=false`) leaves the transcript without an assistant reply, so the scheduler will **not** fire a second round until a visible proactive happens — waiting longer cannot fix that.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).

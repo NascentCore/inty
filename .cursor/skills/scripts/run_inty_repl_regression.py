@@ -78,7 +78,7 @@ _DEFAULT_EXPERIENCE_PROFILE_TURN = (
 _DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
 _BOOTSTRAP_USER_NAME_MARKER = "大雄"
 _BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
-_DEFAULT_DREAMING_WAIT_SEC = 90.0
+_DEFAULT_DREAMING_WAIT_SEC = 900.0
 _DREAMING_POLL_SEC = 3.0
 _EXPERIENCE_PROFILE_POLL_SEC = 2.0
 _EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 120.0
@@ -936,16 +936,19 @@ def _wait_dreaming_consolidation(
                 error=None,
             )
         time.sleep(_DREAMING_POLL_SEC)
+    checkpoint_present = _dreaming_checkpoint_present(
+        repo_root, config_path, user_id=user_id, agent_id=agent_id
+    )
+    memory_updated = last_memory_seq > memory_sequence_before
     return DreamingConsolidationResult(
-        checkpoint_present=_dreaming_checkpoint_present(
-            repo_root, config_path, user_id=user_id, agent_id=agent_id
-        ),
-        memory_updated=last_memory_seq > memory_sequence_before,
+        checkpoint_present=checkpoint_present,
+        memory_updated=memory_updated,
         memory_sequence_before=memory_sequence_before,
         memory_sequence_after=last_memory_seq,
         error=(
-            f"no dreaming MEMORY.md update within {wait_sec}s "
-            f"(memory_sequence_before={memory_sequence_before}, "
+            f"no dreaming checkpoint within {wait_sec}s "
+            f"(checkpoint={checkpoint_present}, memory_updated={memory_updated}, "
+            f"memory_sequence_before={memory_sequence_before}, "
             f"memory_sequence_after={last_memory_seq})"
         ),
     )
@@ -2127,21 +2130,20 @@ def run_regression(
                         meta=meta,
                     )
 
-            memory_seq_before_dreaming = memdoc_result.memory_sequence_id
-            if memory_seq_before_dreaming <= 0:
-                memory_doc = _query_latest_memdoc_version(
-                    repo_root,
-                    config_path,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    document_kind="memory",
-                )
-                memory_seq_before_dreaming = (
-                    memory_doc.sequence_id if memory_doc else 0
-                )
+            memory_doc = _query_latest_memdoc_version(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+                document_kind="memory",
+            )
+            memory_seq_before_dreaming = (
+                memory_doc.sequence_id if memory_doc else 0
+            )
             print(
                 f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
-                f"(scope worker; dreaming_idle_seconds=10 in config)...",
+                f"(scope worker; dreaming_idle_seconds=10 in config; "
+                f"memory_sequence_before={memory_seq_before_dreaming})...",
                 flush=True,
             )
             dreaming_result = _wait_dreaming_consolidation(
@@ -2417,7 +2419,7 @@ def main(argv: list[str] | None = None) -> int:
         default=_DEFAULT_DREAMING_WAIT_SEC,
         help=(
             "Seconds to poll for scope-worker dreaming + MEMORY.md update after proactive "
-            f"(default {_DEFAULT_DREAMING_WAIT_SEC:g}; pairs with dreaming_idle_seconds=10)"
+            f"(default {_DEFAULT_DREAMING_WAIT_SEC:g}; pairs with dreaming_idle_seconds=10; scope-worker batches may take minutes)"
         ),
     )
     p.add_argument(
