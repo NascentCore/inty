@@ -69,6 +69,7 @@ from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.memory.client_time_from_memory_store import (
     resolve_client_time,
 )
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_IMPLICIT_SIGN_ON_GREETING,
@@ -98,6 +99,7 @@ from app.core.companion_harness.companion.bootstrap import (
 from .models import (
     CompanionTurnTrack,
     CompanionTurnResult,
+    InnerTickActivity,
     load_context_meta,
     transcript_relative_path_for_turn_persistence,
 )
@@ -143,6 +145,7 @@ from .turn_pipeline import (
     resolve_turn_runtime_flags,
 )
 from .turn_tail_user import (
+    TurnTailUserMessage,
     append_tail_user_transcript_rows,
     resolve_turn_tail_user_messages,
 )
@@ -209,6 +212,45 @@ class CompanionToolBackgroundStartedError(RuntimeError):
     def __init__(self, original_exception: Exception) -> None:
         self.original_exception = original_exception
         super().__init__(str(original_exception))
+
+
+def _persist_inner_tick_user_transcript_before_tool_background(
+    store: MemoryStore,
+    *,
+    track: CompanionTurnTrack,
+    route_inner_activity: InnerTickActivity,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    trace_id: str,
+) -> None:
+    """Persist inner-tick user row before ``tool_background`` starts.
+
+    ``tool_background`` may append assistant rows to ``transcript_inner_tick.jsonl``
+    on a worker thread; writing the user anchor first avoids assistant-first ordering.
+    """
+    rel_tr = transcript_relative_path_for_turn_persistence(
+        inner_tick_turn=True,
+        inner_tick_activity=route_inner_activity,
+    )
+    if len(tail_user_messages) > 1:
+        append_tail_user_transcript_rows(
+            store,
+            rel_tr,
+            tail_user_messages=tail_user_messages,
+            trace_id=trace_id,
+        )
+        return
+    message = tail_user_messages[0]
+    user_row: dict[str, Any] = {
+        "role": "user",
+        "content": message.text,
+        "ts": message.received_at_utc.isoformat(),
+        "uuid": message.message_id,
+        "inner_tick": True,
+        "trace_id": trace_id,
+    }
+    if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
+        user_row["scheduled"] = True
+    store.append_jsonl_record(rel_tr, user_row)
 
 
 async def _await_tool_background_idle_if_configured(
@@ -783,6 +825,15 @@ async def _run_companion_turn_core(
                     langsmith_llm_run_acc = fg_result.langsmith_run_id
                     tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
                     force_tools_first_round = fg_result.force_tools_first_round
+                    if skip_foreground_envelope:
+                        _persist_inner_tick_user_transcript_before_tool_background(
+                            store,
+                            track=track,
+                            route_inner_activity=route_inner_activity,
+                            tail_user_messages=tail_user_messages,
+                            trace_id=trace_id,
+                        )
+                        in_turn_sync_persisted_transcript = True
                     # TODO(!3632): Legacy threaded tool_bg; queue path uses AgenticLoop inline tool leg.
                     # TODO(!3633): Parent RunTree end deferred to tool_bg thread until this path is retired.
                     start_tool_background_job(
