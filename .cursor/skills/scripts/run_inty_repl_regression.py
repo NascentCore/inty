@@ -851,6 +851,32 @@ def _find_feedback_id_for_user_msg_uuid(
     return ""
 
 
+def _poll_feedback_snapshot(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    timeout_sec: float,
+) -> bool:
+    """Wait for tool_background to append a feedback snapshot row."""
+    assert user_msg_uuid != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        raw = _query_user_feedback_jsonl_content(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+        rows = _parse_feedback_jsonl_rows(raw)
+        if _find_snapshot_for_user_msg_uuid(rows, user_msg_uuid):
+            return True
+        time.sleep(1.0)
+    return False
+
+
 def _find_github_issue_skipped_reason(
     rows: list[dict[str, Any]],
     *,
@@ -1069,15 +1095,13 @@ def _run_github_issue_e2e_phase(
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
                 else:
-                    raw = _query_user_feedback_jsonl_content(
+                    snapshot_seen = _poll_feedback_snapshot(
                         repo_root,
                         config_path,
                         user_id=user_id,
                         agent_id=agent_id,
-                    )
-                    rows = _parse_feedback_jsonl_rows(raw)
-                    snapshot_seen = _find_snapshot_for_user_msg_uuid(
-                        rows, user_msg_uuid
+                        user_msg_uuid=user_msg_uuid,
+                        timeout_sec=_GITHUB_ISSUE_POLL_SEC,
                     )
                     if not snapshot_seen:
                         error = (
@@ -1085,6 +1109,13 @@ def _run_github_issue_e2e_phase(
                         )
                         print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
                     else:
+                        raw = _query_user_feedback_jsonl_content(
+                            repo_root,
+                            config_path,
+                            user_id=user_id,
+                            agent_id=agent_id,
+                        )
+                        rows = _parse_feedback_jsonl_rows(raw)
                         feedback_id = _find_feedback_id_for_user_msg_uuid(
                             rows, user_msg_uuid
                         )
