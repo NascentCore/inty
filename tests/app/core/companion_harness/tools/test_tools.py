@@ -136,7 +136,7 @@ def test_tool_memory_store_write_channels_not_mutable_during_chat(
     assert st.read_document("CHANNELS.md") == "seed\n"
 
 
-def test_tool_update_user_md_appends_profile_facts(tmp_path: Path) -> None:
+def test_tool_update_user_md_appends_custom_label(tmp_path: Path) -> None:
     st = MemoryStore(
         scope=CompanionScope("tools", "a", f"{tmp_path.name}-user-md"),
         repository=None,
@@ -150,7 +150,7 @@ def test_tool_update_user_md_appends_profile_facts(tmp_path: Path) -> None:
             ensure_ascii=False,
         ),
     )
-    assert out == "OK appended 1 line(s) to USER.md"
+    assert out == "OK appended 1 line(s) in USER.md"
     user_md_lines = st.read_document("USER.md").split("\n")
     assert user_md_lines == [
         "# USER.md - 关于你的用户",
@@ -160,3 +160,38 @@ def test_tool_update_user_md_appends_profile_facts(tmp_path: Path) -> None:
         f"- 称呼偏好：叫我小宇（记录日期 {date.today().isoformat()}）",
         "",
     ]
+
+
+def test_tool_update_user_md_inline_fills_identity_template(
+    tmp_path: Path,
+) -> None:
+    from app.core.companion_harness.memory.user_md_identity import (
+        UserIdentityFieldLabel,
+        load_user_md_template_text,
+    )
+
+    st = MemoryStore(
+        scope=CompanionScope("tools", "a", f"{tmp_path.name}-inline"),
+        repository=None,
+    )
+    st.write_document("USER.md", load_user_md_template_text())
+    out = _run_tool(
+        st,
+        "update_user_md",
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "label": UserIdentityFieldLabel.GENDER,
+                        "value": "男",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+    )
+    assert out == "OK filled 1 template slot(s) in USER.md"
+    assert (
+        f"- {UserIdentityFieldLabel.GENDER}：男"
+        in st.read_document("USER.md").splitlines()
+    )

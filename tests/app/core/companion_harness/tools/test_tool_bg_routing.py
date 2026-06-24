@@ -66,13 +66,13 @@ def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() ->
     assert out.importance_round == 5
 
 
-def test_resolve_tool_background_finish_envelope_routes_for_maintenance() -> (
+def test_resolve_tool_background_finish_envelope_routes_for_monolog() -> (
     None
 ):
     create_sync = MagicMock(return_value=_completion_response("not json"))
     out = resolve_tool_background_finish_envelope(
         inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         client=None,
         model="m",
         create_completion_sync=create_sync,

@@ -3,6 +3,8 @@
 Persisted companion documents and transcript go through MemoryStore; tool paths align with
 ``memory_store_document_mapping``.
 
+Helper functions for executing tools in the companion harness.
+
 TODO(companion-channel-tools): Dispatch channel-specific tools via adapter layer / agent row — #3362
   writes (e.g. companion_set_status_line) using turn runtime_context — #3362
 """
@@ -32,10 +34,13 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     append_ai_private_thought,
 )
 from app.core.companion_harness.companion.bootstrap import (
+    CompanionRecordUserProfileToolInput,
     CompanionSetExperienceProfileToolInput,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
+from app.db.session import AsyncSessionLocal
+from app.services.user_profile_persistence import persist_user_profile_snapshot
 from app.core.companion_harness.companion.models import (
     ChatMessage,
 )
@@ -100,10 +105,14 @@ from .companion_tool_definitions import (
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
 )
-from app.core.companion_harness.memory.memory_store_scope import USER_MD_REL
+from app.core.companion_harness.memory.memory_store_path_constants import USER_MD_REL
+from app.core.companion_harness.memory.user_md_identity import (
+    USER_PROFILE_SECTION,
+    UserIdentityFieldLabel,
+    fill_user_md_identity_fields,
+)
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
-
 
 def _companion_tool_validation_error_message(exc: ValidationError) -> str:
     detail = "; ".join(
@@ -113,13 +122,12 @@ def _companion_tool_validation_error_message(exc: ValidationError) -> str:
     return f"ERROR: {detail}"
 
 
-_USER_PROFILE_SECTION = "## 身份信息"
 # GENERATION: 成功产出应对用户可见的交付物时, async tool_background **必须**下行到客户端;
 # 是否附加 NL 由统一收尾信封中的 ``output_to_user`` 与产物回填共同决定（见 tool_background）。
 # ``TOOL_TAG_GENERATION`` / memory-store caps / allowlist: ``companion_tool_definitions``.
 
 
-# TODO(narrow-maintenance): ``ai_private.jsonl`` append tool for MAINTENANCE inner-tick; drop — #3375
+# TODO(narrow-monolog): ``ai_private.jsonl`` append tool for MONOLOG inner-tick; drop — #3375
 # UPDATE_USER_MD / memory_store_* / techno_core from INNER_TICK_TOOL_NAMES (MemoryDoc → DREAMING #3375).
 
 
@@ -207,40 +215,41 @@ def round_includes_generation_tool(tool_names: Iterable[str]) -> bool:
     return any(tool_requires_client_delivery_on_success(n) for n in tool_names)
 
 
-def append_user_profile_facts_to_user_md(
-    text: str, new_bullets: list[str]
+def _append_identity_bullets_to_user_md(
+    text: str,
+    bullets: list[str],
 ) -> str:
-    """
-    在 USER.md 的「身份信息」小节追加条目；若尚无该小节则在文末追加。
-    new_bullets 每项应为完整一行（含前导 `- `）。
-    """
+    """Append custom-label bullets under «身份信息»; create section at EOF when missing."""
     lines = text.splitlines()
-    if _USER_PROFILE_SECTION not in lines:
-        block = "\n\n" + _USER_PROFILE_SECTION + "\n\n" + "\n".join(new_bullets)
+    if USER_PROFILE_SECTION not in lines:
+        block = "\n\n" + USER_PROFILE_SECTION + "\n\n" + "\n".join(bullets)
         return text.rstrip() + block + "\n"
-    idx = lines.index(_USER_PROFILE_SECTION)
+    idx = lines.index(USER_PROFILE_SECTION)
     j = idx + 1
     while j < len(lines) and lines[j].strip() == "":
         j += 1
     insert_at = j
     while insert_at < len(lines) and not lines[insert_at].startswith("## "):
         insert_at += 1
-    for k, b in enumerate(new_bullets):
-        lines.insert(insert_at + k, b)
+    for k, bullet in enumerate(bullets):
+        lines.insert(insert_at + k, bullet)
     return "\n".join(lines) + "\n"
 
 
 def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     """
-    将用户自愿透露的基本信息追加写入 USER.md 的「身份信息」小节。
-    items：每项含 label、value（均为非空短文本）。
+    Write user-volunteered basic information in the "Identity Information" section of USER.md.
+    Known template fields (name/gender/age/etc.) are filled inline; other labels are appended as dated bullets.
+    items: each entry contains label and value (both non-empty short text).
     """
     rel = USER_MD_REL
     prev = store.read_document_if_exists(rel)
     if prev is None:
         return f"ERROR: missing {USER_MD_REL!r}"
     today = date.today().isoformat()
-    bullets: list[str] = []
+    inline_values: dict[str, str] = {}
+    append_bullets: list[str] = []
+    known_labels = {member.value for member in UserIdentityFieldLabel}
     for raw in items:
         if not isinstance(raw, dict):
             continue
@@ -248,12 +257,24 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
         value = str(raw.get("value", "")).strip()
         if not label or not value:
             continue
-        bullets.append(f"- {label}：{value}（记录日期 {today}）")
-    if not bullets:
+        if label in known_labels:
+            inline_values[label] = value
+        else:
+            append_bullets.append(f"- {label}：{value}（记录日期 {today}）")
+    if not inline_values and not append_bullets:
         return "ERROR: no valid items (need label and value for each entry)"
-    merged = append_user_profile_facts_to_user_md(prev, bullets)
+    merged = prev
+    if inline_values:
+        merged = fill_user_md_identity_fields(merged, inline_values)
+    if append_bullets:
+        merged = _append_identity_bullets_to_user_md(merged, append_bullets)
     store.write_document(rel, merged)
-    return f"OK appended {len(bullets)} line(s) to {USER_MD_REL}"
+    parts: list[str] = []
+    if inline_values:
+        parts.append(f"filled {len(inline_values)} template slot(s)")
+    if append_bullets:
+        parts.append(f"appended {len(append_bullets)} line(s)")
+    return f"OK {'; '.join(parts)} in {USER_MD_REL}"
 
 
 def tool_memory_store_list_paths(
@@ -535,7 +556,7 @@ def build_openai_repl_tools() -> list[dict[str, Any]]:
 
 
 def build_openai_repl_tools_inner_tick() -> list[dict[str, Any]]:
-    """MAINTENANCE inner tick: ``ai_private.jsonl`` append only."""
+    """MONOLOG inner tick: ``ai_private.jsonl`` append only."""
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
             INNER_TICK_TOOL_NAMES,
@@ -803,9 +824,42 @@ async def _dispatch(
         raw_note = arguments.get("note")
         if raw_note is not None and not isinstance(raw_note, str):
             return "ERROR: note must be a string or omitted"
+        # TODO(#3535): profile_complete metrics / USER.md→DB backfill when write_document-only.
         return tool_companion_bootstrap_user_interactive_complete(
             store, raw_note
         )
+    if name == CompanionToolName.COMPANION_RECORD_USER_PROFILE.value:
+        try:
+            tool_input = CompanionRecordUserProfileToolInput.model_validate(
+                arguments
+            )
+        except ValidationError as exc:
+            return _companion_tool_validation_error_message(exc)
+        user_id = store.scope.user_id.strip()
+        if not user_id:
+            return "ERROR: missing user scope for companion_record_user_profile"
+        snapshot = tool_input.to_snapshot()
+        try:
+            async with AsyncSessionLocal() as db:
+                await persist_user_profile_snapshot(
+                    db,
+                    user_id=user_id,
+                    snapshot=snapshot,
+                    memory_store=store,
+                )
+        except ValueError as exc:
+            return f"ERROR: {exc}"
+        recorded = [
+            label
+            for label, val in (
+                ("gender", snapshot.gender),
+                ("age_group", snapshot.age_group),
+                ("location", snapshot.location),
+                ("iana_timezone", snapshot.iana_timezone),
+            )
+            if val is not None and val != ""
+        ]
+        return f"OK recorded user profile fields: {', '.join(recorded)}"
     return f"ERROR: unknown tool {name!r}"
 
 

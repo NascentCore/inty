@@ -403,7 +403,7 @@ async def _try_handle_ws_user_signed_on_frame(
     """
     Consume ``{"type":"user_signed_on","agent_id":...}``.
 
-    Product intent: arms inner-tick WebSocket coordinates (proactive chat, maintenance inner-tick,
+    Product intent: arms inner-tick WebSocket coordinates (proactive chat, monolog inner-tick,
     and due ``schedule_queue`` reminders share this registration). Requires ``message_id`` (RFC4122);
     missing/invalid ids fail before ack; greeting turn is scheduled before ``user_signed_on_ack``.
     """

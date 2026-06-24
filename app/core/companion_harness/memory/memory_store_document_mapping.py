@@ -113,14 +113,14 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     TRANSCRIPT_JSONL_REL: (CompanionMemoryDocumentKind.TRANSCRIPT, None),
-    # TODO(rename-memory-doc): transcript_inner_tick_maintenance.jsonl (with scope path + migration). — #3400
+    # TODO(rename-memory-doc): transcript_inner_tick_monolog.jsonl (with scope path + migration). — #3400
     TRANSCRIPT_INNER_TICK_JSONL_REL: (
         CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
         None,
     ),
     CONTEXT_JSON_REL: (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
     AI_PRIVATE_MD_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
-    # Inner thoughts about the user (MAINTENANCE)—not LIFE_CURRENTS virtual-world activity.
+    # Inner thoughts about the user (MONOLOG)—not LIFE_CURRENTS virtual-world activity.
     # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
     AI_PRIVATE_JSONL_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
     TOOL_BACKGROUND_JSONL_REL: (

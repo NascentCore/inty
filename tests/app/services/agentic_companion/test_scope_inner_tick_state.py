@@ -17,9 +17,9 @@ def test_scope_inner_tick_state_throttle_and_tool_bg() -> None:
     state_b = get_scope_inner_tick_state(scope)
     assert state_a is state_b
 
-    state_a.mark_maintenance_inner_tick_fired(100.0, 5)
-    assert state_b.last_maintenance_inner_tick_monotonic() == 100.0
-    assert state_b.last_maintenance_transcript_line_count() == 5
+    state_a.mark_monolog_inner_tick_fired(100.0, 5)
+    assert state_b.last_monolog_inner_tick_monotonic() == 100.0
+    assert state_b.last_monolog_transcript_line_count() == 5
 
     ev = threading.Event()
     state_a.bind_autonomy_tool_bg_idle(ev)
@@ -31,4 +31,4 @@ def test_scope_inner_tick_state_throttle_and_tool_bg() -> None:
     release_scope_inner_tick_state(scope)
     state_c = get_scope_inner_tick_state(scope)
     assert state_c is not state_a
-    assert state_c.last_maintenance_inner_tick_monotonic() is None
+    assert state_c.last_monolog_inner_tick_monotonic() is None

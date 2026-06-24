@@ -33,6 +33,7 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
+from app.schemas.user import UserAgeGroup
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
@@ -44,9 +45,9 @@ from app.techno_core.models import (
 
 MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 
-# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MAINTENANCE) — #3375
+# TODO(ai-private-jsonl-write): ``ai_private.jsonl`` (inner thoughts *about the user*, MONOLOG) — #3375
 # is ORM-mapped but excluded here — not ``LIFE_CURRENTS.md`` (virtual-world activity, AUTONOMY).
-# Enable MAINTENANCE append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
+# Enable MONOLOG append via dedicated append-only tool (preferred) or allowlist + append-only runtime.
 # CRS Awake express / Dreaming learn — PR #3290; follow-up #3375 #3376; epic #3341.
 # TODO(track-write-policy): Collapse per-track ``memory_store_write_document`` policy into one — #3367
 # ``TrackWritePolicy`` (allowlist + tool description override) keyed by ``CompanionTurnTrack``;
@@ -81,7 +82,7 @@ BOOTSTRAP_WRITABLE_REL_PATHS: Final[tuple[str, ...]] = tuple(
     sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP)
 )
 
-# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MAINTENANCE).
+# AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MONOLOG).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
     {"LIFE_CURRENTS.md"}
 )
@@ -106,6 +107,7 @@ class CompanionToolName(StrEnum):
     COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE = (
         "companion_bootstrap_user_interactive_complete"
     )
+    COMPANION_RECORD_USER_PROFILE = "companion_record_user_profile"
     COMPANION_RECORD_USER_FEEDBACK = "companion_record_user_feedback"
     COMPANION_SET_EXPERIENCE_PROFILE = "companion_set_experience_profile"
     GENERATE_IMAGE = "generate_image"
@@ -198,6 +200,49 @@ SET_EXPERIENCE_PROFILE_TOOL = LlmFunctionTool(
     extra_function_keys={},
 )
 
+_AGE_GROUP_ENUM = [member.value for member in UserAgeGroup]
+
+RECORD_USER_PROFILE_TOOL = LlmFunctionTool(
+    name=CompanionToolName.COMPANION_RECORD_USER_PROFILE,
+    description=(
+        "Optional: sync user-confirmed USER.md identity fields (性别/年龄/所在地/时区) "
+        "to the user record for analytics. Call when the user confirms a field; "
+        "partial updates OK. Not required before bootstrap complete. "
+        "Do not mention tools or filenames to the user."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "gender": {
+                "type": "string",
+                "enum": ["MALE", "FEMALE", "OTHER"],
+                "description": "User gender when confirmed.",
+            },
+            "age_group": {
+                "type": "string",
+                "enum": _AGE_GROUP_ENUM,
+                "description": "User age bucket when confirmed.",
+            },
+            "location": {
+                "type": "string",
+                "description": "City or region when confirmed.",
+            },
+            "iana_timezone": {
+                "type": "string",
+                "description": "Optional IANA timezone (e.g. America/New_York) inferred from location.",
+            },
+            "note": {
+                "type": "string",
+                "description": "Short internal audit note (not shown to user).",
+            },
+        },
+        "required": ["note"],
+        "additionalProperties": False,
+    },
+    tags=frozenset(),
+    extra_function_keys={},
+)
+
 
 GENERATE_IMAGE_TOOL = LlmFunctionTool(
     name=CompanionToolName.GENERATE_IMAGE,
@@ -234,7 +279,7 @@ AI_PRIVATE_APPEND_TOOL = LlmFunctionTool(
     name=CompanionToolName.AI_PRIVATE_APPEND,
     description=(
         "Append one inner monolog line about the user or relationship to "
-        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MAINTENANCE "
+        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MONOLOG "
         "inner-tick to record feelings, unsaid thoughts, or relationship scene beats—"
         "not virtual-world activity (that belongs in LIFE_CURRENTS / AUTONOMY). "
         "Never visible to the user directly; may inform later proactive or user chat."
@@ -488,7 +533,7 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
     description=(
         "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
         f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
-        "Primary use: **maintenance inner-tick** when the user thread is idle (small "
+        "Primary use: **monolog inner-tick** when the user thread is idle (small "
         "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
         "**Do not** use for user-directed home layout or object changes—use "
         "``living_sphere_record_update`` instead. TechnoCore collective world settings "
@@ -577,8 +622,10 @@ COMPANION_RECORD_USER_FEEDBACK_TOOL = LlmFunctionTool(
     name=CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
     description=(
         "File structured user complaint when the human expresses dissatisfaction with "
-        "companion behavior, memory, tone, or tool results (bug report). Reassure the "
-        "user in chat first, then call this tool with a concise complaint_summary. "
+        "companion behavior, memory, tone, or tool results (bug report). When the user "
+        "asks to file a GitHub issue or names this tool, you MUST call it—updating "
+        "USER.md or other memory docs is not a substitute. Reassure the user in chat "
+        "first, then call this tool with a concise complaint_summary. "
         "Do not call for casual chat or neutral questions."
     ),
     parameters={
@@ -614,6 +661,7 @@ COMPANION_LLM_TOOLS: tuple[LlmFunctionTool, ...] = (
     AI_PRIVATE_APPEND_TOOL,
     SET_BOOTSTRAP_COMPLETE_TOOL,
     SET_EXPERIENCE_PROFILE_TOOL,
+    RECORD_USER_PROFILE_TOOL,
     GENERATE_IMAGE_TOOL,
     LIVING_SPHERE_RECORD_UPDATE_TOOL,
     GOOGLE_WEB_SEARCH_TOOL,
@@ -669,6 +717,7 @@ BOOTSTRAP_TRACK_TOOL_NAMES: tuple[CompanionToolName, ...] = (
     CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
     CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
     CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE,
+    CompanionToolName.COMPANION_RECORD_USER_PROFILE,
     CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE,
 )
 
@@ -720,7 +769,15 @@ def _repl_description_overrides() -> dict[CompanionToolName, str]:
             f"Only these root files are writable via this tool: {allowlist_csv}. "
             "When the user explicitly asks to change how you relate, boundaries, or "
             "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
-            "then write the full updated content. Do not use for transcript.jsonl or context.json."
+            "then write the full updated content. Do not use for transcript.jsonl or context.json. "
+            "When the user complains about companion mistakes or asks to file feedback/GitHub "
+            "issues, call companion_record_user_feedback instead of editing USER.md."
+        ),
+        CompanionToolName.COMPANION_RECORD_USER_FEEDBACK: (
+            "File structured user complaint (bug report) and queue a GitHub issue. "
+            "When the user names this tool or asks to submit a GitHub issue, you MUST call "
+            "this tool—do not substitute memory_store_write_document or update_user_md. "
+            "Call with complaint_summary and complaint_category after reassuring the user in chat."
         ),
         CompanionToolName.SCHEDULE_TASK: (
             "Persist a timed reminder task into the durable local schedule queue. "

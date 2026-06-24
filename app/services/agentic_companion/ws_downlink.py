@@ -48,7 +48,7 @@ class WebSocketDownlink:
                 await self._deliver_tool_background(event)
             case _:
                 # TODO(companion-ws-bootstrap-downlink): BOOTSTRAP_INTERIM materializer. #3209 #3398
-                # TODO(companion-ws-inner-tick-downlink): USER_REPLY / PROACTIVE / SCHEDULED / MAINTENANCE. #3210
+                # TODO(companion-ws-inner-tick-downlink): USER_REPLY / PROACTIVE / SCHEDULED / MONOLOG. #3210
                 raise NotImplementedError(
                     f"WebSocketDownlink does not handle {event.kind}; "
                     "use bootstrap consumer or inner_tick_fire for this path"

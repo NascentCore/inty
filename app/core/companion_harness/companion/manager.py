@@ -48,7 +48,7 @@ from .turn_deps import CompanionTurnDeps
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
-    run_companion_inner_tick_maintenance_turn,
+    run_companion_inner_tick_monolog_turn,
     run_companion_inner_tick_proactive_chat_turn,
     run_companion_inner_tick_scheduled_turn,
     run_companion_user_chat_turn,
@@ -386,7 +386,7 @@ class CompanionManager:
             ),
         )
 
-    async def run_inner_tick_maintenance_turn(
+    async def run_inner_tick_monolog_turn(
         self,
         session: CompanionSession,
         *,
@@ -397,7 +397,7 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
     ) -> CompanionTurnResult:
-        return await run_companion_inner_tick_maintenance_turn(
+        return await run_companion_inner_tick_monolog_turn(
             deps=self._build_turn_deps(
                 session,
                 background_output_sink=background_output_sink,
