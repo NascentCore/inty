@@ -2,7 +2,7 @@
 
 Must be in plan mode, if not, swith to plan mode first.
 
-Draft a solid implementation plan, after you have a sound design.
+Draft a solid implementation plan for a sound and clear design.
 
 ## Scoping
 

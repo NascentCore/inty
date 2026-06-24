@@ -63,14 +63,49 @@ Companion Harness 的目标是为长期关系中陪伴用户的**虚拟活人**�
 - agentic loop: 与 LLM 的多轮推理；多个 agentic loop 组成模拟思考与行动的 central mind model。既产出用户可见消息，也产出非用户可见数据（monolog、autonomy 等），影响后续可见话术。
 - channel: 用户与 agentic companion 交互的媒介抽象；当前有 Weixin/WeChat (IM)、Telegram (IM)、App (WebSocket)。
 - input & output queue: 在用户与 agent 之间缓冲消息。
-- Prompt slice: 当轮注入 LLM 的 system 文本块；可 1:1 来自 MemDoc，也可仅来自包内模板或 Python 组装（见 [MEMORY_STORE.md](./MEMORY_STORE.md)）。
+- Prompt slice: one individual message in an LLM completion request—usually a system message; a prompt includes multiple slices in the form of user, assistant, and tool rows (transcript and tail user lines). A non-chat-history slice may map 1:1 to a MemDoc, a package template, or Python assembly (see [MEMORY_STORE.md](./MEMORY_STORE.md)).
 - Living Sphere / Techno Core: 见 [LIVING_SPHERE.md](./LIVING_SPHERE.md)——LivingSphere 是用户可改写的私密虚拟小家，TechnoCore 是只读的集体居留层。
 - Interaction patterns:
   - proactive: 由 agent 主动搭话，一种用户可见的行为模式。
 
+### Prompt content categories and runtime organization
+
+Every prompt slice is classified on **two orthogonal axes**. Both are required when adding or moving slices.
+
+**Axis 1 — Content category (what the text is).** Semantic kind of material. Stable layer names used in system-prefix assembly:
+
+- **Doctrine** — product axiom, Inty ontology, safety seeds; fixed package prompts.
+- **Capability** — harness limits, channel contracts, tool contracts (`HARNESS.md`, `CHANNELS.md`, `TOOLS.md`).
+- **Persona** — bond material: SOUL, IDENTITY, STYLE, USER.md, COMPANIONSHIP.md, MEMORY, Living Sphere / Techno Core when injected; bootstrap relationship procedure (`BOOTSTRAP.md`, tool section, template reference) while bootstrap phase is active.
+- **Output** — turn output contracts (bootstrap, settled, inner-tick variants).
+- **Contextual** — turn overlays: experience directives, time context, significance perception, proactive/scheduled clauses, Turn Brief when wired.
+- **Transcript** — user / assistant / tool history rows (not part of the system prefix builder, still part of the completion request).
+
+**Axis 2 — Runtime organization (how the harness manages the slice).** Ordering, persistence, and discarding as the companion runs indefinitely:
+
+- **core** — Long-lived relationship material re-injected across turns (doctrine seeds, MemDoc persona bodies, bootstrap procedure while phase active). Persisted in MemoryStore or package seeds; not discarded turn-to-turn.
+- **runtime** — Turn-scoped material refreshed or windowed each invocation (output contracts, contextual clauses, transcript window, tool-round prefix refresh). Persisted via transcript JSONL and per-turn compose; replaced per harness rules.
+- **peripheral** — Gateway or product/campaign slices the harness may attach or omit without breaking the relationship model (channel output format, Weixin alias, Telegram cohort overlay). Often not in MemDocs; gated by channel or session flags.
+
 ## 目标架构图
 
-```bird's-eye-view-components-diagram
+```bird's-eye-view
++------------------------------------------+
+|                  RUNTIME                 |
+|    +----------------------------------+  |
+|    |         COMPANION HARNESS        |  |
+|    |    +------------------------+    |  |
+|    |    |          LLM           |    |  |
+|    |    +------------------------+    |  |
+|    +----------------------------------+  |
++------------------------------------------+
+```
+
+- LLM : language model core (external providers)
+- Companion Harness : orchestration, emotional scaffolding, "agency"
+- Runtime: APIs, gateways, external system integration, observability (conventional technology)
+
+```components-diagram
 ┌──────────────────────────────────────┐
 │  Users side                          │
 └───────────────────┬──────────────────┘
