@@ -20,7 +20,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
@@ -40,10 +42,6 @@ from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
     CompanionSession,
-)
-from app.core.companion_harness.agent_channel.channel_kind import (
-    ChannelKind,
-    TurnRuntimeContext,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,

@@ -24,7 +24,7 @@ from app.core.companion_harness.companion.turn import (
     run_companion_user_chat_turn,
     run_inner_tick_autonomy,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

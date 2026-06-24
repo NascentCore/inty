@@ -19,7 +19,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (

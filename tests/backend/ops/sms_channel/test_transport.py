@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.external_services.twilio_sms import TwilioInboundSms, TwilioSmsSendResult
 from app.services.agentic_channel.channel_runtime import clear_registries_for_tests
 from app.services.agentic_channel.endpoints import resolve_scope

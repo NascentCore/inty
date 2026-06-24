@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from sqlalchemy import delete
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.companion_bond import CompanionBond

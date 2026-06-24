@@ -87,7 +87,7 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
     profile_collection_active,
 )
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.core.companion_harness.memory.user_md_identity import (
     build_cohort_profile_probe_hint,
 )

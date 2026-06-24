@@ -12,9 +12,9 @@ from loguru import logger
 from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
-    is_im_channel,
+    is_im_runtime_channel,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -77,7 +77,7 @@ def _localized_im_channel_message(
 ) -> str:
     """Return English copy on IM channels; Chinese elsewhere."""
     match runtime_channel:
-        case channel if is_im_channel(channel):
+        case channel if is_im_runtime_channel(channel):
             return english
         case _:
             return chinese
@@ -212,7 +212,7 @@ class AgentChannelPresence:
             )
         if ready_output_is_agent_initiated_visible(message):
             # TODO(#3576): Deliver agent-initiated sign-on rows on App-WS via OutputQueue.
-            if not is_im_channel(active):
+            if not is_im_runtime_channel(active):
                 raise OutputDeliveryUnroutableError(
                     self._scope,
                     message.message_ids,

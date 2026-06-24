@@ -9,7 +9,7 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.config import global_config_loaded_from_config_yaml

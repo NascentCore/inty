@@ -1,9 +1,11 @@
-"""Tests for active gateway exclusivity registry."""
+"""Tests for active channel exclusivity registry."""
 
 from __future__ import annotations
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
-from app.services.agentic_companion.active_channel_registry import (
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
+from app.services.agentic_companion.runtime_channel_registry import (
     clear_all_for_tests,
     other_active_channel,
     register_active_channel,
@@ -12,8 +14,10 @@ from app.services.agentic_companion.active_channel_registry import (
 
 def test_active_channel_registry_detects_telegram_conflict() -> None:
     clear_all_for_tests()
-    user_id = "user-gateway-test"
-    register_active_channel(user_id=user_id, channel=ChannelKind.TELEGRAM,
+    user_id = "user-channel-test"
+    register_active_channel(
+        user_id=user_id,
+        channel=ChannelKind.TELEGRAM,
     )
     conflict = other_active_channel(
         user_id=user_id,
@@ -25,8 +29,10 @@ def test_active_channel_registry_detects_telegram_conflict() -> None:
 
 def test_active_channel_registry_detects_sms_conflict() -> None:
     clear_all_for_tests()
-    user_id = "user-gateway-sms-test"
-    register_active_channel(user_id=user_id, channel=ChannelKind.SMS,
+    user_id = "user-channel-sms-test"
+    register_active_channel(
+        user_id=user_id,
+        channel=ChannelKind.SMS,
     )
     conflict = other_active_channel(
         user_id=user_id,

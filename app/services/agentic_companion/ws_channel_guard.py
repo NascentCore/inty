@@ -1,9 +1,9 @@
-"""Reject companion WebSocket when another gateway already holds the user."""
+"""Reject companion WebSocket when another channel already holds the user."""
 
 from __future__ import annotations
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
-from app.services.agentic_companion.active_channel_registry import (
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.services.agentic_companion.runtime_channel_registry import (
     other_active_channel,
     register_active_channel,
     unregister_active_channel,
@@ -11,7 +11,7 @@ from app.services.agentic_companion.active_channel_registry import (
 
 
 def ws_reject_reason_if_other_channel_active(*, user_id: str) -> str | None:
-    """Return close reason when a non-App gateway blocks a new App WS session."""
+    """Return close reason when a non-App channel blocks a new App WS session."""
     assert user_id != ""
     conflict = other_active_channel(
         user_id=user_id,

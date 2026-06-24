@@ -15,7 +15,9 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import (
     AgenticCompanion,
@@ -30,9 +32,6 @@ from app.core.companion_harness.agentic_companion.postgres_queue import (
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
     QueueStatus,
-)
-from app.core.companion_harness.agent_channel.channel_kind import (
-    ChannelKind,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,

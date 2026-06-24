@@ -44,7 +44,7 @@ from app.core.companion_harness.companion.manager_factory import (
     companion_tool_model_api_id,
 )
 from app.core.companion_harness.companion.models import load_context_meta
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

@@ -17,7 +17,7 @@ from enum import StrEnum
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.external_services.telegram_bot_api import (

@@ -23,7 +23,7 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

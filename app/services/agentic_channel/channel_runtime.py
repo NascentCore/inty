@@ -12,12 +12,12 @@ from enum import StrEnum
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_channel.adapters.base import ChannelAdapter
 from app.services.agentic_channel.endpoints import get_endpoint_for_scope
-from app.services.agentic_companion.active_channel_registry import (
+from app.services.agentic_companion.runtime_channel_registry import (
     register_active_channel,
     unregister_active_channel,
 )

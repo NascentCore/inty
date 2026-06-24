@@ -9,7 +9,9 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent

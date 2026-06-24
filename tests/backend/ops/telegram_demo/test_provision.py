@@ -9,9 +9,6 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
-    ChannelKind,
-)
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -21,7 +18,9 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
 )
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.services.agentic_channel.provision import (
     OwnedChannelProvisionInput,
     provision_agent_for_channel_onboard,

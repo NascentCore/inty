@@ -22,7 +22,7 @@ from app.core.llms.client import (
     LLM_SCENE_CHAT,
 )
 from app.core.companion_harness.companion.models import InnerTickActivity
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

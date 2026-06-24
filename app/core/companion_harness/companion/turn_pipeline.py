@@ -43,7 +43,7 @@ from .models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
-from app.core.companion_harness.agent_channel.channel_kind import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
 from .turn_track import turn_flags_for_track
 from .dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,

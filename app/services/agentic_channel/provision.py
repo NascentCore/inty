@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.model_selection import select_chat_model
@@ -231,7 +231,8 @@ async def provision_agent_for_channel_onboard(
         try:
             scope = await provision_guest_scope(
                 db,
-                ProvisionGuestScopeInput(channel=channel,
+ProvisionGuestScopeInput(
+                    channel=channel,
                     nickname_prefix="Guest",
                     meta_data=_guest_meta_data_for_channel(channel),
                 ),

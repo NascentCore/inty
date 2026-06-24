@@ -24,11 +24,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
-from app.core.companion_harness.agent_channel.channel_traits import (
-    guest_agent_name_for_channel,
-)
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.uuid import get_new_user_id
 from app.models.agent import Agent, AgentVisibility
 from app.models.user import AuthType, User, normalize_gender
@@ -71,6 +70,24 @@ def guest_nickname(*, prefix: str, user_id: str) -> str:
     return f"{prefix}_{user_id[-8:]}"
 
 
+def companion_guest_agent_name(
+    *, channel: ChannelKind, tag: str
+) -> str:
+    """Channel-specific display name only; legacy character-card fields stay NULL."""
+    assert tag != ""
+    match channel:
+        case ChannelKind.APP_WS:
+            return f"agent-channel-{tag}"
+        case ChannelKind.TELEGRAM:
+            return f"telegram-{tag}"
+        case ChannelKind.WECHAT_WEIXIN:
+            return f"weixin-companion-{tag}"
+        case ChannelKind.SMS:
+            return f"sms-{tag}"
+        case _:
+            raise AssertionError(f"unsupported channel: {channel!r}")
+
+
 async def add_guest_user(db: AsyncSession, input: GuestUserInput) -> User:
     assert input.nickname_prefix != ""
     user_id = get_new_user_id()
@@ -97,7 +114,7 @@ async def add_companion_guest_agent_for_user(
         db,
         PrivateAgentInput(
             user_id=user_id,
-            name=guest_agent_name_for_channel(channel=channel, tag=tag),
+            name=companion_guest_agent_name(channel=channel, tag=tag),
             gender=COMPANION_GUEST_DEFAULT_GENDER,
         ),
     )

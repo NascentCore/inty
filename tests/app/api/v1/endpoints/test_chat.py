@@ -23,9 +23,10 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -972,33 +973,7 @@ def _patch_companion_ws_queue_turn(
     from unittest.mock import AsyncMock, MagicMock
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
-    from app.core.companion_harness.agent_channel.channel_kind import (
-        ChannelKind,
-    )
-    from app.schemas.implicit_signals import ImplicitSignalBundle
-    from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
-    from app.services.agentic_channel.channel_runtime import (
-        ChannelRuntimeState,
-        clear_registries_for_tests,
-        get_scope_channel_registry,
-    )
-    from app.services.agentic_channel.presence import (
-        AgentChannelPresence,
-        clear_presences_for_tests,
-        _presences,
-    )
-    from app.core.companion_harness.agentic_companion.output_queue import (
-        ReadyOutputMessage,
-    )
-    from app.core.companion_harness.agentic_companion.types import (
-        InputQueueRecord,
-        QueueStatus,
-    )
-    from app.services.agentic_companion.downlink import DownlinkKind
-    from app.services.agentic_companion.ws_outbound_materialize import (
-        materialize_queue_user_reply_from_durable,
-    )
-
+    
     from app.core.config import global_config_loaded_from_config_yaml
     from app.services.agentic_companion.inner_tick_poll import (
         run_inner_tick_poll,
@@ -2655,7 +2630,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-            channel=ChannelKind.APP_WS,
+channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )

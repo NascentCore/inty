@@ -20,7 +20,7 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.models import InnerTickThrottleKind
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

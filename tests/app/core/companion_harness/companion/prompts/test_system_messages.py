@@ -34,7 +34,7 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

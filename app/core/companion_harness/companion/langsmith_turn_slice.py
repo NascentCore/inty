@@ -18,7 +18,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     invocation_extra,
     tool_call_langsmith_extra,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

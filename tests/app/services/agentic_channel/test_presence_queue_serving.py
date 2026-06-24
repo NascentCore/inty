@@ -11,7 +11,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind

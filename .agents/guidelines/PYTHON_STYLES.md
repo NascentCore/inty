@@ -15,7 +15,7 @@ Use `StrEnum` for fixed choices. Branch with `match/case`, not string literals o
 
 **Suffix** picks the angle:
 
-- **Kind** — what category something is (`ChannelKind`, `CompanionGuestAgentKind`)
+- **Kind** — what category something is (`ChannelKind`)
 - **Mode** — which behavior is on (`UserTurnLlmLoopMode`)
 - **Status** — lifecycle state (`QueueStatus`)
 - **Role**, **Track**, **Source** — same idea: suffix names the dimension

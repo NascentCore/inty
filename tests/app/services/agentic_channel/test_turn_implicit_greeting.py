@@ -8,7 +8,7 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_channel.presence import AgentChannelPresence

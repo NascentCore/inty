@@ -18,7 +18,7 @@ from app.core.companion_harness.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent

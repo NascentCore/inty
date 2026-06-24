@@ -20,7 +20,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
 )
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,

@@ -11,7 +11,7 @@ from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
     output_format_prompt_slice_for_runtime_channel,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import delete
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.agentic_channel.companion_guest_provision import (

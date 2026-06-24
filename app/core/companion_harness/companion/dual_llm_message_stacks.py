@@ -22,7 +22,7 @@ from .prompt_stack import append_runtime_output_format_system_message
 from .prompts.system_messages import (
     build_system_messages_for_tool_track,
 )
-from app.core.companion_harness.agent_channel.channel_kind import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
 
 
 def replace_leading_system_messages_multi(

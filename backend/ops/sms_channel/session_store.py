@@ -5,7 +5,7 @@ from __future__ import annotations
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.channel_runtime import turn_channel_up

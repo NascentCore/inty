@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 
 PlainTextAssistantSink = Callable[[str], Awaitable[None]]

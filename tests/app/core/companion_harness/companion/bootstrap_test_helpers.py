@@ -14,7 +14,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

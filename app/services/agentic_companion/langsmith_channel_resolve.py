@@ -13,13 +13,13 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.manager import CompanionSession
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
-from app.services.agentic_companion.active_channel_registry import (
+from app.services.agentic_companion.runtime_channel_registry import (
     active_channel_for_user,
 )
 

@@ -1,7 +1,7 @@
 """Channel adapter protocol for agent-channel stack.
 
 TODO(rename-channel-to-gateway): Rename ``ChannelAdapter`` → ``Gateway`` (Protocol); each — #3548
-implementation declares ``gateway_kind: ChannelKind`` from ``agent_channel/channel_kind.py``.
+implementation declares ``gateway_kind: ChannelKind`` from ``companion/runtime_channel.py``.
 Adapters must not define the canonical enum.
 TODO(companion-channel-tools): Extend protocol with channel tool execution hooks (or sibling
   port) so harness dispatch stays out of transport details — #3362
@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink

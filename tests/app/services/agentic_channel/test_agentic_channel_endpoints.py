@@ -8,9 +8,6 @@ import pytest
 from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.channel_kind import (
-    ChannelKind,
-)
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -24,7 +21,9 @@ from app.services.agentic_channel.endpoints import (
     resolve_scope_by_channel_user_id,
 )
 from app.services.agentic_channel.errors import ChannelEndpointConflictError
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
 )

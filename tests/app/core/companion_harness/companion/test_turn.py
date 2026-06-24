@@ -25,7 +25,7 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

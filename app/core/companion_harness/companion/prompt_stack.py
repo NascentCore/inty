@@ -13,7 +13,7 @@ hierarchy (design issue; options include in-context vs retrieval-required splits
 
 
 TODO(rename-channel-to-gateway): Move ``output_format_prompt_slice_for_runtime_channel`` to — #3548
-``agent_channel/channel_traits.py`` (#3409).
+``companion/runtime_channel.py`` (#3409).
 """
 
 from __future__ import annotations
@@ -38,9 +38,10 @@ from .models import (
 from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from app.core.companion_harness.agent_channel.channel_kind import (
+from .runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
+    is_im_runtime_channel,
 )
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -93,14 +94,13 @@ def output_format_prompt_slice_for_runtime_channel(
     runtime_channel: ChannelKind,
 ) -> str:
     """Resolve channel output-format text from the runtime communication medium."""
-    from app.core.companion_harness.agent_channel.channel_traits import (
-        harness_output_format_slice,
-    )
-
-    return harness_output_format_slice(
-        bundle=bundle,
-        channel=runtime_channel,
-    )
+    match runtime_channel:
+        case channel if is_im_runtime_channel(channel):
+            return bundle.output_format_im_dm_md
+        case ChannelKind.APP_WS | ChannelKind.SMS:
+            return ""
+        case _:
+            return ""
 
 
 def append_runtime_output_format_system_message(

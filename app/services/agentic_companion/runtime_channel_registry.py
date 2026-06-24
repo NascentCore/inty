@@ -1,4 +1,4 @@
-"""Per-user active channel registry (prototype: in-process only).
+"""Per-user active runtime channel registry (prototype: in-process only).
 
 TODO(cross-channel-same-user-association): #3491 — associate channels for the same
 canonical user across devices; today exclusivity is per-process user_id only.
@@ -7,7 +7,9 @@ TODO(telegram-demo-ws-guard): Extend registry across Ops replicas — #3351
 
 from __future__ import annotations
 
-from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+)
 
 _active_by_user_id: dict[str, ChannelKind] = {}
 

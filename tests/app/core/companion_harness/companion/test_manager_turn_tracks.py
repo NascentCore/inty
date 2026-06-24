@@ -13,7 +13,7 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

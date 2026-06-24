@@ -49,7 +49,7 @@ from app.core.companion_harness.prompting.tracks import (
     _persona_bootstrap_user_turn_system_messages,
     _persona_settled_user_turn_system_messages,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

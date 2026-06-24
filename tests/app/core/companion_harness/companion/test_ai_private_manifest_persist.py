@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.ai_private_prompt import (
 from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
 )
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )

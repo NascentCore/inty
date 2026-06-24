@@ -121,7 +121,7 @@ async def test_deliver_inner_tick_assistant_telegram_calls_sink() -> None:
 def test_inner_tick_delivery_rejects_multiple_media() -> None:
     import pytest
 
-    from app.core.companion_harness.agent_channel.channel_kind import (
+    from app.core.companion_harness.companion.runtime_channel import (
         ChannelKind,
     )
     from app.services.agentic_companion.inner_tick_delivery import (

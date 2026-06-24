@@ -7,7 +7,7 @@ import uuid
 import pytest
 from sqlalchemy import delete
 
-from app.core.companion_harness.agent_channel.channel_kind import (
+from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
