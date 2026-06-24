@@ -886,13 +886,12 @@ def append_profile_collection_system_messages(
 
     Runtime organization: peripheral (track-attached).
 
-    Single compositor for paid-ad cohort profile collection during interactive
-    bootstrap. When profile collection is required and the turn runs on Telegram,
-    append the channel overlay slice and an optional runtime hint for empty user
-    profile identity labels. All other sessions receive the input list unchanged.
+    Paid-ad launch policy: static English overlay and optional runtime hint for
+    unfilled user profile identity labels. Gated by interactive bootstrap,
+    profile_collection_required, and Telegram channel. All other sessions receive
+    the input list unchanged.
 
-    TODO(bootstrap-cohort-overlays): Only choke point should invoke this; wire
-    PromptBuilder bootstrap path and #3463 proactive overlay through here — #3628.
+    TODO(bootstrap-cohort-overlays): #3463 proactive bootstrap should call this compositor — #3628.
     """
     if not interactive_bootstrap_active:
         return system_messages
