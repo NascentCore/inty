@@ -212,15 +212,15 @@ def is_scope_initialized_in_store(store: MemoryStore) -> bool:
 
 _MINIMAL_TRANSCRIPT_SEED = ""
 
-# Canonical list of core companion templates seeded into MemoryStore on init.
-_CORE_COMPANION_TEMPLATE_ATTRS: tuple[str, ...] = (
-    "identity",
-    "soul",
-    "style_md",
-    "user_md",
-    "memory_md",
-    "channels_md",
-    "companionship_md",
+# Canonical rel paths for core companion templates seeded into MemoryStore on init.
+_CORE_COMPANION_TEMPLATE_REL_PATHS: Final[tuple[str, ...]] = (
+    IDENTITY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+    MEMORY_MD_REL,
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
 )
 
 
@@ -232,9 +232,7 @@ def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     Does not touch transcript.jsonl; ``ensure_minimal_documents_in_store`` creates an
     empty transcript when the five-piece is not yet satisfied.
     """
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    for attr in _CORE_COMPANION_TEMPLATE_ATTRS:
-        rel = getattr(paths, attr)
+    for rel in _CORE_COMPANION_TEMPLATE_REL_PATHS:
         body = store.read_document_if_exists(rel)
         if body is None or not body.strip():
             store.write_document(rel, load_template_seed_text(rel))
