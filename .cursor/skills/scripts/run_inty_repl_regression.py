@@ -1585,12 +1585,29 @@ def _run_experience_profile_phase(
     stderr: TextIO,
 ) -> bool:
     """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
+    if not _wait_input_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="pre-experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "input queue not idle before experience_profile"),
+            }
+        )
     print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
     experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
-    text, meta, err = _wait_downlink(
+    text, meta, err = _wait_downlink_for_user_msg_uuid(
         bridge,
+        report,
+        expected_user_msg_uuid=experience_msg_uuid,
         timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
         label="experience_profile",
+        trailing_label="experience_profile_mismatch",
     )
     if err is not None:
         report["errors"].append({"turn": "experience_profile", "error": err})
@@ -1802,11 +1819,14 @@ def run_regression(
 
         for idx, user_text in enumerate(bootstrap_turns, start=1):
             print(f"{_TAG} bootstrap turn {idx}: {user_text!r}", flush=True)
-            _send_turn(bridge, agent_id, user_text)
-            text, meta, err = _wait_downlink(
+            bootstrap_msg_uuid = _send_turn(bridge, agent_id, user_text)
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
                 bridge,
+                report,
+                expected_user_msg_uuid=bootstrap_msg_uuid,
                 timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
                 label=f"bootstrap-{idx}",
+                trailing_label=f"bootstrap-{idx}_mismatch",
             )
             if err is not None:
                 report["errors"].append({"turn": f"bootstrap-{idx}", "error": err})
@@ -1817,6 +1837,7 @@ def run_regression(
                 {
                     "kind": "bootstrap",
                     "user": user_text,
+                    "user_msg_uuid": bootstrap_msg_uuid,
                     "text_preview": text[:120],
                     "meta": meta,
                 }
@@ -1826,7 +1847,24 @@ def run_regression(
                 f"context_mode={meta.get('context_mode')}",
                 flush=True,
             )
-            _drain_until_quiet(bridge, quiet_sec=2.0, max_sec=15.0)
+            _drain_turn_trailing_frames(
+                bridge, report, label=f"bootstrap-{idx}"
+            )
+            if not _wait_input_delivered(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                client_message_id=bootstrap_msg_uuid,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label=f"bootstrap-{idx}",
+                stderr=stderr,
+            ):
+                report["errors"].append(
+                    {
+                        "turn": f"bootstrap-{idx}-delivered",
+                        "error": (408, f"input not delivered: {bootstrap_msg_uuid}"),
+                    }
+                )
 
         experience_profile_ok = _run_experience_profile_phase(
             bridge=bridge,
