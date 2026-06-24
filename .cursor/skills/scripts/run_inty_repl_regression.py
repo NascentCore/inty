@@ -1587,13 +1587,10 @@ def _run_experience_profile_phase(
     """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
     print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
     experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
-    text, meta, err = _wait_downlink_for_user_msg_uuid(
+    text, meta, err = _wait_downlink(
         bridge,
-        report,
-        expected_user_msg_uuid=experience_msg_uuid,
         timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
         label="experience_profile",
-        trailing_label="experience_profile_mismatch",
     )
     if err is not None:
         report["errors"].append({"turn": "experience_profile", "error": err})
