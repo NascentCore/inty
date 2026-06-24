@@ -1,8 +1,10 @@
-# Engineer local Ops / REPL development (INTY_CONFIG_YAML=devops/config.yaml.local).
-# Real LLM and external services; tune freely for day-to-day companion work.
-# Automated REPL regression uses devops/config.yaml.regression_tests — keep that file
-# stable for CI/agent gates; do not point run_inty_repl_regression.py here.
-# Unit tests with mocked/fake external services use devops/config.yaml.test.
+# REPL / companion harness regression E2E (run_inty_repl_regression.py).
+# Calls real LLM, LangSmith, GitHub user-feedback, and other external services.
+# Separate from devops/config.yaml.local so engineers can tune local REPL without
+# breaking the automated regression gate. Database DSN matches config.yaml.local.
+# Launch Ops for regression: export INTY_CONFIG_YAML=devops/config.yaml.regression_tests
+# then ./backend/ops/start.sh --local --no-build-frontend (do not rely on --local default).
+# Unit tests that mock external services use devops/config.yaml.test instead.
 app:
   debug: true
   environment: local
@@ -67,9 +69,9 @@ agent:
     memory_bootstrap_type: USER_INTERACTIVE
     # Local Telegram idle-pause smoke only (production default 960 min).
     agent_scope_idle_timeout_minutes: 5
-    # Fast proactive + dreaming rhythm for local REPL / regression (defaults: idle 30s / 7200s).
+    # Fast proactive + dreaming rhythm for REPL regression gate (defaults: idle 30s / 7200s).
     # Min idle 10s (RootConfig validation); poll 3s → proactive + scope dreaming within ~90s wait.
-    # dreaming_idle_seconds: 10
+    dreaming_idle_seconds: 10
     inner_tick:
       proactive_chat:
         base_idle_seconds: 10

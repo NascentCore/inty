@@ -1,6 +1,8 @@
-# Used for running backend server in CI tests.
-# External services and tracing are disabled or faked so CI does not depend on third-party APIs.
+# pytest / CI unit & integration tests — no real LLM, GCS, or other paid external APIs.
+# External services and tracing are disabled or faked (app/external_services/fakes/).
 # Database DSN matches devops/config.yaml.local (same local Postgres Ops migrates).
+# REPL regression E2E (real LLM + GitHub) uses devops/config.yaml.regression_tests.
+# Engineer local REPL/Ops uses devops/config.yaml.local.
 # app.debug true: tolerate missing Firebase JSON in CI; OpenAPI on. Log level comes from logging.level / INTY_* only.
 app:
   debug: true
@@ -20,9 +22,9 @@ logging:
   level: "INFO"
 
 database:
-  # Same DSN as devops/config.yaml.local — pytest / CI backend share the local Postgres
-  # instance Ops prepares (localhost:15432, db inty). Smoke docs assume DB is already
-  # compatible; do not alter Postgres password as a test step.
+  # Same DSN as devops/config.yaml.local / config.yaml.regression_tests — pytest shares
+  # the local Postgres instance Ops prepares (localhost:15432, db inty). This file does
+  # not call real LLM/GCS; use config.yaml.regression_tests for REPL regression E2E.
   host: localhost
   port: 15432
   user: postgres

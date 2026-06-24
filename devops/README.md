@@ -58,8 +58,9 @@ dev 环境预制了 3 个测试用户（使用`python tools/scripts/create_email
   - `config.yaml.dev` / `config.yaml.prod`：IntelliMate 部署环境配置（构建期注入进入镜像；具体机制见 `RELEASE.md`）
     - **dev / prod**：`database` 均指向 VM 本地 Docker Postgres（[LOCAL_POSTGRES.md](LOCAL_POSTGRES.md)）
   - `config.yaml.imate_dev` / `config.yaml.imate_prod`：iMate 第二实例配置
-  - `config.yaml.local`：工程师本机 Ops / REPL 配置；通过 **`export INTY_CONFIG_YAML=devops/config.yaml.local`** 加载（Postgres **`localhost:15432`**，db **`inty`**）
-  - `config.yaml.test`：CI / 本地 pytest 配置（**`INTY_CONFIG_YAML=devops/config.yaml.test`**）；**`database` 段与 `config.yaml.local` 相同 DSN**，可连 Ops 已 migrate 的同一 Postgres；差异仅在 agent / tracing / 外部服务 mock
+  - `config.yaml.local`：工程师本机 Ops / REPL 日常开发；**`export INTY_CONFIG_YAML=devops/config.yaml.local`**（Postgres **`localhost:15432`**，db **`inty`**）；可自由调整，勿当作回归门禁配置
+  - `config.yaml.regression_tests`：REPL 回归 E2E（`run_inty_repl_regression.py`）；**真实 LLM / LangSmith / GitHub**；**`database` 段与 local 相同 DSN**；Ops 回归前 **`export INTY_CONFIG_YAML=devops/config.yaml.regression_tests`**
+  - `config.yaml.test`：pytest / CI **单元与集成测试**（**`INTY_CONFIG_YAML=devops/config.yaml.test`**）；**不调用真实 LLM 或 GCS 等外部服务**（fake/mock）；**`database` 段与 local 相同 DSN**
 - **nginx/**：反向代理配置与校验脚本
   - `nginx/nginx.conf`：Nginx 主配置
   - `nginx/conf.d/sxwl.ai.conf`：站点配置

@@ -19,7 +19,7 @@ Layout:
   require ``--proactive-min-rounds`` (default 1) with ``--proactive-target-rounds`` (default 2,
   summary-only); fast local idle (10s + poll 3s); fail on legacy ``[SILENT]`` token in previews.
 - Dreaming: poll ``.companion_dreaming_state.json`` + ``MEMORY.md`` sequence after proactive
-  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.local``; ``--dreaming-wait-sec`` default 90).
+  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.regression_tests``; ``--dreaming-wait-sec`` default 90).
 - GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
   ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
@@ -28,6 +28,9 @@ Layout:
   ``tests/cursor/skills/scripts/test_run_inty_repl_regression.py``.
 
 Run with shell cwd = repository root (or any path under the repo).
+
+Config: default ``devops/config.yaml.regression_tests`` (real LLM/GitHub E2E gate).
+``devops/config.yaml.local`` is for engineer REPL tuning; ``devops/config.yaml.test`` is pytest-only (faked externals).
 
 TODO(#3606): Split mandatory pass gate (infra-only) from live LLM eval smoke;
 github_issue_e2e and proactive target rounds should not block exit 0.
@@ -54,7 +57,8 @@ from typing import Any, TextIO
 
 _TAG = "[inty-repl-regression]"
 _DEFAULT_API_BASE = "http://127.0.0.1:8001"
-_DEFAULT_CONFIG = "devops/config.yaml.local"
+# Default regression YAML — separate from config.yaml.local (engineer REPL tuning).
+_DEFAULT_CONFIG = "devops/config.yaml.regression_tests"
 _DEFAULT_USER_ID = "user-testing"
 _PROACTIVE_CHAT_HISTORY_MARKER = "[SYSTEM PROACTIVE CHAT]"
 _DEFAULT_BOOTSTRAP_TURNS = (
@@ -99,7 +103,7 @@ _BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 20.0
 _BOOTSTRAP_TURN_SETTLE_MAX_SEC = 300.0
 _SETTLED_TURN_TIMEOUT_SEC = 900.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
-# Match devops/config.yaml.local fast proactive: idle 10s + poll 3s + LLM slack.
+# Match devops/config.yaml.regression_tests fast proactive: idle 10s + poll 3s + LLM slack.
 # ``--proactive-wait-sec``: wall-clock listen duration (not capped by min/target rounds).
 # ``--proactive-min-rounds``: pass gate (default 1; silent-first round cannot schedule a 2nd).
 # ``--proactive-target-rounds``: stretch goal logged in summary; does not fail the run.

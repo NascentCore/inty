@@ -2,6 +2,11 @@
 
 Path: ``INTY_CONFIG_YAML`` when set, otherwise ``config.yaml`` in the current working directory.
 
+Config file roles (``devops/config.yaml.*``):
+- ``.local`` — engineer local Ops / REPL; real external services; tune freely.
+- ``.regression_tests`` — REPL regression E2E; real LLM/GitHub; keep stable for gates.
+- ``.test`` — pytest / CI; faked external services; no real LLM or GCS calls.
+
 Migration (grep ``TODO(INTY_CONFIG_YAML)``): shared ``resolve_inty_config_yaml_path()`` in
 ``app.utils.config``; entrypoints export env instead of ``cp devops/config.yaml.*`` — see
 https://github.com/NascentCore/inty/issues/3530 and skill dedupe https://github.com/NascentCore/inty/issues/3529.

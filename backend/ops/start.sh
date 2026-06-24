@@ -27,7 +27,9 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
                          Existing log file is removed at startup. With --debug: console INFO, file DEBUG.
 
   Flags (--local|--dev only):
-    --local|--dev        Use devops/config.yaml.local (unless INTY_CONFIG_YAML already set); seed admin + report fixtures; write JWT and agent id for user-testing.
+    --local|--dev        Use devops/config.yaml.local when INTY_CONFIG_YAML unset (engineer REPL).
+                         REPL regression: export INTY_CONFIG_YAML=devops/config.yaml.regression_tests first.
+                         pytest/CI uses devops/config.yaml.test (faked externals). Seeds admin + report fixtures.
     --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
     --no-build-frontend  Skip that step; use existing app/static/evaluation.
 
@@ -76,6 +78,7 @@ mkdir -p "$WORKSPACE"
 LOG_FILE="$WORKSPACE/inty.log"
 
 if [ "$LOCAL" = true ] && [ -z "${INTY_CONFIG_YAML:-}" ]; then
+  # Engineer local default — not config.yaml.regression_tests (see devops/config.yaml.* headers).
   export INTY_CONFIG_YAML=devops/config.yaml.local
   echo "Using local config: INTY_CONFIG_YAML=$INTY_CONFIG_YAML"
 fi
