@@ -14,8 +14,8 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -98,7 +98,7 @@ def bootstrap_queue_turn_deps(
         repository_only_store_text=False,
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         background_output_sink=None,

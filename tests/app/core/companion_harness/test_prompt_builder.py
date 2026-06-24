@@ -14,8 +14,8 @@ from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
     build_system_messages_for_tool_track,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_tail_user import (
@@ -78,7 +78,7 @@ def _telegram_bootstrap_builder(*, user_md: str) -> PromptBuilder:
             profile_collection_required=True,
         ),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         ),
     )
@@ -121,7 +121,7 @@ def test_bootstrap_user_chat_prompt_omits_profile_slice_without_flag() -> None:
             workspace_bootstrap_user_interactive_completed=False,
         ),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         ),
     )
@@ -149,7 +149,7 @@ def test_bootstrap_user_chat_prompt_omits_profile_slice_on_app_ws() -> None:
             profile_collection_required=True,
         ),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -169,7 +169,7 @@ def test_build_user_chat_prompt_unchanged_no_cohort_overlay() -> None:
         bundle=_bundle(),
         context=ContextMeta(profile_collection_required=True),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         ),
     )
@@ -196,7 +196,7 @@ def test_build_user_chat_prompt_includes_fixed_reply_language_from_config(
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -227,7 +227,7 @@ def test_build_bootstrap_user_chat_prompt_includes_fixed_reply_language_from_con
             workspace_bootstrap_user_interactive_completed=False,
         ),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -263,7 +263,7 @@ def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", load_user_md_template_text())
     runtime = TurnRuntimeContext(
-        gateway=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
     )
     messages: list[dict[str, Any]] = [
@@ -310,7 +310,7 @@ def test_refresh_bootstrap_prefix_updates_probe_hint_after_partial_user_md() -> 
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", partial_user_md)
     runtime = TurnRuntimeContext(
-        gateway=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
     )
     messages: list[dict[str, Any]] = [
@@ -357,7 +357,7 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", load_user_md_template_text())
     runtime = TurnRuntimeContext(
-        gateway=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
     )
     messages: list[dict[str, Any]] = [
@@ -386,7 +386,7 @@ def test_build_user_chat_prompt_allows_tools_and_sets_tool_choice_none() -> (
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -426,7 +426,7 @@ def test_build_user_chat_prompt_preserves_multi_user_tail() -> None:
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -477,7 +477,7 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
             bundle=bundle,
             context=context,
             runtime_context=TurnRuntimeContext(
-                gateway=GatewayKind.APP_WS,
+                channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
         ).settled_single_llm_system_messages()
@@ -511,7 +511,7 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", "user")
     runtime = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
     compact_prefix = build_system_messages_for_tool_track(
@@ -559,7 +559,7 @@ def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() ->
     store.write_document("IDENTITY.md", "id")
     store.write_document("USER.md", "user")
     runtime = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
     messages: list[dict[str, Any]] = [
@@ -620,7 +620,7 @@ def test_build_settled_user_chat_dual_llm_tool_prompt_plan_includes_disclosure_c
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )
@@ -650,7 +650,7 @@ def test_build_settled_user_chat_dual_llm_tool_prompt_plan_omits_disclosure_when
         bundle=_bundle(),
         context=ContextMeta(),
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
     )

@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import (
     AgenticCompanion,
@@ -31,8 +31,8 @@ from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
     QueueStatus,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
@@ -127,7 +127,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground(
     )
     injected, fake = build_scripted_injected_runtime(built.steps)
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_script",
         meta_data={"test": "scripted_drain"},
     )
@@ -139,7 +139,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground(
                 await input_repo.append_user_message(
                     InboundWireMessage(
                         scope=scope,
-                        channel=GatewayKind.APP_WS,
+                        channel=ChannelKind.APP_WS,
                         wire_id="wire-drain-no-tool",
                         text="hello",
                         received_at_utc=now,
@@ -154,7 +154,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground(
                 )
                 result = await companion.drain_once(
                     resolved_chat_model=DEEPSEEK_V3_2,
-                    runtime_channel=GatewayKind.APP_WS,
+                    runtime_channel=ChannelKind.APP_WS,
                     background_output_sink=None,
                     implicit_signal_bundle=_implicit_bundle(),
                     injected_runtime=injected,
@@ -228,7 +228,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
     )
     injected, fake = build_scripted_injected_runtime(built.steps)
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_tool_bg",
         meta_data={"test": "scripted_drain_tool_bg"},
     )
@@ -239,7 +239,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-drain-tool-bg",
                     text="what files do I have?",
                     received_at_utc=now,
@@ -254,7 +254,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
             )
             await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=GatewayKind.APP_WS,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -292,7 +292,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
     )
     injected, fake = build_scripted_injected_runtime(built.steps)
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_silent_fg",
         meta_data={"test": "scripted_drain_skip_output"},
     )
@@ -303,7 +303,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-silent-fg",
                     text="trigger tools",
                     received_at_utc=now,
@@ -318,7 +318,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=GatewayKind.APP_WS,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -373,7 +373,7 @@ async def test_drain_empty_input_queue_returns_none() -> None:
         (fake_step_text("unused"), fake_step_text("")),
     )
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_empty",
         meta_data={"test": "scripted_drain_empty"},
     )
@@ -385,7 +385,7 @@ async def test_drain_empty_input_queue_returns_none() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=GatewayKind.APP_WS,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -406,7 +406,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
     )
     injected, fake = build_scripted_injected_runtime(script)
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_batch",
         meta_data={"test": "scripted_drain_batch"},
     )
@@ -424,7 +424,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-batch",
                     text="line one",
                     received_at_utc=now,
@@ -433,7 +433,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-batch",
                     text="line two",
                     received_at_utc=now,
@@ -448,7 +448,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=GatewayKind.APP_WS,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
@@ -501,7 +501,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
         memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
     )
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="drain_bootstrap",
         meta_data={"test": "scripted_drain_bootstrap"},
     )
@@ -512,7 +512,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
             await input_repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="wire-bootstrap",
                     text="hi, I'm new here",
                     received_at_utc=now,
@@ -527,7 +527,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
             )
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
-                runtime_channel=GatewayKind.APP_WS,
+                runtime_channel=ChannelKind.APP_WS,
                 background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,

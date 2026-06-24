@@ -1,6 +1,6 @@
 """Ops-only API: agent-channel debug endpoints.
 
-TODO(rename-channel-to-gateway): Ops debug routes for bonded gateways; use ``GatewayKind`` — #3548
+TODO(rename-channel-to-gateway): Ops debug routes for bonded gateways; use ``ChannelKind`` — #3548
 from ``agent_channel/gateway.py``. External route paths may alias during migration.
 """
 

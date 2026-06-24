@@ -1,6 +1,6 @@
 """Harness scope for agent-channel stack: one human user bound to one Inty agent.
 
-TODO(rename-channel-to-gateway): Keep ``AgentScope`` here; import ``GatewayKind`` from — #3548
+TODO(rename-channel-to-gateway): Keep ``AgentScope`` here; import ``ChannelKind`` from — #3548
 ``agent_channel/gateway.py`` once #3409 lands. Scope routes turns; enum stays canonical in gateway.py.
 """
 

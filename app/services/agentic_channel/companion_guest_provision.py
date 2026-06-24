@@ -24,9 +24,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
-from app.core.companion_harness.agent_channel.gateway_traits import (
-    guest_agent_name_for_gateway,
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.agent_channel.channel_traits import (
+    guest_agent_name_for_channel,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.uuid import get_new_user_id
@@ -60,7 +60,7 @@ class PrivateAgentInput:
 class ProvisionGuestScopeInput:
     """Guest user + PRIVATE agent pair for companion onboard (caller commits)."""
 
-    gateway: GatewayKind
+    channel: ChannelKind
     nickname_prefix: str
     meta_data: dict
 
@@ -88,7 +88,7 @@ async def add_companion_guest_agent_for_user(
     db: AsyncSession,
     *,
     user_id: str,
-    gateway: GatewayKind,
+    channel: ChannelKind,
 ) -> Agent:
     """Add PRIVATE companion agent for existing guest user (caller commits)."""
     assert user_id != ""
@@ -97,7 +97,7 @@ async def add_companion_guest_agent_for_user(
         db,
         PrivateAgentInput(
             user_id=user_id,
-            name=guest_agent_name_for_gateway(gateway=gateway, tag=tag),
+            name=guest_agent_name_for_channel(channel=channel, tag=tag),
             gender=COMPANION_GUEST_DEFAULT_GENDER,
         ),
     )
@@ -137,7 +137,7 @@ async def provision_guest_scope(
     agent = await add_companion_guest_agent_for_user(
         db,
         user_id=user.id,
-        gateway=input.gateway,
+        channel=input.channel,
     )
     scope = AgentScope(user_id=user.id, agent_id=agent.id)
     await create_active_companion_bond(db, scope)

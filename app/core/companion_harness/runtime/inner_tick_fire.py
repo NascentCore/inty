@@ -34,7 +34,7 @@ from app.core.companion_harness.companion.proactive_chat import (
     ProactiveChatConfig,
     next_proactive_chat_wait_seconds,
 )
-from app.core.companion_harness.agent_channel.gateway import (
+from app.core.companion_harness.agent_channel.channel_kind import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.schedule_queue import (

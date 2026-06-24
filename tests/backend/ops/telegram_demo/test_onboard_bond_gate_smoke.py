@@ -16,8 +16,8 @@ from loguru import logger
 from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import (
@@ -147,7 +147,7 @@ async def test_smoke_onboard_bond_gate_happy_returning_path() -> None:
     telegram_chat_id = f"tg-smoke-ok-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -174,7 +174,7 @@ async def test_smoke_onboard_bond_gate_rejects_inactive_then_restore_skips(
     telegram_chat_id = f"tg-smoke-bad-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -217,7 +217,7 @@ async def test_smoke_onboard_bond_gate_paused_returning_welcome() -> None:
     telegram_chat_id = f"tg-smoke-pause-{tag}"
     channel_user_id = f"tg-user-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )

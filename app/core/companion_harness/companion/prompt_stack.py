@@ -13,7 +13,7 @@ hierarchy (design issue; options include in-context vs retrieval-required splits
 
 
 TODO(rename-channel-to-gateway): Move ``output_format_prompt_slice_for_runtime_channel`` to — #3548
-``agent_channel/gateway_traits.py`` (#3409).
+``agent_channel/channel_traits.py`` (#3409).
 """
 
 from __future__ import annotations
@@ -38,8 +38,8 @@ from .models import (
 from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.prompting.tracks import (
@@ -90,16 +90,16 @@ def replace_leading_system_messages_inplace(
 def output_format_prompt_slice_for_runtime_channel(
     *,
     bundle: PromptBundle,
-    runtime_channel: GatewayKind,
+    runtime_channel: ChannelKind,
 ) -> str:
     """Resolve channel output-format text from the runtime communication medium."""
-    from app.core.companion_harness.agent_channel.gateway_traits import (
+    from app.core.companion_harness.agent_channel.channel_traits import (
         harness_output_format_slice,
     )
 
     return harness_output_format_slice(
         bundle=bundle,
-        gateway=runtime_channel,
+        channel=runtime_channel,
     )
 
 
@@ -112,7 +112,7 @@ def append_runtime_output_format_system_message(
     """Append channel output-format prompt selected from runtime context."""
     output_format = output_format_prompt_slice_for_runtime_channel(
         bundle=bundle,
-        runtime_channel=runtime_context.gateway,
+        runtime_channel=runtime_context.channel,
     )
     if output_format.strip():
         return [
@@ -129,7 +129,7 @@ def companion_tools_for_turn(
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
-    # TODO(companion-channel-tools): Filter tool schemas by ``runtime_context.gateway`` — #3362
+    # TODO(companion-channel-tools): Filter tool schemas by ``runtime_context.channel`` — #3362
     # TODO(telegram-meta-ops-tools): Telegram meta tools only when dedicated-bot — #3397 / #3361
 ) -> list[dict[str, Any]]:
     """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
@@ -180,7 +180,7 @@ def companion_system_messages_for_track(
                 bundle,
                 context,
                 memory_bootstrap_type,
-                runtime_context.gateway,
+                runtime_context.channel,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             # TODO(!3463): Compose proactive as overlay on base track prefix — during
@@ -228,7 +228,7 @@ def companion_system_messages_for_track(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.gateway == GatewayKind.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         out.append(weixin_clawbot_contact_alias_system_message())
     return out
 
@@ -242,7 +242,7 @@ def companion_turn_tools_and_system_messages(
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
@@ -290,7 +290,7 @@ def refresh_companion_turn_prompt_stack(
     messages: list[dict[str, Any]],
     track: CompanionTurnTrack,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
 ) -> list[dict[str, Any]]:
@@ -346,7 +346,7 @@ def refresh_companion_turn_prompt_stack(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.gateway == GatewayKind.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

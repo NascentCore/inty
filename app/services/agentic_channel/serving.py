@@ -27,8 +27,8 @@ from app.core.companion_harness.agentic_companion.postgres_queue import (
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
@@ -38,7 +38,7 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 
 DeliverReadyMessageFn = Callable[[ReadyOutputMessage], Awaitable[None]]
-DeliveryTargetResolver = Callable[[], tuple[GatewayKind | None, str | None]]
+DeliveryTargetResolver = Callable[[], tuple[ChannelKind | None, str | None]]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
 
@@ -134,7 +134,7 @@ async def channel_output_pump(
     *,
     deliver_message: DeliverReadyMessageFn,
     stop_event: asyncio.Event,
-    delivery_channel: GatewayKind | None = None,
+    delivery_channel: ChannelKind | None = None,
     delivery_wire_id: str | None = None,
     resolve_delivery_target: DeliveryTargetResolver | None = None,
     poll_interval_sec: float = _CHANNEL_OUTPUT_PUMP_POLL_SEC,
@@ -144,7 +144,7 @@ async def channel_output_pump(
     assert deliver_message is not None
     output_queue = get_output_queue_for_scope(scope)
 
-    def _delivery_target() -> tuple[GatewayKind | None, str | None]:
+    def _delivery_target() -> tuple[ChannelKind | None, str | None]:
         if resolve_delivery_target is not None:
             return resolve_delivery_target()
         return delivery_channel, delivery_wire_id
@@ -206,7 +206,7 @@ async def flush_scope_output_queue_ready(
 async def drain_and_deliver_user_chat_turn(
     scope: AgentScope,
     *,
-    runtime_channel: GatewayKind,
+    runtime_channel: ChannelKind,
     delivery_wire_id: str,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
@@ -259,7 +259,7 @@ async def enqueue_inbound_wire_message(
 async def drain_scope_once_via_companion(
     scope: AgentScope,
     *,
-    runtime_channel: GatewayKind,
+    runtime_channel: ChannelKind,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
 ) -> DrainScopeOnceResult:
@@ -304,7 +304,7 @@ async def handle_sync_user_turn_via_queues(
     scope: AgentScope,
     *,
     inbound: InboundWireMessage,
-    runtime_channel: GatewayKind,
+    runtime_channel: ChannelKind,
     implicit_signal_bundle: ImplicitSignalBundle,
     background_output_sink,
     deliver_message: DeliverReadyMessageFn,

@@ -9,8 +9,8 @@ TODO(weixin-reply-reaction): Quote/reply threading + emoji reactions via Hermes 
 from __future__ import annotations
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
 from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
@@ -25,8 +25,8 @@ class WeixinChannelAdapterStub:
     """Stub adapter documenting ``channel_address=peer_id``, ``channel_user_id=wxid``."""
 
     @property
-    def channel(self) -> GatewayKind:
-        return GatewayKind.WECHAT_WEIXIN
+    def channel(self) -> ChannelKind:
+        return ChannelKind.WECHAT_WEIXIN
 
     def as_downlink(self) -> ChannelDownlink:
         return _NoOpDownlink()

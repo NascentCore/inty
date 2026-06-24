@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
-from app.core.companion_harness.agent_channel.gateway_traits import (
-    guest_agent_name_for_gateway,
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
+from app.core.companion_harness.agent_channel.channel_traits import (
+    guest_agent_name_for_channel,
     harness_output_format_slice,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
 def test_guest_agent_name_for_sms_gateway() -> None:
-    assert guest_agent_name_for_gateway(
-        gateway=GatewayKind.SMS,
+    assert guest_agent_name_for_channel(channel=ChannelKind.SMS,
         tag="abc123",
     ) == "sms-abc123"
 
@@ -28,7 +27,7 @@ def test_harness_output_format_slice_sms_is_empty() -> None:
     assert (
         harness_output_format_slice(
             bundle=bundle,
-            gateway=GatewayKind.SMS,
+            channel=ChannelKind.SMS,
         )
         == ""
     )

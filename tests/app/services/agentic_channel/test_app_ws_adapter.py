@@ -18,8 +18,8 @@ from app.core.companion_harness.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
@@ -66,7 +66,7 @@ def _input_record(
         scope=scope,
         sequence=1,
         status=QueueStatus.DELIVERED,
-        channel=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         wire_id="app:ws",
         text=text,
         received_at_utc=datetime.now(timezone.utc),
@@ -244,9 +244,9 @@ async def test_presence_deliver_ready_passes_ready_message_to_app_adapter() -> (
     adapter = AppWsChannelAdapter(scope=scope, outbound_queue=outbound_queue)
     downlink = adapter.as_downlink()
     registry = get_scope_channel_registry(scope)
-    registry.states[GatewayKind.APP_WS] = ChannelRuntimeState.ACTIVE
-    registry.adapters[GatewayKind.APP_WS] = adapter
-    registry.downlinks[GatewayKind.APP_WS] = downlink
+    registry.states[ChannelKind.APP_WS] = ChannelRuntimeState.ACTIVE
+    registry.adapters[ChannelKind.APP_WS] = adapter
+    registry.downlinks[ChannelKind.APP_WS] = downlink
     presence = AgentChannelPresence(scope)
     ready = ReadyOutputMessage(
         message_id="out-redeliver",

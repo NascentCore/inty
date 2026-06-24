@@ -5,7 +5,7 @@ from __future__ import annotations
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.channel_runtime import turn_channel_up
@@ -60,7 +60,7 @@ async def activate_sms_scope(
     )
     await turn_channel_up(
         scope,
-        GatewayKind.SMS,
+        ChannelKind.SMS,
         adapter=adapter,
         reason=reason,
     )
@@ -75,7 +75,7 @@ async def restore_persisted_bindings(
     """Reload SMS endpoints with ACTIVE companion bonds and restart presences."""
     assert api is not None
     assert from_number != ""
-    records = await list_endpoints_for_channel(channel=GatewayKind.SMS)
+    records = await list_endpoints_for_channel(channel=ChannelKind.SMS)
     restored_count = 0
     skipped_inactive = 0
     for record in records:

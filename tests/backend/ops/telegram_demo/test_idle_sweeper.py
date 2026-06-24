@@ -8,8 +8,8 @@ import uuid
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.external_services.telegram_bot_api import TelegramBotApi
@@ -83,7 +83,7 @@ async def test_idle_sweeper_pauses_stale_runtime() -> None:
     telegram_chat_id = f"tg-sweep-stale-{tag}"
     channel_user_id = f"tu-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )
@@ -91,7 +91,7 @@ async def test_idle_sweeper_pauses_stale_runtime() -> None:
         record=EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=telegram_chat_id,
             channel_user_id=channel_user_id,
         ),
@@ -115,7 +115,7 @@ async def test_idle_sweeper_pauses_stale_runtime() -> None:
     assert get_presence(provision.scope) is None
     registry = get_scope_channel_registry(provision.scope)
     assert (
-        registry.state_of(GatewayKind.TELEGRAM) == ChannelRuntimeState.INACTIVE
+        registry.state_of(ChannelKind.TELEGRAM) == ChannelRuntimeState.INACTIVE
     )
     await _cleanup_provision(provision.scope.user_id)
 
@@ -126,7 +126,7 @@ async def test_idle_sweeper_skips_fresh_runtime() -> None:
     telegram_chat_id = f"tg-sweep-fresh-{tag}"
     channel_user_id = f"tu-{tag}"
     provision = await provision_agent_for_channel_onboard(
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
         channel_address=telegram_chat_id,
         channel_user_id=channel_user_id,
     )

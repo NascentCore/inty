@@ -12,8 +12,8 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 
@@ -67,7 +67,7 @@ class UserInputMessage(BaseModel):
 
     message_id: str = Field(min_length=1)
     scope: AgentScope
-    channel: GatewayKind
+    channel: ChannelKind
     wire_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     received_at_utc: datetime
@@ -123,7 +123,7 @@ class InputQueueRecord(BaseModel):
     scope: AgentScope
     sequence: int = Field(ge=0)
     status: QueueStatus
-    channel: GatewayKind
+    channel: ChannelKind
     wire_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     received_at_utc: datetime
@@ -155,7 +155,7 @@ class OutputQueueRecord(BaseModel):
     generated_images: tuple[GeneratedImageRef, ...] = Field(
         default_factory=tuple
     )
-    delivery_channel: GatewayKind | None = None
+    delivery_channel: ChannelKind | None = None
     delivery_wire_id: str | None = None
     delivery_attempt_count: int = Field(ge=0, default=0)
 
@@ -176,7 +176,7 @@ class QueueClaim:
     """One claimed output row awaiting transport delivery."""
 
     record: OutputQueueRecord
-    delivery_channel: GatewayKind
+    delivery_channel: ChannelKind
     delivery_wire_id: WireId
 
 
@@ -208,7 +208,7 @@ class InboundWireMessage(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     scope: AgentScope
-    channel: GatewayKind
+    channel: ChannelKind
     wire_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     received_at_utc: datetime

@@ -15,8 +15,8 @@ from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_tail_user import (
@@ -26,7 +26,7 @@ from app.core.companion_harness.companion.turn_tail_user import (
 
 def runtime_context_for_builder_tests() -> TurnRuntimeContext:
     return TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
 

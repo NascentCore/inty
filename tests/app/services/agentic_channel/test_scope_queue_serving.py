@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
@@ -75,7 +75,7 @@ async def test_scope_serving_delivers_each_output_row_once() -> None:
         background_output_sink=None,
         deliver_message=deliver_message,
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
@@ -133,14 +133,14 @@ async def test_wake_triggers_drain_until_empty() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
         drain_mock,
     ):
         await serving.start()
-        serving.wake(runtime_channel=GatewayKind.TELEGRAM)
+        serving.wake(runtime_channel=ChannelKind.TELEGRAM)
         await asyncio.sleep(0.05)
         await serving.stop()
 
@@ -174,16 +174,16 @@ async def test_drain_failure_does_not_kill_worker() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
         drain_mock,
     ):
         await serving.start()
-        serving.wake(runtime_channel=GatewayKind.TELEGRAM)
+        serving.wake(runtime_channel=ChannelKind.TELEGRAM)
         await asyncio.sleep(0.05)
-        serving.wake(runtime_channel=GatewayKind.TELEGRAM)
+        serving.wake(runtime_channel=ChannelKind.TELEGRAM)
         await asyncio.sleep(0.05)
         await serving.stop()
 
@@ -215,14 +215,14 @@ async def test_tool_background_batch_still_reports_completion() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
         drain_mock,
     ):
         await serving.start()
-        serving.wake(runtime_channel=GatewayKind.TELEGRAM)
+        serving.wake(runtime_channel=ChannelKind.TELEGRAM)
         await asyncio.sleep(0.05)
         await serving.stop()
 
@@ -242,7 +242,7 @@ async def test_start_recovers_after_pump_task_exits() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -276,7 +276,7 @@ async def test_stop_cancels_input_and_pump_tasks() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -394,7 +394,7 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
         background_output_sink=None,
         deliver_message=deliver_mock,
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.APP_WS,
+        runtime_channel=ChannelKind.APP_WS,
     )
     fake_queue = MagicMock()
     fake_queue.pull_ready_batch = AsyncMock(return_value=())
@@ -410,7 +410,7 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
         ):
             await serving.start()
             await asyncio.sleep(0.02)
-            serving.wake(runtime_channel=GatewayKind.APP_WS)
+            serving.wake(runtime_channel=ChannelKind.APP_WS)
             await asyncio.sleep(0.02)
             stop.set()
             await serving.stop()
@@ -418,7 +418,7 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
     _, kwargs = pump_mock.await_args
     assert kwargs.get("resolve_delivery_target") is not None
     channel, wire_id = serving._resolve_output_delivery_target()
-    assert channel == GatewayKind.APP_WS
+    assert channel == ChannelKind.APP_WS
     assert wire_id == f"app_ws:{scope.registry_key()}"
 
 
@@ -438,7 +438,7 @@ async def test_drain_on_start_uses_constructor_runtime_channel() -> None:
         background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
-        runtime_channel=GatewayKind.TELEGRAM,
+        runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
@@ -450,5 +450,5 @@ async def test_drain_on_start_uses_constructor_runtime_channel() -> None:
 
     drain_mock.assert_awaited()
     assert drain_mock.await_args.kwargs["runtime_channel"] == (
-        GatewayKind.TELEGRAM
+        ChannelKind.TELEGRAM
     )

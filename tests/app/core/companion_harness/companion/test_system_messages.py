@@ -23,8 +23,8 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
@@ -41,14 +41,14 @@ def _system_contents(messages: list[dict[str, object]]) -> list[str]:
 def _bootstrap_system_contents(
     bundle: PromptBundle,
     context: ContextMeta,
-    channel: GatewayKind,
+    channel: ChannelKind,
 ) -> list[str]:
     return _system_contents(
         PromptBuilder(
             bundle=bundle,
             context=context,
             runtime_context=TurnRuntimeContext(
-                gateway=channel,
+                channel=channel,
                 implicit_signal_bundle=None,
             ),
         ).bootstrap_turn_system_dicts()
@@ -82,7 +82,7 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
     contents = _bootstrap_system_contents(
         bundle,
         ContextMeta(workspace_bootstrap_user_interactive_completed=False),
-        GatewayKind.APP_WS,
+        ChannelKind.APP_WS,
     )
     bootstrap_spec = load_bootstrap_spec_text()
     tool_section = build_bootstrap_tool_call_section()
@@ -110,7 +110,7 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> (
         memory_md="",
     )
     joined = "\n".join(
-        _bootstrap_system_contents(bundle, ContextMeta(), GatewayKind.APP_WS)
+        _bootstrap_system_contents(bundle, ContextMeta(), ChannelKind.APP_WS)
     )
     assert "memory_store_write_document" in joined
     assert "COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md" in joined
@@ -130,7 +130,7 @@ def test_bootstrap_omits_experience_profile_context_mode_clause() -> None:
         _bootstrap_system_contents(
             bundle,
             ContextMeta(context_mode="intimate"),
-            GatewayKind.APP_WS,
+            ChannelKind.APP_WS,
         )
     )
     assert EXPERIENCE_PROFILE_CONTEXT_MODE_HEADING not in joined
@@ -147,7 +147,7 @@ def test_bootstrap_omits_capability_package_slices() -> None:
         tools_md="# Tools\ntool contract",
     )
     joined = "\n".join(
-        _bootstrap_system_contents(bundle, ContextMeta(), GatewayKind.APP_WS)
+        _bootstrap_system_contents(bundle, ContextMeta(), ChannelKind.APP_WS)
     )
     assert "harness contract" not in joined
     assert "channel contract" not in joined
@@ -190,7 +190,7 @@ def test_persona_omits_companionship_during_bootstrap() -> None:
         _bootstrap_system_contents(
             bundle,
             ContextMeta(workspace_bootstrap_user_interactive_completed=False),
-            GatewayKind.APP_WS,
+            ChannelKind.APP_WS,
         )
     )
     assert "COMPANIONSHIP — 陪伴关系 framing（COMPANIONSHIP.md）" not in joined
@@ -262,7 +262,7 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
             track=CompanionTurnTrack.USER_CHAT,
             route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
             runtime_context=TurnRuntimeContext(
-                gateway=GatewayKind.WECHAT_WEIXIN,
+                channel=ChannelKind.WECHAT_WEIXIN,
                 implicit_signal_bundle=None,
             ),
         )
@@ -292,7 +292,7 @@ def test_telegram_bootstrap_injects_profile_collection_slice() -> None:
             workspace_bootstrap_user_interactive_completed=False,
             profile_collection_required=True,
         ),
-        GatewayKind.TELEGRAM,
+        ChannelKind.TELEGRAM,
     )
     telegram_slice = load_bootstrap_telegram_profile_slice_text()
     assert telegram_slice in contents
@@ -309,7 +309,7 @@ def test_telegram_bootstrap_omits_profile_slice_without_flag() -> None:
     contents = _bootstrap_system_contents(
         bundle,
         ContextMeta(workspace_bootstrap_user_interactive_completed=False),
-        GatewayKind.TELEGRAM,
+        ChannelKind.TELEGRAM,
     )
     telegram_slice = load_bootstrap_telegram_profile_slice_text()
     assert telegram_slice not in contents
@@ -325,7 +325,7 @@ def test_app_ws_bootstrap_omits_telegram_profile_slice() -> None:
     contents = _bootstrap_system_contents(
         bundle,
         ContextMeta(workspace_bootstrap_user_interactive_completed=False),
-        GatewayKind.APP_WS,
+        ChannelKind.APP_WS,
     )
     telegram_slice = load_bootstrap_telegram_profile_slice_text()
     assert telegram_slice not in contents

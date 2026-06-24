@@ -14,7 +14,7 @@ TODO(abstraction): Group tools by defining tuple of LlmFunctionTool data objects
 Do not group by tool names.
 
 TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolName`` members — #3362
-  (e.g. companion_set_status_line); filter by ``runtime_context.gateway`` — #3362
+  (e.g. companion_set_status_line); filter by ``runtime_context.channel`` — #3362
 TODO(telegram-meta-ops-tools): Telegram meta tools (e.g. telegram_set_bot_name) — #3397;
   gated on dedicated-bot bonding #3361; shared-bot path #3396
 """

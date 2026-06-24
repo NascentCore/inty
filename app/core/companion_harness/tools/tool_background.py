@@ -73,8 +73,8 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.runtime_events import (
@@ -566,7 +566,7 @@ async def run_tool_background_loop(
     # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
     # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -1013,7 +1013,7 @@ def start_tool_background_job(
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
     langsmith_slice: CompanionTurnLangsmithSlice,

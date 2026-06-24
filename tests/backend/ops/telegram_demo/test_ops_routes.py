@@ -9,8 +9,8 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from backend.ops.api.telegram_web import _TELEGRAM_ONBOARD_HTML
@@ -61,7 +61,7 @@ def test_telegram_bot_info_http_route_exists() -> None:
 class _FakeEndpoint:
     user_id: str
     agent_id: str
-    channel: GatewayKind
+    channel: ChannelKind
     channel_address: str
     channel_user_id: str
 
@@ -75,7 +75,7 @@ async def test_telegram_demo_bindings_api_lists_rows() -> None:
         channel_user_id="456",
         user_id="user-1",
         agent_id="agent-1",
-        channel=GatewayKind.TELEGRAM,
+        channel=ChannelKind.TELEGRAM,
     )
     with patch(
         "backend.ops.api.v1.telegram_demo.list_endpoints_for_channel",

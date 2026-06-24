@@ -28,8 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope_turn_lock import (
     companion_scope_from_foreground_ctx,
@@ -111,9 +111,9 @@ from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_tool_background_ws_payload,
 )
 from app.services.agentic_companion.ws_channel_guard import (
-    register_app_ws_gateway,
-    unregister_app_ws_gateway,
-    ws_reject_reason_if_other_gateway_active,
+    register_app_ws_channel,
+    unregister_app_ws_channel,
+    ws_reject_reason_if_other_channel_active,
 )
 from app.services.agentic_companion.ws_downlink import WebSocketDownlink
 from app.services.phone_call_service import (
@@ -162,7 +162,7 @@ async def _turn_up_app_ws_channel(
     assert user_id != ""
     await provision_owned_agent_for_channel(
         input=OwnedChannelProvisionInput(
-            channel=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             channel_address=scope.registry_key(),
             channel_user_id=user_id,
             scope=scope,
@@ -175,7 +175,7 @@ async def _turn_up_app_ws_channel(
     )
     await turn_channel_up(
         scope,
-        GatewayKind.APP_WS,
+        ChannelKind.APP_WS,
         adapter=adapter,
         reason="app_ws_channel_up",
     )
@@ -194,7 +194,7 @@ async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
     """Mark APP channel inactive and clear proactive coords on the per-scope presence."""
     assert reason != ""
     presence = get_presence(scope)
-    await turn_channel_down(scope, GatewayKind.APP_WS, reason=reason)
+    await turn_channel_down(scope, ChannelKind.APP_WS, reason=reason)
     if presence is not None:
         presence.coordinator.sign_out()
 
@@ -1210,7 +1210,7 @@ async def _agent_chat_ws_completions_impl(
                             if (
                                 channel_presence is None
                                 or registry.active_channel()
-                                != GatewayKind.APP_WS
+                                != ChannelKind.APP_WS
                             ):
                                 try:
                                     await _turn_up_app_ws_channel(
@@ -1470,13 +1470,13 @@ async def chat_completions_websocket(
         db=db,
     )
 
-    telegram_ws_reject = ws_reject_reason_if_other_gateway_active(
+    telegram_ws_reject = ws_reject_reason_if_other_channel_active(
         user_id=str(current_user.id)
     )
     if telegram_ws_reject is not None:
         await websocket.close(code=4003, reason=telegram_ws_reject[:123])
         return
-    register_app_ws_gateway(user_id=str(current_user.id))
+    register_app_ws_channel(user_id=str(current_user.id))
 
     app_version_code_header = websocket.headers.get("appVersionCode")
     app_version_code = (
@@ -1746,7 +1746,7 @@ async def chat_completions_websocket(
     except WebSocketDisconnect:
         return
     finally:
-        unregister_app_ws_gateway(user_id=str(current_user.id))
+        unregister_app_ws_channel(user_id=str(current_user.id))
         logger.info(
             "chat_ws session_end ws_conn_id={} user={}",
             ws_conn_id,

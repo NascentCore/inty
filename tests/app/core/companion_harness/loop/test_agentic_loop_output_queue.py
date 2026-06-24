@@ -27,8 +27,8 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -86,7 +86,7 @@ def _clear_registry() -> None:
 
 def _runtime_context() -> TurnRuntimeContext:
     return TurnRuntimeContext(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
 

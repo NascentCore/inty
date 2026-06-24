@@ -46,8 +46,8 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
     InnerTickActivity,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.config import global_config_loaded_from_config_yaml
@@ -470,7 +470,7 @@ async def run_user_chat(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
     bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     """Run one user-chat turn via maintenance HTTP API.
@@ -512,7 +512,7 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     session_id: str | None = None,
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="implicit_sign_on_greeting",
@@ -545,7 +545,7 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="inner_tick_proactive_chat",
@@ -578,7 +578,7 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     assert (
         scheduled_user_text.strip()
@@ -614,7 +614,7 @@ async def run_companion_inner_tick_monolog_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="inner_tick_monolog",
@@ -646,7 +646,7 @@ async def run_inner_tick_autonomy(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     """AUTONOMY inner-tick: silent self-directed turn; assistant_text is not delivered to the user."""
     return await _run_companion_api_track_turn(
@@ -682,7 +682,7 @@ async def run_companion_chat_turn_for_api(
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
-    runtime_channel: GatewayKind = GatewayKind.APP_WS,
+    runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     """Legacy delegator; WebSocket handlers should call track-specific APIs."""
     common = {

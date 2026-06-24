@@ -1,7 +1,7 @@
 """Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink.
 
 TODO(rename-channel-to-gateway): Rename runtime/registry types to Gateway; key by — #3548
-``GatewayKind`` from ``agent_channel/gateway.py``. Transport only — no harness traits here.
+``ChannelKind`` from ``agent_channel/gateway.py``. Transport only — no harness traits here.
 """
 
 from __future__ import annotations
@@ -12,14 +12,14 @@ from enum import StrEnum
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_channel.adapters.base import ChannelAdapter
 from app.services.agentic_channel.endpoints import get_endpoint_for_scope
-from app.services.agentic_companion.active_gateway_registry import (
-    register_active_gateway,
-    unregister_active_gateway,
+from app.services.agentic_companion.active_channel_registry import (
+    register_active_channel,
+    unregister_active_channel,
 )
 from app.services.agentic_companion.downlink import ChannelDownlink
 
@@ -34,17 +34,17 @@ class ScopeChannelRegistry:
     """Process-local runtime state for one ``AgentScope``."""
 
     scope: AgentScope
-    states: dict[GatewayKind, ChannelRuntimeState] = field(default_factory=dict)
-    downlinks: dict[GatewayKind, ChannelDownlink] = field(default_factory=dict)
-    adapters: dict[GatewayKind, ChannelAdapter] = field(default_factory=dict)
+    states: dict[ChannelKind, ChannelRuntimeState] = field(default_factory=dict)
+    downlinks: dict[ChannelKind, ChannelDownlink] = field(default_factory=dict)
+    adapters: dict[ChannelKind, ChannelAdapter] = field(default_factory=dict)
 
-    def active_channel(self) -> GatewayKind | None:
+    def active_channel(self) -> ChannelKind | None:
         for channel, state in self.states.items():
             if state == ChannelRuntimeState.ACTIVE:
                 return channel
         return None
 
-    def state_of(self, channel: GatewayKind) -> ChannelRuntimeState:
+    def state_of(self, channel: ChannelKind) -> ChannelRuntimeState:
         return self.states.get(channel, ChannelRuntimeState.INACTIVE)
 
 
@@ -67,7 +67,7 @@ def clear_registries_for_tests() -> None:
 
 async def turn_channel_up(
     scope: AgentScope,
-    channel: GatewayKind,
+    channel: ChannelKind,
     *,
     adapter: ChannelAdapter,
     reason: str,
@@ -89,7 +89,7 @@ async def turn_channel_up(
     registry.adapters[channel] = adapter
     registry.downlinks[channel] = adapter.as_downlink()
     await adapter.on_turn_up(scope)
-    register_active_gateway(user_id=scope.user_id, gateway=channel)
+    register_active_channel(user_id=scope.user_id, channel=channel)
     logger.info(
         "agent_channel turn_up scope={} channel={} reason={}",
         scope.registry_key(),
@@ -100,7 +100,7 @@ async def turn_channel_up(
 
 async def turn_channel_down(
     scope: AgentScope,
-    channel: GatewayKind,
+    channel: ChannelKind,
     *,
     reason: str,
 ) -> None:
@@ -114,7 +114,7 @@ async def turn_channel_down(
     adapter = registry.adapters.pop(channel, None)
     if adapter is not None:
         await adapter.on_turn_down(scope)
-    unregister_active_gateway(user_id=scope.user_id, gateway=channel)
+    unregister_active_channel(user_id=scope.user_id, channel=channel)
     logger.info(
         "agent_channel turn_down scope={} channel={} reason={}",
         scope.registry_key(),

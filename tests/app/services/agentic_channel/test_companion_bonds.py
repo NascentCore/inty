@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -49,7 +49,7 @@ async def _create_unbonded_scope(
     agent = await add_companion_guest_agent_for_user(
         db,
         user_id=user.id,
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
     )
     return AgentScope(user_id=user.id, agent_id=agent.id)
 
@@ -99,7 +99,7 @@ async def test_ensure_active_companion_bond_for_owned_scope_rejects_conflict() -
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first.user_id,
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
         )
         second = AgentScope(user_id=first.user_id, agent_id=second_agent.id)
         with pytest.raises(CompanionBondInvariantError):
@@ -152,7 +152,7 @@ async def test_create_active_companion_bond_rejects_duplicate_user() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=first.user_id,
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
         )
         second = AgentScope(user_id=first.user_id, agent_id=second_agent.id)
         with pytest.raises(CompanionBondInvariantError):
@@ -282,7 +282,7 @@ async def test_has_active_companion_bond_fails_closed_on_conflict() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=scope.user_id,
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
         )
         db.add(
             CompanionBond(
@@ -325,7 +325,7 @@ async def test_list_active_companion_agent_scope_keys_skips_conflicts() -> None:
         second_agent = await add_companion_guest_agent_for_user(
             db,
             user_id=scope.user_id,
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
         )
         second = AgentScope(user_id=scope.user_id, agent_id=second_agent.id)
         db.add(

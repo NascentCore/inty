@@ -14,8 +14,8 @@ from app.core.companion_harness.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 import pytest
@@ -49,7 +49,7 @@ def _record(
         scope=scope,
         sequence=sequence,
         status=QueueStatus.CLAIMED,
-        channel=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         wire_id="wire-1",
         text=text,
         received_at_utc=ts,

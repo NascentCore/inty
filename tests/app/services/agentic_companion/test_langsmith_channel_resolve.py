@@ -10,8 +10,8 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
@@ -21,9 +21,9 @@ from app.services.agentic_channel.channel_runtime import (
 from app.services.agentic_companion.langsmith_channel_resolve import (
     resolve_langsmith_slice_for_session,
 )
-from app.services.agentic_companion.active_gateway_registry import (
+from app.services.agentic_companion.active_channel_registry import (
     clear_all_for_tests,
-    register_active_gateway,
+    register_active_channel,
 )
 
 
@@ -45,7 +45,7 @@ def _session(*, user_id: str, companion_id: str, chat_id: str) -> MagicMock:
 async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     registry = get_scope_channel_registry(scope)
-    registry.states[GatewayKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
+    registry.states[ChannelKind.TELEGRAM] = ChannelRuntimeState.ACTIVE
     session = _session(
         user_id="u1",
         companion_id="a1",
@@ -54,21 +54,19 @@ async def test_resolve_uses_scope_registry_for_agent_scope_chat_id() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == GatewayKind.TELEGRAM
+    assert slice_.runtime_channel == ChannelKind.TELEGRAM
     assert slice_.channel_source == LangsmithChannelSource.SCOPE_REGISTRY
 
 
 @pytest.mark.asyncio
 async def test_resolve_uses_user_registry_for_ws_chat_id() -> None:
-    register_active_gateway(
-        user_id="u-ws",
-        gateway=GatewayKind.APP_WS,
+    register_active_channel(user_id="u-ws", channel=ChannelKind.APP_WS,
     )
     session = _session(user_id="u-ws", companion_id="a1", chat_id="chat-uuid-1")
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == GatewayKind.APP_WS
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.USER_REGISTRY
 
 
@@ -79,7 +77,7 @@ def test_resolve_defaults_to_app_when_no_registry_entry() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == GatewayKind.APP_WS
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
 
 
@@ -93,7 +91,7 @@ def test_resolve_agent_scope_without_active_channel_defaults_app() -> None:
 
     slice_ = resolve_langsmith_slice_for_session(session)
 
-    assert slice_.runtime_channel == GatewayKind.APP_WS
+    assert slice_.runtime_channel == ChannelKind.APP_WS
     assert slice_.channel_source == LangsmithChannelSource.DEFAULT_APP
 
 

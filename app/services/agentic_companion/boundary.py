@@ -19,7 +19,7 @@ AGENTIC_COMPANION_SCAN_ROOT: Final[str] = "app/services/agentic_companion"
 
 AGENTIC_COMPANION_ALLOWED_HARNESS_PREFIXES: Final[tuple[str, ...]] = (
     "app.core.companion_harness.companion.models",
-    "app.core.companion_harness.agent_channel.gateway",
+    "app.core.companion_harness.agent_channel.channel_kind",
     "app.core.companion_harness.companion.turn_routes",
     "app.core.companion_harness.companion.scope",
     "app.core.companion_harness.companion.scope_turn_lock",

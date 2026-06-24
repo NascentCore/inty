@@ -17,8 +17,8 @@ from enum import StrEnum
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.external_services.telegram_bot_api import (
     TelegramBotApi,
@@ -159,7 +159,7 @@ class TelegramTransport:
             await self._handle_onboard(inbound=inbound)
             return
         scope = await resolve_scope(
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if scope is None:
@@ -170,7 +170,7 @@ class TelegramTransport:
             return
         try:
             await assert_inbound_endpoint_identity(
-                channel=GatewayKind.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
@@ -196,7 +196,7 @@ class TelegramTransport:
             presence = await ensure_presence(scope)
         channel_error = await presence.handle_user_text(
             inbound.text,
-            runtime_channel=GatewayKind.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )
         if channel_error:
             await self._send_channel_text(
@@ -208,13 +208,13 @@ class TelegramTransport:
         self, *, inbound: TelegramIncomingMessage
     ) -> None:
         existing = await resolve_scope(
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=inbound.chat_id,
         )
         if existing is not None:
             try:
                 await assert_inbound_endpoint_identity(
-                    channel=GatewayKind.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     channel_address=inbound.chat_id,
                     channel_user_id=inbound.channel_user_id,
                 )
@@ -255,13 +255,13 @@ class TelegramTransport:
             return
         try:
             provision = await provision_agent_for_channel_onboard(
-                channel=GatewayKind.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
                 channel_user_id=inbound.channel_user_id,
             )
         except CompanionBondInvariantError as exc:
             reject_scope = await resolve_scope(
-                channel=GatewayKind.TELEGRAM,
+                channel=ChannelKind.TELEGRAM,
                 channel_address=inbound.chat_id,
             )
             await self._reject_onboard_for_bond(
@@ -335,7 +335,7 @@ class TelegramTransport:
         record = EndpointRecord(
             user_id=provision.scope.user_id,
             agent_id=provision.scope.agent_id,
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=provision.channel_address,
             channel_user_id=provision.channel_user_id,
         )
@@ -353,7 +353,7 @@ class TelegramTransport:
         )
         try:
             await presence.greet_on_sign_on(
-                runtime_channel=GatewayKind.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
             )
         except Exception:
             logger.exception(
@@ -420,7 +420,7 @@ class TelegramTransport:
         logger.info(
             "runtime_resume scope={} channel={}",
             scope.registry_key(),
-            GatewayKind.TELEGRAM.value,
+            ChannelKind.TELEGRAM.value,
         )
 
     async def _ensure_active(
@@ -437,7 +437,7 @@ class TelegramTransport:
         )
         await turn_channel_up(
             scope,
-            GatewayKind.TELEGRAM,
+            ChannelKind.TELEGRAM,
             adapter=adapter,
             reason=reason,
         )

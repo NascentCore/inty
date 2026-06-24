@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import delete
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services.agentic_channel.companion_guest_provision import (
@@ -17,13 +17,13 @@ from app.schemas.user import UserMetadata
 
 
 def test_guest_meta_data_telegram_sets_profile_collection_required() -> None:
-    meta = _guest_meta_data_for_channel(GatewayKind.TELEGRAM)
+    meta = _guest_meta_data_for_channel(ChannelKind.TELEGRAM)
     assert meta["agent_channel"] is True
     assert meta["profile_collection_required"] is True
 
 
 def test_guest_meta_data_weixin_unchanged() -> None:
-    meta = _guest_meta_data_for_channel(GatewayKind.WECHAT_WEIXIN)
+    meta = _guest_meta_data_for_channel(ChannelKind.WECHAT_WEIXIN)
     assert meta == {"agent_channel": True}
     assert "profile_collection_required" not in meta
 
@@ -35,7 +35,7 @@ async def test_telegram_guest_row_carries_profile_flag() -> None:
             db,
             GuestUserInput(
                 nickname_prefix="tg",
-                meta_data=_guest_meta_data_for_channel(GatewayKind.TELEGRAM),
+                meta_data=_guest_meta_data_for_channel(ChannelKind.TELEGRAM),
             ),
         )
         await db.commit()

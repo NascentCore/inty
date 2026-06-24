@@ -23,9 +23,9 @@ from app.api import deps
 from app.api.v1.endpoints import chat as chat_v1
 from app.api.v1.endpoints import chat_ws as chat_ws_v1
 from app.core.agent import agent as agent_module
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -972,8 +972,8 @@ def _patch_companion_ws_queue_turn(
     from unittest.mock import AsyncMock, MagicMock
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
-    from app.core.companion_harness.agent_channel.gateway import (
-        GatewayKind,
+    from app.core.companion_harness.agent_channel.channel_kind import (
+        ChannelKind,
     )
     from app.schemas.implicit_signals import ImplicitSignalBundle
     from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
@@ -1039,9 +1039,9 @@ def _patch_companion_ws_queue_turn(
             outbound_queue=outbound_queue,
         )
         registry = get_scope_channel_registry(scope)
-        registry.states[GatewayKind.APP_WS] = ChannelRuntimeState.ACTIVE
-        registry.adapters[GatewayKind.APP_WS] = adapter
-        registry.downlinks[GatewayKind.APP_WS] = adapter.as_downlink()
+        registry.states[ChannelKind.APP_WS] = ChannelRuntimeState.ACTIVE
+        registry.adapters[ChannelKind.APP_WS] = adapter
+        registry.downlinks[ChannelKind.APP_WS] = adapter.as_downlink()
         if presence._session is None:
             presence._session = Session.from_coordinator(
                 downlink=adapter.as_downlink(),
@@ -1114,14 +1114,14 @@ def _patch_companion_ws_queue_turn(
             text = turn_result.assistant_text.strip()
             if text:
                 registry = get_scope_channel_registry(self._scope)
-                adapter = registry.adapters.get(GatewayKind.APP_WS)
+                adapter = registry.adapters.get(ChannelKind.APP_WS)
                 if adapter is not None:
                     input_record = InputQueueRecord(
                         message_id=queue_message_id,
                         scope=self._scope,
                         sequence=1,
                         status=QueueStatus.DELIVERED,
-                        channel=GatewayKind.APP_WS,
+                        channel=ChannelKind.APP_WS,
                         wire_id=wire_id,
                         text=user_text.strip(),
                         received_at_utc=datetime.now(timezone.utc),
@@ -1501,7 +1501,7 @@ async def _create_unbonded_owned_scope() -> AgentScope:
         agent = await add_companion_guest_agent_for_user(
             db,
             user_id=user.id,
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
         )
         await db.commit()
         return AgentScope(user_id=user.id, agent_id=agent.id)
@@ -1534,7 +1534,7 @@ def _assert_owned_bond_and_app_ws_endpoint_sync(scope: AgentScope) -> None:
         assert bond.state == CompanionBondState.ACTIVE
         endpoint = db.execute(
             select(AgentChannelEndpoint).where(
-                AgentChannelEndpoint.channel == GatewayKind.APP_WS.value,
+                AgentChannelEndpoint.channel == ChannelKind.APP_WS.value,
                 AgentChannelEndpoint.channel_address == scope.registry_key(),
             )
         ).scalar_one()
@@ -2655,7 +2655,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-            gateway=GatewayKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )
@@ -2666,7 +2666,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
             second_agent = await add_companion_guest_agent_for_user(
                 db,
                 user_id=bonded_scope.user_id,
-                gateway=GatewayKind.APP_WS,
+                channel=ChannelKind.APP_WS,
             )
             await db.commit()
             return second_agent.id

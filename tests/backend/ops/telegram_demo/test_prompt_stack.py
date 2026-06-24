@@ -11,8 +11,8 @@ from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
     output_format_prompt_slice_for_runtime_channel,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
@@ -45,7 +45,7 @@ def test_telegram_output_format_uses_im_dm_slice() -> None:
     assert (
         output_format_prompt_slice_for_runtime_channel(
             bundle=bundle,
-            runtime_channel=GatewayKind.TELEGRAM,
+            runtime_channel=ChannelKind.TELEGRAM,
         )
         == im_body
     )
@@ -61,7 +61,7 @@ def test_telegram_system_messages_exclude_weixin_alias() -> None:
         track=CompanionTurnTrack.USER_CHAT,
         route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
         runtime_context=TurnRuntimeContext(
-            gateway=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
         ),
     )

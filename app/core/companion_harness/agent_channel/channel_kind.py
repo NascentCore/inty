@@ -1,9 +1,7 @@
-"""Canonical gateway kinds for human-facing companion media.
+"""Canonical channel kinds for human-facing companion media.
 
-Generated entirely by Cursor agent.
-
-``GatewayKind`` is the single wire-stable enum for every human-facing medium.
-Adapters declare ``GatewayKind``; do not introduce parallel channel enums.
+``ChannelKind`` is the single wire-stable enum for every human-facing medium.
+Adapters declare ``ChannelKind``; do not introduce parallel channel enums.
 """
 
 from __future__ import annotations
@@ -14,7 +12,7 @@ from enum import StrEnum
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
-class GatewayKind(StrEnum):
+class ChannelKind(StrEnum):
     """Human-facing medium between the companion and the human user."""
 
     APP_WS = "app_ws"
@@ -23,12 +21,12 @@ class GatewayKind(StrEnum):
     SMS = "sms"
 
 
-def is_im_gateway(gateway: GatewayKind) -> bool:
+def is_im_channel(channel: ChannelKind) -> bool:
     """True when the turn is delivered on an instant-messaging surface (not the app)."""
-    match gateway:
-        case GatewayKind.WECHAT_WEIXIN | GatewayKind.TELEGRAM:
+    match channel:
+        case ChannelKind.WECHAT_WEIXIN | ChannelKind.TELEGRAM:
             return True
-        case GatewayKind.APP_WS | GatewayKind.SMS:
+        case ChannelKind.APP_WS | ChannelKind.SMS:
             return False
 
 
@@ -36,5 +34,5 @@ def is_im_gateway(gateway: GatewayKind) -> bool:
 class TurnRuntimeContext:
     """Runtime facts for one companion turn, separate from prompt documents."""
 
-    gateway: GatewayKind
+    channel: ChannelKind
     implicit_signal_bundle: ImplicitSignalBundle | None

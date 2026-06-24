@@ -49,8 +49,8 @@ from app.core.companion_harness.prompting.tracks import (
     _persona_bootstrap_user_turn_system_messages,
     _persona_settled_user_turn_system_messages,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_pipeline import (
@@ -187,7 +187,7 @@ def _append_runtime_channel_system_extras(
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.gateway == GatewayKind.WECHAT_WEIXIN:
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         out.append(weixin_clawbot_contact_alias_system_message())
     return out
 
@@ -338,7 +338,7 @@ class PromptBuilder:
         return append_profile_collection_system_messages(
             system_dicts,
             context=self.context,
-            runtime_channel=self.runtime_context.gateway,
+            runtime_channel=self.runtime_context.channel,
             interactive_bootstrap_active=(
                 not self.context.workspace_bootstrap_user_interactive_completed
             ),

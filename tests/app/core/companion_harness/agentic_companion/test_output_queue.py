@@ -29,8 +29,8 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueStatus,
     WireId,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
 
@@ -289,7 +289,7 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
     )
     claim = QueueClaim(
         record=record,
-        delivery_channel=GatewayKind.TELEGRAM,
+        delivery_channel=ChannelKind.TELEGRAM,
         delivery_wire_id=WireId(value="telegram:u-recover:a-recover"),
     )
 
@@ -307,14 +307,14 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
             return_value=repo,
         ):
             batch = await queue.pull_ready_batch(
-                delivery_channel=GatewayKind.TELEGRAM,
+                delivery_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="telegram:u-recover:a-recover",
             )
 
     assert tuple(message.message_id for message in batch) == ("msg-recovered",)
     repo.claim_pending_for_delivery.assert_awaited_once_with(
         scope,
-        delivery_channel=GatewayKind.TELEGRAM,
+        delivery_channel=ChannelKind.TELEGRAM,
         delivery_wire_id="telegram:u-recover:a-recover",
         limit=100,
     )

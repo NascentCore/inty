@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
@@ -20,8 +20,8 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueMessageId,
     QueueStatus,
 )
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -60,7 +60,7 @@ async def _cleanup_scope(scope: AgentScope) -> None:
 @pytest.mark.asyncio
 async def test_input_queue_append_and_claim_batch_order() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue",
         meta_data={"test": True},
     )
@@ -71,7 +71,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="first",
                     received_at_utc=now,
@@ -80,7 +80,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="second",
                     received_at_utc=now,
@@ -99,7 +99,7 @@ async def test_input_queue_append_and_claim_batch_order() -> None:
 @pytest.mark.asyncio
 async def test_append_user_message_idempotent_for_client_message_id() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_dedup",
         meta_data={"test": True},
     )
@@ -111,7 +111,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
             first = await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-1",
                     text="hello",
                     received_at_utc=now,
@@ -123,7 +123,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
             second = await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-1",
                     text="hello resend",
                     received_at_utc=now,
@@ -164,7 +164,7 @@ async def test_append_user_message_idempotent_for_client_message_id() -> None:
 @pytest.mark.asyncio
 async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_lookup",
         meta_data={"test": True},
     )
@@ -176,7 +176,7 @@ async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.APP_WS,
+                    channel=ChannelKind.APP_WS,
                     wire_id="app:wire-2",
                     text="lookup me",
                     received_at_utc=now,
@@ -201,7 +201,7 @@ async def test_get_records_by_ids_returns_app_ws_metadata() -> None:
 @pytest.mark.asyncio
 async def test_mark_batch_failed_persists_after_commit() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="input_queue_failed",
         meta_data={"test": True},
     )
@@ -212,7 +212,7 @@ async def test_mark_batch_failed_persists_after_commit() -> None:
             await repo.append_user_message(
                 InboundWireMessage(
                     scope=scope,
-                    channel=GatewayKind.TELEGRAM,
+                    channel=ChannelKind.TELEGRAM,
                     wire_id="wire-a",
                     text="will fail",
                     received_at_utc=now,
@@ -253,7 +253,7 @@ async def test_mark_batch_failed_persists_after_commit() -> None:
 @pytest.mark.asyncio
 async def test_output_queue_append_claim_and_deliver() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="output_queue",
         meta_data={"test": True},
     )
@@ -278,7 +278,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
             output_repo = PostgresOutputQueueRepository(db)
             claims = await output_repo.claim_pending_for_delivery(
                 scope,
-                delivery_channel=GatewayKind.TELEGRAM,
+                delivery_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="wire-a",
                 limit=4,
             )
@@ -302,7 +302,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
 @pytest.mark.asyncio
 async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
     scope = await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="output_queue_skipped",
         meta_data={"test": True},
     )
@@ -322,7 +322,7 @@ async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
             )
             await output_repo.claim_pending_for_delivery(
                 scope,
-                delivery_channel=GatewayKind.TELEGRAM,
+                delivery_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="wire-a",
                 limit=4,
             )

@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.agentic_companion.output_queue import (
@@ -63,7 +63,7 @@ def _pending_output_claim(
             created_at_utc=datetime.now(timezone.utc),
             message_ids=("input-1",),
         ),
-        delivery_channel=GatewayKind.TELEGRAM,
+        delivery_channel=ChannelKind.TELEGRAM,
         delivery_wire_id=WireId(value=wire_id),
     )
 
@@ -133,7 +133,7 @@ async def test_concurrent_flush_and_pump_deliver_same_row_twice() -> None:
                     scope,
                     deliver_message=slow_deliver,
                     stop_event=stop,
-                    delivery_channel=GatewayKind.TELEGRAM,
+                    delivery_channel=ChannelKind.TELEGRAM,
                     delivery_wire_id=wire_id,
                     poll_interval_sec=0.01,
                 )
@@ -170,7 +170,7 @@ async def test_drain_and_deliver_runs_pump_concurrently() -> None:
         ) as pump_mock:
             result = await drain_and_deliver_user_chat_turn(
                 scope,
-                runtime_channel=GatewayKind.TELEGRAM,
+                runtime_channel=ChannelKind.TELEGRAM,
                 delivery_wire_id="telegram:user-a:agent-a",
                 implicit_signal_bundle=ImplicitSignalBundle(
                     client_time=None,
@@ -209,7 +209,7 @@ async def test_drain_and_deliver_returns_empty_when_pump_empty() -> None:
         ):
             result = await drain_and_deliver_user_chat_turn(
                 scope,
-                runtime_channel=GatewayKind.WECHAT_WEIXIN,
+                runtime_channel=ChannelKind.WECHAT_WEIXIN,
                 delivery_wire_id="weixin:binding-1",
                 implicit_signal_bundle=ImplicitSignalBundle(
                     client_time=None,

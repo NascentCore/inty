@@ -13,14 +13,14 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.manager import CompanionSession
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.services.agentic_channel.channel_runtime import (
     get_scope_channel_registry,
 )
-from app.services.agentic_companion.active_gateway_registry import (
-    active_gateway_for_user,
+from app.services.agentic_companion.active_channel_registry import (
+    active_channel_for_user,
 )
 
 
@@ -45,11 +45,11 @@ def resolve_langsmith_slice_for_session(
             scope.registry_key(),
         )
         return CompanionTurnLangsmithSlice.from_channel(
-            GatewayKind.APP_WS,
+            ChannelKind.APP_WS,
             LangsmithChannelSource.DEFAULT_APP,
         )
 
-    user_active = active_gateway_for_user(session.user_id)
+    user_active = active_channel_for_user(session.user_id)
     if user_active is not None:
         return CompanionTurnLangsmithSlice.from_channel(
             user_active,

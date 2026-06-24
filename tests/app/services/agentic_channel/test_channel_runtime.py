@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import delete
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agent_channel.gateway import (
-    GatewayKind,
+from app.core.companion_harness.agent_channel.channel_kind import (
+    ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
@@ -27,7 +27,7 @@ from app.services.agentic_channel.channel_runtime import (
     turn_channel_up,
 )
 from app.services.agentic_channel.endpoints import bind_endpoint
-from app.core.companion_harness.agent_channel.gateway import GatewayKind
+from app.core.companion_harness.agent_channel.channel_kind import ChannelKind
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
 )
@@ -35,7 +35,7 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 
 async def _create_scope() -> AgentScope:
     return await create_guest_scope_for_test(
-        gateway=GatewayKind.APP_WS,
+        channel=ChannelKind.APP_WS,
         nickname_prefix="runtime",
         meta_data={"test": True},
     )
@@ -68,13 +68,13 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=f"tg-1-{uuid.uuid4().hex}",
             channel_user_id=f"tu-1-{uuid.uuid4().hex}",
         )
         await bind_endpoint(
             scope,
-            channel=GatewayKind.WECHAT_WEIXIN,
+            channel=ChannelKind.WECHAT_WEIXIN,
             channel_address=f"wx-peer-{uuid.uuid4().hex}",
             channel_user_id=f"wx-user-{uuid.uuid4().hex}",
         )
@@ -90,22 +90,22 @@ async def test_turn_up_supersedes_prior_active_channel() -> None:
         )
         await turn_channel_up(
             scope,
-            GatewayKind.TELEGRAM,
+            ChannelKind.TELEGRAM,
             adapter=tg_adapter,
             reason="test",
         )
-        assert registry.active_channel() == GatewayKind.TELEGRAM
+        assert registry.active_channel() == ChannelKind.TELEGRAM
 
         wx_adapter = WeixinChannelAdapterStub()
         await turn_channel_up(
             scope,
-            GatewayKind.WECHAT_WEIXIN,
+            ChannelKind.WECHAT_WEIXIN,
             adapter=wx_adapter,
             reason="test",
         )
-        assert registry.active_channel() == GatewayKind.WECHAT_WEIXIN
+        assert registry.active_channel() == ChannelKind.WECHAT_WEIXIN
         assert (
-            registry.state_of(GatewayKind.TELEGRAM)
+            registry.state_of(ChannelKind.TELEGRAM)
             == ChannelRuntimeState.INACTIVE
         )
     finally:
@@ -118,14 +118,14 @@ async def test_turn_down_idempotent() -> None:
     try:
         await bind_endpoint(
             scope,
-            channel=GatewayKind.TELEGRAM,
+            channel=ChannelKind.TELEGRAM,
             channel_address=f"tg-2-{uuid.uuid4().hex}",
             channel_user_id=f"tu-2-{uuid.uuid4().hex}",
         )
         registry = get_scope_channel_registry(scope)
         await turn_channel_down(
             scope,
-            GatewayKind.TELEGRAM,
+            ChannelKind.TELEGRAM,
             reason="noop",
         )
         assert registry.active_channel() is None
