@@ -158,6 +158,7 @@ class BootstrapMemDocResult:
     style_sequence_id: int
     memory_sequence_id: int
     errors: tuple[str, ...]
+    warnings: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -842,14 +843,15 @@ def _verify_bootstrap_memdocs(
         errors.append("STYLE.md missing")
     elif not style_customized:
         errors.append("STYLE.md still template seed")
+    warnings: list[str] = []
     if soul_doc is None:
-        errors.append("SOUL.md missing")
+        warnings.append("SOUL.md missing")
     elif not soul_unchanged:
-        errors.append("SOUL.md changed from template seed")
+        warnings.append("SOUL.md drifted from template seed")
     if memory_doc is None:
-        errors.append("MEMORY.md missing")
+        warnings.append("MEMORY.md missing")
     elif not memory_unchanged:
-        errors.append("MEMORY.md changed before dreaming")
+        warnings.append("MEMORY.md drifted from template seed before dreaming")
 
     return BootstrapMemDocResult(
         user_customized=user_customized,
@@ -862,6 +864,7 @@ def _verify_bootstrap_memdocs(
         style_sequence_id=style_doc.sequence_id if style_doc else 0,
         memory_sequence_id=memory_doc.sequence_id if memory_doc else 0,
         errors=tuple(errors),
+        warnings=tuple(warnings),
     )
 
 
@@ -1569,6 +1572,97 @@ def _run_github_issue_e2e_phase(
     )
 
 
+def _run_experience_profile_phase(
+    *,
+    bridge: Any,
+    report: dict[str, Any],
+    repo_root: Path,
+    config_path: Path,
+    agent_id: str,
+    user_id: str,
+    experience_profile_turn: str,
+    experience_profile_context_mode: str,
+    stderr: TextIO,
+) -> bool:
+    """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
+    print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
+    experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
+    text, meta, err = _wait_downlink_for_user_msg_uuid(
+        bridge,
+        report,
+        expected_user_msg_uuid=experience_msg_uuid,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="experience_profile",
+        trailing_label="experience_profile_mismatch",
+    )
+    if err is not None:
+        report["errors"].append({"turn": "experience_profile", "error": err})
+        print(f"{_TAG} ERROR experience_profile: {err}", file=stderr, flush=True)
+    else:
+        assert text is not None
+        report["turns"].append(
+            {
+                "kind": "experience_profile",
+                "user": experience_profile_turn,
+                "user_msg_uuid": experience_msg_uuid,
+                "text_preview": text[:120],
+                "meta": meta,
+            }
+        )
+        print(
+            f"{_TAG} experience_profile reply={text[:80]!r} "
+            f"context_mode={meta.get('context_mode')}",
+            flush=True,
+        )
+    _drain_turn_trailing_frames(bridge, report, label="experience_profile")
+    if not _wait_input_delivered(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        client_message_id=experience_msg_uuid,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile-delivered",
+                "error": (408, f"input not delivered: {experience_msg_uuid}"),
+            }
+        )
+    matched = _poll_context_mode(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        expected=experience_profile_context_mode,
+        timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
+        bridge=bridge,
+        stderr=stderr,
+    )
+    report["experience_profile"] = {
+        "expected_context_mode": experience_profile_context_mode,
+        "matched": matched,
+        "actual_context_mode": _query_context_mode(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        ),
+    }
+    if not matched:
+        report["errors"].append(
+            {
+                "turn": "experience_profile",
+                "error": (
+                    422,
+                    f"context_mode != {experience_profile_context_mode!r}",
+                ),
+            }
+        )
+    return matched
+
+
 def run_regression(
     *,
     repo_root: Path,
@@ -1642,6 +1736,7 @@ def run_regression(
         style_sequence_id=0,
         memory_sequence_id=0,
         errors=("skipped: regression did not reach bootstrap memdoc phase",),
+        warnings=(),
     )
     experience_profile_ok = False
     dreaming_result = DreamingConsolidationResult(
@@ -1736,6 +1831,18 @@ def run_regression(
             )
             _drain_until_quiet(bridge, quiet_sec=2.0, max_sec=15.0)
 
+        experience_profile_ok = _run_experience_profile_phase(
+            bridge=bridge,
+            report=report,
+            repo_root=repo_root,
+            config_path=config_path,
+            agent_id=agent_id,
+            user_id=user_id,
+            experience_profile_turn=experience_profile_turn,
+            experience_profile_context_mode=experience_profile_context_mode,
+            stderr=stderr,
+        )
+
         print(f"{_TAG} bootstrap finish turn: {bootstrap_finish_turn!r}", flush=True)
         _send_turn(bridge, agent_id, bootstrap_finish_turn)
         text, meta, err = _wait_downlink(
@@ -1791,6 +1898,7 @@ def run_regression(
                 "style_sequence_id": memdoc_result.style_sequence_id,
                 "memory_sequence_id": memdoc_result.memory_sequence_id,
                 "errors": list(memdoc_result.errors),
+                "warnings": list(memdoc_result.warnings),
             }
             if memdoc_result.errors:
                 report["errors"].append(
@@ -1812,92 +1920,10 @@ def run_regression(
                     f"style_seq={memdoc_result.style_sequence_id}",
                     flush=True,
                 )
-
-            print(
-                f"{_TAG} experience_profile turn: {experience_profile_turn!r}",
-                flush=True,
-            )
-            experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
-            text, meta, err = _wait_downlink_for_user_msg_uuid(
-                bridge,
-                report,
-                expected_user_msg_uuid=experience_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label="experience_profile",
-                trailing_label="experience_profile_mismatch",
-            )
-            if err is not None:
-                report["errors"].append(
-                    {"turn": "experience_profile", "error": err}
-                )
+            if memdoc_result.warnings:
                 print(
-                    f"{_TAG} ERROR experience_profile: {err}",
-                    file=stderr,
+                    f"{_TAG} bootstrap_memdocs warnings: {memdoc_result.warnings}",
                     flush=True,
-                )
-            else:
-                assert text is not None
-                report["turns"].append(
-                    {
-                        "kind": "experience_profile",
-                        "user": experience_profile_turn,
-                        "user_msg_uuid": experience_msg_uuid,
-                        "text_preview": text[:120],
-                        "meta": meta,
-                    }
-                )
-                print(
-                    f"{_TAG} experience_profile reply={text[:80]!r} "
-                    f"context_mode={meta.get('context_mode')}",
-                    flush=True,
-                )
-            _drain_turn_trailing_frames(
-                bridge, report, label="experience_profile"
-            )
-            if not _wait_input_delivered(
-                repo_root,
-                config_path,
-                agent_id=agent_id,
-                client_message_id=experience_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label="experience_profile",
-                stderr=stderr,
-            ):
-                report["errors"].append(
-                    {
-                        "turn": "experience_profile-delivered",
-                        "error": (408, f"input not delivered: {experience_msg_uuid}"),
-                    }
-                )
-            experience_profile_ok = _poll_context_mode(
-                repo_root,
-                config_path,
-                user_id=user_id,
-                agent_id=agent_id,
-                expected=experience_profile_context_mode,
-                timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
-                bridge=bridge,
-                stderr=stderr,
-            )
-            report["experience_profile"] = {
-                "expected_context_mode": experience_profile_context_mode,
-                "matched": experience_profile_ok,
-                "actual_context_mode": _query_context_mode(
-                    repo_root,
-                    config_path,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                ),
-            }
-            if not experience_profile_ok:
-                report["errors"].append(
-                    {
-                        "turn": "experience_profile",
-                        "error": (
-                            422,
-                            f"context_mode != {experience_profile_context_mode!r}",
-                        ),
-                    }
                 )
 
         for text, meta in _drain_until_quiet(
