@@ -59,6 +59,8 @@ TAG_TO_ISSUE: dict[str, int] = {
     "code-consistency": 3413,
     "crs-persona-slice-registry": 3341,
     "experience-profile": 3343,
+    "bootstrap-cohort-overlays": 3628,
+    "track-compose-unify": 3398,
 }
 
 ROOTS = (
