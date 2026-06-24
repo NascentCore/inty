@@ -336,55 +336,6 @@ async def test_run_in_turn_sync_tool_loop_emit_every_assistant_round_terminal(
 
 
 @pytest.mark.asyncio
-async def test_run_bootstrap_track_sync_tool_loop_returns_result(
-    tmp_path: Path,
-) -> None:
-    from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
-        BootstrapInTurnSyncToolLoopInput,
-        InTurnSyncToolLoopResult,
-        run_bootstrap_track_sync_tool_loop,
-    )
-
-    scope = CompanionScope("bootstrap-wrapper", "agent", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
-    store.write_document("transcript.jsonl", "")
-    client = _FakeSyncToolLoopLLMClient(
-        [_final_response(content="bootstrap ok")]
-    )
-
-    result = await run_bootstrap_track_sync_tool_loop(
-        BootstrapInTurnSyncToolLoopInput(
-            store=store,
-            llm_client=client,  # type: ignore[arg-type]
-            messages=({"role": "user", "content": "hi"},),
-            tools_for_turn=(),
-            memory_bootstrap_type="none",
-            repository_only_store_text=False,
-            trace_id="trace-bootstrap",
-            user_text="hi",
-            ts_user=datetime(2026, 1, 3, tzinfo=UTC),
-            user_msg_uuid="user-bootstrap",
-            tail_user_messages=_tail(
-                message_id="user-bootstrap",
-                text="hi",
-                ts=datetime(2026, 1, 3, tzinfo=UTC),
-            ),
-            transcript_rel="transcript.jsonl",
-            bootstrap_interim_output_sink=None,
-            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
-                TurnRuntimeContext(
-                    channel=ChannelKind.APP_WS,
-                    implicit_signal_bundle=None,
-                )
-            ),
-        )
-    )
-
-    assert isinstance(result, InTurnSyncToolLoopResult)
-    assert result.assistant_text == "bootstrap ok"
-
-
-@pytest.mark.asyncio
 async def test_run_in_turn_sync_tool_loop_after_tool_hook_refreshes_openai_tools(
     tmp_path: Path,
 ) -> None:

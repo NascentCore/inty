@@ -1,5 +1,6 @@
 # Companion Harness: 架构说明
 
+> 描述从用户视角看到的系统的架构，不涉及具体的代码结构。
 > 本文描述的是 agentic companion 的**目标态理想设计**，不是现状清单。
 > `companion_harness` 目前仍处于 **PROTOTYPE** 状态，可以不考虑向前兼容。
 > 编码智能体与工程师在判断「某部分是否已实现」之前，**必须先读 `app/core/companion_harness/` 代码**，不要以本文为实现依据。

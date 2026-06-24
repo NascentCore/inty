@@ -17,6 +17,18 @@ Open PRs checked: #3555 (app-ws channel adapter), #3556 (stale REPL/turn_engine 
 - [x] **HYGIENE-2026-05** ruff UP017: remaining `timezone.utc` in `agentic_companion/output_queue.py`, `agentic_companion/postgres_queue.py`, `companion/dreaming.py`, `companion/proactive_chat.py`, `companion/schedule_queue.py`, `runtime/dreaming_batch.py`, `tools/fal_z_image_tool.py`. Fixed in `cursor/agent-maintenance-tasks-f49a`.
 - [x] **HYGIENE-2026-06** ruff UP017: test files still using `timezone.utc` instead of `datetime.UTC` (batch by test subdir). Fixed in `cursor/agent-maintenance-tasks-f49a`.
 
+## 2026-06-22 scan
+
+Source: open PR overlap check (#3611 #3400 rename, #3620 #3375 ai_private.md reader); ruff UP017/UP035/UP041 + vulture `--min-confidence 80` — clean.
+
+Open PRs checked: #3611 (INNER_TICK_MONOLOG rename #3400), #3620 (dead ai_private.md reader #3375) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-07** #3551: Dreaming batch LangSmith parent — `record_dreaming_batch_observability` on failure paths (`DreamingTranscriptBoundaryMismatchError` etc.). Fixed in `cursor/agent-maintenance-tasks-b0b1` / pull/3621.
+- [x] **HYGIENE-2026-08** #3413: Export module-level `Final` MemDoc path constants in `memory_store_path_constants.py`; migrate ad-hoc `_USER_MD_REL` / `_MEMORY_REL` in `read_web_page.py`, `client_time_from_memory_store.py`, `companion_tool_runtime.py`, `image_gate.py`. Fixed in `cursor/agent-maintenance-tasks-b0b1` / pull/3621.
+- [x] **HYGIENE-2026-09** #3413: Wire `memory_store_document_mapping._REL_TO_KIND` keys and `MemoryStoreScopePaths` to canonical path constants. Fixed in `cursor/agent-maintenance-tasks-b0b1` / pull/3621.
+
 ## 2026-06-23 scan
 
 Source: issue audit `hygiene_defer` lane; ruff UP017/UP035/UP041 + vulture `--min-confidence 80` clean on `app/core/companion_harness/`.

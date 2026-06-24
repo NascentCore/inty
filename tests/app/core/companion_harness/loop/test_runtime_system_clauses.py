@@ -13,7 +13,7 @@ from app.core.companion_harness.loop.runtime_system_clauses import (
     apply_agentic_loop_runtime_system_clauses,
     apply_debug_github_disclosure_runtime_clause,
     debug_disclose_github_issue_system_clause,
-    reply_in_user_language_system_clause,
+    reply_language_clause,
 )
 
 
@@ -28,12 +28,39 @@ def _realistic_message_stack() -> list[dict[str, Any]]:
     ]
 
 
-def test_reply_in_user_language_system_clause_skips_empty_user_text() -> None:
-    assert reply_in_user_language_system_clause(user_text="") is None
-    assert reply_in_user_language_system_clause(user_text="   ") is None
+def test_reply_language_clause_skips_empty_user_text_when_config_unset(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: None,
+    )
+    assert reply_language_clause(user_text="") is None
+    assert reply_language_clause(user_text="   ") is None
 
 
-def test_apply_inserts_clause_after_time_context_before_tail_user() -> None:
+def test_reply_language_clause_returns_fixed_language_from_config(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+    clause = reply_language_clause(user_text="你好")
+    assert clause == (
+        "Use English for all user-facing reply text in this turn. "
+        "Do not use another language unless the user explicitly asks "
+        "about language choice."
+    )
+
+
+def test_apply_inserts_clause_after_time_context_before_tail_user(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: None,
+    )
     messages = _realistic_message_stack()
     apply_agentic_loop_runtime_system_clauses(
         openai_messages=messages,
@@ -57,7 +84,26 @@ def test_apply_inserts_clause_after_time_context_before_tail_user() -> None:
     assert len(clause_rows) == 1
 
 
-def test_apply_inserts_before_multi_tail_user_rows() -> None:
+def test_apply_skips_runtime_clause_when_fixed_language_configured(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+    messages = _realistic_message_stack()
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=messages,
+        user_text="你好",
+    )
+    assert messages == _realistic_message_stack()
+
+
+def test_apply_inserts_before_multi_tail_user_rows(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: None,
+    )
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "prefix"},
         {"role": "user", "content": "history"},
@@ -77,7 +123,11 @@ def test_apply_inserts_before_multi_tail_user_rows() -> None:
     assert messages[5]["content"] == "second batch line"
 
 
-def test_clause_survives_leading_prefix_refresh() -> None:
+def test_clause_survives_leading_prefix_refresh(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: None,
+    )
     messages = _realistic_message_stack()
     apply_agentic_loop_runtime_system_clauses(
         openai_messages=messages,

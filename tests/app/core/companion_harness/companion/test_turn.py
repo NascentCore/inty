@@ -30,9 +30,14 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
-from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
-    InTurnSyncToolLoopResult,
+from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+    bootstrap_queue_turn_deps,
 )
+from tests.app.core.companion_harness.companion.companion_scripted_llm import (
+    companion_llm_client_with_scripted_transport,
+    scripted_harness_llm_config,
+)
+from app.external_services.fakes.openai import fake_step_text
 
 
 class _FakeLLMClient:
@@ -134,136 +139,78 @@ def test_run_turn_inner_tick_scheduled_semantics(
     assert rows[0].get("proactive_chat") is not True
 
 
-@pytest.mark.asyncio
-async def test_bootstrap_turn_appends_user_row_when_loop_did_not_persist(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scope = CompanionScope("turn-bootstrap-fallback", "a", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
+def _seed_bootstrap_workspace(store: MemoryStore) -> None:
+    store.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "unspecific",
+                "workspace_bootstrap_user_interactive_completed": False,
+            }
+        ),
+    )
     _seed_workspace(store)
-    client = _FakeLLMClient()
 
-    async def _bootstrap_loop_without_transcript_persist(
-        *args: Any, **kwargs: Any
-    ):
-        return InTurnSyncToolLoopResult(
-            assistant_text="bootstrap reply",
-            langsmith_trace_id="",
-            langsmith_run_id="",
-            skip_final_transcript_assistant_row=False,
-            last_interim_assistant_msg_uuid=None,
-            loop_persisted_user_transcript=False,
+
+@pytest.mark.asyncio
+async def test_bootstrap_without_queue_raises_runtime_error(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("turn-bootstrap-no-queue", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_bootstrap_workspace(store)
+    client, _ = companion_llm_client_with_scripted_transport(
+        scripted_harness_llm_config(),
+        (fake_step_text("bootstrap reply"),),
+    )
+    with pytest.raises(RuntimeError, match="agentic_output_queue"):
+        await _run_companion_turn_core(
+            "bootstrap hello",
+            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            deps=CompanionTurnDeps(
+                store=store,
+                llm_client=client,
+                transcript_compaction=None,
+                transcript_llm_window_max_messages=None,
+                repository_only_store_text=False,
+                memory_bootstrap_type="USER_INTERACTIVE",
+                runtime_context=TurnRuntimeContext(
+                    channel=ChannelKind.APP_WS,
+                    implicit_signal_bundle=None,
+                ),
+                background_output_sink=None,
+                preset_user_msg_uuid=None,
+                langsmith_parent_run_enabled=False,
+                tool_bg_idle_event=None,
+                bootstrap_interim_output_sink=None,
+            ),
         )
 
-    monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.run_bootstrap_track_sync_tool_loop",
-        _bootstrap_loop_without_transcript_persist,
-    )
 
+@pytest.mark.asyncio
+async def test_bootstrap_queue_turn_persists_single_user_row(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("turn-bootstrap-queue", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_bootstrap_workspace(store)
+    client, _ = companion_llm_client_with_scripted_transport(
+        scripted_harness_llm_config(),
+        (fake_step_text("bootstrap reply"),),
+    )
+    deps = bootstrap_queue_turn_deps(store, client)
     out = await _run_companion_turn_core(
         "bootstrap hello",
         track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        deps=CompanionTurnDeps(
-            store=store,
-            llm_client=client,  # type: ignore[arg-type]
-            transcript_compaction=None,
-            transcript_llm_window_max_messages=None,
-            repository_only_store_text=False,
-            memory_bootstrap_type="USER_INTERACTIVE",
-            runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
-                implicit_signal_bundle=None,
-            ),
-            background_output_sink=None,
-            preset_user_msg_uuid=None,
-            langsmith_parent_run_enabled=False,
-            tool_bg_idle_event=None,
-            bootstrap_interim_output_sink=None,
-        ),
+        deps=deps,
     )
-
     rows = [
         json.loads(line)
         for line in store.read_document("transcript.jsonl").splitlines()
         if line
     ]
-    assert [row["role"] for row in rows] == ["user", "assistant"]
-    assert rows[0]["content"] == "bootstrap hello"
-    assert rows[0]["uuid"] == out.user_msg_uuid
-    assert rows[1]["reply_to"] == out.user_msg_uuid
-
-
-@pytest.mark.asyncio
-async def test_bootstrap_turn_skips_duplicate_user_row_when_loop_persisted(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scope = CompanionScope("turn-bootstrap-dedupe", "a", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
-    _seed_workspace(store)
-    client = _FakeLLMClient()
-    user_uuid = "bootstrap-user-uuid"
-
-    async def _bootstrap_loop_with_transcript_persist(
-        *args: Any, **kwargs: Any
-    ):
-        from app.core.companion_harness.companion.transcript_user_row import (
-            TranscriptUserRowBuildInput,
-            append_transcript_user_row,
-        )
-
-        append_transcript_user_row(
-            store,
-            "transcript.jsonl",
-            TranscriptUserRowBuildInput(
-                content="bootstrap hello",
-                uuid=user_uuid,
-                trace_id="trace-in-loop",
-            ),
-            ts="2026-06-17T00:00:00+00:00",
-        )
-        return InTurnSyncToolLoopResult(
-            assistant_text="bootstrap reply",
-            langsmith_trace_id="",
-            langsmith_run_id="",
-            skip_final_transcript_assistant_row=False,
-            last_interim_assistant_msg_uuid=None,
-            loop_persisted_user_transcript=True,
-        )
-
-    monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.run_bootstrap_track_sync_tool_loop",
-        _bootstrap_loop_with_transcript_persist,
-    )
-
-    await _run_companion_turn_core(
-        "bootstrap hello",
-        track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        deps=CompanionTurnDeps(
-            store=store,
-            llm_client=client,  # type: ignore[arg-type]
-            transcript_compaction=None,
-            transcript_llm_window_max_messages=None,
-            repository_only_store_text=False,
-            memory_bootstrap_type="USER_INTERACTIVE",
-            runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.APP_WS,
-                implicit_signal_bundle=None,
-            ),
-            background_output_sink=None,
-            preset_user_msg_uuid=user_uuid,
-            langsmith_parent_run_enabled=False,
-            tool_bg_idle_event=None,
-            bootstrap_interim_output_sink=None,
-        ),
-    )
-
-    rows = [
-        json.loads(line)
-        for line in store.read_document("transcript.jsonl").strip().splitlines()
-        if line
-    ]
     user_rows = [row for row in rows if row["role"] == "user"]
     assert len(user_rows) == 1
-    assert user_rows[0]["uuid"] == user_uuid
+    assert user_rows[0]["content"] == "bootstrap hello"
+    assert user_rows[0]["uuid"] == out.user_msg_uuid
+    assert [row["role"] for row in rows] == ["user", "assistant"]

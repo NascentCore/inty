@@ -73,58 +73,6 @@ def test_settled_single_llm_matches_legacy_build_system_messages() -> None:
     assert composed == legacy
 
 
-def test_bootstrap_single_llm_matches_legacy_build_system_messages_default_context() -> (
-    None
-):
-    bundle = _bundle()
-    context = ContextMeta()
-    legacy = build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        interactive_bootstrap_active=True,
-        include_significance_perception_slice=False,
-    )
-    builder = PromptBuilder(
-        bundle=bundle,
-        context=context,
-        runtime_context=_runtime_context(),
-    )
-    composed = builder.bootstrap_single_llm_system_messages()
-    assert composed == legacy
-
-
-def test_bootstrap_single_llm_matches_legacy_with_directives_and_private_memory() -> (
-    None
-):
-    bundle = _bundle()
-    context = ContextMeta(
-        context_mode="intimate",
-        experience_directives=ExperienceDirectives(
-            intent=ExperienceSessionIntent.DEEP_CONVERSATION,
-            tone=ExperienceDirectiveTone.WARM,
-        ),
-    )
-    legacy = build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        interactive_bootstrap_active=True,
-        include_significance_perception_slice=False,
-    )
-    builder = PromptBuilder(
-        bundle=bundle,
-        context=context,
-        runtime_context=_runtime_context(),
-    )
-    composed = builder.bootstrap_single_llm_system_messages()
-    assert composed == legacy
-
-
 def test_settled_dual_chat_leg_matches_legacy_build_system_messages() -> None:
     bundle = _bundle()
     context = ContextMeta()

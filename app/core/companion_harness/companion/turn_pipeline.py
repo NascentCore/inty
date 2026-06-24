@@ -49,7 +49,11 @@ from .dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     load_dreaming_state,
 )
-from .prompt_stack import companion_turn_tools_and_system_messages
+from .prompt_stack import (
+    companion_tools_for_turn,
+    companion_turn_tools_and_system_messages,
+)
+from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
     ConversationCompactor,
@@ -62,7 +66,6 @@ from .transcript_ai_private import (
     track_uses_ai_private_splice,
     transcript_window_to_llm_dialogue,
 )
-from .turn_routes import TurnRouteMode
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
@@ -225,17 +228,38 @@ def build_companion_turn_prompt_plan(
     """Assemble system messages, route, and final request messages."""
     inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    tools_for_turn, system_messages, route_mode = (
-        companion_turn_tools_and_system_messages(
-            store=store,
-            bundle=loaded_state.bundle,
-            context=loaded_state.context,
-            memory_bootstrap_type=memory_bootstrap_type,
-            track=track,
-            implicit_user_signed_on_turn=implicit_sign_on_turn,
-            runtime_context=runtime_context,
-        )
-    )
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            from app.core.companion_harness.prompt_builder import PromptBuilder
+
+            tools_for_turn = companion_tools_for_turn(
+                track=track,
+                inner_tick_turn=False,
+                inner_tick_activity=InnerTickActivity.MONOLOG,
+                implicit_user_signed_on_turn=implicit_sign_on_turn,
+            )
+            system_messages = PromptBuilder(
+                bundle=loaded_state.bundle,
+                context=loaded_state.context,
+                runtime_context=runtime_context,
+            ).bootstrap_turn_system_dicts()
+            route_mode = resolve_turn_route_mode(
+                inner_tick_turn=False,
+                inner_tick_activity=InnerTickActivity.MONOLOG,
+                tools_enabled=bool(tools_for_turn),
+            )
+        case _:
+            tools_for_turn, system_messages, route_mode = (
+                companion_turn_tools_and_system_messages(
+                    store=store,
+                    bundle=loaded_state.bundle,
+                    context=loaded_state.context,
+                    memory_bootstrap_type=memory_bootstrap_type,
+                    track=track,
+                    implicit_user_signed_on_turn=implicit_sign_on_turn,
+                    runtime_context=runtime_context,
+                )
+            )
     use_dual_structured_chat = (
         (not inner_tick_turn)
         and (not tools_for_turn)

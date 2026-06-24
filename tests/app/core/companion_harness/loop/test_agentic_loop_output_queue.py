@@ -583,6 +583,84 @@ async def test_prompt_plan_tool_loop_injects_reply_language_clause() -> None:
 
 
 @pytest.mark.asyncio
+async def test_prompt_plan_tool_loop_skips_runtime_clause_when_fixed_language_configured(
+    monkeypatch,
+) -> None:
+    from app.core.companion_harness.loop.agentic_loop import (
+        _run_prompt_plan_tool_loop,
+    )
+    from app.core.companion_harness.loop.runtime_system_clauses import (
+        fixed_reply_language_clause,
+    )
+    from app.core.companion_harness.prompt_builder import (
+        PromptMessage,
+        PromptMessageRole,
+        PromptPlan,
+    )
+
+    monkeypatch.setattr(
+        "app.core.companion_harness.loop.runtime_system_clauses.resolved_companion_harness_reply_language",
+        lambda: "English",
+    )
+
+    def _response(text: str):  # type: ignore[no-untyped-def]
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=text, tool_calls=[]),
+                )
+            ]
+        )
+
+    fixed_clause = fixed_reply_language_clause(language="English")
+    context = _loop_context(output_queue=MagicMock(spec=OutputQueue))
+    prompt_plan = PromptPlan(
+        messages=(
+            PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
+            PromptMessage(
+                role=PromptMessageRole.SYSTEM,
+                content=fixed_clause,
+            ),
+            PromptMessage(role=PromptMessageRole.USER, content="hello"),
+        ),
+        tools=(),
+        tool_choice=None,
+    )
+    context = replace(context, prompt_plan=prompt_plan, user_text="hello")
+    llm_client = MagicMock()
+    llm_client.resolve_model.return_value = SimpleNamespace(
+        id_on_provider="test/model"
+    )
+    llm_client.chat_completion = AsyncMock(return_value=_response("ok"))
+
+    with patch(
+        "app.core.companion_harness.loop.agentic_loop.resolve_openai_tool_call_loop_async",
+        new=AsyncMock(
+            return_value=SimpleNamespace(
+                trace_id="trace-1",
+                response=_response("ok"),
+                messages=[],
+            )
+        ),
+    ):
+        await _run_prompt_plan_tool_loop(
+            context,
+            store=_loop_store(),
+            llm_client=llm_client,
+            interim_output_sink=None,
+        )
+
+    initial_messages = llm_client.chat_completion.await_args_list[0].kwargs[
+        "messages"
+    ]
+    assert initial_messages == [
+        {"role": "system", "content": "sys"},
+        {"role": "system", "content": fixed_clause},
+        {"role": "user", "content": "hello"},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
     from app.core.companion_harness.companion.dual_llm_foreground_chat import (
         DualLlmForegroundChatResult,

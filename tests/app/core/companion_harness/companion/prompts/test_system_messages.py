@@ -20,7 +20,6 @@ from app.core.companion_harness.prompting.tracks import (
 )
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
-    build_system_messages_for_bootstrap_track,
     build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
@@ -257,7 +256,6 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
 ):
     builders = [
         build_system_messages,
-        build_system_messages_for_bootstrap_track,
         build_settled_user_turn_dual_chat_leg_system_messages,
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_monolog,

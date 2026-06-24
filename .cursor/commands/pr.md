@@ -27,6 +27,7 @@ Create a pull request for the current working branch
 - [ ] Working branch rebased and pushed
 - [ ] PR title and description written
 - [ ] PR is created on GitHub
+- [ ] PR auto-merge is enabled
 
 ## Output
 

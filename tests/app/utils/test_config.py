@@ -898,6 +898,29 @@ def test_companion_harness_default_user_time_zone_empty_disables() -> None:
     assert agent.companion_harness.default_user_time_zone is None
 
 
+def test_companion_harness_language_default_none() -> None:
+    agent = AgentConfig(api_key="test", langchain_api_key="test")
+    assert agent.companion_harness.language is None
+
+
+def test_companion_harness_language_strips_and_preserves() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"language": " English "},
+    )
+    assert agent.companion_harness.language == "English"
+
+
+def test_companion_harness_language_empty_disables() -> None:
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"language": "   "},
+    )
+    assert agent.companion_harness.language is None
+
+
 def test_companion_harness_default_user_time_zone_invalid_raises() -> None:
     with pytest.raises(ValueError, match="default_user_time_zone"):
         AgentConfig(
@@ -1003,6 +1026,17 @@ def test_load_config_companion_harness_memory_bootstrap_type():
     assert cfg.agent.companion_harness.memory_bootstrap_type == (
         CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     )
+
+
+def test_load_config_companion_harness_language() -> None:
+    yaml_text = _minimal_yaml_for_load_config_harness(
+        "    language: English\n",
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "config.yaml"
+        path.write_text(yaml_text, encoding="utf-8")
+        cfg = load_config(str(path))
+    assert cfg.agent.companion_harness.language == "English"
 
 
 def test_load_config_companion_harness_inner_tick_proactive_chat():

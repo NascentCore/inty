@@ -9,6 +9,9 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -81,5 +84,11 @@ def dual_llm_system_message_variants(
         system_messages=chat_system_msgs,
         bundle=bundle,
         runtime_context=runtime_context,
+    )
+    tool_system_msgs = append_configured_fixed_reply_language_system_messages(
+        tool_system_msgs
+    )
+    chat_system_msgs = append_configured_fixed_reply_language_system_messages(
+        chat_system_msgs
     )
     return tool_system_msgs, chat_system_msgs
