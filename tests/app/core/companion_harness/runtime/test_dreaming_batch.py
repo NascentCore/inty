@@ -46,6 +46,8 @@ def _session() -> MagicMock:
     session.companion_id = "a"
     session.chat_id = "c"
     session.store = MagicMock()
+    session.store.uses_repository_without_scope_disk = False
+    session.store.scope.registry_key.return_value = "u:a:c"
     session.llm_client = MagicMock()
     session.tool_bg_idle = MagicMock()
     return session
@@ -170,3 +172,42 @@ def test_run_dreaming_batch_if_due_saves_checkpoint_after_update() -> None:
     memory_update.assert_called_once()
     save_dreaming_state.assert_called_once()
     record_obs.assert_called_once()
+
+
+@contextmanager
+def _lock_busy(_scope_registry_key: str):
+    yield False
+
+
+def test_run_dreaming_batch_if_due_skips_when_advisory_lock_busy() -> None:
+    session = _session()
+    session.store.uses_repository_without_scope_disk = True
+
+    with (
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
+            return_value=_dreaming_candidate(),
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.try_dreaming_scope_advisory_lock",
+            _lock_busy,
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.record_dreaming_batch_observability"
+        ) as record_obs,
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.consolidate_memory_during_dreaming"
+        ) as memory_update,
+    ):
+        result = run_dreaming_batch_if_due(
+            session,
+            idle_seconds=120,
+        )
+
+    assert result == DreamingBatchOutcome.ADVISORY_LOCK_BUSY
+    memory_update.assert_not_called()
+    record_obs.assert_called_once()
+    assert (
+        record_obs.call_args.kwargs["outcome"]
+        == DreamingBatchOutcome.ADVISORY_LOCK_BUSY
+    )

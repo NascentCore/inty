@@ -38,6 +38,7 @@ class DreamingBatchOutcome(StrEnum):
     """Result of one dreaming batch attempt under ``turn_lock``."""
 
     NOT_DUE = "not_due"
+    ADVISORY_LOCK_BUSY = "advisory_lock_busy"
     CHECKPOINT_SAVED = "checkpoint_saved"
     BATCH_FAILED = "batch_failed"
 

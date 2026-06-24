@@ -437,8 +437,8 @@ def _github_issue_worker(
     github_repo: str,
     github_token: str,
 ) -> None:
-    # TODO(companion-user-feedback): MemoryStore.append_jsonl_record is read-modify-write; — #3552
-    # concurrent appends from other turns may race — consider append-only repo API.
+    # Concurrent tool_background threads share one MemoryStore; the lock serializes
+    # read-modify-write appends so feedback lines are not lost.
     try:
         file_github_issue_for_snapshot(
             snapshot,

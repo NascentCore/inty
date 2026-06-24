@@ -14,6 +14,9 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -173,6 +176,12 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
+        ),
+        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+            TurnRuntimeContext(
+                channel=ChannelKind.TELEGRAM,
+                implicit_signal_bundle=None,
+            )
         ),
         force_tools_first_round=False,
     )
