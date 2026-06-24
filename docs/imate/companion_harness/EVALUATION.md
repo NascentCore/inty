@@ -1,114 +1,125 @@
-# Companion Evaluation: 如何评测一个 personal AI companion
+# Companion Evaluation: 评测一个 personal AI companion 的第一性原理
 
-> 本文件由 AI（编码智能体）依据 repo 现有散点记录综合生成（generated entirely by the coding agent）。
-> 用途：把散落在 DESIGN.md、SPECULATIVE_IDEAS.md、CRS Epic 与若干 issue 里的评测立场，**收敛成一处**，供 `app/core/companion_harness/` 的评测机制持续实现时参照。
-> 本文描述的是**评测方法论的目标态与判断**，不是现状清单；判断「某层是否已实现」之前，**必须先读代码**（`evaluation/`、REPL regression、scripted CI 测试）。
-> 设计压缩在一处、以 pointer 传播：定性信号锚点在 [DESIGN.md](./DESIGN.md)「成效判断」，关系三轴在 [DESIGN.md](./DESIGN.md) 与 CRS Epic（#3341），本文不复制其措辞。
+> 本文件由 AI（编码智能体）依据 repo 现有散点记录与公开科研文献综合生成（generated entirely by the coding agent）。
+> 读者：思考「评什么、为什么这么评」的设计者与工程师；运营评测台操作见 [evaluation/](/evaluation/)。
+> 用途：先立**第一性原理**（评测对象是什么、依据何在），再把工程化的分层与对照作为**次要落地说明**。
+> 设计压缩在一处、以 pointer 传播：关系三轴定义在 [DESIGN.md](./DESIGN.md) 与 CRS Epic（#3341），定性信号锚点在 [DESIGN.md](./DESIGN.md)「成效判断」，本文不复制其措辞。
+> 判断「某机制是否已实现」前**必须先读代码**（`evaluation/`、scripted CI 测试、REPL regression）。
 
-## Problem definition
+## 第一性原理（First principle）
 
-评测 personal AI companion 与评测 task agent（如 Terminal-Bench 那类）本质不同：companionship 的价值是**长期情感联结**，它具有四条让传统评测失效的属性。
+一个 personal AI companion 的价值 = 它为唯一配对用户**维系的关系质量与净福祉（wellbeing）**，并且只能从**用户亲历的主观现实**出发、由**跨时间的关系行为**佐证来衡量。
 
-- No deterministic verifier：陪伴质量是**定性**的（被懂、被惦记、关系在变深），没有 task agent 那种 pass/fail ground truth。
-- Path-dependent：1 人 1 Inty 的关系是**有状态、逐轮累积**的，memory 与姿态随历史漂移，无法像独立 task 那样「每次全新环境」重跑。
-- Single-subject（n=1）：每段关系只属于一个用户，无法在同一用户上做破坏性 A/B。
-- Slow signal：最有意义的信号（自愿回访、关系变深）要**数天到数周**才显形，远慢于一次 turn。
+由此推出三条不可回避的判断：
 
-因此评测不能是「单一分数」，只能是**按可测性 × 时间尺度的分层三角验证**。这一判断已隐含在 repo 多处记录中（见文末 Pointers），本文将其显式化。
+- 评测对象**不是「回答对不对」**，而是关系科学已验证的一组 **latent relational constructs**（被理解、依恋安全、连接质量、关系变深、孤独缓解）。这些 construct 无法用一次 turn 的 pass/fail 表达。
+- 评测的**金标准是用户的体验与福祉**，不是代理指标（DAU、消息条数、停留时长）。把代理当目标会触发 surrogation / Goodhart（Strathern 1997；Goodhart's law），并与「快感泵 vs 意义型福祉」的取向冲突（见 SPECULATIVE_IDEAS.md：eudaimonic 而非 hedonic；Ryan & Deci 2001）。
+- 因为是 **n=1、有状态、慢信号**的关系，方法必须是 **within-subject 纵向 + 多方法三角化**，而非横向单分数。
 
-## Objectives
+“好”的定义里**必须含 net-positive 约束**：缓解孤独而非制造依赖、补充而非替代人际关系。companion 评测因此天然包含**福祉与安全的负向闸**（over-dependence、sycophancy、人际位移），不能只测「关系更黏」。
 
-- 给出 companion 评测的**分层框架**，让每一类检查各安其位、不互相冒充。
-- 钉死一条**方法论不变式**：deterministic regression 与 stochastic model-behavior eval 必须分层，前者 gate CI、后者只产报告（来源 #3606）。
-- 把每层信号**映射到 CRS 关系三轴**，使评测与关系模型同源。
-- 诚实标注**现状 vs 目标**，让后续实现知道缺口在哪。
-- Out of scope：具体打分 rubric 文案、benchmark 数据集清单、运营报表字段（属实现细节，落在 `evaluation/` 与各 issue）。
+## 评测对象：科研支撑的 latent constructs
 
-## Bird's eye view: four evaluation layers
+按「最核心 → 外围」排列；每个 construct 给出**学理来源**与**为什么它是 companion 的成效信号**。
 
-按「越往下越可测、越往上越接近真正的陪伴价值」排列。下层便宜可靠但量不到陪伴，上层量到陪伴但慢且被混淆。
+- **Perceived Partner Responsiveness（PPR，被理解/被在乎/被肯定）— 关系亲密的核心引擎**。
+  - 来源：Reis & Shaver 1988（intimacy as an interpersonal process）；Reis, Clark & Holmes 2004。
+  - 何以核心：自我表露只有在「对方有响应」时才转化为亲密；PPR 是 companion 是否「接住」用户的最直接 latent 量。对应 DESIGN.md「正确回忆并引用过往表露」与 Gottman bid 的成功响应。
+- **Self-disclosure 的 breadth × depth（关系如何变深）**。
+  - 来源：Social Penetration Theory，Altman & Taylor 1973；在 human–chatbot 关系上已被实证沿用（Skjuve et al. 2021/2022，对 Replika 的纵向研究）。
+  - 何以重要：关系深度=表露的广度与深度随时间增长，且解锁更私密话题。直接对应 CRS 的 Social Penetration depth 轴。
+- **Attachment security（安全基地 / 安全港）**。
+  - 来源：Bowlby 1969/1982、Ainsworth 1978；成人依恋 Hazan & Shaver 1987；AI companion 依恋的实证 Pentina et al. 2023。
+  - 何以重要：长期陪伴的疗效在于成为 secure base / safe haven（proximity-seeking、separation distress、安心探索）。对应 CRS 的 Attachment posture 轴与「主动触达被感知为惦记」。
+- **逐轮连接质量与 repair（互动层）**。
+  - 来源：Gottman & Levenson；Sound Relationship House、bids for connection 与 repair attempts、正负比（Gottman & DeClaire 2001）。已在 SPECULATIVE_IDEAS.md 引用。
+  - 何以重要：关系由无数微观「bid → 接住 / 错过 / rupture → repair」累积而成。对应 CRS 的 Gottman moment 轴。
+- **Relatedness 与 eudaimonic wellbeing（用户活得更好没有）**。
+  - 来源：Self-Determination Theory，Deci & Ryan 2000；relatedness 是基本心理需求之一；eudaimonia 见 Ryan & Deci 2001。
+  - 何以重要：companion 的终极价值是满足 relatedness、提升意义型福祉，而非提供短时快感。
+- **孤独缓解（net wellbeing 的关键 outcome）**。
+  - 来源：UCLA Loneliness Scale（Russell 1996）；AI companion 对孤独影响的实证（如 Maples et al. 2024 对 Replika 的研究）。
+  - 何以重要：孤独下降是可量、可纵向追踪的福祉 outcome，也是区分「健康陪伴 vs 成瘾性黏着」的判别量。
+- **关系亲密度与承诺（结构性 outcome）**。
+  - 来源：Inclusion of Other in the Self（IOS，Aron, Aron & Smollan 1992）；Investment Model（Rusbult 1980：satisfaction + investment + alternatives → commitment）。
+  - 何以重要：把「关系有多近、是否愿意持续投入」收成可测量的关系结构，是回访/留存的心理前因。
+- **治疗性联结底色（支持型陪伴的质量条件）**。
+  - 来源：Working Alliance（Bordin 1979：bond/goal/task）；Rogers 1957 core conditions（无条件积极关注、共情、一致）。已隐含于 #3323「non-judgmental、infinite patience」。
 
-```evaluation-layers
-                   closer to real companionship value (slow, confounded)
-        ^   +---------------------------------------------------------+
-        |   | L3  Real-usage outcomes                                 |
-        |   |     voluntary return / emotional closure / recall /     |
-        |   |     proactive-felt-as-caring ; in-product feedback      |
-        |   +---------------------------------------------------------+
-        |   | L2  Qualitative relationship signals (rubric / human)   |
-   timescale|     judged against CRS axes on transcripts              |
-   & value  +---------------------------------------------------------+
-        |   | L1  Behavioral eval (live LLM, REPORT-ONLY)             |
-        |   |     scripted scenarios ; tool-use / proactive / recall  |
-        |   +---------------------------------------------------------+
-        |   | L0  Deterministic invariants (CI, MUST-PASS)            |
-        |   |     format / protocol / safety / queue / bootstrap      |
-        v   +---------------------------------------------------------+
-            cheaper, reliable, repeatable (fast) -- but only guards plumbing
+### 必须同时监测的「失真与危害」（科研已知的反作用）
 
-   ====================  the regression / eval firewall  ====================
-   L0 gates exit code.  L1-L3 produce reports, never block CI (issue #3606).
+- **Parasocial 本质**：companion 关系本质是单向拟社会关系（Horton & Wohl 1956）；评测须区分「真实关系收益」与「拟社会幻觉」，避免把后者当成效。
+- **过度拟人化与误信任**：CASA / Media Equation（Reeves & Nass 1996）使人对机器投射社会性；需做 trust calibration（Lee & See 2004：信任应匹配真实能力），并测量拟人化感受（Godspeed，Bartneck et al. 2009）。
+- **依赖与人际位移、sycophancy**：成效定义须含上限——不以牺牲用户的人际世界、不以一味迎合换取黏着。
+
+## 测量方法论（来自心理测量学与 HCI）
+
+把上面的 latent constructs 变成可操作测量时，遵循四条原则。
+
+- **测 construct 本身，不测代理（construct validity）**：优先用已验证量表/编码，而非 DAU 之类 proxy；警惕 surrogation/Goodhart。
+- **三角化（convergent validity / triangulation）**：每个 construct 用「**自陈** + **行为痕迹** + **第三方评判**」至少两路交叉，单一方法（尤其 LLM-judge）不足采信。
+  - 自陈：validated scales（PPR、UCLA Loneliness、IOS、ECR 依恋）+ 在场即时自陈 ESM/EMA（Csikszentmihalyi & Larson 1987；Shiffman et al. 2008）。
+  - 行为痕迹：transcript / LangSmith 上的 bid-response、表露深度、回访间隔等可观测信号。
+  - 第三方评判：人评或 LLM-judge 按 rubric 打分（需 pairwise + 重复降噪以抗判分噪声与 Goodhart）。
+- **时间尺度对齐 construct**：moment 级（bid/repair）、session 级（felt understanding）、weeks 级（亲密/福祉）、months 级（依恋/承诺/留存）各用各的设计。
+- **生态效度 vs 控制的取舍**：实验室/scenario 可复现但失真，in-the-wild 真实但被混淆；并须扣除 **novelty effect**（新鲜期高估，长期才见真章）——故纵向、within-subject 不可省。
+
+```construct-timescale-method
+TIMESCALE      LATENT CONSTRUCT (validated)              CRS AXIS              PRIMARY METHOD
+-------------------------------------------------------------------------------------------------
+moment/turn    bid-response, repair, responsiveness      Gottman moment        trace + judge rubric
+session        felt understanding (PPR), disclosure      (interaction layer)   in-situ self-report (ESM/EMA)
+weeks          intimacy depth, relatedness, wellbeing    Social Penetration    validated scales (UCLA/IOS)
+months         attachment security, trust, commitment    Attachment posture    longitudinal cohort + retention
+-------------------------------------------------------------------------------------------------
+cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-wellbeing veto)
 ```
 
-## The four layers
+构念与 CRS 三轴同源：三轴定义见 [DESIGN.md](./DESIGN.md)，本文只给「轴 ← 哪些 construct / 用何方法测」的映射，不复述轴本身。
 
-### L0 — Deterministic invariants（CI 必过，确定性）
+## 次要：工程化落地（instrumentation layers）
 
-- 评什么：与 LLM 内容无关、可机器判定的契约——output format/schema、protocol 不变量（无 `[SILENT]` 泄漏）、safety 子句、queue delivered、bootstrap 完成、tool-call 无错。
-- 信号源：FakeOpenAI scripted 测试（如 `test_harness_orchestration_scripted_llm`、`test_turn_proactive_structured`）+ REPL live driver 的 infra-only pass gate。
-- Gate 语义：**唯一会 block CI / exit code 的层**。
-- 局限：只守「管道」，**完全量不到陪伴质量**——L0 全绿不代表 Inty 像活人。
+第一性原理要变成可在 CI / REPL 跑的检查，按「越底越可测、越顶越接近真价值」分四层；细节与状态在各 issue，不在本文展开。
 
-### L1 — Behavioral eval（live LLM，report-only）
+- **L0 Deterministic invariants（CI 必过）**：format/protocol/safety、无 `[SILENT]` 泄漏、queue delivered、bootstrap 完成。守的是「管道」，不量陪伴。来源：FakeOpenAI scripted 测试。
+- **L1 Behavioral eval（live LLM，report-only）**：scripted 场景下行为是否出现（tool 调用、proactive 文案、recall、repair）。随机性高，**只产报告不 block**。来源 #3606。
+- **L2 Qualitative relationship signals（rubric / 人评）**：对 transcript 按上文 construct rubric 打分（PPR、表露深度、bid/repair）。来源 `evaluation/` 人评台、#457 对话评价数据集。
+- **L3 Real-usage outcomes**：自愿回访 + 情绪收束 + 福祉量表 + 产品内 `companion_record_user_feedback`（`ComplaintCategory`→issue）。来源 #3323、`evaluation/` 分析页。
 
-- 评什么：真实 LLM 在 scripted 场景下**是否表现出目标行为**——是否按 prompt 调用工具、proactive 文案是否得体、是否 recall 过往、是否做 bid/repair。
-- 信号源：REPL regression 的 eval smoke、`evaluation/` 单角色聊天与会话评测。
-- Gate 语义：**只写报告，不 block exit 0**（#3606 的核心结论：pass/fail 一旦取决于 live LLM 行为，就是 model eval 而非 regression）。
-- 局限：随机性高，需重复采样；衡量「行为出现与否」，不等于「关系变好」。
+**方法论不变式（#3606）**：L0=regression（确定性，gate CI exit code）；L1–L3=eval（随机/定性，report-only）。让 live LLM 行为决定 CI 是反模式。
 
-### L2 — Qualitative relationship signals（rubric / 人评）
+## 次要：与 task-agent 评测的对照、与现状
 
-- 评什么：DESIGN.md「成效判断」四信号——正确引用表露、成功 bid/repair、主动触达被感知为惦记、人格/记忆稳定——对 transcript 由人或 LLM-judge 按 rubric 打分。
-- 信号源：`evaluation/` 人评台（`EvaluationPage`/`ScoreSelector`）；scripted 多轮对话数据集（issue #457 形态：固定 system prompt + 多轮依次进行）。
-- Gate 语义：**质量报告与趋势**，非硬门；LLM-judge 需 pairwise + 重复降噪，避免 Goodhart。
-- 局限：当前是 aspirational——rubric 与判分机制**尚未系统落地**。
+- 对照（succinct）：task agent（如 Terminal-Bench / Self-Harness, arXiv 2606.09498）有 deterministic verifier + i.i.d. task split，可单分数回归；companion **无 ground-truth verifier、path-dependent、n=1、信号慢**，故只能上文的纵向三角化。
+- 现状 vs 缺口（诚实）：
+  - 已具备：L0 scripted/infra gate、`evaluation/` 人评与分析台、`companion_record_user_feedback` 负反馈链路。
+  - 缺口：L2 的 construct rubric 与 LLM-judge 判分**未系统落地**；L1 缺**可复现 scenario-replay**（冻结 agent 快照 + 模拟用户）以治 path-dependence；ESM/EMA 与 validated scales 尚未接入产品；#457 仍雏形。
+- 落地顺序（P/S）：
+  - P1/S1：scenario-replay + frozen-snapshot 基建（无它 L1/L2 无法可复现）。
+  - P1/S1：补全 L0 deterministic gates。
+  - P2/S1：L2 pairwise rubric-judge，rubric 锚定上文 construct 与 CRS 三轴。
+  - P2/S2：以 `companion_record_user_feedback` 做首版 weakness/负向 outcome 输入。
 
-### L3 — Real-usage outcomes（最终代理，慢且被混淆）
+## References
 
-- 评什么：north-star 行为结果——**自愿跨周回访、情绪收束**（来源 SPECULATIVE_IDEAS：拒绝以 DAU / 消息条数为度量），以及产品层 trust/continuity（#3323：day-1 continuity、functional-use→attachment、platform-betrayal→migration）。
-- 信号源：产品内 `companion_record_user_feedback`（`ComplaintCategory` → GitHub issue，天然负反馈输入）+ `evaluation/` 用户行为分析页（`UserAnalyticsPage`、`PerformanceAnalyticsPage`、`ReportFeedbackPage`）。
-- Gate 语义：长期 proxy，看趋势，不进 CI。
-- 局限：信号慢、被关系 path-dependence 与外部因素混淆，n=1 难归因。
+科研文献（frameworks，按本文出现序）：
 
-## 与 CRS 关系三轴的映射
+- Reis & Shaver 1988; Reis, Clark & Holmes 2004 — Perceived Partner Responsiveness / intimacy process.
+- Altman & Taylor 1973 — Social Penetration Theory; Skjuve et al. 2021/2022 — human–chatbot relationship development.
+- Bowlby 1969/1982; Ainsworth et al. 1978; Hazan & Shaver 1987; Pentina et al. 2023 — attachment (incl. AI companion).
+- Gottman & Levenson; Gottman & DeClaire 2001 — Sound Relationship House, bids, repair.
+- Deci & Ryan 2000; Ryan & Deci 2001 — Self-Determination Theory, relatedness, eudaimonia.
+- Russell 1996 — UCLA Loneliness Scale; Maples et al. 2024 — AI companion & loneliness.
+- Aron, Aron & Smollan 1992 — Inclusion of Other in the Self; Rusbult 1980 — Investment Model.
+- Bordin 1979 — Working Alliance; Rogers 1957 — therapeutic core conditions.
+- Horton & Wohl 1956 — parasocial interaction; Reeves & Nass 1996 — CASA / Media Equation.
+- Lee & See 2004 — trust in automation; Bartneck et al. 2009 — Godspeed questionnaire.
+- Csikszentmihalyi & Larson 1987; Shiffman, Stone & Hufford 2008 — ESM / EMA.
+- Strathern 1997 — “when a measure becomes a target” (Goodhart / surrogation).
 
-评测信号与关系模型同源：每层信号都应能落到某条 CRS 轴（轴定义见 [DESIGN.md](./DESIGN.md) 与 CRS Epic #3341），这样「评测推动什么」与「harness 演化什么」一致。
+Repo pointers：
 
-- Gottman moment（interaction，快）→ 逐轮 bid/repair 与连接质量，主要在 L1/L2 观测。
-- Social Penetration depth（intimacy，中）→ 正确回忆并引用表露、话题解锁，主要在 L2 观测，L3 间接印证。
-- Attachment posture（disposition，慢）→ 人格/记忆稳定、proactive 被感知为惦记，主要在 L3（回访、信任）观测。
-
-## 方法论不变式：regression 与 eval 必须分层
-
-- 单一不变式（来源 #3606）：**L0 = regression（deterministic，gate CI）；L1–L3 = eval（stochastic/qualitative，report-only）**。
-- 反模式：让 live LLM 的行为决定 CI exit code——会把不可重复的 model eval 伪装成 regression，导致与被测改动无关的随机 fail。
-- 推论：新增 companion 行为的**确定性覆盖**应优先用 FakeOpenAI scripted 表达；live/judge 路径只产趋势报告。
-
-## Current state vs target（诚实声明）
-
-- 已具备（现状）：L0 的 scripted/infra gate、`evaluation/` 人评与分析台、`companion_record_user_feedback` 负反馈链路、REPL regression 的 infra pass gate。
-- 缺口（目标）：L2 的 rubric 与 LLM-judge 判分机制**未系统落地**；L1 缺**可复现的 scenario-replay**（冻结 agent 快照 + 脚本化模拟用户）以解决 path-dependence；issue #457 的对话评价系统仍是雏形。
-- 落地顺序建议（P/S）：
-  - P1/S1：scenario-replay + frozen-snapshot 基建（无它则 L1/L2 无法可复现回归）。
-  - P1/S1：补全 L0 deterministic gates（format/safety/tool-error/persona-leak）。
-  - P2/S1：L2 pairwise rubric-judge，rubric 锚定 CRS 三轴。
-  - P2/S2：以 `companion_record_user_feedback` 的 `ComplaintCategory` 做首版 weakness 输入。
-
-## Pointers / See also
-
-- [DESIGN.md](./DESIGN.md) — 「成效判断」定性信号（评测的权威锚点）与关系三轴。
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — north-star 度量哲学（回访 + 情绪收束，非 DAU），Gottman / eudaimonic。
-- [GLOSSARY.md](./GLOSSARY.md) — 关系轴与方向术语。
-- `evaluation/` — 运营向人评与行为分析台（PM/运营读者）。
-- Issues：#3341（CRS Epic）、#3323（retention/trust）、#3606（regression vs eval 分层）、#457（对话评价系统）、#72（本地 inty-eval）。
-- Code：FakeOpenAI scripted 测试（`tests/app/core/companion_harness/companion/`）、REPL regression（`.cursor/skills/inty-repl-regression`）、`companion_record_user_feedback` 工具。
+- [DESIGN.md](./DESIGN.md) — 成效判断、关系三轴（权威锚点）。
+- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）。
+- `evaluation/` — 运营人评与行为分析台。
+- Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。
