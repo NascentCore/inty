@@ -786,6 +786,8 @@ async def _run_companion_turn_core(
                     langsmith_llm_run_acc = fg_result.langsmith_run_id
                     tool_msgs_for_bg = list(fg_result.tool_msgs_for_bg)
                     force_tools_first_round = fg_result.force_tools_first_round
+                    # TODO(!3632): Legacy threaded tool_bg; queue path uses AgenticLoop inline tool leg.
+                    # TODO(!3633): Parent RunTree end deferred to tool_bg thread until this path is retired.
                     start_tool_background_job(
                         memory_store=store,
                         request_messages=tool_msgs_for_bg,
