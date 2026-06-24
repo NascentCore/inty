@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TextIO
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
@@ -83,6 +83,25 @@ def _read_bearer(repo_root: Path) -> str:
     return tok
 
 
+def _deactivate_active_companion_bonds(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+) -> None:
+    _psql(
+        repo_root,
+        config_path,
+        f"""
+UPDATE companion_bonds
+SET state = 'INACTIVE',
+    inactive_at = NOW()
+WHERE user_id = '{user_id}'
+  AND state = 'ACTIVE';
+""",
+    )
+
+
 def _create_agent(api_base: str, bearer: str) -> str:
     import urllib.request
 
@@ -106,11 +125,42 @@ def _create_agent(api_base: str, bearer: str) -> str:
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
-        out: Any = json.loads(resp.read())
+        payload: Any = json.loads(resp.read())
+    out = payload.get("data") if isinstance(payload, dict) else None
+    if not isinstance(out, dict):
+        out = payload if isinstance(payload, dict) else {}
     agent_id = str(out.get("id") or out.get("agent_id") or "").strip()
     if not agent_id:
-        raise SystemExit(f"create agent: missing id in {out!r}")
+        raise SystemExit(f"create agent: missing id in {payload!r}")
     return agent_id
+
+
+def _psql(repo_root: Path, config_path: Path, query: str) -> str:
+    import yaml
+
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    db = cfg["database"]
+    env = {**dict(os.environ), "PGPASSWORD": str(db["password"])}
+    cmd = [
+        "psql",
+        "-h",
+        str(db["host"]),
+        "-p",
+        str(db["port"]),
+        "-U",
+        str(db["user"]),
+        "-d",
+        str(db["db"]),
+        "-t",
+        "-A",
+        "-c",
+        query,
+    ]
+    return subprocess.check_output(cmd, env=env, text=True, cwd=repo_root)
+
+
+def _agent_scope_chat_id(agent_id: str) -> str:
+    return f"agent-scope:user-testing:{agent_id}"
 
 
 def _patch_context_lwm_flags(
@@ -118,12 +168,23 @@ def _patch_context_lwm_flags(
     flags: dict[str, bool],
     *,
     config: str,
+    repo_root: Path,
 ) -> None:
-    os.environ["INTY_CONFIG_YAML"] = config
-    from companion_memory_inspect_lib import open_memory_store, resolve_scope
+    del repo_root
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_registry import get_memory_store
+    from app.models.registry import load_model_modules
 
-    scope = resolve_scope(agent_id=agent_id, user_id="user-testing", chat_id="")
-    store = open_memory_store(scope)
+    load_model_modules()
+    os.environ["INTY_CONFIG_YAML"] = config
+    from companion_memory_inspect_lib import load_database_dsn
+
+    scope = CompanionScope(
+        user_id="user-testing",
+        companion_id=agent_id,
+        chat_id=_agent_scope_chat_id(agent_id),
+    )
+    store = get_memory_store(scope, dsn=load_database_dsn())
     raw = store.read_document_if_exists("context.json")
     data: dict[str, Any] = {}
     if raw and raw.strip():
@@ -136,46 +197,50 @@ def _patch_context_lwm_flags(
     )
 
 
-def _bootstrap_complete(agent_id: str, *, config: str) -> bool:
-    os.environ["INTY_CONFIG_YAML"] = config
-    from companion_memory_inspect_lib import open_memory_store, resolve_scope
-
-    scope = resolve_scope(agent_id=agent_id, user_id="user-testing", chat_id="")
-    store = open_memory_store(scope)
-    raw = store.read_document_if_exists("context.json")
-    if not raw:
-        return False
-    data = json.loads(raw)
-    return bool(data.get("workspace_bootstrap_user_interactive_completed"))
+def _bootstrap_complete(agent_id: str, *, config: str, repo_root: Path) -> bool:
+    chat_id = _agent_scope_chat_id(agent_id)
+    raw = _psql(
+        repo_root,
+        Path(config),
+        "SELECT trim(content)::json->>'workspace_bootstrap_user_interactive_completed' "
+        "FROM companion_memory_document_versions "
+        f"WHERE companion_id = '{agent_id}' AND user_id = 'user-testing' "
+        f"AND chat_id = '{chat_id}' AND document_kind = 'context_json' "
+        "AND calendar_date IS NULL ORDER BY sequence_id DESC LIMIT 1;",
+    ).strip()
+    return raw.lower() == "true"
 
 
 def _read_scope_artifacts(
     agent_id: str,
     *,
     config: str,
+    repo_root: Path,
 ) -> dict[str, Any]:
-    os.environ["INTY_CONFIG_YAML"] = config
-    from companion_memory_inspect_lib import (
-        fetch_document_versions,
-        open_memory_store,
-        resolve_scope,
-    )
+    chat_id = _agent_scope_chat_id(agent_id)
 
-    scope = resolve_scope(agent_id=agent_id, user_id="user-testing", chat_id="")
-    store = open_memory_store(scope)
-    life = store.read_document_if_exists("LIFE_CURRENTS.md") or ""
-    tc_raw = store.read_document_if_exists("techno_core_events.jsonl") or ""
-    tc_lines = [ln for ln in tc_raw.splitlines() if ln.strip()]
-    inner_rows = fetch_document_versions(
-        scope,
-        "transcript_inner_tick.jsonl",
-        limit=1,
-    )
-    inner_count = 0
-    if inner_rows:
-        inner_count = len(
-            [ln for ln in inner_rows[0].content.splitlines() if ln.strip()]
+    def _latest_body(kind: str, rel_suffix: str) -> str:
+        return _psql(
+            repo_root,
+            Path(config),
+            "SELECT content FROM companion_memory_document_versions "
+            f"WHERE companion_id = '{agent_id}' AND user_id = 'user-testing' "
+            f"AND chat_id = '{chat_id}' AND document_kind = '{kind}' "
+            "AND calendar_date IS NULL ORDER BY sequence_id DESC LIMIT 1;",
         )
+
+    life = _latest_body("life_currents", "LIFE_CURRENTS.md").strip()
+    tc_raw = _latest_body("techno_core_events_jsonl", "techno_core_events.jsonl").strip()
+    inner_raw = _psql(
+        repo_root,
+        Path(config),
+        "SELECT content FROM companion_memory_document_versions "
+        f"WHERE companion_id = '{agent_id}' AND user_id = 'user-testing' "
+        f"AND chat_id = '{chat_id}' AND document_kind = 'transcript_inner_tick' "
+        "AND calendar_date IS NULL ORDER BY sequence_id DESC LIMIT 1;",
+    ).strip()
+    tc_lines = [ln for ln in tc_raw.splitlines() if ln.strip()]
+    inner_count = len([ln for ln in inner_raw.splitlines() if ln.strip()])
     tc_previews: list[str] = []
     for line in tc_lines[-3:]:
         try:
@@ -213,6 +278,23 @@ def _drain_until_quiet(bridge: Any, *, max_sec: float) -> tuple[str, dict[str, A
     return "".join(parts), meta
 
 
+def _wait_downlink(
+    bridge: Any,
+    *,
+    timeout_sec: float,
+    label: str,
+) -> tuple[str, dict[str, Any]]:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        text, err, meta = bridge.try_pop_queued_chat()
+        if err is not None:
+            raise RuntimeError(f"{label}: ws error {err[0]} {err[1]}")
+        if text is not None:
+            return text, meta
+        time.sleep(_RECV_POLL_SEC)
+    raise TimeoutError(f"timeout waiting for {label}")
+
+
 def _run_ws_session(
     *,
     api_base: str,
@@ -220,22 +302,56 @@ def _run_ws_session(
     agent_id: str,
     lwm_flags: dict[str, bool],
     autonomy_wait_sec: float,
+    config: str,
+    repo_root: Path,
     stderr: TextIO,
 ) -> tuple[str, dict[str, Any]]:
-    from tools.inty_v2_repl.backend_chat_ws import BackendChatWsBridge
-
-    bridge = BackendChatWsBridge(
-        api_base_url=api_base,
-        bearer_token=bearer,
+    from tools.inty_v2_repl.backend_chat_ws import (
+        BackendChatWsBridge,
+        http_base_to_ws_chat_url,
     )
-    bridge.start(agent_id)
+
+    ws_url = http_base_to_ws_chat_url(
+        api_base,
+        agent_id=agent_id,
+        ws_conn_id=str(uuid.uuid4()),
+    )
+    bridge = BackendChatWsBridge(ws_url=ws_url, bearer_token=bearer)
+    bridge.start(connect_timeout=45.0)
     try:
-        for turn in _BOOTSTRAP_TURNS:
+        print(f"{_TAG} waiting for greeting...", flush=True)
+        try:
+            greet, _ = _wait_downlink(bridge, timeout_sec=60.0, label="greeting")
+            print(f"{_TAG} greeting={greet[:80]!r}", flush=True)
+        except TimeoutError:
+            print(f"{_TAG} no greeting within 60s; continuing", flush=True)
+        for idx, turn in enumerate(_BOOTSTRAP_TURNS, start=1):
+            print(f"{_TAG} bootstrap {idx}: {turn!r}", flush=True)
             bridge.post_turn(agent_id, turn, str(uuid.uuid4()))
-            _drain_until_quiet(bridge, max_sec=_TURN_TIMEOUT_SEC)
+            reply, meta = _wait_downlink(
+                bridge,
+                timeout_sec=_TURN_TIMEOUT_SEC,
+                label=f"bootstrap-{idx}",
+            )
+            print(
+                f"{_TAG} bootstrap {idx} reply len={len(reply)} "
+                f"trace={meta.get('langsmith_trace_id')}",
+                flush=True,
+            )
+        print(f"{_TAG} bootstrap finish", flush=True)
         bridge.post_turn(agent_id, _BOOTSTRAP_FINISH, str(uuid.uuid4()))
-        _drain_until_quiet(bridge, max_sec=_TURN_TIMEOUT_SEC)
-        _patch_context_lwm_flags(agent_id, lwm_flags, config=_DEFAULT_CONFIG)
+        finish_reply, _ = _wait_downlink(
+            bridge,
+            timeout_sec=_TURN_TIMEOUT_SEC,
+            label="bootstrap-finish",
+        )
+        print(f"{_TAG} bootstrap finish reply len={len(finish_reply)}", flush=True)
+        _patch_context_lwm_flags(
+            agent_id,
+            lwm_flags,
+            config=config,
+            repo_root=repo_root,
+        )
         print(
             f"{_TAG} {agent_id} patched lwm flags={lwm_flags}; "
             f"waiting {autonomy_wait_sec:.0f}s for inner ticks",
@@ -252,7 +368,11 @@ def _run_ws_session(
                 )
             time.sleep(1.0)
         bridge.post_turn(agent_id, _PROBE_TURN, str(uuid.uuid4()))
-        reply, meta = _drain_until_quiet(bridge, max_sec=_TURN_TIMEOUT_SEC)
+        reply, meta = _wait_downlink(
+            bridge,
+            timeout_sec=_TURN_TIMEOUT_SEC,
+            label="probe",
+        )
         return reply, meta
     finally:
         bridge.stop()
@@ -265,8 +385,15 @@ def run_variant(
     api_base: str,
     bearer: str,
     autonomy_wait_sec: float,
+    config: str,
+    repo_root: Path,
     stderr: TextIO,
 ) -> VariantResult:
+    _deactivate_active_companion_bonds(
+        repo_root,
+        Path(config),
+        user_id="user-testing",
+    )
     agent_id = _create_agent(api_base, bearer)
     result = VariantResult(variant=variant, agent_id=agent_id)
     print(f"{_TAG} === variant={variant} agent_id={agent_id} ===", flush=True)
@@ -277,6 +404,8 @@ def run_variant(
             agent_id=agent_id,
             lwm_flags=flags,
             autonomy_wait_sec=autonomy_wait_sec,
+            config=config,
+            repo_root=repo_root,
             stderr=stderr,
         )
         result.probe_reply = reply
@@ -284,8 +413,10 @@ def run_variant(
     except Exception as exc:
         result.errors.append(str(exc))
         print(f"{_TAG} ERROR variant={variant}: {exc}", file=stderr, flush=True)
-    result.bootstrap_complete = _bootstrap_complete(agent_id, config=_DEFAULT_CONFIG)
-    artifacts = _read_scope_artifacts(agent_id, config=_DEFAULT_CONFIG)
+    result.bootstrap_complete = _bootstrap_complete(
+        agent_id, config=config, repo_root=repo_root
+    )
+    artifacts = _read_scope_artifacts(agent_id, config=config, repo_root=repo_root)
     life = str(artifacts["life_currents"])
     result.life_currents_chars = len(life)
     result.life_currents_has_structure = "## 当前主题" in life or "## 今天" in life
@@ -357,6 +488,8 @@ def main() -> int:
                 api_base=args.api_base,
                 bearer=bearer,
                 autonomy_wait_sec=args.autonomy_wait_sec,
+                config=args.config,
+                repo_root=repo_root,
                 stderr=sys.stderr,
             )
         )
