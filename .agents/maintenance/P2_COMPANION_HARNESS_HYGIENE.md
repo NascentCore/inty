@@ -49,7 +49,7 @@ Open PRs checked: #3658 (dead symbols DREAMING_BATCH_ORCHESTRATOR / flush_now) �
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-13** ruff F841: remove unused `bootstrap_interim_output_sink` local in `companion/turn.py`. **claimed** `cursor/agent-maintenance-tasks-8357`
-- [ ] **HYGIENE-2026-14** #3504: rename OutputQueue DB column `in_reply_to_input_ids_json` → `message_ids_json` (Alembic + ORM + repository). **claimed** `cursor/agent-maintenance-tasks-8357`
-- [ ] **HYGIENE-2026-15** ruff F401: remove unused `json` import in `tests/.../test_memory_store.py`. **claimed** `cursor/agent-maintenance-tasks-8357`
-- [ ] **HYGIENE-2026-16** #3413 follow-up: seed core templates from `memory_store_path_constants` rel paths instead of `_CORE_COMPANION_TEMPLATE_ATTRS` attr-name tuple. **claimed** `cursor/agent-maintenance-tasks-8357`
+- [x] **HYGIENE-2026-13** ruff F841: remove unused `bootstrap_interim_output_sink` local in `companion/turn.py`. Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-14** #3504: rename OutputQueue DB column `in_reply_to_input_ids_json` → `message_ids_json` (Alembic + ORM + repository). Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-15** ruff F401: remove unused `json` import in `tests/.../test_memory_store.py`. Fixed in `cursor/agent-maintenance-tasks-8357`.
+- [x] **HYGIENE-2026-16** #3413 follow-up: seed core templates from `memory_store_path_constants` rel paths instead of `_CORE_COMPANION_TEMPLATE_ATTRS` attr-name tuple. Fixed in `cursor/agent-maintenance-tasks-8357`.
