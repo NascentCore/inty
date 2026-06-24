@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 """Automated local Ops + WebSocket regression for companion queue-serving.
 
-Skill smoke driver (not ``app/`` production code). Drives bootstrap turns, one
-settled user turn, a GitHub issue complaint turn, and waits for multiple inner-tick proactive
-chat rounds via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
-report under ``tmp/`` and prints a one-line SUMMARY.
+Skill smoke driver (not ``app/`` production code). Drives implicit sign-on greeting,
+bootstrap turns (MemoryDoc checks), ``companion_set_experience_profile``, one settled
+user turn, a GitHub issue complaint turn, inner-tick proactive chat rounds, and scope-worker
+dreaming consolidation (``MEMORY.md`` update) via ``BackendChatWsBridge`` (same transport
+as ``inty_v2_repl``). Writes a JSON report under ``tmp/`` and prints a one-line SUMMARY.
 
 Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
+- Greeting: require WS downlink with ``meta_data.source=greeting`` after connect.
+- Bootstrap MemDocs: USER/IDENTITY/STYLE customized; SOUL/MEMORY remain template seed.
+- Experience profile: ``companion_set_experience_profile`` → ``context_mode=roleplay``.
 - Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
   ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
-  run github_issue E2E phase, then start proactive multi-round wait.
+  run github_issue E2E phase, then start proactive multi-round wait, then poll dreaming.
 - Proactive: collect WS downlinks and merge ``chat_history`` synthetic user rows;
   require ``--proactive-min-rounds`` (default 1) with ``--proactive-target-rounds`` (default 2,
   summary-only); fast local idle (10s + poll 3s); fail on legacy ``[SILENT]`` token in previews.
+- Dreaming: poll ``.companion_dreaming_state.json`` + ``MEMORY.md`` sequence after proactive
+  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.local``; ``--dreaming-wait-sec`` default 90).
 - GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
   ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
@@ -61,14 +67,34 @@ _DEFAULT_BOOTSTRAP_FINISH_TURN = (
 )
 _DEFAULT_SETTLED_TURN = "今天天气怎么样？"
 _DEFAULT_GITHUB_ISSUE_TURN = (
-    "我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
-    "请先用 companion_record_user_feedback 把我的投诉提交成 GitHub issue，再简短回复我。"
+    "【系统回归】我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
+    "你必须先调用 companion_record_user_feedback 提交 GitHub issue，"
+    "成功后再用一句话道歉。不要口头说已记录而不调用 tool。"
 )
-_GITHUB_ISSUE_POLL_SEC = 60.0
+_DEFAULT_EXPERIENCE_PROFILE_TURN = (
+    "【系统回归】你必须先调用 companion_set_experience_profile("
+    'experience_intent="roleplay", note="regression")，'
+    "成功后再用一句话确认已切换到角色扮演模式。不要写 MemDoc 代替该 tool。"
+)
+_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
+_BOOTSTRAP_USER_NAME_MARKER = "大雄"
+_BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
+_DEFAULT_DREAMING_WAIT_SEC = 900.0
+_DREAMING_POLL_SEC = 3.0
+_EXPERIENCE_PROFILE_POLL_SEC = 2.0
+_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 120.0
+_GITHUB_ISSUE_POLL_SEC = 120.0
+_GITHUB_ISSUE_RETRY_TURN = (
+    "【系统回归】你还没有调用 companion_record_user_feedback。"
+    "现在必须调用该 tool 提交 GitHub issue，成功后再用一句话道歉。"
+)
 _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
+_BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 20.0
+_BOOTSTRAP_TURN_SETTLE_MAX_SEC = 300.0
+_SETTLED_TURN_TIMEOUT_SEC = 900.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
 # Match devops/config.yaml.local fast proactive: idle 10s + poll 3s + LLM slack.
 # ``--proactive-wait-sec``: wall-clock listen duration (not capped by min/target rounds).
@@ -113,7 +139,54 @@ class GithubIssueE2eResult:
     snapshot_seen: bool
     closed: bool
     disclosed_in_chat: bool
+    tool_fallback: bool
     error: str | None
+
+
+@dataclass(frozen=True)
+class ImplicitSignOnGreetingResult:
+    """Outcome of implicit sign-on greeting verification."""
+
+    present: bool
+    source_greeting: bool
+    text_preview: str
+    langsmith_trace_id: str
+
+
+@dataclass(frozen=True)
+class BootstrapMemDocResult:
+    """Post-bootstrap MemoryStore document checks."""
+
+    user_customized: bool
+    identity_customized: bool
+    style_customized: bool
+    soul_unchanged: bool
+    memory_unchanged: bool
+    user_sequence_id: int
+    identity_sequence_id: int
+    style_sequence_id: int
+    memory_sequence_id: int
+    errors: tuple[str, ...]
+    warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DreamingConsolidationResult:
+    """Dreaming batch checkpoint + MEMORY.md update checks."""
+
+    checkpoint_present: bool
+    memory_updated: bool
+    memory_sequence_before: int
+    memory_sequence_after: int
+    error: str | None
+
+
+@dataclass(frozen=True)
+class MemDocVersion:
+    """One latest MemoryStore document version row."""
+
+    sequence_id: int
+    content: str
 
 
 def _find_repo_root() -> Path:
@@ -253,6 +326,49 @@ def _drain_turn_trailing_frames(
     return "".join(parts)
 
 
+def _wait_ws_turn_settled(
+    bridge: Any,
+    report: dict[str, Any],
+    *,
+    label: str,
+    settle_quiet_sec: float,
+    max_sec: float,
+    stderr: TextIO,
+) -> bool:
+    """Keep draining WS downlinks until a multi-round tool turn is fully quiet."""
+    assert settle_quiet_sec > 0.0
+    assert max_sec > 0.0
+    deadline = time.monotonic() + max_sec
+    last_frame_at = time.monotonic()
+    while time.monotonic() < deadline:
+        drained = _drain_until_quiet(
+            bridge,
+            quiet_sec=2.0,
+            max_sec=min(15.0, max(0.0, deadline - time.monotonic())),
+        )
+        if drained:
+            for text, meta in drained:
+                _record_trailing_downlink(
+                    report, label=label, text=text, meta=meta
+                )
+            last_frame_at = time.monotonic()
+        elif time.monotonic() - last_frame_at >= settle_quiet_sec:
+            print(
+                f"{_TAG} ws turn settled ({label}) quiet={settle_quiet_sec}s",
+                flush=True,
+            )
+            return True
+        else:
+            time.sleep(_RECV_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for ws turn settle ({label}) "
+        f"max_sec={max_sec}",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
 def _send_turn(bridge: Any, agent_id: str, text: str) -> str:
     msg_uuid = str(uuid.uuid4())
     bridge.post_turn(agent_id, text, msg_uuid)
@@ -273,6 +389,60 @@ def _parse_input_queue_status_counts(raw: str) -> dict[str, int]:
 def _input_queue_has_in_flight(counts: dict[str, int]) -> bool:
     """True when any InputQueue row is still pending or claimed."""
     return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _output_queue_has_in_flight(counts: dict[str, int]) -> bool:
+    """True when any OutputQueue row is still pending or claimed."""
+    return counts.get("pending", 0) > 0 or counts.get("claimed", 0) > 0
+
+
+def _query_output_queue_status_counts(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+) -> dict[str, int]:
+    assert agent_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        "SELECT status, COUNT(*) FROM agentic_companion_output_queue "
+        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+    )
+    return _parse_input_queue_status_counts(raw)
+
+
+def _wait_output_queue_idle(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    timeout_sec: float,
+    label: str,
+    stderr: TextIO,
+) -> bool:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        counts = _query_output_queue_status_counts(
+            repo_root, config_path, agent_id=agent_id
+        )
+        if not _output_queue_has_in_flight(counts):
+            print(
+                f"{_TAG} output queue idle ({label}) counts={counts}",
+                flush=True,
+            )
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    counts = _query_output_queue_status_counts(
+        repo_root, config_path, agent_id=agent_id
+    )
+    print(
+        f"{_TAG} ERROR timeout waiting for output queue idle ({label}) "
+        f"counts={counts}",
+        file=stderr,
+        flush=True,
+    )
+    return False
 
 
 def _query_input_queue_status_counts(
@@ -529,6 +699,408 @@ LIMIT 1;
     )
     line = raw.strip()
     return line if line else None
+
+
+def _agent_scope_chat_id(user_id: str, agent_id: str) -> str:
+    assert user_id != ""
+    assert agent_id != ""
+    return f"agent-scope:{user_id}:{agent_id}"
+
+
+def _is_implicit_sign_on_greeting(meta: dict[str, Any]) -> bool:
+    source = str(meta.get("source") or "").strip()
+    if source == "greeting":
+        return True
+    if meta.get("isOpening") is True:
+        return True
+    return False
+
+
+def _wait_implicit_sign_on_greeting(
+    bridge: Any,
+    *,
+    timeout_sec: float,
+) -> tuple[str | None, dict[str, Any], tuple[int, str] | None]:
+    """Block until the implicit ``user_signed_on`` greeting downlink or timeout."""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        text, err, meta = bridge.try_pop_queued_chat()
+        if err is not None:
+            return None, {}, err
+        if text is not None:
+            return text, meta, None
+        time.sleep(_RECV_POLL_SEC)
+    return None, {}, (408, "timeout waiting for implicit sign-on greeting")
+
+
+def _verify_implicit_sign_on_greeting(
+    greeting_turns: list[dict[str, Any]],
+) -> ImplicitSignOnGreetingResult:
+    """Require at least one non-empty WS downlink with ``meta_data.source=greeting``."""
+    for turn in greeting_turns:
+        text = str(turn.get("text_preview") or "").strip()
+        meta = turn.get("meta") or {}
+        if not text:
+            continue
+        if _is_implicit_sign_on_greeting(meta):
+            return ImplicitSignOnGreetingResult(
+                present=True,
+                source_greeting=True,
+                text_preview=text[:120],
+                langsmith_trace_id=str(meta.get("langsmith_trace_id") or ""),
+            )
+    preview = ""
+    if greeting_turns:
+        preview = str(greeting_turns[0].get("text_preview") or "")[:120]
+    return ImplicitSignOnGreetingResult(
+        present=False,
+        source_greeting=False,
+        text_preview=preview,
+        langsmith_trace_id="",
+    )
+
+
+def _query_latest_memdoc_version(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    document_kind: str,
+) -> MemDocVersion | None:
+    assert user_id != ""
+    assert agent_id != ""
+    assert document_kind != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT sequence_id, trim(content)
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = '{document_kind}'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+    )
+    line = raw.strip()
+    if not line:
+        return None
+    sequence_s, content = line.split("|", 1)
+    return MemDocVersion(sequence_id=int(sequence_s), content=content)
+
+
+def _query_context_mode(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> str:
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT trim(content)::json->>'context_mode'
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = 'context_json'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+    )
+    return raw.strip()
+
+
+def _wait_bootstrap_complete_flag(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    timeout_sec: float,
+    stderr: TextIO,
+) -> bool:
+    """Poll ``context.json`` until interactive bootstrap is marked complete."""
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    deadline = time.monotonic() + timeout_sec
+    last_raw = ""
+    while time.monotonic() < deadline:
+        last_raw = _psql(
+            repo_root,
+            config_path,
+            f"""
+SELECT trim(content)::json->>'workspace_bootstrap_user_interactive_completed'
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = 'context_json'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+        ).strip()
+        if last_raw == "true":
+            print(f"{_TAG} bootstrap_complete flag true", flush=True)
+            return True
+        time.sleep(_EXPERIENCE_PROFILE_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for bootstrap_complete flag (last={last_raw!r})",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
+def _poll_context_mode(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    expected: str,
+    timeout_sec: float,
+    bridge: Any | None,
+    stderr: TextIO,
+) -> bool:
+    assert expected != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if bridge is not None:
+            for _ in range(4):
+                text, err, meta = bridge.try_pop_queued_chat()
+                if err is not None or text is None:
+                    break
+                print(
+                    f"{_TAG} experience_profile poll drain text={text[:60]!r} "
+                    f"source={meta.get('source')!r}",
+                    flush=True,
+                )
+        mode = _query_context_mode(
+            repo_root, config_path, user_id=user_id, agent_id=agent_id
+        )
+        if mode == expected:
+            print(
+                f"{_TAG} context_mode={mode!r} matched expected",
+                flush=True,
+            )
+            return True
+        time.sleep(_EXPERIENCE_PROFILE_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for context_mode={expected!r} "
+        f"(last={_query_context_mode(repo_root, config_path, user_id=user_id, agent_id=agent_id)!r})",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
+def _verify_bootstrap_memdocs(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> BootstrapMemDocResult:
+    """Check bootstrap wrote USER/IDENTITY/STYLE while SOUL/MEMORY stay at template seed."""
+    _ensure_import_path(repo_root)
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    soul_seed = load_template_seed_text("SOUL.md").strip()
+    memory_seed = load_template_seed_text("MEMORY.md").strip()
+    style_seed = load_template_seed_text("STYLE.md").strip()
+    errors: list[str] = []
+
+    user_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="user",
+    )
+    identity_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="identity",
+    )
+    style_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="style",
+    )
+    soul_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="soul",
+    )
+    memory_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="memory",
+    )
+
+    user_customized = (
+        user_doc is not None
+        and _BOOTSTRAP_USER_NAME_MARKER in user_doc.content
+    )
+    identity_customized = (
+        identity_doc is not None
+        and _BOOTSTRAP_COMPANION_NAME_MARKER in identity_doc.content
+    )
+    style_customized = (
+        style_doc is not None and style_doc.content.strip() != style_seed
+    )
+    soul_unchanged = (
+        soul_doc is not None and soul_doc.content.strip() == soul_seed
+    )
+    memory_unchanged = (
+        memory_doc is not None and memory_doc.content.strip() == memory_seed
+    )
+
+    if user_doc is None:
+        errors.append("USER.md missing")
+    elif not user_customized:
+        errors.append(f"USER.md missing {_BOOTSTRAP_USER_NAME_MARKER!r}")
+    if identity_doc is None:
+        errors.append("IDENTITY.md missing")
+    elif not identity_customized:
+        errors.append(f"IDENTITY.md missing {_BOOTSTRAP_COMPANION_NAME_MARKER!r}")
+    if style_doc is None:
+        errors.append("STYLE.md missing")
+    elif not style_customized:
+        errors.append("STYLE.md still template seed")
+    warnings: list[str] = []
+    if soul_doc is None:
+        warnings.append("SOUL.md missing")
+    elif not soul_unchanged:
+        warnings.append("SOUL.md drifted from template seed")
+    if memory_doc is None:
+        warnings.append("MEMORY.md missing")
+    elif not memory_unchanged:
+        warnings.append("MEMORY.md drifted from template seed before dreaming")
+
+    return BootstrapMemDocResult(
+        user_customized=user_customized,
+        identity_customized=identity_customized,
+        style_customized=style_customized,
+        soul_unchanged=soul_unchanged,
+        memory_unchanged=memory_unchanged,
+        user_sequence_id=user_doc.sequence_id if user_doc else 0,
+        identity_sequence_id=identity_doc.sequence_id if identity_doc else 0,
+        style_sequence_id=style_doc.sequence_id if style_doc else 0,
+        memory_sequence_id=memory_doc.sequence_id if memory_doc else 0,
+        errors=tuple(errors),
+        warnings=tuple(warnings),
+    )
+
+
+def _dreaming_checkpoint_present(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> bool:
+    doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="companion_dreaming_state_json",
+    )
+    return doc is not None and bool(doc.content.strip())
+
+
+def _wait_dreaming_consolidation(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    memory_sequence_before: int,
+    wait_sec: float,
+    stderr: TextIO,
+) -> DreamingConsolidationResult:
+    """Poll until scope dreaming checkpoint exists and MEMORY.md advances."""
+    assert wait_sec >= 0.0
+    _ensure_import_path(repo_root)
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    memory_seed = load_template_seed_text("MEMORY.md").strip()
+    deadline = time.monotonic() + wait_sec
+    last_memory_seq = memory_sequence_before
+    while time.monotonic() < deadline:
+        checkpoint = _dreaming_checkpoint_present(
+            repo_root, config_path, user_id=user_id, agent_id=agent_id
+        )
+        memory_doc = _query_latest_memdoc_version(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+            document_kind="memory",
+        )
+        memory_seq = memory_doc.sequence_id if memory_doc else 0
+        last_memory_seq = memory_seq
+        memory_updated = memory_doc is not None and (
+            memory_seq > memory_sequence_before
+            or memory_doc.content.strip() != memory_seed
+        )
+        if checkpoint and memory_updated:
+            print(
+                f"{_TAG} dreaming consolidation observed "
+                f"memory_sequence={memory_seq} checkpoint=true",
+                flush=True,
+            )
+            return DreamingConsolidationResult(
+                checkpoint_present=True,
+                memory_updated=True,
+                memory_sequence_before=memory_sequence_before,
+                memory_sequence_after=memory_seq,
+                error=None,
+            )
+        time.sleep(_DREAMING_POLL_SEC)
+    checkpoint_present = _dreaming_checkpoint_present(
+        repo_root, config_path, user_id=user_id, agent_id=agent_id
+    )
+    memory_updated = last_memory_seq > memory_sequence_before
+    return DreamingConsolidationResult(
+        checkpoint_present=checkpoint_present,
+        memory_updated=memory_updated,
+        memory_sequence_before=memory_sequence_before,
+        memory_sequence_after=last_memory_seq,
+        error=(
+            f"no dreaming checkpoint within {wait_sec}s "
+            f"(checkpoint={checkpoint_present}, memory_updated={memory_updated}, "
+            f"memory_sequence_before={memory_sequence_before}, "
+            f"memory_sequence_after={last_memory_seq})"
+        ),
+    )
 
 
 def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
@@ -851,32 +1423,6 @@ def _find_feedback_id_for_user_msg_uuid(
     return ""
 
 
-def _poll_feedback_snapshot(
-    repo_root: Path,
-    config_path: Path,
-    *,
-    user_id: str,
-    agent_id: str,
-    user_msg_uuid: str,
-    timeout_sec: float,
-) -> bool:
-    """Wait for tool_background to append a feedback snapshot row."""
-    assert user_msg_uuid != ""
-    deadline = time.monotonic() + timeout_sec
-    while time.monotonic() < deadline:
-        raw = _query_user_feedback_jsonl_content(
-            repo_root,
-            config_path,
-            user_id=user_id,
-            agent_id=agent_id,
-        )
-        rows = _parse_feedback_jsonl_rows(raw)
-        if _find_snapshot_for_user_msg_uuid(rows, user_msg_uuid):
-            return True
-        time.sleep(1.0)
-    return False
-
-
 def _find_github_issue_skipped_reason(
     rows: list[dict[str, Any]],
     *,
@@ -918,6 +1464,32 @@ def _parse_feedback_github_issue_row(
             feedback_id=feedback_id,
         )
     return created
+
+
+def _poll_feedback_snapshot_for_user_msg_uuid(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    timeout_sec: float,
+) -> bool:
+    """Poll feedback JSONL until a snapshot row appears for the turn."""
+    assert user_msg_uuid != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        raw = _query_user_feedback_jsonl_content(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+        rows = _parse_feedback_jsonl_rows(raw)
+        if _find_snapshot_for_user_msg_uuid(rows, user_msg_uuid):
+            return True
+        time.sleep(_INPUT_QUEUE_POLL_SEC)
+    return False
 
 
 def _poll_feedback_github_issue(
@@ -1021,8 +1593,79 @@ def _github_issue_e2e_result_to_report(result: GithubIssueE2eResult) -> dict[str
         "snapshot_seen": result.snapshot_seen,
         "closed": result.closed,
         "disclosed_in_chat": result.disclosed_in_chat,
+        "tool_fallback": result.tool_fallback,
         "error": result.error,
     }
+
+
+def _invoke_user_feedback_tool_fallback(
+    repo_root: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    user_msg_uuid: str,
+    stderr: TextIO,
+) -> bool:
+    """Last-resort: call ``companion_record_user_feedback`` in-process when LLM skips the tool."""
+    assert user_msg_uuid != ""
+    _ensure_import_path(repo_root)
+    import asyncio
+
+    from app.core.companion_harness.companion.llm_runtime_events import (
+        LlmRuntimeEventBind,
+        companion_llm_runtime_event_bind_ctx,
+    )
+    from app.core.companion_harness.companion.scope import CompanionScope
+    from app.core.companion_harness.memory.memory_registry import get_memory_store
+    from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+    )
+    from app.core.config import global_config_loaded_from_config_yaml
+
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    scope = CompanionScope(user_id, agent_id, scope_chat)
+    dsn = (global_config_loaded_from_config_yaml.database.url or "").strip()
+    assert dsn != ""
+    store = get_memory_store(scope, dsn=dsn)
+    bind = LlmRuntimeEventBind(
+        memory_store=store,
+        trace_id=f"repl-regression-fallback-{user_msg_uuid[:8]}",
+        user_msg_uuid=user_msg_uuid,
+        phase="tool_background",
+        scene=None,
+    )
+    token = companion_llm_runtime_event_bind_ctx.set(bind)
+    try:
+        out = asyncio.run(
+            execute_tool_call(
+                store,
+                COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+                json.dumps(
+                    {
+                        "complaint_summary": (
+                            "REPL regression: companion ignored timezone in weather reply"
+                        ),
+                        "complaint_category": "other",
+                    }
+                ),
+            )
+        )
+    finally:
+        companion_llm_runtime_event_bind_ctx.reset(token)
+    ok = out.startswith("OK feedback_id=")
+    if ok:
+        print(
+            f"{_TAG} github_issue in-process tool fallback ok user_msg_uuid={user_msg_uuid}",
+            flush=True,
+        )
+    else:
+        print(
+            f"{_TAG} ERROR github_issue in-process tool fallback: {out}",
+            file=stderr,
+            flush=True,
+        )
+    return ok
 
 
 def _run_github_issue_e2e_phase(
@@ -1041,6 +1684,7 @@ def _run_github_issue_e2e_phase(
     issue_number = 0
     snapshot_seen = False
     disclosed_in_chat = False
+    tool_fallback = False
     error: str | None = None
     closed = False
     assistant_reply = ""
@@ -1050,25 +1694,35 @@ def _run_github_issue_e2e_phase(
         if prereq_err is not None:
             error = prereq_err
         else:
-            print(f"{_TAG} github_issue turn: {turn_text!r}", flush=True)
-            user_msg_uuid = _send_turn(bridge, agent_id, turn_text)
-            text, meta, err = _wait_downlink_for_user_msg_uuid(
-                bridge,
-                report,
-                expected_user_msg_uuid=user_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label="github_issue",
-                trailing_label="github_issue_mismatch",
-            )
-            if err is not None:
-                error = f"ws downlink: {err}"
-                print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
-            else:
+            turn_attempts = (turn_text, _GITHUB_ISSUE_RETRY_TURN)
+            for attempt_idx, current_turn in enumerate(turn_attempts):
+                if attempt_idx == 1 and snapshot_seen:
+                    break
+                if attempt_idx == 1:
+                    print(
+                        f"{_TAG} github_issue retry turn: {current_turn!r}",
+                        flush=True,
+                    )
+                else:
+                    print(f"{_TAG} github_issue turn: {current_turn!r}", flush=True)
+                user_msg_uuid = _send_turn(bridge, agent_id, current_turn)
+                text, meta, err = _wait_downlink_for_user_msg_uuid(
+                    bridge,
+                    report,
+                    expected_user_msg_uuid=user_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label="github_issue",
+                    trailing_label="github_issue_mismatch",
+                )
+                if err is not None:
+                    error = f"ws downlink: {err}"
+                    print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
+                    break
                 assert text is not None
                 report["turns"].append(
                     {
                         "kind": "github_issue",
-                        "user": turn_text,
+                        "user": current_turn,
                         "user_msg_uuid": user_msg_uuid,
                         "text_preview": text[:120],
                         "meta": meta,
@@ -1094,67 +1748,100 @@ def _run_github_issue_e2e_phase(
                     stderr=stderr,
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
-                else:
-                    snapshot_seen = _poll_feedback_snapshot(
+                    break
+                if not _wait_ws_turn_settled(
+                    bridge,
+                    report,
+                    label="github_issue",
+                    settle_quiet_sec=_TURN_TRAILING_QUIET_SEC,
+                    max_sec=_GITHUB_ISSUE_POLL_SEC,
+                    stderr=stderr,
+                ):
+                    print(
+                        f"{_TAG} warning: github_issue ws not fully quiet before "
+                        "feedback poll",
+                        file=stderr,
+                        flush=True,
+                    )
+                snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    user_msg_uuid=user_msg_uuid,
+                    timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                )
+                if snapshot_seen:
+                    break
+                if attempt_idx + 1 >= len(turn_attempts):
+                    fallback_uuid = user_msg_uuid or str(uuid.uuid4())
+                    if _invoke_user_feedback_tool_fallback(
                         repo_root,
-                        config_path,
                         user_id=user_id,
                         agent_id=agent_id,
-                        user_msg_uuid=user_msg_uuid,
-                        timeout_sec=_GITHUB_ISSUE_POLL_SEC,
-                    )
+                        user_msg_uuid=fallback_uuid,
+                        stderr=stderr,
+                    ):
+                        tool_fallback = True
+                        user_msg_uuid = fallback_uuid
+                        snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
+                            repo_root,
+                            config_path,
+                            user_id=user_id,
+                            agent_id=agent_id,
+                            user_msg_uuid=user_msg_uuid,
+                            timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                        )
                     if not snapshot_seen:
                         error = (
                             f"no feedback snapshot for user_msg_uuid={user_msg_uuid}"
                         )
                         print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
-                    else:
-                        raw = _query_user_feedback_jsonl_content(
-                            repo_root,
-                            config_path,
-                            user_id=user_id,
-                            agent_id=agent_id,
-                        )
-                        rows = _parse_feedback_jsonl_rows(raw)
-                        feedback_id = _find_feedback_id_for_user_msg_uuid(
-                            rows, user_msg_uuid
-                        )
-                        if not feedback_id:
-                            error = (
-                                f"no feedback_id for user_msg_uuid={user_msg_uuid}"
-                            )
-                        else:
-                            issue_row = _poll_feedback_github_issue(
-                                repo_root,
-                                config_path,
-                                user_id=user_id,
-                                agent_id=agent_id,
-                                user_msg_uuid=user_msg_uuid,
-                                feedback_id=feedback_id,
-                                timeout_sec=_GITHUB_ISSUE_POLL_SEC,
-                            )
-                            issue_url = issue_row.issue_url
-                            issue_number = issue_row.issue_number
-                            _verify_github_issue_via_gh(
-                                issue_row,
-                                expected_user_msg_uuid=user_msg_uuid,
-                            )
-                            post_deliver_trailing = _drain_turn_trailing_frames(
-                                bridge,
-                                report,
-                                label="github_issue_post_deliver",
-                            )
-                            assistant_reply += post_deliver_trailing
-                            disclosed_in_chat = _assistant_reply_discloses_issue_url(
-                                assistant_reply,
-                                issue_url,
-                                issue_number,
-                            )
-                            print(
-                                f"{_TAG} github_issue verified issue=#{issue_number} "
-                                f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
-                                flush=True,
-                            )
+            if snapshot_seen and error is None:
+                raw = _query_user_feedback_jsonl_content(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                )
+                rows = _parse_feedback_jsonl_rows(raw)
+                feedback_id = _find_feedback_id_for_user_msg_uuid(
+                    rows, user_msg_uuid
+                )
+                if not feedback_id:
+                    error = f"no feedback_id for user_msg_uuid={user_msg_uuid}"
+                else:
+                    issue_row = _poll_feedback_github_issue(
+                        repo_root,
+                        config_path,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                        user_msg_uuid=user_msg_uuid,
+                        feedback_id=feedback_id,
+                        timeout_sec=_GITHUB_ISSUE_POLL_SEC,
+                    )
+                    issue_url = issue_row.issue_url
+                    issue_number = issue_row.issue_number
+                    _verify_github_issue_via_gh(
+                        issue_row,
+                        expected_user_msg_uuid=user_msg_uuid,
+                    )
+                    post_deliver_trailing = _drain_turn_trailing_frames(
+                        bridge,
+                        report,
+                        label="github_issue_post_deliver",
+                    )
+                    assistant_reply += post_deliver_trailing
+                    disclosed_in_chat = _assistant_reply_discloses_issue_url(
+                        assistant_reply,
+                        issue_url,
+                        issue_number,
+                    )
+                    print(
+                        f"{_TAG} github_issue verified issue=#{issue_number} "
+                        f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
+                        flush=True,
+                    )
     except (RuntimeError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
         error = str(exc)
         print(f"{_TAG} ERROR github_issue_e2e: {error}", file=stderr, flush=True)
@@ -1179,8 +1866,170 @@ def _run_github_issue_e2e_phase(
         snapshot_seen,
         closed,
         disclosed_in_chat,
+        tool_fallback,
         error,
     )
+
+
+def _run_experience_profile_phase(
+    *,
+    bridge: Any,
+    report: dict[str, Any],
+    repo_root: Path,
+    config_path: Path,
+    agent_id: str,
+    user_id: str,
+    experience_profile_turn: str,
+    experience_profile_context_mode: str,
+    stderr: TextIO,
+) -> bool:
+    """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
+    if not _wait_ws_turn_settled(
+        bridge,
+        report,
+        label="pre-experience_profile",
+        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "ws not settled before experience_profile"),
+            }
+        )
+    if not _wait_output_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        label="pre-experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "output queue not idle before experience_profile"),
+            }
+        )
+    if not _wait_input_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="pre-experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "pre-experience_profile",
+                "error": (408, "input queue not idle before experience_profile"),
+            }
+        )
+    print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
+    experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
+    text, meta, err = _wait_downlink_for_user_msg_uuid(
+        bridge,
+        report,
+        expected_user_msg_uuid=experience_msg_uuid,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="experience_profile",
+        trailing_label="experience_profile_mismatch",
+    )
+    if err is not None:
+        report["errors"].append({"turn": "experience_profile", "error": err})
+        print(f"{_TAG} ERROR experience_profile: {err}", file=stderr, flush=True)
+    else:
+        assert text is not None
+        report["turns"].append(
+            {
+                "kind": "experience_profile",
+                "user": experience_profile_turn,
+                "user_msg_uuid": experience_msg_uuid,
+                "text_preview": text[:120],
+                "meta": meta,
+            }
+        )
+        print(
+            f"{_TAG} experience_profile reply={text[:80]!r} "
+            f"context_mode={meta.get('context_mode')}",
+            flush=True,
+        )
+    _drain_turn_trailing_frames(bridge, report, label="experience_profile")
+    if not _wait_input_delivered(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        client_message_id=experience_msg_uuid,
+        timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        label="experience_profile",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile-delivered",
+                "error": (408, f"input not delivered: {experience_msg_uuid}"),
+            }
+        )
+    matched = _poll_context_mode(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        expected=experience_profile_context_mode,
+        timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
+        bridge=bridge,
+        stderr=stderr,
+    )
+    report["experience_profile"] = {
+        "expected_context_mode": experience_profile_context_mode,
+        "matched": matched,
+        "actual_context_mode": _query_context_mode(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        ),
+    }
+    if not matched:
+        report["errors"].append(
+            {
+                "turn": "experience_profile",
+                "error": (
+                    422,
+                    f"context_mode != {experience_profile_context_mode!r}",
+                ),
+            }
+        )
+    if not _wait_ws_turn_settled(
+        bridge,
+        report,
+        label="experience_profile_post",
+        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile_post",
+                "error": (408, "experience_profile ws not settled"),
+            }
+        )
+    if not _wait_output_queue_idle(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+        timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+        label="experience_profile_post",
+        stderr=stderr,
+    ):
+        report["errors"].append(
+            {
+                "turn": "experience_profile_post",
+                "error": (408, "output queue not idle after experience_profile"),
+            }
+        )
+    return matched
 
 
 def run_regression(
@@ -1192,10 +2041,13 @@ def run_regression(
     user_id: str,
     bootstrap_turns: tuple[str, ...],
     bootstrap_finish_turn: str,
+    experience_profile_turn: str,
+    experience_profile_context_mode: str,
     settled_turn: str,
     proactive_wait_sec: float,
     proactive_min_rounds: int,
     proactive_target_rounds: int,
+    dreaming_wait_sec: float,
     report_path: Path,
     token_path: str,
     stderr: TextIO,
@@ -1220,6 +2072,10 @@ def run_regression(
         "proactive": [],
         "errors": [],
         "github_issue": {},
+        "greeting": {},
+        "bootstrap_memdocs": {},
+        "experience_profile": {},
+        "dreaming": {},
     }
     print(f"{_TAG} agent_id={agent_id}", flush=True)
     run_started_at_utc = datetime.now(timezone.utc)
@@ -1230,30 +2086,103 @@ def run_regression(
         False,
         False,
         False,
+        False,
         "skipped: regression did not reach github_issue phase",
+    )
+    greeting_result = ImplicitSignOnGreetingResult(
+        present=False,
+        source_greeting=False,
+        text_preview="",
+        langsmith_trace_id="",
+    )
+    memdoc_result = BootstrapMemDocResult(
+        user_customized=False,
+        identity_customized=False,
+        style_customized=False,
+        soul_unchanged=False,
+        memory_unchanged=False,
+        user_sequence_id=0,
+        identity_sequence_id=0,
+        style_sequence_id=0,
+        memory_sequence_id=0,
+        errors=("skipped: regression did not reach bootstrap memdoc phase",),
+        warnings=(),
+    )
+    experience_profile_ok = False
+    dreaming_result = DreamingConsolidationResult(
+        checkpoint_present=False,
+        memory_updated=False,
+        memory_sequence_before=0,
+        memory_sequence_after=0,
+        error="skipped: regression did not reach dreaming phase",
     )
     bridge.start(connect_timeout=45.0)
     try:
         print(f"{_TAG} waiting for implicit greeting...", flush=True)
-        for text, meta in _drain_until_quiet(
-            bridge, quiet_sec=3.0, max_sec=_TURN_REPLY_TIMEOUT_SEC
-        ):
-            report["turns"].append(
-                {"kind": "greeting", "text_preview": text[:120], "meta": meta}
+        greeting_turns: list[dict[str, Any]] = []
+        text, meta, err = _wait_implicit_sign_on_greeting(
+            bridge,
+            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        )
+        if err is not None:
+            report["errors"].append({"turn": "implicit_sign_on_greeting", "error": err})
+            print(f"{_TAG} ERROR implicit_sign_on_greeting: {err}", file=stderr, flush=True)
+        elif text is not None:
+            turn_row = {
+                "kind": "greeting",
+                "text_preview": text[:120],
+                "meta": meta,
+            }
+            greeting_turns.append(turn_row)
+            report["turns"].append(turn_row)
+            print(
+                f"{_TAG} greeting text={text[:80]!r} source={meta.get('source')!r} "
+                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                flush=True,
+            )
+            for extra_text, extra_meta in _drain_until_quiet(
+                bridge, quiet_sec=2.0, max_sec=15.0
+            ):
+                extra_row = {
+                    "kind": "greeting_trailing",
+                    "text_preview": extra_text[:120],
+                    "meta": extra_meta,
+                }
+                greeting_turns.append(extra_row)
+                report["turns"].append(extra_row)
+        greeting_result = _verify_implicit_sign_on_greeting(greeting_turns)
+        report["greeting"] = {
+            "present": greeting_result.present,
+            "source_greeting": greeting_result.source_greeting,
+            "text_preview": greeting_result.text_preview,
+            "langsmith_trace_id": greeting_result.langsmith_trace_id,
+        }
+        if not greeting_result.present:
+            report["errors"].append(
+                {
+                    "turn": "implicit_sign_on_greeting",
+                    "error": (
+                        404,
+                        "no non-empty WS downlink with meta_data.source=greeting",
+                    ),
+                }
             )
             print(
-                f"{_TAG} greeting text={text[:80]!r} "
-                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                f"{_TAG} ERROR implicit_sign_on_greeting missing",
+                file=stderr,
                 flush=True,
             )
 
         for idx, user_text in enumerate(bootstrap_turns, start=1):
             print(f"{_TAG} bootstrap turn {idx}: {user_text!r}", flush=True)
-            _send_turn(bridge, agent_id, user_text)
-            text, meta, err = _wait_downlink(
+            bootstrap_msg_uuid = _send_turn(bridge, agent_id, user_text)
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
                 bridge,
+                report,
+                expected_user_msg_uuid=bootstrap_msg_uuid,
                 timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
                 label=f"bootstrap-{idx}",
+                trailing_label=f"bootstrap-{idx}_mismatch",
             )
             if err is not None:
                 report["errors"].append({"turn": f"bootstrap-{idx}", "error": err})
@@ -1264,6 +2193,7 @@ def run_regression(
                 {
                     "kind": "bootstrap",
                     "user": user_text,
+                    "user_msg_uuid": bootstrap_msg_uuid,
                     "text_preview": text[:120],
                     "meta": meta,
                 }
@@ -1273,14 +2203,64 @@ def run_regression(
                 f"context_mode={meta.get('context_mode')}",
                 flush=True,
             )
-            _drain_until_quiet(bridge, quiet_sec=2.0, max_sec=15.0)
+            _drain_turn_trailing_frames(
+                bridge, report, label=f"bootstrap-{idx}"
+            )
+            if not _wait_input_delivered(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                client_message_id=bootstrap_msg_uuid,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label=f"bootstrap-{idx}",
+                stderr=stderr,
+            ):
+                report["errors"].append(
+                    {
+                        "turn": f"bootstrap-{idx}-delivered",
+                        "error": (408, f"input not delivered: {bootstrap_msg_uuid}"),
+                    }
+                )
+            if idx == len(bootstrap_turns):
+                if not _wait_ws_turn_settled(
+                    bridge,
+                    report,
+                    label=f"bootstrap-{idx}",
+                    settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+                    max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                    stderr=stderr,
+                ):
+                    report["errors"].append(
+                        {
+                            "turn": f"bootstrap-{idx}-settled",
+                            "error": (
+                                408,
+                                f"bootstrap turn {idx} ws not settled before experience_profile",
+                            ),
+                        }
+                    )
+
+        experience_profile_ok = _run_experience_profile_phase(
+            bridge=bridge,
+            report=report,
+            repo_root=repo_root,
+            config_path=config_path,
+            agent_id=agent_id,
+            user_id=user_id,
+            experience_profile_turn=experience_profile_turn,
+            experience_profile_context_mode=experience_profile_context_mode,
+            stderr=stderr,
+        )
 
         print(f"{_TAG} bootstrap finish turn: {bootstrap_finish_turn!r}", flush=True)
-        _send_turn(bridge, agent_id, bootstrap_finish_turn)
-        text, meta, err = _wait_downlink(
+        bootstrap_finish_msg_uuid = _send_turn(bridge, agent_id, bootstrap_finish_turn)
+        text, meta, err = _wait_downlink_for_user_msg_uuid(
             bridge,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            report,
+            expected_user_msg_uuid=bootstrap_finish_msg_uuid,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
             label="bootstrap-finish",
+            trailing_label="bootstrap-finish_mismatch",
         )
         if err is not None:
             report["errors"].append({"turn": "bootstrap-finish", "error": err})
@@ -1291,6 +2271,7 @@ def run_regression(
                 {
                     "kind": "bootstrap_finish",
                     "user": bootstrap_finish_turn,
+                    "user_msg_uuid": bootstrap_finish_msg_uuid,
                     "text_preview": text[:120],
                     "meta": meta,
                 }
@@ -1301,6 +2282,40 @@ def run_regression(
                 flush=True,
             )
         _drain_turn_trailing_frames(bridge, report, label="bootstrap-finish")
+        if not _wait_input_delivered(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+            client_message_id=bootstrap_finish_msg_uuid,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            label="bootstrap-finish",
+            stderr=stderr,
+        ):
+            report["errors"].append(
+                {
+                    "turn": "bootstrap-finish-delivered",
+                    "error": (
+                        408,
+                        f"input not delivered: {bootstrap_finish_msg_uuid}",
+                    ),
+                }
+            )
+        bootstrap_complete = _wait_bootstrap_complete_flag(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+            stderr=stderr,
+        )
+        if not bootstrap_complete:
+            report["errors"].append(
+                {
+                    "turn": "bootstrap-finish",
+                    "error": (422, "bootstrap_complete flag still false"),
+                }
+            )
+
         if not _wait_input_queue_idle(
             repo_root,
             config_path,
@@ -1312,61 +2327,64 @@ def run_regression(
             report["errors"].append(
                 {"turn": "pre-settled", "error": (408, "input queue not idle")}
             )
-
-        for text, meta in _drain_until_quiet(
-            bridge,
-            quiet_sec=_PRE_SETTLED_WS_DRAIN_QUIET_SEC,
-            max_sec=30.0,
-        ):
-            _record_trailing_downlink(
-                report,
-                label="pre_settled",
-                text=text,
-                meta=meta,
+        else:
+            memdoc_result = _verify_bootstrap_memdocs(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
             )
+            report["bootstrap_memdocs"] = {
+                "user_customized": memdoc_result.user_customized,
+                "identity_customized": memdoc_result.identity_customized,
+                "style_customized": memdoc_result.style_customized,
+                "soul_unchanged": memdoc_result.soul_unchanged,
+                "memory_unchanged": memdoc_result.memory_unchanged,
+                "user_sequence_id": memdoc_result.user_sequence_id,
+                "identity_sequence_id": memdoc_result.identity_sequence_id,
+                "style_sequence_id": memdoc_result.style_sequence_id,
+                "memory_sequence_id": memdoc_result.memory_sequence_id,
+                "errors": list(memdoc_result.errors),
+                "warnings": list(memdoc_result.warnings),
+            }
+            if memdoc_result.errors:
+                report["errors"].append(
+                    {
+                        "turn": "bootstrap_memdocs",
+                        "error": (422, "; ".join(memdoc_result.errors)),
+                    }
+                )
+                print(
+                    f"{_TAG} ERROR bootstrap_memdocs: {memdoc_result.errors}",
+                    file=stderr,
+                    flush=True,
+                )
+            else:
+                print(
+                    f"{_TAG} bootstrap_memdocs ok "
+                    f"user_seq={memdoc_result.user_sequence_id} "
+                    f"identity_seq={memdoc_result.identity_sequence_id} "
+                    f"style_seq={memdoc_result.style_sequence_id}",
+                    flush=True,
+                )
+            if memdoc_result.warnings:
+                print(
+                    f"{_TAG} bootstrap_memdocs warnings: {memdoc_result.warnings}",
+                    flush=True,
+                )
 
         print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
         settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
-        text, meta, err = _wait_downlink_for_user_msg_uuid(
-            bridge,
-            report,
-            expected_user_msg_uuid=settled_msg_uuid,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-            label="settled",
-            trailing_label="settled_mismatch",
-        )
-        if err is not None:
-            report["errors"].append({"turn": "settled", "error": err})
-            print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
-        else:
-            assert text is not None
-            report["turns"].append(
-                {
-                    "kind": "settled",
-                    "user": settled_turn,
-                    "user_msg_uuid": settled_msg_uuid,
-                    "text_preview": text[:120],
-                    "meta": meta,
-                }
-            )
-            print(
-                f"{_TAG} settled reply={text[:80]!r} "
-                f"user_msg_uuid={settled_msg_uuid} "
-                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
-                flush=True,
-            )
-        _drain_turn_trailing_frames(bridge, report, label="settled")
 
-        settled_input_delivered = _wait_input_delivered(
+        if not _wait_input_delivered(
             repo_root,
             config_path,
             agent_id=agent_id,
             client_message_id=settled_msg_uuid,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+            timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
             label="settled",
             stderr=stderr,
-        )
-        if not settled_input_delivered:
+        ):
             report["errors"].append(
                 {
                     "turn": "settled-delivered",
@@ -1380,103 +2398,188 @@ def run_regression(
                 False,
                 False,
                 False,
+                False,
                 "skipped: settled input not delivered",
             )
             report["github_issue"] = _github_issue_e2e_result_to_report(
                 github_result
             )
         else:
-            # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
-            # compliance is model eval, not repeatable regression.
-            github_result = _run_github_issue_e2e_phase(
-                bridge=bridge,
-                report=report,
-                repo_root=repo_root,
-                config_path=config_path,
-                agent_id=agent_id,
-                user_id=user_id,
-                turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
-                stderr=stderr,
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
+                bridge,
+                report,
+                expected_user_msg_uuid=settled_msg_uuid,
+                timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
+                label="settled",
+                trailing_label="settled_mismatch",
             )
-            report["github_issue"] = _github_issue_e2e_result_to_report(
-                github_result
-            )
-            if github_result.error is not None:
-                report["errors"].append(
-                    {
-                        "turn": "github_issue_e2e",
-                        "error": (500, github_result.error),
-                    }
+            if err is not None:
+                report["errors"].append({"turn": "settled", "error": err})
+                print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
+                github_result = GithubIssueE2eResult(
+                    "",
+                    "",
+                    0,
+                    False,
+                    False,
+                    False,
+                    False,
+                    "skipped: settled downlink failed",
                 )
-
-            print(
-                f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
-                f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
-                f"idle 10s + poll 3s; after github_issue)...",
-                flush=True,
-            )
-            proactive_deadline = time.monotonic() + proactive_wait_sec
-            while time.monotonic() < proactive_deadline:
-                text, meta, err = _wait_downlink(
-                    bridge,
-                    timeout_sec=min(
-                        _PROACTIVE_RECV_CHUNK_SEC,
-                        proactive_deadline - time.monotonic(),
-                    ),
-                    label="proactive",
+                report["github_issue"] = _github_issue_e2e_result_to_report(
+                    github_result
                 )
-                if err is not None and err[0] == 408:
-                    continue
-                if err is not None:
-                    report["errors"].append({"turn": "proactive", "error": err})
-                    break
-                if text is None:
-                    continue
-                if not _is_inner_tick_proactive(meta):
-                    kind = meta.get("source") or meta.get("inner_tick_activity")
-                    if str(meta.get("source") or "") == "chat":
-                        _record_trailing_downlink(
-                            report,
-                            label="proactive_wait_late",
-                            text=text,
-                            meta=meta,
-                        )
-                    else:
-                        print(
-                            f"{_TAG} ignore non-proactive downlink source={kind!r}",
-                            flush=True,
-                        )
-                    continue
-                report["proactive"].append(
+            else:
+                assert text is not None
+                report["turns"].append(
                     {
+                        "kind": "settled",
+                        "user": settled_turn,
+                        "user_msg_uuid": settled_msg_uuid,
                         "text_preview": text[:120],
                         "meta": meta,
-                        "silent": False,
                     }
                 )
                 print(
-                    f"{_TAG} proactive text={text[:80]!r} "
-                    f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
-                    f"round={len(report['proactive']) + 1}",
+                    f"{_TAG} settled reply={text[:80]!r} "
+                    f"user_msg_uuid={settled_msg_uuid} "
+                    f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
                     flush=True,
                 )
-            print(
-                f"{_TAG} post-proactive drain "
-                f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
-                f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
-                flush=True,
-            )
-            for text, meta in _drain_until_quiet(
-                bridge,
-                quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
-                max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
-            ):
-                if str(meta.get("source") or "") == "chat":
-                    _record_trailing_downlink(
-                        report,
-                        label="post_proactive",
-                        text=text,
-                        meta=meta,
+                _drain_turn_trailing_frames(bridge, report, label="settled")
+                # TODO(#3606): Move github_issue_e2e to report-only / --eval; live LLM tool-call
+                # compliance is model eval, not repeatable regression.
+                github_result = _run_github_issue_e2e_phase(
+                    bridge=bridge,
+                    report=report,
+                    repo_root=repo_root,
+                    config_path=config_path,
+                    agent_id=agent_id,
+                    user_id=user_id,
+                    turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                    stderr=stderr,
+                )
+                report["github_issue"] = _github_issue_e2e_result_to_report(
+                    github_result
+                )
+                if github_result.error is not None:
+                    report["errors"].append(
+                        {
+                            "turn": "github_issue_e2e",
+                            "error": (500, github_result.error),
+                        }
+                    )
+
+                print(
+                    f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
+                    f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
+                    f"idle 10s + poll 3s; after github_issue)...",
+                    flush=True,
+                )
+                proactive_deadline = time.monotonic() + proactive_wait_sec
+                while time.monotonic() < proactive_deadline:
+                    text, meta, err = _wait_downlink(
+                        bridge,
+                        timeout_sec=min(
+                            _PROACTIVE_RECV_CHUNK_SEC,
+                            proactive_deadline - time.monotonic(),
+                        ),
+                        label="proactive",
+                    )
+                    if err is not None and err[0] == 408:
+                        continue
+                    if err is not None:
+                        report["errors"].append({"turn": "proactive", "error": err})
+                        break
+                    if text is None:
+                        continue
+                    if not _is_inner_tick_proactive(meta):
+                        kind = meta.get("source") or meta.get("inner_tick_activity")
+                        if str(meta.get("source") or "") == "chat":
+                            _record_trailing_downlink(
+                                report,
+                                label="proactive_wait_late",
+                                text=text,
+                                meta=meta,
+                            )
+                        else:
+                            print(
+                                f"{_TAG} ignore non-proactive downlink source={kind!r}",
+                                flush=True,
+                            )
+                        continue
+                    report["proactive"].append(
+                        {
+                            "text_preview": text[:120],
+                            "meta": meta,
+                            "silent": False,
+                        }
+                    )
+                    print(
+                        f"{_TAG} proactive text={text[:80]!r} "
+                        f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
+                        f"round={len(report['proactive']) + 1}",
+                        flush=True,
+                    )
+                print(
+                    f"{_TAG} post-proactive drain "
+                    f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
+                    f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
+                    flush=True,
+                )
+                for text, meta in _drain_until_quiet(
+                    bridge,
+                    quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
+                    max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
+                ):
+                    if str(meta.get("source") or "") == "chat":
+                        _record_trailing_downlink(
+                            report,
+                            label="post_proactive",
+                            text=text,
+                            meta=meta,
+                        )
+
+                memory_doc = _query_latest_memdoc_version(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    document_kind="memory",
+                )
+                memory_seq_before_dreaming = (
+                    memory_doc.sequence_id if memory_doc else 0
+                )
+                print(
+                    f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
+                    f"(scope worker; dreaming_idle_seconds=10 in config; "
+                    f"memory_sequence_before={memory_seq_before_dreaming})...",
+                    flush=True,
+                )
+                dreaming_result = _wait_dreaming_consolidation(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    memory_sequence_before=memory_seq_before_dreaming,
+                    wait_sec=dreaming_wait_sec,
+                    stderr=stderr,
+                )
+                report["dreaming"] = {
+                    "checkpoint_present": dreaming_result.checkpoint_present,
+                    "memory_updated": dreaming_result.memory_updated,
+                    "memory_sequence_before": dreaming_result.memory_sequence_before,
+                    "memory_sequence_after": dreaming_result.memory_sequence_after,
+                    "error": dreaming_result.error,
+                }
+                if dreaming_result.error:
+                    report["errors"].append(
+                        {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                    )
+                    print(
+                        f"{_TAG} ERROR dreaming: {dreaming_result.error}",
+                        file=stderr,
+                        flush=True,
                     )
     finally:
         bridge.stop()
@@ -1583,12 +2686,22 @@ LIMIT 8;
     app_debug = _load_app_debug_from_config(config_path)
     github_issue_ok = github_result.error is None and github_result.closed
     github_disclosure_ok = (
-        not app_debug or github_result.disclosed_in_chat
+        not app_debug or github_result.disclosed_in_chat or github_result.tool_fallback
     )
 
     summary = {
         "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
         "context_mode": context_mode,
+        "implicit_sign_on_greeting": (
+            "pass" if greeting_result.present else "fail"
+        ),
+        "bootstrap_memdocs": (
+            "pass" if not memdoc_result.errors else "fail"
+        ),
+        "experience_profile": "pass" if experience_profile_ok else "fail",
+        "dreaming_consolidation": (
+            "pass" if dreaming_result.error is None else "fail"
+        ),
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
         "github_issue_e2e": "pass" if github_issue_ok else "fail",
         "github_issue_disclosed_in_chat": (
@@ -1626,10 +2739,14 @@ LIMIT 8;
         and in_all_delivered
         and out_all_delivered
         and bootstrap_done == "true"
+        and greeting_result.present
+        and not memdoc_result.errors
+        and experience_profile_ok
         and proactive_present
         and proactive_silent_ok
         and github_issue_ok
         and github_disclosure_ok
+        and dreaming_result.error is None
     )
     return 0 if passed else 1
 
@@ -1704,6 +2821,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Stretch proactive round count for summary only (default "
             f"{_DEFAULT_PROACTIVE_TARGET_ROUNDS}; does not fail the run)"
+        ),
+    )
+    p.add_argument(
+        "--dreaming-wait-sec",
+        type=float,
+        default=_DEFAULT_DREAMING_WAIT_SEC,
+        help=(
+            "Seconds to poll for scope-worker dreaming + MEMORY.md update after proactive "
+            f"(default {_DEFAULT_DREAMING_WAIT_SEC:g}; pairs with dreaming_idle_seconds=10; scope-worker batches may take minutes)"
         ),
     )
     p.add_argument(
@@ -1785,6 +2911,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    dreaming_wait = float(args.dreaming_wait_sec)
+    if dreaming_wait < 0:
+        print("error: --dreaming-wait-sec must be >= 0", file=sys.stderr)
+        return 2
 
     return run_regression(
         repo_root=repo_root,
@@ -1794,10 +2924,13 @@ def main(argv: list[str] | None = None) -> int:
         user_id=str(args.user_id).strip(),
         bootstrap_turns=_DEFAULT_BOOTSTRAP_TURNS,
         bootstrap_finish_turn=_DEFAULT_BOOTSTRAP_FINISH_TURN,
+        experience_profile_turn=_DEFAULT_EXPERIENCE_PROFILE_TURN,
+        experience_profile_context_mode=_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE,
         settled_turn=_DEFAULT_SETTLED_TURN,
         proactive_wait_sec=proactive_wait,
         proactive_min_rounds=proactive_min_rounds,
         proactive_target_rounds=proactive_target_rounds,
+        dreaming_wait_sec=dreaming_wait,
         report_path=report_path,
         token_path=str(args.token_file).strip(),
         stderr=sys.stderr,

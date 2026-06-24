@@ -65,8 +65,9 @@ agent:
     memory_bootstrap_type: USER_INTERACTIVE
     # Local Telegram idle-pause smoke only (production default 960 min).
     agent_scope_idle_timeout_minutes: 5
-    # Fast proactive rhythm for local REPL / regression (defaults: idle 30s, poll 60s).
-    # Min idle 10s (RootConfig validation); poll 3s → ~2 proactive rounds within 75s wait.
+    # Fast proactive + dreaming rhythm for local REPL / regression (defaults: idle 30s / 7200s).
+    # Min idle 10s (RootConfig validation); poll 3s → proactive + scope dreaming within ~90s wait.
+    dreaming_idle_seconds: 10
     inner_tick:
       proactive_chat:
         base_idle_seconds: 10
