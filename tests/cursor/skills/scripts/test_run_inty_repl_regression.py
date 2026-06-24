@@ -216,3 +216,86 @@ def test_load_app_debug_from_config(tmp_path) -> None:
     assert mod._load_app_debug_from_config(cfg) is True
     cfg.write_text("app:\n  debug: false\n", encoding="utf-8")
     assert mod._load_app_debug_from_config(cfg) is False
+
+
+def test_is_implicit_sign_on_greeting() -> None:
+    mod = _load_regression_module()
+
+    assert mod._is_implicit_sign_on_greeting({"source": "greeting"})
+    assert not mod._is_implicit_sign_on_greeting({"source": "chat"})
+    assert not mod._is_implicit_sign_on_greeting({})
+
+
+def test_verify_implicit_sign_on_greeting() -> None:
+    mod = _load_regression_module()
+
+    ok = mod._verify_implicit_sign_on_greeting(
+        [
+            {
+                "text_preview": "hello",
+                "meta": {"source": "greeting", "langsmith_trace_id": "t1"},
+            }
+        ]
+    )
+    assert ok.present is True
+    assert ok.source_greeting is True
+    assert ok.langsmith_trace_id == "t1"
+
+    missing = mod._verify_implicit_sign_on_greeting(
+        [{"text_preview": "hello", "meta": {"source": "chat"}}]
+    )
+    assert missing.present is False
+
+
+def test_agent_scope_chat_id() -> None:
+    mod = _load_regression_module()
+
+    assert (
+        mod._agent_scope_chat_id("user-testing", "agent-1")
+        == "agent-scope:user-testing:agent-1"
+    )
+
+
+def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    mod._ensure_import_path(repo_root)
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    soul_seed = load_template_seed_text("SOUL.md")
+    memory_seed = load_template_seed_text("MEMORY.md")
+    style_seed = load_template_seed_text("STYLE.md")
+
+    def fake_psql(_repo_root, _config_path, query: str) -> str:
+        if "document_kind = 'user'" in query:
+            return "2|# user\n大雄\n"
+        if "document_kind = 'identity'" in query:
+            return "2|# id\n多啦\n"
+        if "document_kind = 'style'" in query:
+            return f"2|{style_seed}\n# customized\n"
+        if "document_kind = 'soul'" in query:
+            return f"1|{soul_seed}"
+        if "document_kind = 'memory'" in query:
+            return f"1|{memory_seed}"
+        return ""
+
+    original = mod._psql
+    mod._psql = fake_psql
+    try:
+        result = mod._verify_bootstrap_memdocs(
+            repo_root,
+            tmp_path / "missing.yaml",
+            user_id="user-testing",
+            agent_id="agent-1",
+        )
+    finally:
+        mod._psql = original
+
+    assert result.user_customized is True
+    assert result.identity_customized is True
+    assert result.style_customized is True
+    assert result.soul_unchanged is True
+    assert result.memory_unchanged is True
+    assert result.errors == ()

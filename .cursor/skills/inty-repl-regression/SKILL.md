@@ -18,10 +18,13 @@ description: >-
 
 Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion harness regressions across:
 
-- bootstrap queue path
+- implicit sign-on greeting (`IMPLICIT_SIGN_ON_GREETING`, `meta_data.source=greeting`)
+- bootstrap queue path + MemoryDoc writes (`USER.md` / `IDENTITY.md` / `STYLE.md`; SOUL/MEMORY stay seed)
+- `companion_set_experience_profile` → settled `context_mode` (default `roleplay`)
 - settled `USER_CHAT`
 - user complaint → `companion_record_user_feedback` → real GitHub issue (then auto-closed)
 - proactive inner tick
+- scope-worker dreaming consolidation → `MEMORY.md` update (fast `dreaming_idle_seconds: 10` in local config)
 - durable InputQueue / OutputQueue delivery
 - LangSmith prompt inputs
 
@@ -60,10 +63,11 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 - Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
 - When `app.debug: true` (local `config.yaml.local`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
-- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.local`. Driver flags:
+- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.local`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Driver flags:
   - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
   - `--proactive-min-rounds` (**1** default): **pass gate** — at least this many proactive rounds (WS and/or DB)
   - `--proactive-target-rounds` (**2** default): stretch goal in summary only; **does not fail** the run
+  - `--dreaming-wait-sec` (**90** default): poll Postgres for `.companion_dreaming_state.json` + `MEMORY.md` update after proactive (scope inner-tick worker must be running on Ops)
 - A **silent first proactive** (`output_to_user=false`) leaves the transcript without an assistant reply, so the scheduler will **not** fire a second round until a visible proactive happens — waiting longer cannot fix that.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).
@@ -167,15 +171,17 @@ For proactive:
 
 ## Pass Criteria
 
+- `meta_data.source=greeting` on at least one implicit sign-on WS downlink after connect.
 - `context.json` latest agent-scope row has `workspace_bootstrap_user_interactive_completed = true`.
-- Latest `context_mode` is the expected settled mode, often `emotional_companion`.
-- USER / IDENTITY / STYLE / COMPANIONSHIP have non-template bootstrap content.
+- Latest `context_mode` is the expected settled mode after experience-profile phase (default **`roleplay`**).
+- USER / IDENTITY / STYLE have non-template bootstrap content (`大雄` / `多啦` markers); SOUL / MEMORY remain template seed (`sequence_id=1`).
 - InputQueue rows for the run are all `delivered`.
 - OutputQueue rows for user-visible replies are all `delivered`.
 - Settled user turn produces one coherent delivered reply.
 - **GitHub issue E2E:** complaint turn produces feedback JSONL `snapshot` + `github_issue_created`; `gh issue view` validates title/labels/body; issue closed in cleanup (`summary.github_issue_e2e: pass`).
 - **GitHub disclosure (debug only):** when `app.debug: true`, tool-leg WS reply includes issue URL from tool result (`summary.github_issue_disclosed_in_chat: pass`; `skipped` when debug is off).
 - Proactive LLM input includes the synthetic proactive user marker; **≥1 proactive round** (`proactive_inner_tick: present`); no `[SILENT]` token (`proactive_no_silent_token: pass`). Optional stretch: `proactive_target_rounds: met` when the model speaks on round 1.
+- **Dreaming consolidation:** `.companion_dreaming_state.json` checkpoint + `MEMORY.md` sequence/content update (`summary.dreaming_consolidation: pass`).
 - LangSmith run ids in REPL metadata match delivered OutputQueue rows where applicable.
 
 ## Known Non-Blocking Findings
@@ -195,9 +201,13 @@ Reply with:
 
 - `agent_id`
 - bootstrap: complete / incomplete
+- implicit_sign_on_greeting: pass / fail
+- bootstrap_memdocs: pass / fail
+- experience_profile (`context_mode`): pass / fail
 - settled queue turn: pass / fail
 - github_issue_e2e: pass / fail (issue # if created)
 - proactive prompt marker: present / missing
+- dreaming_consolidation: pass / fail
 - InputQueue / OutputQueue status counts
 - key LangSmith trace/run ids
 - blockers vs known non-blocking findings

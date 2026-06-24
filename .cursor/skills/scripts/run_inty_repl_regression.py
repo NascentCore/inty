@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 """Automated local Ops + WebSocket regression for companion queue-serving.
 
-Skill smoke driver (not ``app/`` production code). Drives bootstrap turns, one
-settled user turn, a GitHub issue complaint turn, and waits for multiple inner-tick proactive
-chat rounds via ``BackendChatWsBridge`` (same transport as ``inty_v2_repl``). Writes a JSON
-report under ``tmp/`` and prints a one-line SUMMARY.
+Skill smoke driver (not ``app/`` production code). Drives implicit sign-on greeting,
+bootstrap turns (MemoryDoc checks), ``companion_set_experience_profile``, one settled
+user turn, a GitHub issue complaint turn, inner-tick proactive chat rounds, and scope-worker
+dreaming consolidation (``MEMORY.md`` update) via ``BackendChatWsBridge`` (same transport
+as ``inty_v2_repl``). Writes a JSON report under ``tmp/`` and prints a one-line SUMMARY.
 
 Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
+- Greeting: require WS downlink with ``meta_data.source=greeting`` after connect.
+- Bootstrap MemDocs: USER/IDENTITY/STYLE customized; SOUL/MEMORY remain template seed.
+- Experience profile: ``companion_set_experience_profile`` → ``context_mode=roleplay``.
 - Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
   ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
-  run github_issue E2E phase, then start proactive multi-round wait.
+  run github_issue E2E phase, then start proactive multi-round wait, then poll dreaming.
 - Proactive: collect WS downlinks and merge ``chat_history`` synthetic user rows;
   require ``--proactive-min-rounds`` (default 1) with ``--proactive-target-rounds`` (default 2,
   summary-only); fast local idle (10s + poll 3s); fail on legacy ``[SILENT]`` token in previews.
+- Dreaming: poll ``.companion_dreaming_state.json`` + ``MEMORY.md`` sequence after proactive
+  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.local``; ``--dreaming-wait-sec`` default 90).
 - GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
   ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
@@ -64,6 +70,17 @@ _DEFAULT_GITHUB_ISSUE_TURN = (
     "我很不满——你刚才的回答没有考虑我在美国西海岸的时区。"
     "请先用 companion_record_user_feedback 把我的投诉提交成 GitHub issue，再简短回复我。"
 )
+_DEFAULT_EXPERIENCE_PROFILE_TURN = (
+    "我想试试角色扮演。请调用 companion_set_experience_profile，"
+    "experience_intent 设为 roleplay，note 写 regression，然后简短回复我。"
+)
+_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
+_BOOTSTRAP_USER_NAME_MARKER = "大雄"
+_BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
+_DEFAULT_DREAMING_WAIT_SEC = 90.0
+_DREAMING_POLL_SEC = 3.0
+_EXPERIENCE_PROFILE_POLL_SEC = 2.0
+_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 60.0
 _GITHUB_ISSUE_POLL_SEC = 60.0
 _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
@@ -114,6 +131,51 @@ class GithubIssueE2eResult:
     closed: bool
     disclosed_in_chat: bool
     error: str | None
+
+
+@dataclass(frozen=True)
+class ImplicitSignOnGreetingResult:
+    """Outcome of implicit sign-on greeting verification."""
+
+    present: bool
+    source_greeting: bool
+    text_preview: str
+    langsmith_trace_id: str
+
+
+@dataclass(frozen=True)
+class BootstrapMemDocResult:
+    """Post-bootstrap MemoryStore document checks."""
+
+    user_customized: bool
+    identity_customized: bool
+    style_customized: bool
+    soul_unchanged: bool
+    memory_unchanged: bool
+    user_sequence_id: int
+    identity_sequence_id: int
+    style_sequence_id: int
+    memory_sequence_id: int
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DreamingConsolidationResult:
+    """Dreaming batch checkpoint + MEMORY.md update checks."""
+
+    checkpoint_present: bool
+    memory_updated: bool
+    memory_sequence_before: int
+    memory_sequence_after: int
+    error: str | None
+
+
+@dataclass(frozen=True)
+class MemDocVersion:
+    """One latest MemoryStore document version row."""
+
+    sequence_id: int
+    content: str
 
 
 def _find_repo_root() -> Path:
@@ -529,6 +591,333 @@ LIMIT 1;
     )
     line = raw.strip()
     return line if line else None
+
+
+def _agent_scope_chat_id(user_id: str, agent_id: str) -> str:
+    assert user_id != ""
+    assert agent_id != ""
+    return f"agent-scope:{user_id}:{agent_id}"
+
+
+def _is_implicit_sign_on_greeting(meta: dict[str, Any]) -> bool:
+    return str(meta.get("source") or "").strip() == "greeting"
+
+
+def _verify_implicit_sign_on_greeting(
+    greeting_turns: list[dict[str, Any]],
+) -> ImplicitSignOnGreetingResult:
+    """Require at least one non-empty WS downlink with ``meta_data.source=greeting``."""
+    for turn in greeting_turns:
+        text = str(turn.get("text_preview") or "").strip()
+        meta = turn.get("meta") or {}
+        if not text:
+            continue
+        if _is_implicit_sign_on_greeting(meta):
+            return ImplicitSignOnGreetingResult(
+                present=True,
+                source_greeting=True,
+                text_preview=text[:120],
+                langsmith_trace_id=str(meta.get("langsmith_trace_id") or ""),
+            )
+    preview = ""
+    if greeting_turns:
+        preview = str(greeting_turns[0].get("text_preview") or "")[:120]
+    return ImplicitSignOnGreetingResult(
+        present=False,
+        source_greeting=False,
+        text_preview=preview,
+        langsmith_trace_id="",
+    )
+
+
+def _query_latest_memdoc_version(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    document_kind: str,
+) -> MemDocVersion | None:
+    assert user_id != ""
+    assert agent_id != ""
+    assert document_kind != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT sequence_id, trim(content)
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = '{document_kind}'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+    )
+    line = raw.strip()
+    if not line:
+        return None
+    sequence_s, content = line.split("|", 1)
+    return MemDocVersion(sequence_id=int(sequence_s), content=content)
+
+
+def _query_context_mode(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> str:
+    assert user_id != ""
+    assert agent_id != ""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    raw = _psql(
+        repo_root,
+        config_path,
+        f"""
+SELECT trim(content)::json->>'context_mode'
+FROM companion_memory_document_versions
+WHERE companion_id = '{agent_id}'
+  AND user_id = '{user_id}'
+  AND chat_id = '{scope_chat}'
+  AND document_kind = 'context_json'
+  AND calendar_date IS NULL
+ORDER BY sequence_id DESC
+LIMIT 1;
+""",
+    )
+    return raw.strip()
+
+
+def _poll_context_mode(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    expected: str,
+    timeout_sec: float,
+    stderr: TextIO,
+) -> bool:
+    assert expected != ""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        mode = _query_context_mode(
+            repo_root, config_path, user_id=user_id, agent_id=agent_id
+        )
+        if mode == expected:
+            print(
+                f"{_TAG} context_mode={mode!r} matched expected",
+                flush=True,
+            )
+            return True
+        time.sleep(_EXPERIENCE_PROFILE_POLL_SEC)
+    print(
+        f"{_TAG} ERROR timeout waiting for context_mode={expected!r} "
+        f"(last={_query_context_mode(repo_root, config_path, user_id=user_id, agent_id=agent_id)!r})",
+        file=stderr,
+        flush=True,
+    )
+    return False
+
+
+def _verify_bootstrap_memdocs(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> BootstrapMemDocResult:
+    """Check bootstrap wrote USER/IDENTITY/STYLE while SOUL/MEMORY stay at template seed."""
+    _ensure_import_path(repo_root)
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    soul_seed = load_template_seed_text("SOUL.md").strip()
+    memory_seed = load_template_seed_text("MEMORY.md").strip()
+    style_seed = load_template_seed_text("STYLE.md").strip()
+    errors: list[str] = []
+
+    user_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="user",
+    )
+    identity_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="identity",
+    )
+    style_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="style",
+    )
+    soul_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="soul",
+    )
+    memory_doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="memory",
+    )
+
+    user_customized = (
+        user_doc is not None
+        and _BOOTSTRAP_USER_NAME_MARKER in user_doc.content
+    )
+    identity_customized = (
+        identity_doc is not None
+        and _BOOTSTRAP_COMPANION_NAME_MARKER in identity_doc.content
+    )
+    style_customized = (
+        style_doc is not None
+        and style_doc.content.strip() != style_seed
+        and style_doc.sequence_id > 1
+    )
+    soul_unchanged = (
+        soul_doc is not None
+        and soul_doc.content.strip() == soul_seed
+        and soul_doc.sequence_id == 1
+    )
+    memory_unchanged = (
+        memory_doc is not None
+        and memory_doc.content.strip() == memory_seed
+        and memory_doc.sequence_id == 1
+    )
+
+    if user_doc is None:
+        errors.append("USER.md missing")
+    elif not user_customized:
+        errors.append(f"USER.md missing {_BOOTSTRAP_USER_NAME_MARKER!r}")
+    if identity_doc is None:
+        errors.append("IDENTITY.md missing")
+    elif not identity_customized:
+        errors.append(f"IDENTITY.md missing {_BOOTSTRAP_COMPANION_NAME_MARKER!r}")
+    if style_doc is None:
+        errors.append("STYLE.md missing")
+    elif not style_customized:
+        errors.append("STYLE.md still template seed")
+    if soul_doc is None:
+        errors.append("SOUL.md missing")
+    elif not soul_unchanged:
+        errors.append("SOUL.md changed from template seed")
+    if memory_doc is None:
+        errors.append("MEMORY.md missing")
+    elif not memory_unchanged:
+        errors.append("MEMORY.md changed before dreaming")
+
+    return BootstrapMemDocResult(
+        user_customized=user_customized,
+        identity_customized=identity_customized,
+        style_customized=style_customized,
+        soul_unchanged=soul_unchanged,
+        memory_unchanged=memory_unchanged,
+        user_sequence_id=user_doc.sequence_id if user_doc else 0,
+        identity_sequence_id=identity_doc.sequence_id if identity_doc else 0,
+        style_sequence_id=style_doc.sequence_id if style_doc else 0,
+        memory_sequence_id=memory_doc.sequence_id if memory_doc else 0,
+        errors=tuple(errors),
+    )
+
+
+def _dreaming_checkpoint_present(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> bool:
+    doc = _query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="companion_dreaming_state_json",
+    )
+    return doc is not None and bool(doc.content.strip())
+
+
+def _wait_dreaming_consolidation(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    memory_sequence_before: int,
+    wait_sec: float,
+    stderr: TextIO,
+) -> DreamingConsolidationResult:
+    """Poll until scope dreaming checkpoint exists and MEMORY.md advances."""
+    assert wait_sec >= 0.0
+    _ensure_import_path(repo_root)
+    from app.core.companion_harness.memory.memory_store_scope import (
+        load_template_seed_text,
+    )
+
+    memory_seed = load_template_seed_text("MEMORY.md").strip()
+    deadline = time.monotonic() + wait_sec
+    last_memory_seq = memory_sequence_before
+    while time.monotonic() < deadline:
+        checkpoint = _dreaming_checkpoint_present(
+            repo_root, config_path, user_id=user_id, agent_id=agent_id
+        )
+        memory_doc = _query_latest_memdoc_version(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+            document_kind="memory",
+        )
+        memory_seq = memory_doc.sequence_id if memory_doc else 0
+        last_memory_seq = memory_seq
+        memory_updated = memory_doc is not None and (
+            memory_seq > memory_sequence_before
+            or memory_doc.content.strip() != memory_seed
+        )
+        if checkpoint and memory_updated:
+            print(
+                f"{_TAG} dreaming consolidation observed "
+                f"memory_sequence={memory_seq} checkpoint=true",
+                flush=True,
+            )
+            return DreamingConsolidationResult(
+                checkpoint_present=True,
+                memory_updated=True,
+                memory_sequence_before=memory_sequence_before,
+                memory_sequence_after=memory_seq,
+                error=None,
+            )
+        time.sleep(_DREAMING_POLL_SEC)
+    return DreamingConsolidationResult(
+        checkpoint_present=_dreaming_checkpoint_present(
+            repo_root, config_path, user_id=user_id, agent_id=agent_id
+        ),
+        memory_updated=last_memory_seq > memory_sequence_before,
+        memory_sequence_before=memory_sequence_before,
+        memory_sequence_after=last_memory_seq,
+        error=(
+            f"no dreaming MEMORY.md update within {wait_sec}s "
+            f"(memory_sequence_before={memory_sequence_before}, "
+            f"memory_sequence_after={last_memory_seq})"
+        ),
+    )
 
 
 def _is_inner_tick_proactive(meta: dict[str, Any]) -> bool:
@@ -1161,10 +1550,13 @@ def run_regression(
     user_id: str,
     bootstrap_turns: tuple[str, ...],
     bootstrap_finish_turn: str,
+    experience_profile_turn: str,
+    experience_profile_context_mode: str,
     settled_turn: str,
     proactive_wait_sec: float,
     proactive_min_rounds: int,
     proactive_target_rounds: int,
+    dreaming_wait_sec: float,
     report_path: Path,
     token_path: str,
     stderr: TextIO,
@@ -1189,6 +1581,10 @@ def run_regression(
         "proactive": [],
         "errors": [],
         "github_issue": {},
+        "greeting": {},
+        "bootstrap_memdocs": {},
+        "experience_profile": {},
+        "dreaming": {},
     }
     print(f"{_TAG} agent_id={agent_id}", flush=True)
     run_started_at_utc = datetime.now(timezone.utc)
@@ -1201,18 +1597,71 @@ def run_regression(
         False,
         "skipped: regression did not reach github_issue phase",
     )
+    greeting_result = ImplicitSignOnGreetingResult(
+        present=False,
+        source_greeting=False,
+        text_preview="",
+        langsmith_trace_id="",
+    )
+    memdoc_result = BootstrapMemDocResult(
+        user_customized=False,
+        identity_customized=False,
+        style_customized=False,
+        soul_unchanged=False,
+        memory_unchanged=False,
+        user_sequence_id=0,
+        identity_sequence_id=0,
+        style_sequence_id=0,
+        memory_sequence_id=0,
+        errors=("skipped: regression did not reach bootstrap memdoc phase",),
+    )
+    experience_profile_ok = False
+    dreaming_result = DreamingConsolidationResult(
+        checkpoint_present=False,
+        memory_updated=False,
+        memory_sequence_before=0,
+        memory_sequence_after=0,
+        error="skipped: regression did not reach dreaming phase",
+    )
     bridge.start(connect_timeout=45.0)
     try:
         print(f"{_TAG} waiting for implicit greeting...", flush=True)
+        greeting_turns: list[dict[str, Any]] = []
         for text, meta in _drain_until_quiet(
             bridge, quiet_sec=3.0, max_sec=_TURN_REPLY_TIMEOUT_SEC
         ):
-            report["turns"].append(
-                {"kind": "greeting", "text_preview": text[:120], "meta": meta}
+            turn_row = {
+                "kind": "greeting",
+                "text_preview": text[:120],
+                "meta": meta,
+            }
+            greeting_turns.append(turn_row)
+            report["turns"].append(turn_row)
+            print(
+                f"{_TAG} greeting text={text[:80]!r} source={meta.get('source')!r} "
+                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                flush=True,
+            )
+        greeting_result = _verify_implicit_sign_on_greeting(greeting_turns)
+        report["greeting"] = {
+            "present": greeting_result.present,
+            "source_greeting": greeting_result.source_greeting,
+            "text_preview": greeting_result.text_preview,
+            "langsmith_trace_id": greeting_result.langsmith_trace_id,
+        }
+        if not greeting_result.present:
+            report["errors"].append(
+                {
+                    "turn": "implicit_sign_on_greeting",
+                    "error": (
+                        404,
+                        "no non-empty WS downlink with meta_data.source=greeting",
+                    ),
+                }
             )
             print(
-                f"{_TAG} greeting text={text[:80]!r} "
-                f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                f"{_TAG} ERROR implicit_sign_on_greeting missing",
+                file=stderr,
                 flush=True,
             )
 
@@ -1281,6 +1730,112 @@ def run_regression(
             report["errors"].append(
                 {"turn": "pre-settled", "error": (408, "input queue not idle")}
             )
+        else:
+            memdoc_result = _verify_bootstrap_memdocs(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+            )
+            report["bootstrap_memdocs"] = {
+                "user_customized": memdoc_result.user_customized,
+                "identity_customized": memdoc_result.identity_customized,
+                "style_customized": memdoc_result.style_customized,
+                "soul_unchanged": memdoc_result.soul_unchanged,
+                "memory_unchanged": memdoc_result.memory_unchanged,
+                "user_sequence_id": memdoc_result.user_sequence_id,
+                "identity_sequence_id": memdoc_result.identity_sequence_id,
+                "style_sequence_id": memdoc_result.style_sequence_id,
+                "memory_sequence_id": memdoc_result.memory_sequence_id,
+                "errors": list(memdoc_result.errors),
+            }
+            if memdoc_result.errors:
+                report["errors"].append(
+                    {
+                        "turn": "bootstrap_memdocs",
+                        "error": (422, "; ".join(memdoc_result.errors)),
+                    }
+                )
+                print(
+                    f"{_TAG} ERROR bootstrap_memdocs: {memdoc_result.errors}",
+                    file=stderr,
+                    flush=True,
+                )
+            else:
+                print(
+                    f"{_TAG} bootstrap_memdocs ok "
+                    f"user_seq={memdoc_result.user_sequence_id} "
+                    f"identity_seq={memdoc_result.identity_sequence_id} "
+                    f"style_seq={memdoc_result.style_sequence_id}",
+                    flush=True,
+                )
+
+            print(
+                f"{_TAG} experience_profile turn: {experience_profile_turn!r}",
+                flush=True,
+            )
+            _send_turn(bridge, agent_id, experience_profile_turn)
+            text, meta, err = _wait_downlink(
+                bridge,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label="experience_profile",
+            )
+            if err is not None:
+                report["errors"].append(
+                    {"turn": "experience_profile", "error": err}
+                )
+                print(
+                    f"{_TAG} ERROR experience_profile: {err}",
+                    file=stderr,
+                    flush=True,
+                )
+            else:
+                assert text is not None
+                report["turns"].append(
+                    {
+                        "kind": "experience_profile",
+                        "user": experience_profile_turn,
+                        "text_preview": text[:120],
+                        "meta": meta,
+                    }
+                )
+                print(
+                    f"{_TAG} experience_profile reply={text[:80]!r} "
+                    f"context_mode={meta.get('context_mode')}",
+                    flush=True,
+                )
+            _drain_turn_trailing_frames(
+                bridge, report, label="experience_profile"
+            )
+            experience_profile_ok = _poll_context_mode(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+                expected=experience_profile_context_mode,
+                timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
+                stderr=stderr,
+            )
+            report["experience_profile"] = {
+                "expected_context_mode": experience_profile_context_mode,
+                "matched": experience_profile_ok,
+                "actual_context_mode": _query_context_mode(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                ),
+            }
+            if not experience_profile_ok:
+                report["errors"].append(
+                    {
+                        "turn": "experience_profile",
+                        "error": (
+                            422,
+                            f"context_mode != {experience_profile_context_mode!r}",
+                        ),
+                    }
+                )
 
         for text, meta in _drain_until_quiet(
             bridge,
@@ -1447,6 +2002,49 @@ def run_regression(
                         text=text,
                         meta=meta,
                     )
+
+            memory_seq_before_dreaming = memdoc_result.memory_sequence_id
+            if memory_seq_before_dreaming <= 0:
+                memory_doc = _query_latest_memdoc_version(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    document_kind="memory",
+                )
+                memory_seq_before_dreaming = (
+                    memory_doc.sequence_id if memory_doc else 0
+                )
+            print(
+                f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
+                f"(scope worker; dreaming_idle_seconds=10 in config)...",
+                flush=True,
+            )
+            dreaming_result = _wait_dreaming_consolidation(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+                memory_sequence_before=memory_seq_before_dreaming,
+                wait_sec=dreaming_wait_sec,
+                stderr=stderr,
+            )
+            report["dreaming"] = {
+                "checkpoint_present": dreaming_result.checkpoint_present,
+                "memory_updated": dreaming_result.memory_updated,
+                "memory_sequence_before": dreaming_result.memory_sequence_before,
+                "memory_sequence_after": dreaming_result.memory_sequence_after,
+                "error": dreaming_result.error,
+            }
+            if dreaming_result.error:
+                report["errors"].append(
+                    {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                )
+                print(
+                    f"{_TAG} ERROR dreaming: {dreaming_result.error}",
+                    file=stderr,
+                    flush=True,
+                )
     finally:
         bridge.stop()
 
@@ -1558,6 +2156,16 @@ LIMIT 8;
     summary = {
         "bootstrap": "complete" if bootstrap_done == "true" else "incomplete",
         "context_mode": context_mode,
+        "implicit_sign_on_greeting": (
+            "pass" if greeting_result.present else "fail"
+        ),
+        "bootstrap_memdocs": (
+            "pass" if not memdoc_result.errors else "fail"
+        ),
+        "experience_profile": "pass" if experience_profile_ok else "fail",
+        "dreaming_consolidation": (
+            "pass" if dreaming_result.error is None else "fail"
+        ),
         "settled_queue_turn": "pass" if settled_ok and not report["errors"] else "fail",
         "github_issue_e2e": "pass" if github_issue_ok else "fail",
         "github_issue_disclosed_in_chat": (
@@ -1595,10 +2203,14 @@ LIMIT 8;
         and in_all_delivered
         and out_all_delivered
         and bootstrap_done == "true"
+        and greeting_result.present
+        and not memdoc_result.errors
+        and experience_profile_ok
         and proactive_present
         and proactive_silent_ok
         and github_issue_ok
         and github_disclosure_ok
+        and dreaming_result.error is None
     )
     return 0 if passed else 1
 
@@ -1673,6 +2285,15 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Stretch proactive round count for summary only (default "
             f"{_DEFAULT_PROACTIVE_TARGET_ROUNDS}; does not fail the run)"
+        ),
+    )
+    p.add_argument(
+        "--dreaming-wait-sec",
+        type=float,
+        default=_DEFAULT_DREAMING_WAIT_SEC,
+        help=(
+            "Seconds to poll for scope-worker dreaming + MEMORY.md update after proactive "
+            f"(default {_DEFAULT_DREAMING_WAIT_SEC:g}; pairs with dreaming_idle_seconds=10)"
         ),
     )
     p.add_argument(
@@ -1754,6 +2375,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    dreaming_wait = float(args.dreaming_wait_sec)
+    if dreaming_wait < 0:
+        print("error: --dreaming-wait-sec must be >= 0", file=sys.stderr)
+        return 2
 
     return run_regression(
         repo_root=repo_root,
@@ -1763,10 +2388,13 @@ def main(argv: list[str] | None = None) -> int:
         user_id=str(args.user_id).strip(),
         bootstrap_turns=_DEFAULT_BOOTSTRAP_TURNS,
         bootstrap_finish_turn=_DEFAULT_BOOTSTRAP_FINISH_TURN,
+        experience_profile_turn=_DEFAULT_EXPERIENCE_PROFILE_TURN,
+        experience_profile_context_mode=_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE,
         settled_turn=_DEFAULT_SETTLED_TURN,
         proactive_wait_sec=proactive_wait,
         proactive_min_rounds=proactive_min_rounds,
         proactive_target_rounds=proactive_target_rounds,
+        dreaming_wait_sec=dreaming_wait,
         report_path=report_path,
         token_path=str(args.token_file).strip(),
         stderr=sys.stderr,
