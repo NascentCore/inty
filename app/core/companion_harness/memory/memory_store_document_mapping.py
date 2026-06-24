@@ -97,6 +97,7 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     "context.json": (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
+    # TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md (with migration). — #3400
     "ai_private.md": (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MONOLOG)—not LIFE_CURRENTS virtual-world activity.
     # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
