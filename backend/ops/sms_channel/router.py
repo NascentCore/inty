@@ -7,14 +7,9 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Request, Response
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.twilio_sms import (
     parse_inbound_sms_form,
     twilio_empty_response_body,
-)
-from app.utils.config import (
-    resolved_sms_from_number,
-    resolved_twilio_messaging_credentials,
 )
 from backend.ops.sms_channel.lifecycle import get_sms_transport
 
@@ -27,24 +22,17 @@ async def twilio_inbound(request: Request) -> Response:
     transport = get_sms_transport()
     if transport is None:
         raise HTTPException(status_code=503, detail="SMS gateway is not configured")
-    account_sid, auth_token = resolved_twilio_messaging_credentials(
-        global_config_loaded_from_config_yaml
-    )
-    from_number = resolved_sms_from_number(
-        global_config_loaded_from_config_yaml.agent
-    )
-    if not account_sid or not auth_token or not from_number:
-        raise HTTPException(status_code=503, detail="SMS gateway is not configured")
-    from app.external_services.twilio_sms import TwilioSmsApi
-
-    api = TwilioSmsApi(account_sid=account_sid, auth_token=auth_token)
-    webhook_url = str(request.url.replace(query=""))
-    if not await api.validate_webhook(request=request, webhook_url=webhook_url):
-        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
     form = await request.form()
-    inbound = parse_inbound_sms_form(
-        {key: str(value) for key, value in form.items()}
-    )
+    params = {key: str(value) for key, value in form.items()}
+    webhook_url = str(request.url.replace(query=""))
+    signature = request.headers.get("X-Twilio-Signature", "")
+    if not transport.api.validate_webhook_signature(
+        webhook_url=webhook_url,
+        params=params,
+        signature=signature,
+    ):
+        raise HTTPException(status_code=403, detail="Invalid Twilio signature")
+    inbound = parse_inbound_sms_form(params)
 
     async def _process() -> None:
         try:

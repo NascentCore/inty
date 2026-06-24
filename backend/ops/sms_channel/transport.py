@@ -33,12 +33,10 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
 )
-from app.core.companion_harness.companion.utc import (
-    strip_leading_transcript_timestamp_prefixes,
-)
-from app.services.agentic_channel.serving import flush_scope_output_queue_ready
-from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 from app.services.agentic_channel.gateways.sms.adapter import SmsGatewayAdapter
+from app.services.agentic_channel.gateways.sms.sign_on_delivery import (
+    flush_sign_on_greeting_to_sms_downlink,
+)
 from app.services.agentic_channel.presence import ensure_presence, get_presence
 from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
@@ -64,6 +62,7 @@ _BOND_UNAVAILABLE = (
     "Please try again later or contact support."
 )
 _STOP_CONFIRMATION = "You have been unsubscribed from SMS. Text START to reconnect."
+# TODO(sms-proactive-cap): Add daily cap + quiet hours before prod SMS proactive rollout.
 
 
 class SmsTransport:
@@ -79,6 +78,10 @@ class SmsTransport:
         assert from_number != ""
         self._api = api
         self._from_number = from_number
+
+    @property
+    def api(self) -> TwilioSmsApi:
+        return self._api
 
     async def handle_inbound(self, inbound: TwilioInboundSms) -> None:
         """Process one inbound SMS asynchronously after webhook ACK."""
@@ -167,6 +170,9 @@ class SmsTransport:
                 text=_STOP_CONFIRMATION,
             )
             return
+        presence = get_presence(scope)
+        if presence is not None:
+            await presence.stop()
         await turn_channel_down(scope, ChannelKind.SMS, reason="sms_stop")
         await self._send_platform_sms(
             to_number=inbound.from_e164,
@@ -277,35 +283,14 @@ class SmsTransport:
         )
         try:
             await presence.greet_on_sign_on(runtime_channel=ChannelKind.SMS)
-
-            async def _deliver_sms_ready(message) -> None:
-                text = strip_leading_transcript_timestamp_prefixes(
-                    message.text.strip()
-                )
-                if not text:
-                    return
-                downlink = SmsGatewayAdapter(
-                    api=self._api,
-                    from_number=self._from_number,
-                    to_number=inbound.from_e164,
-                ).as_downlink()
-                await downlink.deliver(
-                    Downlink(
-                        kind=DownlinkKind.USER_REPLY,
-                        assistant_text=text,
-                        turn=None,
-                        tool_output=None,
-                        bootstrap_interim=None,
-                        scheduled_task_id=None,
-                        transcript_user_text=None,
-                        message_ids=message.message_ids,
-                        output_message=message,
-                    )
-                )
-
-            await flush_scope_output_queue_ready(
-                provision.scope,
-                deliver_message=_deliver_sms_ready,
+            adapter = SmsGatewayAdapter(
+                api=self._api,
+                from_number=self._from_number,
+                to_number=inbound.from_e164,
+            )
+            await flush_sign_on_greeting_to_sms_downlink(
+                scope=provision.scope,
+                downlink=adapter.as_downlink(),
             )
         except Exception:
             logger.exception(

@@ -3,6 +3,7 @@
 Generated entirely by Cursor agent.
 
 New gateways add rows here instead of scattering match arms across companion modules.
+TODO(cross-channel-consistent-identity): #3491 — route onboard traits through shared identity service.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ def guest_agent_name_for_gateway(*, gateway: GatewayKind, tag: str) -> str:
     """Channel-specific PRIVATE agent display name."""
     assert tag != ""
     match gateway:
-        case GatewayKind.AGENT_CHANNEL:
+        case GatewayKind.APP_WS:
             return f"agent-channel-{tag}"
         case GatewayKind.TELEGRAM:
             return f"telegram-{tag}"
@@ -45,6 +46,8 @@ def guest_agent_name_for_gateway(*, gateway: GatewayKind, tag: str) -> str:
             return f"weixin-companion-{tag}"
         case GatewayKind.SMS:
             return f"sms-{tag}"
+        case _:
+            raise AssertionError(f"unsupported gateway: {gateway!r}")
 
 
 def harness_output_format_slice(

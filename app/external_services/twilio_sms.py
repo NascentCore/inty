@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 from urllib.parse import urlencode
 
-from fastapi import Request
+from pydantic import BaseModel, ConfigDict, Field
 
 RequestValidatorFactory = Callable[..., Any]
 RestClientFactory = Callable[..., Any]
@@ -17,7 +17,7 @@ RestClientFactory = Callable[..., Any]
 
 @dataclass(frozen=True)
 class TwilioInboundSms:
-    """One inbound SMS webhook payload from Twilio."""
+    """Normalized inbound SMS after Twilio webhook validation."""
 
     from_e164: str
     to_e164: str
@@ -31,6 +31,20 @@ class TwilioSmsSendResult:
 
     sid: str
     status: str
+
+
+class TwilioInboundSmsForm(BaseModel):
+    """Twilio ``application/x-www-form-urlencoded`` inbound SMS fields."""
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    from_e164: str = Field(validation_alias="From", description="Sender E.164")
+    to_e164: str = Field(validation_alias="To", description="Long code E.164")
+    body: str = Field(default="", validation_alias="Body", description="SMS body")
+    message_sid: str = Field(
+        validation_alias="MessageSid",
+        description="Twilio message sid",
+    )
 
 
 class TwilioSmsApi:
@@ -72,13 +86,17 @@ class TwilioSmsApi:
             status=str(message.status),
         )
 
-    async def validate_webhook(self, *, request: Request, webhook_url: str) -> bool:
+    def validate_webhook_signature(
+        self,
+        *,
+        webhook_url: str,
+        params: dict[str, str],
+        signature: str,
+    ) -> bool:
+        """Return whether ``signature`` matches Twilio webhook params."""
         assert webhook_url != ""
-        signature = request.headers.get("X-Twilio-Signature", "")
         if signature == "":
             return False
-        form = await request.form()
-        params = {key: str(value) for key, value in form.items()}
         validator = self._request_validator(self._auth_token)
         return bool(validator.validate(webhook_url, params, signature))
 
@@ -97,20 +115,17 @@ class TwilioSmsApi:
         return RequestValidator(auth_token)
 
 
-def parse_inbound_sms_form(form: dict[str, str]) -> TwilioInboundSms:
-    """Parse Twilio ``application/x-www-form-urlencoded`` inbound fields."""
-    from_e164 = form.get("From", "")
-    to_e164 = form.get("To", "")
-    body = form.get("Body", "")
-    message_sid = form.get("MessageSid", "")
-    assert from_e164 != ""
-    assert to_e164 != ""
-    assert message_sid != ""
+def parse_inbound_sms_form(params: dict[str, str]) -> TwilioInboundSms:
+    """Parse Twilio inbound webhook form fields."""
+    form = TwilioInboundSmsForm.model_validate(params)
+    assert form.from_e164 != ""
+    assert form.to_e164 != ""
+    assert form.message_sid != ""
     return TwilioInboundSms(
-        from_e164=from_e164,
-        to_e164=to_e164,
-        body=body,
-        message_sid=message_sid,
+        from_e164=form.from_e164,
+        to_e164=form.to_e164,
+        body=form.body,
+        message_sid=form.message_sid,
     )
 
 

@@ -33,3 +33,15 @@ def test_harness_output_format_slice_sms_is_empty() -> None:
         )
         == ""
     )
+
+
+def test_guest_agent_name_for_sms_gateway() -> None:
+    from app.core.companion_harness.agent_channel.gateway import GatewayKind
+    from app.core.companion_harness.agent_channel.gateway_traits import (
+        guest_agent_name_for_gateway,
+    )
+
+    assert guest_agent_name_for_gateway(
+        gateway=GatewayKind.SMS,
+        tag="abc123",
+    ) == "sms-abc123"

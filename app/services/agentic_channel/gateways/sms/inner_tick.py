@@ -1,6 +1,9 @@
 """SMS inner-tick delivery wiring for the gateway adapter.
 
 Generated entirely by Cursor agent.
+
+TODO(sms-plain-text-sink): Rename ``InnerTickDelivery.telegram_assistant_text`` to a
+gateway-neutral plain-text sink when #3576/general gateway traits land.
 """
 
 from __future__ import annotations

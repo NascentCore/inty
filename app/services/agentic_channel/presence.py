@@ -157,12 +157,16 @@ class AgentChannelPresence:
             self._tool_background_consumer(),
             name=f"agent_channel_tool_bg_{self._scope.agent_id}",
         )
+        registry = get_scope_channel_registry(self._scope)
+        initial_channel = registry.active_channel()
+        if initial_channel is None:
+            initial_channel = ChannelKind.APP_WS
         self._queue_serving = ScopeQueueServing(
             self._scope,
             background_output_sink=self._coordinator.background_sink,
             deliver_message=self._deliver_ready_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
-            runtime_channel=ChannelKind.TELEGRAM,
+            runtime_channel=initial_channel,
         )
         await self._queue_serving.start()
 
