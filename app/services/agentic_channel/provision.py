@@ -48,6 +48,21 @@ from app.services.agentic_channel.errors import (
     integrity_error_detail,
 )
 from app.services.agentic_channel.session import ensure_memory_store_session
+from app.services.user_profile_persistence import (
+    seed_profile_collection_required_in_context,
+)
+
+
+def _guest_meta_data_for_channel(channel: ChannelKind) -> dict:
+    """Guest user meta_data payload for agent-channel onboard."""
+    base = {"agent_channel": True}
+    match channel:
+        case ChannelKind.TELEGRAM:
+            return {**base, "profile_collection_required": True}
+        case _:
+            return base
+
+
 from app.services.global_services import subscription_service
 
 
@@ -222,7 +237,7 @@ async def provision_agent_for_channel_onboard(
                 ProvisionGuestScopeInput(
                     kind=companion_guest_agent_kind_for_channel(channel),
                     nickname_prefix="Guest",
-                    meta_data={"agent_channel": True},
+                    meta_data=_guest_meta_data_for_channel(channel),
                 ),
             )
             pending_user_id = scope.user_id
@@ -276,7 +291,12 @@ async def provision_agent_for_channel_onboard(
         scope.user_id,
         scope.agent_id,
     )
-    await ensure_memory_store_session(scope)
+    session = await ensure_memory_store_session(scope)
+    if channel == ChannelKind.TELEGRAM:
+        seed_profile_collection_required_in_context(
+            session.store,
+            required=True,
+        )
     return ChannelProvisionResult(
         scope=scope,
         is_new_user=True,

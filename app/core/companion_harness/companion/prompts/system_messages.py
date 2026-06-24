@@ -4,16 +4,29 @@ This module is the prompt-stack contract for every companion turn track.  It doe
 not own transcript tail messages, runtime user-time slices, or tool execution;
 it only materializes the ordered system prefix consumed by model calls.
 
-**Stack order (fixed):** Doctrine → Capability → Persona → Output → Contextual.
+**Stack order (today's default compose sequence by content category):**
+Doctrine → Capability → Persona → Output → Contextual.
+Runtime organization (core / runtime / peripheral), persistence, and future
+reordering — see ``docs/imate/companion_harness/DESIGN.md``.
 
-**Doctrine (fixed package prompts):** product axiom → Inty ontology → safety.
+**Doctrine (content category; runtime org mostly core):** product axiom → Inty ontology → safety.
 Doctrine is loaded from package prompt seeds and is never writable through
 MemoryStore tools.
 
-**Capability (package + store):** harness innate limits (``HARNESS.md``) → channel
+**Capability (content category; runtime org mixed — #3341):** harness innate limits (``HARNESS.md``) → channel
 contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Static harness/tool seeds
 are package-authoritative today; TODO(static-prompt-slice-memstore): persist as — #3506
 non-mutable MemoryStore kinds (!3506). Mutable channel contract remains ``CHANNELS.md``.
+
+**Persona (content category; runtime org mostly core):** bond MemDocs, bootstrap procedure when phase active.
+
+**Output (content category; runtime org runtime):** turn output contracts.
+
+**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, etc.).
+
+**Track-attached (peripheral runtime org, after stack at track compose):** channel output format,
+Weixin alias (via ``prompt_builder``), Telegram cohort profile collection
+(``append_profile_collection_system_messages``).
 
 Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdown ``##`` headings.
 
@@ -71,6 +84,12 @@ from app.core.companion_harness.companion.bootstrap import (
     build_interactive_bootstrap_template_reference_parts,
     interactive_bootstrap_active,
     load_bootstrap_spec_text,
+    load_bootstrap_telegram_profile_slice_text,
+    profile_collection_active,
+)
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
+from app.core.companion_harness.memory.user_md_identity import (
+    build_cohort_profile_probe_hint,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
@@ -855,12 +874,52 @@ def build_system_messages(
     return out
 
 
+def append_profile_collection_system_messages(
+    system_messages: list[dict[str, Any]],
+    *,
+    context: ContextMeta,
+    runtime_channel: ChannelKind,
+    interactive_bootstrap_active: bool,
+    user_md: str,
+) -> list[dict[str, Any]]:
+    """Append peripheral growth-cohort bootstrap slices when profile collection is required on Telegram.
+
+    Runtime organization: peripheral (track-attached).
+
+    Paid-ad launch policy: static English overlay and optional runtime hint for
+    unfilled user profile identity labels. Gated by interactive bootstrap,
+    profile_collection_required, and Telegram channel. All other sessions receive
+    the input list unchanged.
+
+    TODO(bootstrap-cohort-overlays): #3463 proactive bootstrap should call this compositor — #3628.
+    """
+    if not interactive_bootstrap_active:
+        return system_messages
+    if not profile_collection_active(context=context):
+        return system_messages
+    if runtime_channel != ChannelKind.TELEGRAM:
+        return system_messages
+    out = [
+        *system_messages,
+        _system_message(load_bootstrap_telegram_profile_slice_text()),
+    ]
+    probe_hint = build_cohort_profile_probe_hint(user_md)
+    if probe_hint:
+        out.append(_system_message(probe_hint))
+    return out
+
+
 def build_system_messages_for_bootstrap_track(
     bundle: PromptBundle,
     context: ContextMeta,
+    runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
-    return build_system_messages(
+    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
+
+    TODO(bootstrap-cohort-overlays): Legacy path; share peripheral append with — #3628
+    ``PromptBuilder.bootstrap_turn_system_dicts`` when tracks unify.
+    """
+    out = build_system_messages(
         bundle,
         context,
         enable_tools=True,
@@ -871,6 +930,15 @@ def build_system_messages_for_bootstrap_track(
         tool_side_compact=False,
         interactive_bootstrap_active=True,
         include_significance_perception_slice=False,
+    )
+    return append_profile_collection_system_messages(
+        out,
+        context=context,
+        runtime_channel=runtime_channel,
+        interactive_bootstrap_active=(
+            not context.workspace_bootstrap_user_interactive_completed
+        ),
+        user_md=bundle.user_md,
     )
 
 
@@ -1050,17 +1118,26 @@ def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
     memory_bootstrap_type: str,
+    runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
-    return build_system_messages(
+    bootstrap_active = _greeting_omit_capability_system_slices(
+        context=context,
+        memory_bootstrap_type=memory_bootstrap_type,
+    )
+    out = build_system_messages(
         bundle,
         context,
         enable_tools=False,
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MAINTENANCE,
         include_significance_perception_slice=True,
-        interactive_bootstrap_active=_greeting_omit_capability_system_slices(
-            context=context,
-            memory_bootstrap_type=memory_bootstrap_type,
-        ),
+        interactive_bootstrap_active=bootstrap_active,
+    )
+    return append_profile_collection_system_messages(
+        out,
+        context=context,
+        runtime_channel=runtime_channel,
+        interactive_bootstrap_active=bootstrap_active,
+        user_md=bundle.user_md,
     )
