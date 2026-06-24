@@ -31,13 +31,13 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 ## Prereq
 
 - Repo root cwd.
-- Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.local` **`database`** 一致（**假定已配好，勿改密码**）。
-- Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（`INTY_CONFIG_YAML=devops/config.yaml.local`；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
-  - Start: `./backend/ops/start.sh --local --no-build-frontend`（仓库根、已激活 venv）。
+- Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.regression_tests` **`database`** 一致（**假定已配好，勿改密码**）。
+- Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（**回归专用** `INTY_CONFIG_YAML=devops/config.yaml.regression_tests`；`start.sh --local` **默认** `config.yaml.local`，回归前须 **export**；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
+  - Start: `export INTY_CONFIG_YAML=devops/config.yaml.regression_tests && ./backend/ops/start.sh --local --no-build-frontend`（仓库根、已激活 venv）。
   - **勿**给 uvicorn 加 `--reload`：文件变更触发的进程重启会断开 WS、打断 queue/proactive 等待，导致回归 flaky；`start.sh --local` 已不带 reload。
 - REPL environment sane — see [`examine-local-inty-repl-env`](../examine-local-inty-repl-env/SKILL.md).
 - Create a fresh bootstrap agent — see [`create-bootstrap-test-agent`](../create-bootstrap-test-agent/SKILL.md).
-- **GitHub issue phase (mandatory for pass):** `gh` CLI authenticated for `nascentcore/inty`; token in `devops/config.yaml.local` → `agent.companion_harness.user_feedback_github.token`, or `GH_TOKEN`.
+- **GitHub issue phase (mandatory for pass):** `gh` CLI authenticated for `nascentcore/inty`; token in `devops/config.yaml.regression_tests` → `agent.companion_harness.user_feedback_github.token`, or `GH_TOKEN`.
 
 ## Run
 
@@ -61,9 +61,9 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 ```
 
 - Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
-- When `app.debug: true` (local `config.yaml.local`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
+- When `app.debug: true` (regression `config.yaml.regression_tests`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
-- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.local`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Driver flags:
+- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.regression_tests`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Driver flags:
   - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
   - `--proactive-min-rounds` (**1** default): **pass gate** — at least this many proactive rounds (WS and/or DB)
   - `--proactive-target-rounds` (**2** default): stretch goal in summary only; **does not fail** the run

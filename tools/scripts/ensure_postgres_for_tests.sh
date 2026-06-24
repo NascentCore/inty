@@ -87,6 +87,6 @@ fi
 if [[ -f .venv/bin/python ]]; then
   export PYTHONPATH=.
   export ALEMBIC_CONFIG=backend/alembic/alembic.ini
-  export INTY_CONFIG_YAML=devops/config.yaml.test
+  export INTY_CONFIG_YAML=devops/config.yaml.test  # pytest/CI only — not regression_tests or local
   .venv/bin/python -m alembic upgrade head
 fi

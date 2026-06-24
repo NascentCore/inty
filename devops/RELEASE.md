@@ -122,7 +122,9 @@ sudo docker inspect --format '{{.Config.Image}}' inty-push-worker-{environment}
 
 - **开发环境**：`devops/config.yaml.dev`
 - **生产环境**：`devops/config.yaml.prod`
-- **CI 测试**：`devops/config.yaml.test`（仅用于 CI；本地/线上部署不应使用）
+- **CI / pytest 单元测试**：`devops/config.yaml.test`（faked 外部服务，不调用真实 LLM/GCS）
+- **REPL 回归 E2E**：`devops/config.yaml.regression_tests`（真实 LLM/GitHub；与 local 分离）
+- **工程师本地开发**：`devops/config.yaml.local`（本地/线上部署不应混用 test yaml）
 
 在 GitHub Actions 部署工作流中，通过 `CONFIG_FILE` build-arg 选择并注入配置：
 
