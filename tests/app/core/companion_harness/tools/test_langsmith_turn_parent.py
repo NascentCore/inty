@@ -215,7 +215,7 @@ def test_create_companion_turn_root_run_implicit_signed_on_lane(
     return_value=True,
 )
 @patch("langsmith.run_trees.RunTree")
-def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
+def test_create_companion_turn_root_run_inner_tick_monolog_lane(
     mock_rt_cls: MagicMock, _en: MagicMock
 ) -> None:
     mock_root = MagicMock()
@@ -228,14 +228,14 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         user_id="u1",
         companion_id="a1",
         inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         transcript_newest_message_uuid="tail-uuid-1",
         langsmith_slice=_APP_SLICE,
     )
     kwargs = mock_rt_cls.call_args.kwargs
     assert (
         kwargs["name"]
-        == "agentic_companion_inner_tick maintenance user=u1 agent=a1"
+        == "agentic_companion_inner_tick monolog user=u1 agent=a1"
     )
     assert kwargs["tags"] == [
         "agentic_companion",
@@ -243,10 +243,10 @@ def test_create_companion_turn_root_run_inner_tick_maintenance_lane(
         "runtime_channel_app_ws",
     ]
     assert kwargs["inputs"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["inputs"]["inner_tick_activity"] == "maintenance"
+    assert kwargs["inputs"]["inner_tick_activity"] == "monolog"
     assert kwargs["inputs"]["transcript_newest_message_uuid"] == "tail-uuid-1"
     assert kwargs["extra"]["metadata"]["inty_turn_lane"] == "inner_tick"
-    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "maintenance"
+    assert kwargs["extra"]["metadata"]["inner_tick_activity"] == "monolog"
     assert (
         kwargs["extra"]["metadata"]["transcript_newest_message_uuid"]
         == "tail-uuid-1"

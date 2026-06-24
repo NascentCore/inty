@@ -148,7 +148,7 @@ def _companion_turn_langsmith_root_descriptor(
     cid = (companion_id or "").strip() or "unknown"
     extra_in: dict[str, Any] = {}
     if inner_tick_turn:
-        mode = inner_tick_activity or InnerTickActivity.MAINTENANCE
+        mode = inner_tick_activity or InnerTickActivity.MONOLOG
         lane = "inner_tick"
         extra_in["inner_tick_activity"] = mode.value
         name = (
@@ -188,6 +188,10 @@ def create_companion_turn_root_run(
     transcript_newest_message_uuid: str | None = None,
     langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> Any | None:
+    """Create LangSmith parent RunTree for one companion turn (TurnOrchestrator layer).
+
+    TODO(!3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
+    """
     enabled = (
         companion_turn_langsmith_parent_enabled()
         if parent_run_enabled is None

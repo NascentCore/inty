@@ -7,7 +7,7 @@ user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
 Each poll wake tries at most one activity, in priority order: proactive → scheduled.
 
-Scope tracks (maintenance, autonomy, dreaming) run on ``scope_inner_tick_poll`` (#3255).
+Scope tracks (monolog, autonomy, dreaming) run on ``scope_inner_tick_poll`` (#3255).
 
 TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
 be skipped when proactive fires) — product decision #3273

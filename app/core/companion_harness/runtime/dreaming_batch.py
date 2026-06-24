@@ -6,6 +6,8 @@ Generated entirely by Cursor agent for Phase 3.4 runtime seam slice.
 (``companion_chat_service``, inner-tick fire) resolve ``CompanionSession`` and
 hold ``turn_lock`` before calling here. See ``runtime`` package docstring for the
 lock contract.
+
+TODO(!3634): Future persona PromptPlan + AgenticLoop entry for dreaming consolidation.
 """
 
 from __future__ import annotations

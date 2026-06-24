@@ -4,6 +4,8 @@ Extracted from turn.run_turn ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL for reuse by
 the production AgenticLoop. Does not start tool_background; caller passes
 tool_msgs_for_bg into run_tool_background_loop or start_tool_background_job.
 
+TODO(!3630): Build langsmith_extra via LlmInvocationContext instead of langsmith_slice helpers here.
+TODO(!3632): Callers should prefer inline run_tool_background_loop via AgenticLoop only.
 """
 
 from __future__ import annotations
@@ -81,7 +83,7 @@ class DualLlmForegroundChatResult:
 async def run_dual_llm_foreground_chat(
     fg_input: DualLlmForegroundChatInput,
 ) -> DualLlmForegroundChatResult:
-    """Run foreground dual-LLM envelope chat or skip (maintenance inner tick).
+    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
 
     When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
     ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,

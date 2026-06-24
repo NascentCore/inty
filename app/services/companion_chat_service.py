@@ -598,7 +598,7 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     )
 
 
-async def run_companion_inner_tick_maintenance_turn_for_api(
+async def run_companion_inner_tick_monolog_turn_for_api(
     *,
     user_id: str,
     agent_id: str,
@@ -611,14 +611,14 @@ async def run_companion_inner_tick_maintenance_turn_for_api(
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
-        track_path="inner_tick_maintenance",
+        track_path="inner_tick_monolog",
         user_id=user_id,
         agent_id=agent_id,
         chat_id=chat_id,
         resolved_chat_model=resolved_chat_model,
         user_chars=0,
         session_id=session_id,
-        run_track=lambda manager, session: manager.run_inner_tick_maintenance_turn(
+        run_track=lambda manager, session: manager.run_inner_tick_monolog_turn(
             session,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
@@ -675,7 +675,7 @@ async def run_companion_chat_turn_for_api(
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MAINTENANCE,
+    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
 ) -> CompanionTurnResult:
     """Legacy delegator; WebSocket handlers should call track-specific APIs."""
@@ -698,8 +698,8 @@ async def run_companion_chat_turn_for_api(
                         **common,
                     )
                 )
-            case InnerTickActivity.MAINTENANCE:
-                return await run_companion_inner_tick_maintenance_turn_for_api(
+            case InnerTickActivity.MONOLOG:
+                return await run_companion_inner_tick_monolog_turn_for_api(
                     **common,
                 )
             case InnerTickActivity.AUTONOMY:

@@ -328,7 +328,7 @@ async def run_bootstrap_track_sync_tool_loop(
             store=store,
             memory_bootstrap_type=memory_bootstrap_type,
             inner_tick_turn=False,
-            inner_tick_activity=InnerTickActivity.MAINTENANCE,
+            inner_tick_activity=InnerTickActivity.MONOLOG,
             messages=messages_with_tool_results,
             track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         )

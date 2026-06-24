@@ -1,10 +1,10 @@
-"""Maintenance and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
+"""Monolog and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
 
-``AUTONOMY`` reuses the same wait gate as maintenance but throttles via coordinator
+``AUTONOMY`` reuses the same wait gate as monolog but throttles via coordinator
 ``last_autonomy_*`` fields (see ``try_fire_autonomy_inner_tick``).
 
 WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``;
-the unified WS worker fires proactive / scheduled / autonomy / maintenance
+the unified WS worker fires proactive / scheduled / autonomy / monolog
 on ``agent.companion_harness.inner_tick.proactive_chat.poll_seconds``.
 
 See ``docs/imate/companion_harness/DESIGN.md`` for scheduling semantics and transport boundaries.
@@ -24,8 +24,6 @@ from .models import (
     load_transcript_projection_from_store,
     transcript_without_trailing_presence_signals,
 )
-
-REPL_IDLE_MAX_SLEEP_CHUNK_SEC = 3600.0
 
 _DISABLED_INNER_TICK_WAIT_SEC = 86400.0 * 365.0
 
@@ -80,8 +78,8 @@ def inner_tick_min_gap_seconds() -> float:
     )
 
 
-def _maintenance_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
-    """``transcript.jsonl`` rows with trailing presence user lines stripped (maintenance gate view)."""
+def _monolog_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
+    """``transcript.jsonl`` rows with trailing presence user lines stripped (monolog gate view)."""
     return transcript_without_trailing_presence_signals(
         load_transcript_projection_from_store(
             store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
@@ -89,19 +87,19 @@ def _maintenance_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
     )
 
 
-def maintenance_transcript_line_count(store: MemoryStore) -> int:
-    """Line count for ``transcript.jsonl`` (presence tail stripped), for maintenance skip."""
-    return len(_maintenance_transcript_messages(store))
+def monolog_transcript_line_count(store: MemoryStore) -> int:
+    """Line count for ``transcript.jsonl`` (presence tail stripped), for monolog skip."""
+    return len(_monolog_transcript_messages(store))
 
 
 def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
-    """``uuid`` of the last ``transcript.jsonl`` row in the maintenance gate view.
+    """``uuid`` of the last ``transcript.jsonl`` row in the monolog gate view.
 
-    Maintenance turns persist to ``transcript_inner_tick.jsonl``
-    (TODO(rename-memory-doc): ``transcript_inner_tick_maintenance.jsonl``); this reflects main-track — #3400
+    Monolog turns persist to ``transcript_inner_tick.jsonl``
+    (TODO(rename-memory-doc): ``transcript_inner_tick_monolog.jsonl``); this reflects main-track — #3400
     state only (same source as ``next_inner_tick_wait_seconds``).
     """
-    msgs = _maintenance_transcript_messages(store)
+    msgs = _monolog_transcript_messages(store)
     if not msgs:
         return None
     tail_uuid = msgs[-1].uuid
@@ -114,7 +112,7 @@ def next_inner_tick_wait_seconds(
     store: MemoryStore,
     *,
     last_inner_fire_monotonic: float | None,
-    last_maintenance_transcript_line_count: int | None,
+    last_monolog_transcript_line_count: int | None,
     now_monotonic: float | None = None,
     overrides: InnerTickScheduleOverrides | None = None,
 ) -> float:
@@ -130,10 +128,10 @@ def next_inner_tick_wait_seconds(
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     now = now_monotonic if now_monotonic is not None else time.monotonic()
-    msgs = _maintenance_transcript_messages(store)
+    msgs = _monolog_transcript_messages(store)
     line_count = len(msgs)
-    if last_maintenance_transcript_line_count is not None:
-        if line_count <= last_maintenance_transcript_line_count:
+    if last_monolog_transcript_line_count is not None:
+        if line_count <= last_monolog_transcript_line_count:
             return _DISABLED_INNER_TICK_WAIT_SEC
 
     if overrides is not None and overrides.min_transcript_msgs is not None:

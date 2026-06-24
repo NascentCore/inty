@@ -15,6 +15,7 @@ TAG_TO_ISSUE: dict[str, int] = {
     "tool-bg-idle-starves-user-chat": 3123,
     "rename-memory-doc": 3400,
     "narrow-maintenance": 3375,
+    "narrow-monolog": 3375,
     "companion-session-eviction": 3444,
     "memdoc-path-constants": 3413,
     "companion-channel-tools": 3362,
@@ -48,11 +49,19 @@ TAG_TO_ISSUE: dict[str, int] = {
     "ai-private-persist-atomic": 3375,
     "user-feature": 3325,
     "abstraction": 3453,
+    "prompt-plan-e2e": 3629,
+    "langsmith-invocation-context": 3630,
+    "tool-bg-async-client": 3631,
+    "tool-bg-inline-agentic-loop": 3632,
+    "langsmith-parent-run-orchestrator": 3633,
+    "dreaming-agentic-loop": 3634,
     "structural-simplicity": 3516,
     "structual-simplicity": 3516,
     "code-consistency": 3413,
     "crs-persona-slice-registry": 3341,
     "experience-profile": 3343,
+    "bootstrap-cohort-overlays": 3628,
+    "track-compose-unify": 3398,
 }
 
 ROOTS = (

@@ -10,6 +10,9 @@ https://github.com/NascentCore/inty/issues/3398
 TODO(!3453): Named-slot system slices should use declarative templates instead
 of imperative assembly.
 https://github.com/NascentCore/inty/issues/3453
+
+TODO(!3629): PromptPlan end-to-end; OpenAI wire conversion only in AsyncLlmClient.
+https://github.com/NascentCore/inty/issues/3629
 """
 
 from __future__ import annotations

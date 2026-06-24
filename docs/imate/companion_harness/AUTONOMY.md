@@ -10,35 +10,35 @@
 
 ## Inner-tick poll（五 activity）
 
-每次 poll 至多触发一个（优先级：`proactive → scheduled → autonomy → maintenance → dreaming`）。
+每次 poll 至多触发一个（优先级：`proactive → scheduled → autonomy → monolog → dreaming`）。
 
 | Activity | 机制 | 用户可见？ | 职责（一句话） |
 |----------|------|------------|----------------|
 | `PROACTIVE_CHAT` | 合成 turn | 是 | 主动找用户说话 |
 | `SCHEDULED` | 合成 turn | 是 | `schedule_task` 到期提醒 |
 | **`AUTONOMY`** | 合成 turn | **否**（proactive 可间接引用） | 读/写 `LIFE_CURRENTS.md`，开放 tools **真的去做** |
-| `MAINTENANCE` | 合成 turn | **否**（纯 monolog A：foreground 空，无 WS 下行） | awake 内向独白 append ``ai_private.jsonl`` + 可选 ``transcript_inner_tick`` 场景拍 |
+| `MONOLOG` | 合成 turn | **否**（纯 monolog A：foreground 空，无 WS 下行） | awake 内向独白 append ``ai_private.jsonl`` + 可选 ``transcript_inner_tick`` 场景拍 |
 | `DREAMING` | memory batch | 否 | sleeping **当日汇总**：把一整天发生的事沉淀进 MemoryDoc（非 turn） |
 
 **分工（收窄完成后）**：
 
 - `AUTONOMY`：虚拟空间/环境中的**自主活动**（`LIFE_CURRENTS.md`、联网、生图、LS/TC 事件）。
-- `MAINTENANCE`：对用户与关系的**内在心理独白**（``ai_private.jsonl`` append via ``ai_private_append``、场景下一拍、`transcript_inner_tick`）——**不是** MemoryDoc 策展；**不向用户投递可见正文**。
+- `MONOLOG`：对用户与关系的**内在心理独白**（``ai_private.jsonl`` append via ``ai_private_append``、场景下一拍、`transcript_inner_tick`）——**不是** MemoryDoc 策展；**不向用户投递可见正文**。
 - `USER_CHAT` / `PROACTIVE_CHAT`：**读侧** tail-splice 未 surfaced 的 ``ai_private`` 独白（manifest 索引行持久化在 ``transcript.jsonl``，hydrate 供后续轮与 DREAMING）。
-- `DREAMING`：**汇总当日全部经历**——用户可见对话（`USER_CHAT`、`PROACTIVE_CHAT`、`SCHEDULED`，`transcript.jsonl`）与沉默 awake 轨（`AUTONOMY`、`MAINTENANCE`：`transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md`、`ai_private.jsonl`、相关 tool/jsonl 痕迹）——策展进 `MEMORY` / `USER` / `SOUL` / `STYLE`、daily gist、`LIVING_SPHERE` compact。**不是**当场场景扮演，也不替代 awake 时各轨道的实时写入。
+- `DREAMING`：**汇总当日全部经历**——用户可见对话（`USER_CHAT`、`PROACTIVE_CHAT`、`SCHEDULED`，`transcript.jsonl`）与沉默 awake 轨（`AUTONOMY`、`MONOLOG`：`transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md`、`ai_private.jsonl`、相关 tool/jsonl 痕迹）——策展进 `MEMORY` / `USER` / `SOUL` / `STYLE`、daily gist、`LIVING_SPHERE` compact。**不是**当场场景扮演，也不替代 awake 时各轨道的实时写入。
 
-三者并列：**awake** 时 AUTONOMY / MAINTENANCE 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 maintenance。
+三者并列：**awake** 时 AUTONOMY / MONOLOG 各自记账；**sleeping** 时 DREAMING 做 end-of-day rollup，**不**用 dreaming 替换 monolog。
 
 ## `ai_private.jsonl` vs `LIFE_CURRENTS.md`（核心区分）
 
 | | `ai_private.jsonl` | `LIFE_CURRENTS.md` |
 |--|-------------------|-------------------|
 | **是什么** | Inty **对用户**的内心戏：情绪、未说出口的念头、关系场景里的下一拍 | Inty 在 **虚拟空间/环境**里正在做的事：TechnoCore、LivingSphere、联网查资料、生图等可观察活动 |
-| **轨道** | `MAINTENANCE`（收窄后 primary 写入方） | `AUTONOMY` |
+| **轨道** | `MONOLOG`（收窄后 primary 写入方） | `AUTONOMY` |
 | **存储形态** | `.jsonl` 行级 append（事件流） | `.md` 整文件重写（当前主题 + 当日兴致 + 进展） |
 | **是否「真的在做」** | 可以是想象/心理节拍，不必有工具痕迹 | 要求工具调用、生成物、文档版本等**外在状态变化** |
-| **读侧消费** | MAINTENANCE prompt 注入「内在活动」；USER_CHAT / PROACTIVE_CHAT tail-splice + manifest hydrate | PROACTIVE_CHAT 只读 hint；AUTONOMY 读写 |
-| **写侧** | MAINTENANCE 经 ``ai_private_append``（append-only）；成功 user/proactive turn mark **surfaced** | AUTONOMY ``memory_store_write_document`` 仅 ``LIFE_CURRENTS.md`` |
+| **读侧消费** | MONOLOG prompt 注入「内在活动」；USER_CHAT / PROACTIVE_CHAT tail-splice + manifest hydrate | PROACTIVE_CHAT 只读 hint；AUTONOMY 读写 |
+| **写侧** | MONOLOG 经 ``ai_private_append``（append-only）；成功 user/proactive turn mark **surfaced** | AUTONOMY ``memory_store_write_document`` 仅 ``LIFE_CURRENTS.md`` |
 
 一句话：`ai_private` = **心里想用户**；`LIFE_CURRENTS` = **在世界里动手做事**。
 
@@ -97,16 +97,16 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 ## 与既有调度的关系
 
-- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → maintenance → dreaming`（与 ``inner_tick_poll`` 一致）。
-- 自有 `min_gap`，建议初值与 maintenance 相同（120s）。
+- 复用 unified inner-tick worker（每条 WS 连接）的循环结构；调度顺序为 `proactive → scheduled → autonomy → monolog → dreaming`（与 ``inner_tick_poll`` 一致）。
+- 自有 `min_gap`，建议初值与 monolog 相同（120s）。
 - 复用 `turn_lock` / `tool_bg_idle` 串行化各轨道。
-- **不进 chat 日限额**（autonomy 不发消息）；token 限额按 maintenance 同档计费。
-- `context.json` 的 `bootstrap` 阶段**不**调度 autonomy（与 maintenance 同策略）。
+- **不进 chat 日限额**（autonomy 不发消息）；token 限额按 monolog 同档计费。
+- `context.json` 的 `bootstrap` 阶段**不**调度 autonomy（与 monolog 同策略）。
 
 ## 与已有概念的边界
 
 - 不是 `schedule_queue`：那是**面向用户**的预约触达；autonomy 是**面向虚拟环境**的自主活动。
-- 不是 `ai_private.jsonl`：那是 **对用户的心理独白**（MAINTENANCE）；`LIFE_CURRENTS.md` 是 **在虚拟空间里做过什么**（AUTONOMY）。见上表。
+- 不是 `ai_private.jsonl`：那是 **对用户的心理独白**（MONOLOG）；`LIFE_CURRENTS.md` 是 **在虚拟空间里做过什么**（AUTONOMY）。见上表。
 - 不是 `LIVING_SPHERE.md`：那是与用户共享的小家**可读快照**；autonomy 可 append 事件流，但「今天在做什么」的状态主档是 `LIFE_CURRENTS.md`。
 - 不是新的"长期项目"：长期项目 = AXIOM；本设计**只增加中期、当日两层**的可观察活动状态。
 
@@ -122,8 +122,8 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 
 1. `memory_store_document_mapping.py` 新增 `CompanionMemoryDocumentKind.LIFE_CURRENTS` 与 `"LIFE_CURRENTS.md"` 映射；`MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` 加入它。
 2. `InnerTickActivity` 新增 `AUTONOMY`；`CompanionTurnTrack` 新增 `INNER_TICK_AUTONOMY`；`turn_track.py` 完成翻译与 LangSmith lane 归类。
-3. 内核入口：`run_companion_inner_tick_autonomy_turn_for_api`（参照 `..._maintenance_...`，允许开放工具集，禁用对外下行）。
-4. unified inner-tick worker 在 `proactive` 之后、`maintenance` 之前插入 autonomy 一步。
+3. 内核入口：`run_companion_inner_tick_autonomy_turn_for_api`（参照 `..._monolog_...`，允许开放工具集，禁用对外下行）。
+4. unified inner-tick worker 在 `proactive` 之后、`monolog` 之前插入 autonomy 一步。
 5. `PROACTIVE_CHAT` 的 system 拼装加上 `LIFE_CURRENTS.md` 注入段。
 
 每步独立可合，按顺序提交。
@@ -140,17 +140,17 @@ MVP 阶段**不**给 `USER_CHAT` / `IMPLICIT_SIGN_ON_GREETING` / `INNER_TICK_SCH
 | TODO | 范围 | 目标 |
 |------|------|------|
 | `dreaming-day-rollup` | DREAMING batch | 合并 `transcript_inner_tick.jsonl`、`LIFE_CURRENTS.md` 进 candidate slice + curator（`ai_private` manifest/unconsumed 渲染已在 #3420）；[#3376](https://github.com/NascentCore/inty/issues/3376) |
-| ~~`narrow-maintenance`~~ | ~~MAINTENANCE track~~ | ~~#3375~~ — shipped #3420 |
+| ~~`narrow-monolog`~~ | ~~MONOLOG track~~ | ~~#3375~~ — shipped #3420 |
 | `cross-track-image-delivery` (#3285) | AUTONOMY → proactive/user-chat | AUTONOMY 静默生图与对外交付路径 |
-| `rename-memory-doc` | transcript 持久化 | `transcript_inner_tick` 拆 maintenance vs autonomy 路径 |
+| `rename-memory-doc` | transcript 持久化 | `transcript_inner_tick` 拆 monolog vs autonomy 路径 |
 | `inner-tick-poll-multi-track` (#3273) | poll | 单次 wake 尝试所有 due track，不单 fire 一个 |
-| `scope-inner-tick-worker` (#3255) | 调度 | dreaming / maintenance / autonomy 迁出 presence poll；Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
+| `scope-inner-tick-worker` (#3255) | 调度 | dreaming / monolog / autonomy 迁出 presence poll；Epic [#3373](https://github.com/NascentCore/inty/issues/3373) |
 
-`companion/AGENTS.md` 中 `TODO(narrow-maintenance)` 建议 human 改为：「Shrink MAINTENANCE to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。 — #3375
+`companion/AGENTS.md` 中 `TODO(narrow-monolog)` 建议 human 改为：「Shrink MONOLOG to ai_private / transcript reorg; MemoryDoc sync → DREAMING」（勿写「memory-reorg」以免与 dreaming 混淆）。 — #3375
 
 ## See also
 
 - [`AXIOM.md`](/app/core/companion_harness/companion/prompts/AXIOM.md)：长期项目（唯一）
-- [`DESIGN.md`](/docs/imate/companion_harness/DESIGN.md)：inner-tick worker、proactive rhythm、maintenance 与 transport 关系
+- [`DESIGN.md`](/docs/imate/companion_harness/DESIGN.md)：inner-tick worker、proactive rhythm、monolog 与 transport 关系
 - [`MEMORY_STORE.md`](/docs/imate/companion_harness/MEMORY_STORE.md)：`document_kind` / 写入白名单机制
 - [`FR_WORLD_ENGINE.md`](/docs/imate/companion_harness/FR_WORLD_ENGINE.md)：sub-agent 与 mailbox 交往（**他者**）；本设计是 companion **对自己**的 `LIFE_CURRENTS` 自主轨道——互补，非替代

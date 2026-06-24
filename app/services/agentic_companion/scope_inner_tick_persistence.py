@@ -11,7 +11,7 @@ from app.services.agentic_channel.companion_bonds import (
     list_active_companion_agent_scope_keys,
 )
 
-# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/maintenance — #3423.
+# TODO(scope-listing-due-filter): Narrow to scopes due for dreaming/monolog — #3423.
 
 
 async def fetch_initialized_companion_scopes() -> list[CompanionScope]:

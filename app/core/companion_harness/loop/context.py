@@ -102,6 +102,7 @@ class AgenticLoopContext:
     input_batch: AgenticLoopInputBatch | None = None
     prompt_plan: PromptPlan | None = None
     # TODO(!3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
+    # TODO(!3629): Drop openai_messages once PromptPlan is the sole prompt carrier.
     memory_bootstrap_type: str = ""
     stack_depth: int = 0
     companion_turn_track: CompanionTurnTrack | None = None
@@ -174,7 +175,7 @@ def build_settled_user_chat_loop_context(
             run_id=langsmith_run_id,
         ),
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
@@ -237,7 +238,7 @@ def build_settled_dual_llm_user_chat_loop_context(
             run_id=langsmith_run_id,
         ),
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
@@ -299,7 +300,7 @@ def build_bootstrap_user_chat_loop_context(
             run_id=langsmith_run_id,
         ),
         inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
         max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,

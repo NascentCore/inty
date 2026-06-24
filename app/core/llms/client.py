@@ -104,6 +104,7 @@ class CompanionLLMConfig(BaseModel):
         )
 
 
+# TODO: Deprecate and use AsyncLlmClient exclusively.
 class LlmClient:
     """Manages OpenAI-compatible clients for companion interactions."""
 
@@ -400,7 +401,11 @@ class AsyncLlmClient:
         langsmith_extra: dict[str, Any] | None = None,
         high_reasoning: bool = False,
     ) -> Any:
-        """Execute one single-LLM prompt; caller owns the wire message context."""
+        """Execute one single-LLM prompt; caller owns the wire message context.
+
+        TODO(!3629): Accept PromptPlan; convert to OpenAI wire only inside this method.
+        TODO(!3630): Accept LlmInvocationContext instead of raw langsmith_extra dict.
+        """
         _ensure_langsmith_handle_container_end_patch()
         chat_model = model or self.resolve_model("chat")
         api_model = chat_model.id_on_provider

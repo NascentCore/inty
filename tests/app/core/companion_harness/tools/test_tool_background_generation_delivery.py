@@ -44,10 +44,10 @@ def test_autonomy_inner_tick_never_delivers_despite_generation_deliver() -> (
     )
 
 
-def test_maintenance_inner_tick_still_delivers_on_generation_deliver() -> None:
+def test_monolog_inner_tick_still_delivers_on_generation_deliver() -> None:
     assert tool_background_should_deliver_to_user(
         inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MAINTENANCE,
+        inner_tick_activity=InnerTickActivity.MONOLOG,
         generation_deliver=True,
         output_to_user=False,
     )

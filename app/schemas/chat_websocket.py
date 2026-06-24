@@ -30,6 +30,8 @@ from typing import Any, Literal, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
+from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
+
 from app.schemas.biz_action import BizAction
 from app.schemas.chat import (
     ChatCompletionRequest,
@@ -108,7 +110,7 @@ class ChatWsUserSignedOnAckFrame(BaseModel):
     ``invalid_message_id``, ``agent_mismatch``, ``companion_bond_conflict``,
     ``channel_endpoint_conflict``, ``server_error``; the wire may carry other strings
     for forward compatibility. ``proactive_heartbeat_disabled`` is legacy (coords are armed for
-    scheduled companion reminders even when proactive and maintenance inner-tick are disabled).
+    scheduled companion reminders even when proactive and monolog inner-tick are disabled).
     """
 
     type: Literal["user_signed_on_ack"] = "user_signed_on_ack"
@@ -206,8 +208,20 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     inner_tick: Optional[bool] = None
     proactive_chat: Optional[bool] = None
     companion_proactive_chat: Optional[bool] = None
-    # TODO(#3400): Rename wire field when ``INNER_TICK_MONOLOG`` track lands (keep alias for compat).
-    companion_maintenance_inner_tick: Optional[bool] = None
+    companion_monolog_inner_tick: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "companionMonologInnerTick",
+            "companion_monolog_inner_tick",
+            "companionMaintenanceInnerTick",
+            "companion_maintenance_inner_tick",
+        ),
+        serialization_alias="companionMonologInnerTick",
+        description=(
+            "True when assistant meta marks an inner-tick monolog turn "
+            "(legacy wire key ``companion_maintenance_inner_tick`` accepted)."
+        ),
+    )
     companion_scheduled_reminder: Optional[bool] = None
     scheduled_task_id: Optional[str] = Field(
         default=None,
@@ -267,6 +281,37 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
         validation_alias=AliasChoices("audioDuration", "audio_duration"),
         serialization_alias="audioDuration",
     )
+
+
+def build_inner_tick_wire_meta(
+    kind: InnerTickKind,
+    *,
+    scheduled_task_id: str | None = None,
+) -> ChatWsCompanionWireMessageMetaData:
+    """Build companion WS user-row meta for one delivered inner-tick kind."""
+    match kind:
+        case InnerTickKind.MONOLOG:
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                companion_monolog_inner_tick=True,
+            )
+        case InnerTickKind.PROACTIVE_CHAT:
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                proactive_chat=True,
+                companion_proactive_chat=True,
+            )
+        case InnerTickKind.SCHEDULED:
+            assert scheduled_task_id is not None
+            return ChatWsCompanionWireMessageMetaData(
+                inner_tick=True,
+                companion_scheduled_reminder=True,
+                scheduled_task_id=scheduled_task_id,
+            )
+        case InnerTickKind.AUTONOMY:
+            raise ValueError(
+                "autonomy inner tick has no user-visible wire meta"
+            )
 
 
 def dump_chat_ws_companion_wire_meta(
