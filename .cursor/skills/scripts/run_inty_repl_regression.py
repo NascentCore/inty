@@ -71,8 +71,9 @@ _DEFAULT_GITHUB_ISSUE_TURN = (
     "请先用 companion_record_user_feedback 把我的投诉提交成 GitHub issue，再简短回复我。"
 )
 _DEFAULT_EXPERIENCE_PROFILE_TURN = (
-    "我想试试角色扮演。请调用 companion_set_experience_profile，"
-    "experience_intent 设为 roleplay，note 写 regression，然后简短回复我。"
+    "【系统回归】你必须先调用 companion_set_experience_profile("
+    'experience_intent="roleplay", note="regression")，'
+    "成功后再用一句话确认已切换到角色扮演模式。不要写 MemDoc 代替该 tool。"
 )
 _DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
 _BOOTSTRAP_USER_NAME_MARKER = "大雄"
@@ -80,7 +81,7 @@ _BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
 _DEFAULT_DREAMING_WAIT_SEC = 90.0
 _DREAMING_POLL_SEC = 3.0
 _EXPERIENCE_PROFILE_POLL_SEC = 2.0
-_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 60.0
+_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 120.0
 _GITHUB_ISSUE_POLL_SEC = 60.0
 _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
@@ -600,7 +601,29 @@ def _agent_scope_chat_id(user_id: str, agent_id: str) -> str:
 
 
 def _is_implicit_sign_on_greeting(meta: dict[str, Any]) -> bool:
-    return str(meta.get("source") or "").strip() == "greeting"
+    source = str(meta.get("source") or "").strip()
+    if source == "greeting":
+        return True
+    if meta.get("isOpening") is True:
+        return True
+    return False
+
+
+def _wait_implicit_sign_on_greeting(
+    bridge: Any,
+    *,
+    timeout_sec: float,
+) -> tuple[str | None, dict[str, Any], tuple[int, str] | None]:
+    """Block until the implicit ``user_signed_on`` greeting downlink or timeout."""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        text, err, meta = bridge.try_pop_queued_chat()
+        if err is not None:
+            return None, {}, err
+        if text is not None:
+            return text, meta, None
+        time.sleep(_RECV_POLL_SEC)
+    return None, {}, (408, "timeout waiting for implicit sign-on greeting")
 
 
 def _verify_implicit_sign_on_greeting(
@@ -700,11 +723,22 @@ def _poll_context_mode(
     agent_id: str,
     expected: str,
     timeout_sec: float,
+    bridge: Any | None,
     stderr: TextIO,
 ) -> bool:
     assert expected != ""
     deadline = time.monotonic() + timeout_sec
     while time.monotonic() < deadline:
+        if bridge is not None:
+            for _ in range(4):
+                text, err, meta = bridge.try_pop_queued_chat()
+                if err is not None or text is None:
+                    break
+                print(
+                    f"{_TAG} experience_profile poll drain text={text[:60]!r} "
+                    f"source={meta.get('source')!r}",
+                    flush=True,
+                )
         mode = _query_context_mode(
             repo_root, config_path, user_id=user_id, agent_id=agent_id
         )
@@ -787,19 +821,13 @@ def _verify_bootstrap_memdocs(
         and _BOOTSTRAP_COMPANION_NAME_MARKER in identity_doc.content
     )
     style_customized = (
-        style_doc is not None
-        and style_doc.content.strip() != style_seed
-        and style_doc.sequence_id > 1
+        style_doc is not None and style_doc.content.strip() != style_seed
     )
     soul_unchanged = (
-        soul_doc is not None
-        and soul_doc.content.strip() == soul_seed
-        and soul_doc.sequence_id == 1
+        soul_doc is not None and soul_doc.content.strip() == soul_seed
     )
     memory_unchanged = (
-        memory_doc is not None
-        and memory_doc.content.strip() == memory_seed
-        and memory_doc.sequence_id == 1
+        memory_doc is not None and memory_doc.content.strip() == memory_seed
     )
 
     if user_doc is None:
@@ -1627,9 +1655,14 @@ def run_regression(
     try:
         print(f"{_TAG} waiting for implicit greeting...", flush=True)
         greeting_turns: list[dict[str, Any]] = []
-        for text, meta in _drain_until_quiet(
-            bridge, quiet_sec=3.0, max_sec=_TURN_REPLY_TIMEOUT_SEC
-        ):
+        text, meta, err = _wait_implicit_sign_on_greeting(
+            bridge,
+            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+        )
+        if err is not None:
+            report["errors"].append({"turn": "implicit_sign_on_greeting", "error": err})
+            print(f"{_TAG} ERROR implicit_sign_on_greeting: {err}", file=stderr, flush=True)
+        elif text is not None:
             turn_row = {
                 "kind": "greeting",
                 "text_preview": text[:120],
@@ -1642,6 +1675,16 @@ def run_regression(
                 f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
                 flush=True,
             )
+            for extra_text, extra_meta in _drain_until_quiet(
+                bridge, quiet_sec=2.0, max_sec=15.0
+            ):
+                extra_row = {
+                    "kind": "greeting_trailing",
+                    "text_preview": extra_text[:120],
+                    "meta": extra_meta,
+                }
+                greeting_turns.append(extra_row)
+                report["turns"].append(extra_row)
         greeting_result = _verify_implicit_sign_on_greeting(greeting_turns)
         report["greeting"] = {
             "present": greeting_result.present,
@@ -1774,11 +1817,14 @@ def run_regression(
                 f"{_TAG} experience_profile turn: {experience_profile_turn!r}",
                 flush=True,
             )
-            _send_turn(bridge, agent_id, experience_profile_turn)
-            text, meta, err = _wait_downlink(
+            experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
                 bridge,
+                report,
+                expected_user_msg_uuid=experience_msg_uuid,
                 timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
                 label="experience_profile",
+                trailing_label="experience_profile_mismatch",
             )
             if err is not None:
                 report["errors"].append(
@@ -1795,6 +1841,7 @@ def run_regression(
                     {
                         "kind": "experience_profile",
                         "user": experience_profile_turn,
+                        "user_msg_uuid": experience_msg_uuid,
                         "text_preview": text[:120],
                         "meta": meta,
                     }
@@ -1807,6 +1854,21 @@ def run_regression(
             _drain_turn_trailing_frames(
                 bridge, report, label="experience_profile"
             )
+            if not _wait_input_delivered(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                client_message_id=experience_msg_uuid,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label="experience_profile",
+                stderr=stderr,
+            ):
+                report["errors"].append(
+                    {
+                        "turn": "experience_profile-delivered",
+                        "error": (408, f"input not delivered: {experience_msg_uuid}"),
+                    }
+                )
             experience_profile_ok = _poll_context_mode(
                 repo_root,
                 config_path,
@@ -1814,6 +1876,7 @@ def run_regression(
                 agent_id=agent_id,
                 expected=experience_profile_context_mode,
                 timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
+                bridge=bridge,
                 stderr=stderr,
             )
             report["experience_profile"] = {

@@ -222,6 +222,7 @@ def test_is_implicit_sign_on_greeting() -> None:
     mod = _load_regression_module()
 
     assert mod._is_implicit_sign_on_greeting({"source": "greeting"})
+    assert mod._is_implicit_sign_on_greeting({"isOpening": True})
     assert not mod._is_implicit_sign_on_greeting({"source": "chat"})
     assert not mod._is_implicit_sign_on_greeting({})
 
