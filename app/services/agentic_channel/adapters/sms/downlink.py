@@ -1,4 +1,4 @@
-"""SMS gateway downlink: materialize and send assistant text segments."""
+"""SMS channel downlink: materialize and send assistant text segments."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
 from app.external_services.twilio_sms import TwilioSmsApi
-from app.services.agentic_channel.gateways.sms.materialize import (
+from app.services.agentic_channel.adapters.sms.materialize import (
     materialize_sms_body,
 )
 from app.services.agentic_companion.downlink import (
@@ -27,7 +27,7 @@ _SMS_TEXT_KINDS = frozenset(
 )
 
 
-class SmsGatewayDownlink:
+class SmsChannelDownlink:
     """Deliver visible assistant text via Twilio ``Messages.create``."""
 
     def __init__(

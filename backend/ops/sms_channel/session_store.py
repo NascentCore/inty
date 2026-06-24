@@ -18,7 +18,7 @@ from app.services.agentic_channel.endpoints import (
     EndpointRecord,
     list_endpoints_for_channel,
 )
-from app.services.agentic_channel.gateways.sms.adapter import SmsGatewayAdapter
+from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
 from app.services.agentic_channel.presence import (
     clear_presences_for_tests,
     ensure_presence,
@@ -57,7 +57,7 @@ async def activate_sms_scope(
     async with AsyncSessionLocal() as db:
         await require_active_companion_bond(db, scope)
     remember_scope(user_phone_e164=record.channel_address, scope=scope)
-    adapter = SmsGatewayAdapter(
+    adapter = SmsChannelAdapter(
         api=api,
         from_number=from_number,
         to_number=record.channel_address,

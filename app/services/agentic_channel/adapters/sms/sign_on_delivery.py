@@ -16,7 +16,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
-from app.services.agentic_channel.gateways.sms.downlink import SmsGatewayDownlink
+from app.services.agentic_channel.adapters.sms.downlink import SmsChannelDownlink
 from app.services.agentic_channel.serving import flush_scope_output_queue_ready
 from app.services.agentic_companion.downlink import agent_initiated_visible_downlink
 
@@ -24,7 +24,7 @@ from app.services.agentic_companion.downlink import agent_initiated_visible_down
 async def flush_sign_on_greeting_to_sms_downlink(
     *,
     scope: AgentScope,
-    downlink: SmsGatewayDownlink,
+    downlink: SmsChannelDownlink,
 ) -> None:
     """Drain ready OutputQueue rows from sign-on greeting onto SMS."""
 

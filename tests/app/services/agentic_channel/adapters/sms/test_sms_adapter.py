@@ -1,11 +1,11 @@
-"""Tests for SMS gateway adapter downlink."""
+"""Tests for SMS channel adapter downlink."""
 
 from __future__ import annotations
 
 import pytest
 
 from app.external_services.twilio_sms import TwilioSmsSendResult
-from app.services.agentic_channel.gateways.sms.adapter import SmsGatewayAdapter
+from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
 from app.services.agentic_companion.downlink import Downlink, DownlinkKind
 
 
@@ -31,9 +31,9 @@ class _FakeTwilioSmsApi:
 
 
 @pytest.mark.asyncio
-async def test_sms_gateway_downlink_delivers_proactive() -> None:
+async def test_sms_channel_downlink_delivers_proactive() -> None:
     api = _FakeTwilioSmsApi()
-    adapter = SmsGatewayAdapter(
+    adapter = SmsChannelAdapter(
         api=api,
         from_number="+15005550006",
         to_number="+11234560123",

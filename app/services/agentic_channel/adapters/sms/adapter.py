@@ -1,4 +1,4 @@
-"""SMS gateway adapter for the agent-channel stack.
+"""SMS channel adapter for the agent-channel stack.
 
 Generated entirely by Cursor agent.
 """
@@ -8,8 +8,8 @@ from __future__ import annotations
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.external_services.twilio_sms import TwilioSmsApi
-from app.services.agentic_channel.gateways.sms.downlink import SmsGatewayDownlink
-from app.services.agentic_channel.gateways.sms.inner_tick import sms_inner_tick_delivery
+from app.services.agentic_channel.adapters.sms.downlink import SmsChannelDownlink
+from app.services.agentic_channel.adapters.sms.inner_tick import sms_inner_tick_delivery
 from app.services.agentic_companion.downlink import (
     ChannelDownlink,
     Downlink,
@@ -17,7 +17,7 @@ from app.services.agentic_companion.downlink import (
 )
 
 
-class SmsGatewayAdapter:
+class SmsChannelAdapter:
     """Deliver assistant text via Twilio SMS to one bonded E.164 number."""
 
     def __init__(
@@ -39,7 +39,7 @@ class SmsGatewayAdapter:
         return ChannelKind.SMS
 
     def as_downlink(self) -> ChannelDownlink:
-        return SmsGatewayDownlink(
+        return SmsChannelDownlink(
             api=self._api,
             from_number=self._from_number,
             to_number=self._to_number,

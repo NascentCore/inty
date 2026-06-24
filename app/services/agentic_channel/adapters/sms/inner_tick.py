@@ -1,4 +1,4 @@
-"""SMS inner-tick delivery wiring for the gateway adapter.
+"""SMS inner-tick delivery wiring for the channel adapter.
 
 Generated entirely by Cursor agent.
 

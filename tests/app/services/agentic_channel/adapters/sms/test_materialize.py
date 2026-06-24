@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.services.agentic_channel.gateways.sms.materialize import materialize_sms_body
+from app.services.agentic_channel.adapters.sms.materialize import materialize_sms_body
 
 
 def test_materialize_sms_body_strips_markdown_and_segments() -> None:

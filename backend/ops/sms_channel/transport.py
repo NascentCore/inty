@@ -34,8 +34,8 @@ from app.services.agentic_channel.errors import (
     ChannelEndpointConflictError,
     CompanionBondInvariantError,
 )
-from app.services.agentic_channel.gateways.sms.adapter import SmsGatewayAdapter
-from app.services.agentic_channel.gateways.sms.sign_on_delivery import (
+from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
+from app.services.agentic_channel.adapters.sms.sign_on_delivery import (
     flush_sign_on_greeting_to_sms_downlink,
 )
 from app.services.agentic_channel.presence import (
@@ -312,7 +312,7 @@ class SmsTransport:
         )
         try:
             await presence.greet_on_sign_on(runtime_channel=ChannelKind.SMS)
-            adapter = SmsGatewayAdapter(
+            adapter = SmsChannelAdapter(
                 api=self._api,
                 from_number=self._from_number,
                 to_number=inbound.from_e164,
@@ -364,7 +364,7 @@ class SmsTransport:
         reason: str,
     ) -> None:
         remember_scope(user_phone_e164=inbound.from_e164, scope=scope)
-        adapter = SmsGatewayAdapter(
+        adapter = SmsChannelAdapter(
             api=self._api,
             from_number=self._from_number,
             to_number=inbound.from_e164,

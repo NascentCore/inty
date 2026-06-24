@@ -1,3 +1,3 @@
-"""SMS gateway adapter package."""
+"""SMS channel adapter package."""
 
 from __future__ import annotations
