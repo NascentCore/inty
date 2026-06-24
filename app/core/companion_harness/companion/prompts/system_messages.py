@@ -869,15 +869,14 @@ def append_profile_collection_system_messages(
     interactive_bootstrap_active: bool,
     user_md: str,
 ) -> list[dict[str, Any]]:
-    """Append Telegram bootstrap overlay and dynamic unfilled-field hints.
+    """Append peripheral growth-cohort bootstrap slices when profile collection is required on Telegram.
 
-    Single compositor for paid-ad cohort profile collection during interactive
-    bootstrap. When profile collection is required and the turn runs on Telegram,
-    append the channel overlay slice and an optional runtime hint for empty user
-    profile identity labels. All other sessions receive the input list unchanged.
+    Paid-ad launch policy: static English overlay and optional runtime hint for
+    unfilled user profile identity labels. Gated by interactive bootstrap,
+    profile_collection_required, and Telegram channel. All other sessions receive
+    the input list unchanged.
 
-    TODO(bootstrap-cohort-overlays): Only choke point should invoke this; wire
-    PromptBuilder bootstrap path and #3463 proactive overlay through here — #3628.
+    TODO(bootstrap-cohort-overlays): #3463 proactive bootstrap should call this compositor — #3628.
     """
     if not interactive_bootstrap_active:
         return system_messages
@@ -900,7 +899,11 @@ def build_system_messages_for_bootstrap_track(
     context: ContextMeta,
     runtime_channel: ChannelKind,
 ) -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background)."""
+    """USER_CHAT_BOOTSTRAP: single chat model with in-turn tools (no dual-LLM / tool_background).
+
+    TODO(bootstrap-cohort-overlays): Legacy path; share peripheral append with — #3628
+    ``PromptBuilder.bootstrap_turn_system_dicts`` when tracks unify.
+    """
     out = build_system_messages(
         bundle,
         context,
@@ -917,7 +920,9 @@ def build_system_messages_for_bootstrap_track(
         out,
         context=context,
         runtime_channel=runtime_channel,
-        interactive_bootstrap_active=True,
+        interactive_bootstrap_active=(
+            not context.workspace_bootstrap_user_interactive_completed
+        ),
         user_md=bundle.user_md,
     )
 
