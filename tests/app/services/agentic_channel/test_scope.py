@@ -13,13 +13,6 @@ def test_memory_store_chat_id_stable_and_namespaced() -> None:
     assert not scope.memory_store_chat_id().startswith("00000000")
 
 
-def test_to_companion_scope_uses_synthetic_chat_id() -> None:
-    scope = AgentScope(user_id="u1", agent_id="a1")
-    companion_scope = scope.to_companion_scope()
-    assert companion_scope.chat_id == scope.memory_store_chat_id()
-    assert companion_scope.companion_id == "a1"
-
-
 def test_is_agent_scope_memory_store_chat_id() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     assert (

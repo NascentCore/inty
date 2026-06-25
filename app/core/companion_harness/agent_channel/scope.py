@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.core.companion_harness.companion.scope import CompanionScope
-
 _AGENT_SCOPE_CHAT_ID_PREFIX = "agent-scope:"
 
 
@@ -38,11 +36,3 @@ class AgentScope:
     def memory_store_chat_id(self) -> str:
         """Deterministic MemoryStore key; never collides with UUID chat rows."""
         return f"{_AGENT_SCOPE_CHAT_ID_PREFIX}{self.user_id}:{self.agent_id}"
-
-    def to_companion_scope(self) -> CompanionScope:
-        chat_id = self.memory_store_chat_id()
-        return CompanionScope(
-            user_id=self.user_id,
-            companion_id=self.agent_id,
-            chat_id=chat_id,
-        )
