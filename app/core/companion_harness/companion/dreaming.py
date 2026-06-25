@@ -43,7 +43,7 @@ TODO(dreaming-transcript-invariant): If ``dreaming_idle_seconds`` is lowered bel
 tool_background worst-case runtime, gate dreaming on ``tool_bg_idle`` or revisit this
 assumption (see #3123).
 
-TODO: Dreaming should be performed with AgenticLoop with the same set of prompts
+TODO(dreaming-agentic-loop): Dreaming should be performed with AgenticLoop with the same set of prompts — #3634
 as agentic-companion, which allows the consolidation to be guided by explicit agentic
 companion persona.
 """

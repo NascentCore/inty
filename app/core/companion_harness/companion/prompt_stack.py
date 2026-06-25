@@ -219,7 +219,7 @@ def companion_system_messages_for_track(
                 bundle,
                 context,
             )
-    # TODO(track-compose-unify): Bootstrap/greeting tracks should use shared bootstrap_turn
+    # TODO(track-compose-unify): Bootstrap/greeting tracks should use shared bootstrap_turn — #3398
     # compose (peripheral gateway extras + cohort) — #3398.
     out = append_runtime_output_format_system_message(
         system_messages=out,
