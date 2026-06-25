@@ -1,6 +1,6 @@
-"""Telegram Bot API long-poll transport for Ops telegram-demo.
+"""Telegram Bot API long-poll transport for Ops Telegram channel.
 
-TODO(telegram-demo-text-only): Non-text inbound (photo, voice, sticker) is ignored — #3349
+TODO(telegram-channel-text-only): Non-text inbound (photo, voice, sticker) is ignored — #3349
 TODO(telegram-shared-bot): Option A shared-bot routing — #3396
 TODO(telegram-dedicated-bot-bonding): Option B per-user bot token + 1:1:1 user/bot/agent — #3361 (epic #3395)
 TODO(telegram-reply-reaction-inbound): Route reply_to + emoji reaction updates into channel
@@ -51,15 +51,15 @@ from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
 )
-from backend.ops.telegram_demo.binding import (
+from backend.ops.telegram_channel.binding import (
     StartPayloadKind,
     parse_start_payload,
 )
-from backend.ops.telegram_demo.persistence import (
+from backend.ops.telegram_channel.persistence import (
     load_poll_offset,
     save_poll_offset,
 )
-from backend.ops.telegram_demo.session_store import (
+from backend.ops.telegram_channel.session_store import (
     activate_telegram_scope,
     remember_scope,
 )
@@ -131,7 +131,7 @@ class TelegramTransport:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("telegram-demo poll iteration failed")
+                logger.exception("telegram-channel poll iteration failed")
                 await asyncio.sleep(2.0)
 
     async def stop(self) -> None:

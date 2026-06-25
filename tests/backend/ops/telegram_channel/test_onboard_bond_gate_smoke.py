@@ -1,6 +1,6 @@
 """End-to-end smoke for Telegram onboard ACTIVE bond gate (#3533).
 
-Manual release smoke (real Telegram + Ops): ``.cursor/skills/telegram-demo-restore-smoke/SKILL.md``.
+Manual release smoke (real Telegram + Ops): ``.cursor/skills/telegram-channel-restore-smoke/SKILL.md``.
 """
 
 from __future__ import annotations
@@ -43,8 +43,8 @@ from app.services.agentic_channel.presence import (
 from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
-from backend.ops.telegram_demo import session_store
-from backend.ops.telegram_demo.transport import (
+from backend.ops.telegram_channel import session_store
+from backend.ops.telegram_channel.transport import (
     TelegramTransport,
     _BOND_UNAVAILABLE,
     _ONBOARD_NOTICE_RETURNING,
@@ -92,7 +92,7 @@ def log_capture():
 
 
 @pytest.fixture(autouse=True)
-async def _reset_telegram_demo_state() -> None:
+async def _reset_telegram_channel_state() -> None:
     session_store.clear_all_for_tests()
     clear_registries_for_tests()
     clear_presences_for_tests()

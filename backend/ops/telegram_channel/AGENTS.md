@@ -1,16 +1,16 @@
-# Generated entirely by Cursor agent — telegram-demo Ops bridge package doc.
+# Ops Telegram channel bridge
 
-Ops **telegram-demo**: Telegram Bot API long-poll ↔ companion harness.
+Ops **Telegram channel**: Telegram Bot API long-poll ↔ companion harness.
 
 ## Integration surface
 
 | Layer | Role |
 |-------|------|
 | ``app/external_services/telegram_bot_api.py`` | Bot API HTTP (getUpdates, sendMessage, getMe) |
-| ``backend/ops/telegram_demo/`` | Provision, Postgres binding, in-process presence, transport |
+| ``backend/ops/telegram_channel/`` | Provision, Postgres binding, in-process presence, transport |
 | ``GET /telegram`` | Product onboard page (team QR → ``https://t.me/{username}?start=onboard``) |
 | ``GET /api/v1/telegram/bot-info`` | Product: JSON bot id / username for QR page |
-| ``GET /api/v1/telegram-demo/bindings`` | Debug only when ``app.debug`` (local/dev Ops) |
+| ``GET /api/v1/telegram/debug/bindings`` | Debug only when ``app.debug`` (404 otherwise) |
 | ``companion_chat_service.run_user_chat`` | Same kernel as WebSocket; ``runtime_channel=TELEGRAM`` |
 
 ## Bot ownership
@@ -43,10 +43,10 @@ See ``TelegramTransport`` class docstring.
 - Text inbound only; no image/voice yet — #3349.
 - Production ``/start`` accepts ``onboard`` only; bind-to-existing-agent tests call ``provision_agent_for_existing_agent`` directly.
 
-## Demo vs product routes (#3348)
+## Routes
 
-- **Product** (teammate onboard): ``GET /telegram``, ``GET /api/v1/telegram/bot-info``
+- **Product**: ``GET /telegram``, ``GET /api/v1/telegram/bot-info``
 - **Public URLs**: ``https://dev.ops.inty.cc/telegram``, ``https://ops.inty.cc/telegram`` (nginx full-path proxy to Ops)
-- **Debug** (bindings list): ``GET /api/v1/telegram-demo/bindings`` — mounted only when ``app.debug`` is true (local/dev; not prod)
+- **Debug** (bindings list): ``GET /api/v1/telegram/debug/bindings`` — returns 404 unless ``app.debug`` is true
 
-Manual restore smoke: ``.cursor/skills/telegram-demo-restore-smoke/SKILL.md``.
+Manual restore smoke: ``.cursor/skills/telegram-channel-restore-smoke/SKILL.md``.

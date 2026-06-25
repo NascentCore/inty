@@ -398,7 +398,7 @@ class EmbeddingConfig(BaseModel):
 
 
 class TelegramChannelConfig(BaseModel):
-    """Ops telegram-demo Bot API credentials."""
+    """Ops Telegram channel Bot API credentials."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -429,7 +429,7 @@ class AgentChannelsConfig(BaseModel):
         default_factory=TelegramChannelConfig
     )
     sms: SmsChannelConfig = Field(default_factory=SmsChannelConfig)
-    # TODO(telegram-demo-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
+    # TODO(telegram-channel-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
     # under ``agent.channels.weixin`` for symmetry.
 
 

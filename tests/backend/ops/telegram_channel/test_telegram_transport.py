@@ -51,8 +51,8 @@ from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
 )
-from backend.ops.telegram_demo import session_store
-from backend.ops.telegram_demo.transport import (
+from backend.ops.telegram_channel import session_store
+from backend.ops.telegram_channel.transport import (
     TelegramTransport,
     _BOND_UNAVAILABLE,
     _IDENTITY_MISMATCH,
@@ -181,7 +181,7 @@ async def _run_onboard_start(
     mock_presence.greet_on_sign_on = AsyncMock()
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=mock_presence,
     ):
         inbound = TelegramIncomingMessage(
@@ -300,7 +300,7 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
     mock_presence.greet_on_sign_on = AsyncMock()
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=mock_presence,
     ):
         inbound = TelegramIncomingMessage(
@@ -352,7 +352,7 @@ async def test_handle_inbound_sends_channel_error_from_presence() -> None:
             return "Companion 回合失败，请查看 Ops 日志。"
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=_ErrorPresence(),
     ):
         inbound = TelegramIncomingMessage(
@@ -399,7 +399,7 @@ async def test_handle_inbound_resumes_paused_companion_runtime() -> None:
     api = TelegramBotApi(bot_token="route-test-token", urlopen=_fake_urlopen)
     transport = TelegramTransport(api=api)
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=presence,
     ):
         inbound = TelegramIncomingMessage(
@@ -437,7 +437,7 @@ async def test_onboard_new_user_triggers_greeting() -> None:
     mock_presence.greet_on_sign_on = AsyncMock()
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=mock_presence,
     ):
         inbound = TelegramIncomingMessage(
@@ -731,7 +731,7 @@ async def test_onboard_new_user_gate_before_greeting() -> None:
     mock_presence.greet_on_sign_on = AsyncMock()
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=mock_presence,
     ):
         inbound = TelegramIncomingMessage(
@@ -776,7 +776,7 @@ async def test_onboard_greeting_failure_falls_back() -> None:
     )
 
     with patch(
-        "backend.ops.telegram_demo.transport.get_presence",
+        "backend.ops.telegram_channel.transport.get_presence",
         return_value=mock_presence,
     ):
         inbound = TelegramIncomingMessage(

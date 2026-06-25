@@ -1,13 +1,15 @@
-"""Ops product API: Telegram onboard bot metadata for GET /telegram QR page."""
+"""Ops product API: Telegram onboard bot metadata and debug bindings."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.schemas.response import APIResponse
+from app.services.agentic_channel.endpoints import list_endpoints_for_channel
 from app.utils.config import resolved_telegram_bot_token
 
 router = APIRouter(prefix="/telegram", include_in_schema=False)
@@ -16,6 +18,25 @@ router = APIRouter(prefix="/telegram", include_in_schema=False)
 class TelegramBotInfoData(BaseModel):
     bot_id: int = Field(description="Telegram bot numeric id from getMe")
     bot_username: str = Field(description="Bot @username without @ prefix")
+
+
+class TelegramBindingRow(BaseModel):
+    channel_address: str = Field(description="Telegram DM chat id")
+    channel_user_id: str = Field(description="Telegram User id")
+    user_id: str = Field(description="Inty guest user id")
+    agent_id: str = Field(description="Companion agent id")
+
+
+class TelegramBindingsData(BaseModel):
+    count: int = Field(description="Number of persisted bindings")
+    bindings: list[TelegramBindingRow] = Field(
+        description="Active binding rows"
+    )
+
+
+def _require_debug_ops() -> None:
+    if not global_config_loaded_from_config_yaml.app.debug:
+        raise HTTPException(status_code=404)
 
 
 @router.get("/bot-info", response_model=APIResponse[TelegramBotInfoData])
@@ -37,5 +58,33 @@ async def telegram_bot_info() -> APIResponse[TelegramBotInfoData]:
         data=TelegramBotInfoData(
             bot_id=me.bot_id,
             bot_username=me.username,
+        )
+    )
+
+
+@router.get(
+    "/debug/bindings",
+    response_model=APIResponse[TelegramBindingsData],
+    dependencies=[Depends(_require_debug_ops)],
+)
+async def telegram_debug_bindings() -> APIResponse[TelegramBindingsData]:
+    """Debug: list Postgres-persisted Telegram agent_channel endpoints.
+
+    TODO(telegram-launch-reciprocity-metrics): Add bootstrap / proactive / reciprocity flags
+    per binding for launch north-star — #3535 (epic #3531).
+    """
+    rows = await list_endpoints_for_channel(channel=ChannelKind.TELEGRAM)
+    return APIResponse.success(
+        data=TelegramBindingsData(
+            count=len(rows),
+            bindings=[
+                TelegramBindingRow(
+                    channel_address=row.channel_address,
+                    channel_user_id=row.channel_user_id,
+                    user_id=row.user_id,
+                    agent_id=row.agent_id,
+                )
+                for row in rows
+            ],
         )
     )

@@ -67,6 +67,6 @@ agent:
 ## Verification
 
 ```bash
-uv run pytest tests/app/utils/test_config.py tests/backend/ops/telegram_demo/test_telegram_demo_config.py -q
+uv run pytest tests/app/utils/test_config.py tests/backend/ops/telegram_channel/test_telegram_channel_config.py -q
 rg 'app\.features\.companion_|features\.companion_' app backend devops config.yaml
 ```

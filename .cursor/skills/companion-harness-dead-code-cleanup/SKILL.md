@@ -24,7 +24,7 @@ Generated entirely by Cursor agent.
 - `app/schemas/chat_websocket.py`
 - `app/services/agentic_companion/`、`app/services/agentic_channel/`、`companion_chat_service.py`
 - `app/api/v1/endpoints/chat_ws*.py`
-- `backend/ops/weixin_channel/`、`telegram_demo/` 及相关 ops API
+- `backend/ops/weixin_channel/`、`telegram_channel/` 及相关 ops API
 - `tests/app/core/companion_harness/`、`tests/living_sphere/`
 
 ## 前置

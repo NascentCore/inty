@@ -47,7 +47,7 @@ COMPANION_NO_READABLE_ID_SCAN_ROOTS: Final[tuple[str, ...]] = (
     "app/services/agentic_channel",
     "living_sphere",
     "techno_core",
-    "backend/ops/telegram_demo",
+    "backend/ops/telegram_channel",
     "backend/ops/weixin_onboard",
 )
 

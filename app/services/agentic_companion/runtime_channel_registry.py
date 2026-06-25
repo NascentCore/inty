@@ -2,7 +2,7 @@
 
 TODO(cross-channel-same-user-association): #3491 — associate channels for the same
 canonical user across devices; today exclusivity is per-process user_id only.
-TODO(telegram-demo-ws-guard): Extend registry across Ops replicas — #3351
+TODO(telegram-channel-ws-guard): Extend registry across Ops replicas — #3351
 """
 
 from __future__ import annotations

@@ -28,15 +28,15 @@ from app.services.agentic_companion.scope_inner_tick_lifecycle import (
     start_scope_inner_tick_worker,
     stop_scope_inner_tick_worker,
 )
-from backend.ops.telegram_demo.lifecycle import (
-    start_telegram_demo,
-    stop_telegram_demo,
+from backend.ops.telegram_channel.lifecycle import (
+    start_telegram_channel,
+    stop_telegram_channel,
 )
 from backend.ops.sms_channel.lifecycle import (
     start_sms_channel,
     stop_sms_channel,
 )
-from backend.ops.telegram_demo.idle_sweeper import (
+from backend.ops.telegram_channel.idle_sweeper import (
     start_idle_sweeper,
     stop_idle_sweeper,
 )
@@ -146,8 +146,8 @@ async def startup_event():
         logger.info("Ops Agent 初始化完成")
         await restore_persisted_sessions()
         logger.info("Weixin bridge restore scheduled")
-        await start_telegram_demo()
-        logger.info("Telegram demo poll scheduled")
+        await start_telegram_channel()
+        logger.info("Telegram channel poll scheduled")
         await start_sms_channel()
         logger.info("SMS gateway scheduled")
         await start_idle_sweeper()
@@ -209,7 +209,7 @@ async def shutdown_event():
     try:
         await stop_scope_inner_tick_worker()
         await stop_idle_sweeper()
-        await stop_telegram_demo()
+        await stop_telegram_channel()
         await stop_sms_channel()
         from app.core.companion_harness.companion.websocket_coordinator import (
             ChatWsInflightShutdownRegistry,

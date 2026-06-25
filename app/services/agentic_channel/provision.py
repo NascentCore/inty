@@ -1,6 +1,6 @@
 """Guest user + agent provisioning for agent-channel onboard (no legacy chat row).
 
-Identity for companion / telegram-demo / weixin paths uses ``User.id`` and ``Agent.id``
+Identity for companion / telegram-channel / weixin paths uses ``User.id`` and ``Agent.id``
 only. Do **not** read or write legacy ``readable_id`` here (maintenance-mode HTTP APIs
 may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 

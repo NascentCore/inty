@@ -1,4 +1,4 @@
-"""Tests for telegram demo session store restore."""
+"""Tests for Telegram channel session store restore."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from app.services.agentic_channel.presence import (
 from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
-from backend.ops.telegram_demo import session_store
+from backend.ops.telegram_channel import session_store
 
 
 class _NoopApi:

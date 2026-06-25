@@ -37,10 +37,9 @@ COMPANION_SCOPE_REL_PATHS: tuple[str, ...] = (
     "app/api/v1/endpoints/chat_ws_boundary.py",
     "app/api/v1/endpoints/chat_ws_companion_support.py",
     "backend/ops/weixin_channel",
-    "backend/ops/telegram_demo",
+    "backend/ops/telegram_channel",
     "backend/ops/api/v1/agent_channel.py",
     "backend/ops/api/v1/telegram.py",
-    "backend/ops/api/v1/telegram_demo.py",
     "tests/app/core/companion_harness",
     "tests/living_sphere",
 )

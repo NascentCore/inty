@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from backend.ops.telegram_demo.binding import (
+from backend.ops.telegram_channel.binding import (
     StartPayloadKind,
     parse_start_payload,
 )

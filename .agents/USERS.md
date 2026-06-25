@@ -14,7 +14,7 @@
 - 对代码理解深刻
 - 细粒度配置开关：未实际使用则倾向删除，而非继续维护组合式配置。
 - REPL 回归测 Ops 时 **不要** 用 uvicorn `--reload`（会导致 brittle 进程重启）。
-- Telegram 测试账号 `telegram_chat_id=5078060274`（用于 telegram-demo onboard / restore smoke）。
+- Telegram 测试账号 `telegram_chat_id=5078060274`（用于 Telegram channel onboard / restore smoke）。
 
 ### 王琢誉/wangz233
 

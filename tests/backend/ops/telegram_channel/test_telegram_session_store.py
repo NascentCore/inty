@@ -1,6 +1,6 @@
-"""Tests for telegram demo in-memory scope cache."""
+"""Tests for Telegram channel in-memory scope cache."""
 
-from backend.ops.telegram_demo import session_store
+from backend.ops.telegram_channel import session_store
 from app.core.companion_harness.agent_channel.scope import AgentScope
 
 
