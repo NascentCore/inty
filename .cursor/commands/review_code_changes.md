@@ -27,6 +27,7 @@ behaviors are not well abstracted
 - If code is difficult to described in much shorter documentation,
 that means the code lacks hierarchy.
 - If you noticed refactoring opporutnity, add TODOs to code places that the refactoring should be applied.
+- More than 3-5 arguments in function, consider grouping them into dataclass data types.
 
 ## Alembic version files
 

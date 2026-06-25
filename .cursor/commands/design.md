@@ -1,5 +1,7 @@
 # Design an effective solution
 
+Produce an abstract design that achieves the objective and fit into the existing architecture of the repo.
+
 - Think independently, be critical towards user's requests, suggestions, and other inputs.
 - Absolutely understand the purpose, /grill-me if needed
 - Absolutely understand the problem, /grill-me if needed
@@ -11,10 +13,11 @@
   - Describe how they interact to achieve the design objectives
   - Enum type has semantic of the values
 - Keep scope focused on the core problem
+- Use `app/utils/config.py` to control code logics that directly affect user-perceived behavior from the code
 
 ## Procedure
 
-- Start by clarifying the highest-level objective, and then break down into logical hierarchy with each layer composed of orthogonal
+- Start by clarifying the highest-level objectives, and then break down into logical hierarchy with each layer composed of orthogonal
   and loosely coupled concepts, and the higher-layer achieves its goals through composition of lower-layer components.
 - Propose up to 3 alternative designs
 - Identify the single most effective design after exploring a wide range of possible deisng option. List your rationale, and unselected options.

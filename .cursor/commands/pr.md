@@ -8,14 +8,14 @@ Create a pull request for the current working branch
    - Ensure all changes are committed
    - Ensure the working branch is up to date with the remote main branch.
    - Ensure the working branch is pushed to remote.
-   
 
 2. **Write PR title & description**
    - 输出中文 (output in Mandarin)
    - Summarize changes clearly in PR title
    - In PR description:
-     - Describe changed behaviors from the user's persecptive
+     - Describe changed behaviors from the user's persecptive.
      - Include context and motivation.
+     - Include references to GitHub issues as followups.
 
 3. **Create PR**
    - Create the PR with the above title and description.
