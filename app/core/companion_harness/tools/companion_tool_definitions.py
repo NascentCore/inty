@@ -119,6 +119,7 @@ class CompanionToolName(StrEnum):
     MEMORY_STORE_WRITE_DOCUMENT = "memory_store_write_document"
     MODIFY_IMAGE = "modify_image"
     READ_WEB_PAGE = "read_web_page"
+    # TODO(#3675): BROWSE_WEB = "browse_web" — Browserbase interactive page open — epic #3672.
     SCHEDULE_TASK = "schedule_task"
     TECHNO_CORE_RECORD_EVENT = "techno_core_record_event"
     UPDATE_USER_MD = "update_user_md"

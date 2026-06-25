@@ -1,4 +1,7 @@
-"""Download a web page, extract readable text, summarize as markdown bullets, append to MEMORY.md."""
+"""Download a web page, extract readable text, summarize as markdown bullets, append to MEMORY.md.
+
+TODO(#3674): When Browserbase is enabled, render via remote browser before summarizing — epic #3672.
+"""
 
 from __future__ import annotations
 

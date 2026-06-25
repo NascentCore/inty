@@ -7,6 +7,7 @@ Tools categories
 <!-- TODO(#3362): Built from companion_tool_definitions metadata -->
 
 - Read-only access to the Internet: reading web pages and search the web
+  <!-- TODO(#3672): Browserbase-backed JS rendering (read_web_page #3674) and browse_web #3675 -->
 - Update memory docs
 - Manifesting autonomy: force llm to produce non-user-triggered autonomous activities, can include the above tools
 
