@@ -2,46 +2,28 @@
 
 If not in plan mode, do nothing and stop!
 
-Review and revise the implementation plan:
+Review architecture of the pending changes' fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md).
 
+Make sure that the implementation plan meets the following objectives:
+
+- The plan's problem to be solved are clearly defined and meaningful
 - The plan's objectives are clear and reasonable
 - The plan's logical design is sound
 - The plan's implementation steps are sufficiently granular
   - Include data types definitions (with key doc string to describe the data type's role in the design) and core logics
 - The plan's target state matches objectives
 
-Review architecture of the pending changes' fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
+## Detailed review items
 
-## Use alembic cli to generate database version files
+Check each item against the corresponding section in [plan.md](/.cursor/commands/plan.md):
 
-- After adding new models in orm/, use alembic skill to create new version file
-- Never generate alembic version file
-
-## Testing
-
-- Plan should include testing.
-- Tests are done at the key juncture between procedures of the plan.
-- Complex featuers should have smoke tests to cover the end-to-end process.
-- User-facing changes should have regression tests added to repl regression tests,
-  as repl regression tests are the only client we can reliably test.
-  Weixin/WeChat Telegram are difficult to test in code.
-
-## Refactoring
-
-When refactoring, follow the procedures below:
-
-1. implement the new design in code with minimal changes to the existing code
-2. test the new code
-2. integrate the new code into the existing code
-3. test the integrated code
-4. (optional) delete the old code
-
-## Limited layering
-
-Limit the the number of layers in implementing a complex feature:
-
-- When extending behaviors, prefer rewriting a new function and remove the old one, over extending the existing function and wrap them behind a new function with "more specific interface" or naming. The former sheds the unnecessary complexity, and the latter merely hides and accumlates unnecessary complexity.
+- [ ] **Alembic** — plan includes alembic skill for new ORM models; no hand-written version files ([plan.md § Use alembic cli](/.cursor/commands/plan.md))
+- [ ] **Testing** — plan includes tests at key junctures; smoke/regression coverage where applicable ([plan.md § Testing](/.cursor/commands/plan.md))
+- [ ] **Refactoring** — refactoring steps follow implement → test → integrate → test → optional delete ([plan.md § Refactoring](/.cursor/commands/plan.md))
+- [ ] **Layering** — no excessive abstraction; hierarchy has roughly 3 layers; prefer rewrite over wrapper stacking ([plan.md § Limited layering](/.cursor/commands/plan.md))
+- [ ] **Architecture fitness** - fits the architecture design and common best practices (modularity, composability, encapsulation)
 
 ## References
 
+- [plan.md](/.cursor/commands/plan.md) — implementation plan conventions
 - When choosing from different options, consider the overall [companion harness design](/docs/imate/companion_harness/DESIGN.md)

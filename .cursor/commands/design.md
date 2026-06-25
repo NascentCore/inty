@@ -1,5 +1,7 @@
 # Design an effective solution
 
+Produce an abstract design that achieves the objective and fit into the existing architecture of the repo.
+
 - Think independently, be critical towards user's requests, suggestions, and other inputs.
 - Absolutely understand the purpose, /grill-me if needed
 - Absolutely understand the problem, /grill-me if needed
@@ -11,13 +13,15 @@
   - Describe how they interact to achieve the design objectives
   - Enum type has semantic of the values
 - Keep scope focused on the core problem
+- Only when the user explicitly requests configurability, use repo config mechanisms [`config.py`](/app/utils/config.py); cross-field moves see [move-config-entries skill](/.cursor/skills/move-config-entries/SKILL.md))
 
 ## Procedure
 
-- Start by clarifying the highest-level objective, and then break down into logical hierarchy with each layer composed of orthogonal
+- If direction is not yet converged, run `/brainstorm` or `/grill-me` before proposing alternatives
+- Start by clarifying the highest-level objectives, and then break down into logical hierarchy with each layer composed of orthogonal
   and loosely coupled concepts, and the higher-layer achieves its goals through composition of lower-layer components.
 - Propose up to 3 alternative designs
-- Identify the single most effective design after exploring a wide range of possible deisng option. List your rationale, and unselected options.
+- Identify the single most effective design after exploring a wide range of possible design option. List your rationale, and unselected options.
 
 ## Antipatterns to avoid
 
@@ -25,7 +29,7 @@
   - **No speculative knobs**: do not add new env vars, optional CLI flags, or extra optional parameters “just in case”;
   only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
-- Shallow wrapper, eg: function of only 1 line of actuall code
+- Shallow wrapper, eg: function of only 1 line of actual code
 
 ## Companion harness prompt assemblage
 
