@@ -91,7 +91,7 @@ alembic history -v | head
 python -m alembic heads
 ```
 
-CI 要求恰好一个 head；合并前可跑 Cursor command **`/run_ci_tests`**（[`.cursor/commands/run_ci_tests.md`](/.cursor/commands/run_ci_tests.md)）。
+CI 要求恰好一个 head；合并前可跑 Cursor command **`/run-ci-tests`**（[`.cursor/commands/run-ci-tests.md`](/.cursor/commands/run-ci-tests.md)）。
 
 ## 常用命令速查
 

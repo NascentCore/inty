@@ -7,6 +7,6 @@
 ## Commands workflow as guiding processing
 
 - 探索：`/brainstorm` → `/design`
-- 规划：`/plan`（plan mode）→ `/review_plan`
-- 交付：`/review_code_changes` → `/create_gh_issues_and_todos` → `/pr`
+- 规划：`/plan`（plan mode）→ `/review-plan`
+- 交付：`/review-code-changes` → `/create-gh-issues-and-todos` → `/pr`
 - 输出格式：`/1sentence` + `/1paragraph`（与根 [AGENTS.md](/AGENTS.md) Output 节一致）
