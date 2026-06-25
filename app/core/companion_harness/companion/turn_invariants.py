@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from .models import CompanionTurnTrack
 
-DREAMING_BATCH_ORCHESTRATOR = "run_dreaming_batch_if_due"
 DREAMING_BATCH_CURATION_ENTRY = "consolidate_memory_during_dreaming"
 
 AWAKE_TURN_TRACKS: frozenset[CompanionTurnTrack] = frozenset(CompanionTurnTrack)

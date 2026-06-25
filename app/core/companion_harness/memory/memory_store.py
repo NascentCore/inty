@@ -331,8 +331,5 @@ class MemoryStore:
             merged += line + "\n"
             self.write_document(rel, merged)
 
-    def flush_now(self, *, timeout_s: float = 5.0) -> None:
-        return
-
     def shutdown(self, *, timeout_s: float = 5.0) -> None:
         return
