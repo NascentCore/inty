@@ -1,5 +1,7 @@
 # User preferences
 
+Always try to understand your human partner!
+
 ## 你的人类合作伙伴（Human Partners）
 
 - 使用 github cli gh 来探测 github credentials，然后匹配下面的 github 用户名
