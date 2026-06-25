@@ -30,6 +30,15 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceDirectiveTone,
     ExperienceSessionIntent,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+)
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -54,26 +63,26 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 # wire ``turn.py`` write_allowlist and ``build_openai_*_track_tools`` from that registry instead of
 # three parallel ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_*`` + ``REPL_DESCRIPTION_OVERRIDES_*`` pairs.
 # https://github.com/nascentcore/inty/issues/3367
-# TODO(memdoc-path-constants): Build allowlists from canonical MemDoc path constants. #3413
+# Allowlists from canonical MemDoc path constants (#3413).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
-        "COMPANIONSHIP.md",
-        "IDENTITY.md",
-        "LIFE_CURRENTS.md",  # AUTONOMY: virtual-space activity (not ai_private user-directed thoughts)
-        "MEMORY.md",
-        "SOUL.md",
-        "STYLE.md",
-        "USER.md",
+        COMPANIONSHIP_MD_REL,
+        IDENTITY_MD_REL,
+        LIFE_CURRENTS_MD_REL,
+        MEMORY_MD_REL,
+        SOUL_MD_REL,
+        STYLE_MD_REL,
+        USER_MD_REL,
     }
 )
 
 # USER_CHAT_BOOTSTRAP: relationship seed docs only; SOUL/MEMORY come from package templates.
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP: frozenset[str] = frozenset(
     {
-        "COMPANIONSHIP.md",
-        "IDENTITY.md",
-        "STYLE.md",
-        "USER.md",
+        COMPANIONSHIP_MD_REL,
+        IDENTITY_MD_REL,
+        STYLE_MD_REL,
+        USER_MD_REL,
     }
 )
 
@@ -84,7 +93,7 @@ BOOTSTRAP_WRITABLE_REL_PATHS: Final[tuple[str, ...]] = tuple(
 
 # AUTONOMY inner-tick: only LIFE_CURRENTS.md (profile curation → DREAMING / MONOLOG).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY: frozenset[str] = frozenset(
-    {"LIFE_CURRENTS.md"}
+    {LIFE_CURRENTS_MD_REL}
 )
 
 TOOL_TAG_GENERATION = "GENERATION"
