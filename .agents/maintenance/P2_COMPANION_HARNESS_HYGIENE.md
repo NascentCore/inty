@@ -62,6 +62,6 @@ Open PRs checked: #3682 (`.agents/guidelines` rename) — no overlap.
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-17** #3413: `companion_user_feedback.py` snapshot paths + transcript from `memory_store_path_constants`. Claimed `cursor/agent-maintenance-tasks-471f`.
-- [ ] **HYGIENE-2026-18** #3413: `companion_tool_definitions.py` write allowlists from canonical path constants. Claimed `cursor/agent-maintenance-tasks-471f`.
-- [ ] **HYGIENE-2026-19** #3413: `user_md_identity.py` import `USER_MD_REL` from `memory_store_path_constants` (drop duplicate). Claimed `cursor/agent-maintenance-tasks-471f`.
+- [x] **HYGIENE-2026-17** #3413: `companion_user_feedback.py` snapshot paths + transcript from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-471f`.
+- [x] **HYGIENE-2026-18** #3413: `companion_tool_definitions.py` write allowlists from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-471f`.
+- [x] **HYGIENE-2026-19** #3413: `user_md_identity.py` import `USER_MD_REL` from `memory_store_path_constants` (drop duplicate). Fixed in `cursor/agent-maintenance-tasks-471f`.
