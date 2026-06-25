@@ -10,10 +10,6 @@ from typing import Any
 from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_document_mapping import (
-    CompanionMemoryDocumentKind,
-    parse_memory_store_relative_path,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -248,12 +244,3 @@ def compact_living_sphere_if_pending(
                 len(still_pending),
             )
     return any_ran
-
-
-def document_kind_for_living_sphere_updates_jsonl() -> (
-    CompanionMemoryDocumentKind
-):
-    kind, _ = parse_memory_store_relative_path(
-        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH
-    )
-    return kind
