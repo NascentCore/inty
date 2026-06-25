@@ -973,7 +973,33 @@ def _patch_companion_ws_queue_turn(
     from unittest.mock import AsyncMock, MagicMock
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
-    
+    from app.core.companion_harness.companion.runtime_channel import (
+        ChannelKind,
+    )
+    from app.schemas.implicit_signals import ImplicitSignalBundle
+    from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
+    from app.services.agentic_channel.channel_runtime import (
+        ChannelRuntimeState,
+        clear_registries_for_tests,
+        get_scope_channel_registry,
+    )
+    from app.services.agentic_channel.presence import (
+        AgentChannelPresence,
+        clear_presences_for_tests,
+        _presences,
+    )
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        ReadyOutputMessage,
+    )
+    from app.core.companion_harness.agentic_companion.types import (
+        InputQueueRecord,
+        QueueStatus,
+    )
+    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.services.agentic_companion.ws_outbound_materialize import (
+        materialize_queue_user_reply_from_durable,
+    )
+
     from app.core.config import global_config_loaded_from_config_yaml
     from app.services.agentic_companion.inner_tick_poll import (
         run_inner_tick_poll,
