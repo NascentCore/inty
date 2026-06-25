@@ -19,4 +19,7 @@ Implementations:
   ``channel_address=peer_id``, ``channel_user_id=wxid`` (production bridge unchanged).
 
 - ``app_ws.AppWsChannelAdapter`` — WS completion materialization for OutputQueue delivery.
+- ``sms.SmsChannelAdapter`` — Twilio ``Messages.create`` to one bonded E.164
+  (``channel_address`` = user phone on a shared long code); package holds downlink,
+  body materialization, inner-tick, and sign-on flush helpers.
 """

@@ -1,4 +1,4 @@
-"""Postgres persistence for Ops telegram-demo poll offset (bindings → agent_channel_endpoints)."""
+"""Postgres persistence for Ops Telegram channel poll offset (bindings → agent_channel_endpoints)."""
 
 from __future__ import annotations
 

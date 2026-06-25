@@ -428,7 +428,7 @@ def _print_matches(
         print(f"reply_snippet={match.reply_snippet}")
         print(f"langsmith_url={_LANGSMITH_PUBLIC_TRACE_URL.format(trace_id=match.trace_id)}")
         print("log_grep:")
-        print(f"  rg -n '{match.trace_id}|{match.agent_id}|run_turn|telegram-demo' {log_file}")
+        print(f"  rg -n '{match.trace_id}|{match.agent_id}|run_turn|telegram-channel' {log_file}")
         print(
             "  download trace: "
             f"python .cursor/skills/scripts/download_run.py "

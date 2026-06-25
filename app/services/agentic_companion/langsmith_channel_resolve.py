@@ -52,7 +52,7 @@ def resolve_langsmith_slice_for_session(
     user_active = active_channel_for_user(session.user_id)
     if user_active is not None:
         return CompanionTurnLangsmithSlice.from_channel(
-            ChannelKind(user_active.value),
+            user_active,
             LangsmithChannelSource.USER_REGISTRY,
         )
 

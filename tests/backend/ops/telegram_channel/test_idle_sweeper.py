@@ -30,8 +30,8 @@ from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
 from app.services.agentic_channel.endpoints import EndpointRecord
-from backend.ops.telegram_demo import session_store
-from backend.ops.telegram_demo.idle_sweeper import run_idle_sweeper_cycle
+from backend.ops.telegram_channel import session_store
+from backend.ops.telegram_channel.idle_sweeper import run_idle_sweeper_cycle
 
 
 async def _cleanup_provision(user_id: str) -> None:

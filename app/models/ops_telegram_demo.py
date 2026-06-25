@@ -1,4 +1,4 @@
-"""ORM for Ops Telegram demo shared-bot poll cursor (bindings → ``agent_channel_endpoints``)."""
+"""ORM for Ops Telegram channel shared-bot poll cursor (``ops_telegram_demo_poll_state``)."""
 
 import sqlalchemy as sa
 from sqlalchemy import BigInteger, Column, DateTime, Integer

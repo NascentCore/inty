@@ -1,4 +1,4 @@
-"""Telegram demo session store: in-memory presences + agent_channel endpoint restore."""
+"""Telegram channel session store: in-memory presences + agent_channel endpoint restore."""
 
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             if not bond_active:
                 skipped_inactive += 1
                 logger.info(
-                    "telegram-demo restore skipped inactive bond channel_address={} user_id={} agent_id={}",
+                    "telegram-channel restore skipped inactive bond channel_address={} user_id={} agent_id={}",
                     record.channel_address,
                     scope.user_id,
                     scope.agent_id,
@@ -107,7 +107,7 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             if bond is not None and bond.runtime_paused_at is not None:
                 skipped_inactive += 1
                 logger.info(
-                    "telegram-demo restore skipped paused runtime channel_address={} user_id={} agent_id={}",
+                    "telegram-channel restore skipped paused runtime channel_address={} user_id={} agent_id={}",
                     record.channel_address,
                     scope.user_id,
                     scope.agent_id,
@@ -121,12 +121,12 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
             restored_count += 1
         except Exception:
             logger.exception(
-                "telegram-demo restore failed channel_address={}",
+                "telegram-channel restore failed channel_address={}",
                 record.channel_address,
             )
     if records:
         logger.info(
-            "telegram-demo: restored {} agent_channel endpoint(s) skipped_inactive={} total={}",
+            "telegram-channel: restored {} agent_channel endpoint(s) skipped_inactive={} total={}",
             restored_count,
             skipped_inactive,
             len(records),

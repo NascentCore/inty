@@ -22,9 +22,6 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueMessageId,
     QueueStatus,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-)
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agentic_companion_queue import (

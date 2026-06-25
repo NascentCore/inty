@@ -37,12 +37,18 @@ def test_api_router_telegram_product_route_always_mounted() -> None:
     assert "/api/v1/telegram/bot-info" in paths
 
 
-def test_api_router_debug_bindings_follows_config() -> None:
+def test_api_router_telegram_debug_bindings_route_always_registered() -> None:
     paths = _telegram_paths_on_api_router()
+    assert "/api/v1/telegram/debug/bindings" in paths
+
+
+def test_telegram_debug_bindings_follows_debug_flag() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v1/telegram/debug/bindings")
     if global_config_loaded_from_config_yaml.app.debug:
-        assert "/api/v1/telegram-demo/bindings" in paths
+        assert response.status_code == 200
     else:
-        assert "/api/v1/telegram-demo/bindings" not in paths
+        assert response.status_code == 404
 
 
 def test_telegram_onboard_html_uses_product_api() -> None:
@@ -67,8 +73,8 @@ class _FakeEndpoint:
 
 
 @pytest.mark.asyncio
-async def test_telegram_demo_bindings_api_lists_rows() -> None:
-    from backend.ops.api.v1.telegram_demo import telegram_demo_bindings
+async def test_telegram_debug_bindings_api_lists_rows() -> None:
+    from backend.ops.api.v1.telegram import telegram_debug_bindings
 
     fake_row = _FakeEndpoint(
         channel_address="123",
@@ -78,10 +84,10 @@ async def test_telegram_demo_bindings_api_lists_rows() -> None:
         channel=ChannelKind.TELEGRAM,
     )
     with patch(
-        "backend.ops.api.v1.telegram_demo.list_endpoints_for_channel",
+        "backend.ops.api.v1.telegram.list_endpoints_for_channel",
         new_callable=AsyncMock,
         return_value=[fake_row],
     ):
-        resp = await telegram_demo_bindings()
+        resp = await telegram_debug_bindings()
     assert resp.data.count == 1
     assert resp.data.bindings[0].channel_address == "123"

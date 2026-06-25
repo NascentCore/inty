@@ -23,9 +23,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.security import create_access_token
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-)
 from app.services.agentic_channel.companion_bonds import (
     require_active_companion_bond,
 )

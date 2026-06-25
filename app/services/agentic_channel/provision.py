@@ -1,6 +1,6 @@
 """Guest user + agent provisioning for agent-channel onboard (no legacy chat row).
 
-Identity for companion / telegram-demo / weixin paths uses ``User.id`` and ``Agent.id``
+Identity for companion / telegram-channel / weixin paths uses ``User.id`` and ``Agent.id``
 only. Do **not** read or write legacy ``readable_id`` here (maintenance-mode HTTP APIs
 may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 
@@ -231,7 +231,7 @@ async def provision_agent_for_channel_onboard(
         try:
             scope = await provision_guest_scope(
                 db,
-                ProvisionGuestScopeInput(
+ProvisionGuestScopeInput(
                     channel=channel,
                     nickname_prefix="Guest",
                     meta_data=_guest_meta_data_for_channel(channel),

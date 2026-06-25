@@ -22,6 +22,7 @@ import pytest
 
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
@@ -42,10 +43,6 @@ from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
     CompanionSession,
-)
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,

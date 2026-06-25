@@ -1,7 +1,6 @@
 """Per-scope channel runtime state: bonded endpoints vs ACTIVE downlink.
 
-TODO(rename-channel-to-gateway): Rename runtime/registry types to Gateway; key by — #3548
-``GatewayKind`` from ``agent_channel/gateway.py``. Transport only — no harness traits here.
+``ChannelKind`` from ``companion.runtime_channel``. Transport only — no harness traits here.
 """
 
 from __future__ import annotations
@@ -17,6 +16,10 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.services.agentic_channel.adapters.base import ChannelAdapter
 from app.services.agentic_channel.endpoints import get_endpoint_for_scope
+from app.services.agentic_companion.runtime_channel_registry import (
+    register_active_channel,
+    unregister_active_channel,
+)
 from app.services.agentic_companion.downlink import ChannelDownlink
 
 
@@ -85,6 +88,7 @@ async def turn_channel_up(
     registry.adapters[channel] = adapter
     registry.downlinks[channel] = adapter.as_downlink()
     await adapter.on_turn_up(scope)
+    register_active_channel(user_id=scope.user_id, channel=channel)
     logger.info(
         "agent_channel turn_up scope={} channel={} reason={}",
         scope.registry_key(),
@@ -109,6 +113,7 @@ async def turn_channel_down(
     adapter = registry.adapters.pop(channel, None)
     if adapter is not None:
         await adapter.on_turn_down(scope)
+    unregister_active_channel(user_id=scope.user_id, channel=channel)
     logger.info(
         "agent_channel turn_down scope={} channel={} reason={}",
         scope.registry_key(),

@@ -5,6 +5,7 @@ Channels are medium to interact with your human companion:
 - App (iMate)
 - Wechat
 - Telegram
+- SMS (plain text, no markdown; keep replies short)
 
 Channels offer different shapes of interactivity between you and the user.
 

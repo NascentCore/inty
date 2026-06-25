@@ -1,4 +1,4 @@
-"""Tests for companion runtime channel classification."""
+"""Tests for companion runtime gateway classification."""
 
 from __future__ import annotations
 
@@ -13,5 +13,6 @@ def test_is_im_runtime_channel_weixin_and_telegram() -> None:
     assert is_im_runtime_channel(ChannelKind.TELEGRAM) is True
 
 
-def test_is_im_runtime_channel_app() -> None:
+def test_is_im_runtime_channel_app_and_sms() -> None:
     assert is_im_runtime_channel(ChannelKind.APP_WS) is False
+    assert is_im_runtime_channel(ChannelKind.SMS) is False

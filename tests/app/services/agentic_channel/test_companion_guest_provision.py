@@ -106,7 +106,7 @@ async def test_provision_guest_scope_creates_linked_user_and_agent() -> None:
     async with AsyncSessionLocal() as db:
         scope = await provision_guest_scope(
             db,
-            ProvisionGuestScopeInput(
+ProvisionGuestScopeInput(
                 channel=ChannelKind.WECHAT_WEIXIN,
                 nickname_prefix="Scope",
                 meta_data={"scope": True},

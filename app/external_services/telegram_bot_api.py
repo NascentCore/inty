@@ -1,4 +1,4 @@
-"""Telegram Bot API HTTP client for Ops telegram-demo long-poll bridge.
+"""Telegram Bot API HTTP client for Ops Telegram channel long-poll bridge.
 
 TODO(telegram-meta-ops-api): Add setMyName / setMyDescription / sendChatAction — #3397
   (requires dedicated-bot bonding #3361; shared-bot constraints #3396)

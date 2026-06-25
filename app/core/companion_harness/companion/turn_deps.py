@@ -29,7 +29,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
 
 from app.core.llms.client import LlmClient
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from .runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
 if TYPE_CHECKING:

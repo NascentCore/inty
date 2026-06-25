@@ -41,7 +41,7 @@ When review concludes the skill is ineffective or redundant, shrink to manual wo
 
 - User shares a **Telegram chat screenshot** and asks why replies are wrong, duplicated, or looping.
 - You need **LangSmith trace IDs** and **Ops log grep hints** for a specific visible exchange.
-- Channel is Ops **telegram-demo** (`runtime_channel=telegram` on dev/local/prod Ops).
+- Channel is Ops **Telegram channel** (`runtime_channel=telegram` on dev/local/prod Ops).
 
 ## Inputs to extract from the screenshot
 
@@ -101,10 +101,10 @@ Helper script path: [`.cursor/skills/scripts/telegram_screenshot_trace_match.py`
 **Grep patterns** (after you have `trace_id` / `agent_id` from LangSmith):
 
 ```bash
-rg -n '<trace_id>|<agent_id>|run_turn|telegram-demo|langsmith_trace_id' .inty/inty.log
+rg -n '<trace_id>|<agent_id>|run_turn|telegram-channel|langsmith_trace_id' .inty/inty.log
 ```
 
-Turn lifecycle log lines to expect: `run_turn loop_done`, `repl.turn.bg policy_summary`, `telegram-demo:` transport events.
+Turn lifecycle log lines to expect: `run_turn loop_done`, `repl.turn.bg policy_summary`, `telegram-channel:` transport events.
 
 Postgres transcript fallback (same agent): [`inspect-companion-harness`](../inspect-companion-harness/SKILL.md) — only when LangSmith retention expired or key mismatch.
 
@@ -128,4 +128,4 @@ Duplicate Telegram bubbles often mean **both legs sent overlapping text** — co
 
 - [`langsmith-download-run`](../langsmith-download-run/SKILL.md) — archive trace JSON.
 - [`inspect-companion-harness`](../inspect-companion-harness/SKILL.md) — MemoryStore / transcript in Postgres.
-- [`telegram-demo-restore-smoke`](../telegram-demo-restore-smoke/SKILL.md) — binding + transport smoke.
+- [`telegram-channel-restore-smoke`](../telegram-channel-restore-smoke/SKILL.md) — binding + transport smoke.

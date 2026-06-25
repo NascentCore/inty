@@ -60,13 +60,25 @@ from app.services.companion_chat_service import (
 from app.services.agentic_companion.session import Coordinator, Session
 from app.services.chat_service import generate_session_id
 
-_SIGN_ON_GREETING_USER_TEXT = (
+_SIGN_ON_GREETING_USER_TEXT_TELEGRAM = (
     "The user opened the Telegram chat through onboarding."
+)
+_SIGN_ON_GREETING_USER_TEXT_SMS = (
+    "The user texted START to connect on SMS."
 )
 
 _IM_USER_NOT_FOUND = "Could not find your Inty user. Please send /start again."
 _IM_AGENT_NOT_FOUND = "Could not find this companion. Please check the agent."
 _IM_TURN_FAILED = "Companion turn failed. Please check Ops logs."
+
+
+def _implicit_sign_on_user_text(runtime_channel: ChannelKind) -> str:
+    """Synthetic user line for implicit sign-on greeting by channel."""
+    match runtime_channel:
+        case ChannelKind.SMS:
+            return _SIGN_ON_GREETING_USER_TEXT_SMS
+        case _:
+            return _SIGN_ON_GREETING_USER_TEXT_TELEGRAM
 
 
 def _localized_im_channel_message(
@@ -75,12 +87,12 @@ def _localized_im_channel_message(
     english: str,
     chinese: str,
 ) -> str:
-    """Return English copy on IM channels; Chinese elsewhere."""
+    """Return English copy on IM and SMS; Chinese on App WS."""
     match runtime_channel:
-        case channel if is_im_runtime_channel(channel):
-            return english
-        case _:
+        case ChannelKind.APP_WS:
             return chinese
+        case _:
+            return english
 
 
 _presences: dict[str, AgentChannelPresence] = {}
@@ -157,12 +169,16 @@ class AgentChannelPresence:
             self._tool_background_consumer(),
             name=f"agent_channel_tool_bg_{self._scope.agent_id}",
         )
+        registry = get_scope_channel_registry(self._scope)
+        initial_channel = registry.active_channel()
+        if initial_channel is None:
+            initial_channel = ChannelKind.APP_WS
         self._queue_serving = ScopeQueueServing(
             self._scope,
             background_output_sink=self._coordinator.background_sink,
             deliver_message=self._deliver_ready_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
-            runtime_channel=ChannelKind.TELEGRAM,
+            runtime_channel=initial_channel,
         )
         await self._queue_serving.start()
 
@@ -238,7 +254,7 @@ class AgentChannelPresence:
             user_id=self._scope.user_id,
             agent_id=self._scope.agent_id,
             chat_id=self._scope.memory_store_chat_id(),
-            user_text=_SIGN_ON_GREETING_USER_TEXT,
+            user_text=_implicit_sign_on_user_text(runtime_channel),
             resolved_chat_model=model,
             implicit_signal_bundle=bundle,
             runtime_channel=runtime_channel,

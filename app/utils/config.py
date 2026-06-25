@@ -398,11 +398,26 @@ class EmbeddingConfig(BaseModel):
 
 
 class TelegramChannelConfig(BaseModel):
-    """Ops telegram-demo Bot API credentials."""
+    """Ops Telegram channel Bot API credentials."""
 
     model_config = ConfigDict(extra="ignore")
 
     bot_token: str = ""
+
+
+class SmsChannelConfig(BaseModel):
+    """Ops SMS gateway long code and routing settings."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    from_number: str = ""
+    webhook_base_url: str = Field(
+        default="",
+        description=(
+            "Public HTTPS origin for Twilio webhook signature validation "
+            "(e.g. https://ops.example.com). Empty uses the inbound request URL."
+        ),
+    )
 
 
 class AgentChannelsConfig(BaseModel):
@@ -413,13 +428,41 @@ class AgentChannelsConfig(BaseModel):
     telegram: TelegramChannelConfig = Field(
         default_factory=TelegramChannelConfig
     )
-    # TODO(telegram-demo-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
+    sms: SmsChannelConfig = Field(default_factory=SmsChannelConfig)
+    # TODO(telegram-channel-config-weixin): move root ``weixin_channel`` (WeixinChannelConfig)
     # under ``agent.channels.weixin`` for symmetry.
 
 
 def resolved_telegram_bot_token(agent: "AgentConfig") -> str:
     """Return ``agent.channels.telegram.bot_token``."""
     return agent.channels.telegram.bot_token.strip()
+
+
+def resolved_sms_from_number(agent: "AgentConfig") -> str:
+    """Return ``agent.channels.sms.from_number``."""
+    return agent.channels.sms.from_number.strip()
+
+
+def resolved_sms_twilio_webhook_url(
+    agent: "AgentConfig",
+    *,
+    path: str,
+) -> str:
+    """Return configured public webhook URL for Twilio signature validation."""
+    assert path.startswith("/")
+    base = agent.channels.sms.webhook_base_url.strip().rstrip("/")
+    if not base:
+        return ""
+    return f"{base}{path}"
+
+
+def resolved_twilio_messaging_credentials(
+    config: "Config",
+) -> tuple[str, str]:
+    """Return Twilio REST credentials shared by phone-call and SMS gateways."""
+    account_sid = config.phone_call.twilio_account_sid.strip()
+    auth_token = config.phone_call.twilio_auth_token.strip()
+    return account_sid, auth_token
 
 
 class AgentConfig(BaseModel):

@@ -113,7 +113,7 @@ from app.services.agentic_companion.ws_outbound_materialize import (
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
     unregister_app_ws_channel,
-    ws_reject_reason_if_telegram_active,
+    ws_reject_reason_if_other_channel_active,
 )
 from app.services.agentic_companion.ws_downlink import WebSocketDownlink
 from app.services.phone_call_service import (
@@ -1470,7 +1470,7 @@ async def chat_completions_websocket(
         db=db,
     )
 
-    telegram_ws_reject = ws_reject_reason_if_telegram_active(
+    telegram_ws_reject = ws_reject_reason_if_other_channel_active(
         user_id=str(current_user.id)
     )
     if telegram_ws_reject is not None:

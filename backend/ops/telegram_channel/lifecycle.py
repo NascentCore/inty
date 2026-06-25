@@ -1,4 +1,4 @@
-"""Ops telegram-demo process lifecycle: long-poll start/stop on Ops boot/shutdown."""
+"""Ops Telegram channel process lifecycle: long-poll start/stop on Ops boot/shutdown."""
 
 from __future__ import annotations
 
@@ -10,24 +10,24 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_channel.presence import stop_all_presences
 from app.utils.config import resolved_telegram_bot_token
-from backend.ops.telegram_demo.session_store import restore_persisted_bindings
-from backend.ops.telegram_demo.transport import TelegramTransport
+from backend.ops.telegram_channel.session_store import restore_persisted_bindings
+from backend.ops.telegram_channel.transport import TelegramTransport
 
 _poll_task: asyncio.Task[None] | None = None
 _transport: TelegramTransport | None = None
 
 
-async def start_telegram_demo() -> None:
+async def start_telegram_channel() -> None:
     """Start shared-bot long-poll when ``agent.channels.telegram.bot_token`` is set."""
     global _poll_task, _transport
     token = resolved_telegram_bot_token(
         global_config_loaded_from_config_yaml.agent
     )
     if not token:
-        logger.info("telegram-demo: no bot token configured; poll skipped")
+        logger.info("telegram-channel: no bot token configured; poll skipped")
         return
     if _poll_task is not None and (not _poll_task.done()):
-        logger.warning("telegram-demo: poll already running")
+        logger.warning("telegram-channel: poll already running")
         return
 
     api = TelegramBotApi(bot_token=token)
@@ -35,12 +35,12 @@ async def start_telegram_demo() -> None:
     _transport = TelegramTransport(api=api)
     _poll_task = asyncio.create_task(
         _transport.run_until_stopped(),
-        name="telegram_demo_poll",
+        name="telegram_channel_poll",
     )
-    logger.info("telegram-demo: long-poll started")
+    logger.info("telegram-channel: long-poll started")
 
 
-async def stop_telegram_demo() -> None:
+async def stop_telegram_channel() -> None:
     """Stop long-poll task, all presences, and release transport."""
     global _poll_task, _transport
     transport = _transport
@@ -53,4 +53,4 @@ async def stop_telegram_demo() -> None:
     if task is not None and (not task.done()):
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
-    logger.info("telegram-demo: stopped")
+    logger.info("telegram-channel: stopped")

@@ -37,7 +37,7 @@ from app.core.companion_harness.memory.memory_registry import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from .models import CompanionTurnResult
-from .runtime_channel import ChannelKind, TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import ChannelKind, TurnRuntimeContext
 from .scope import CompanionScope
 from .scope_turn_lock import (
     ScopeTurnLock,

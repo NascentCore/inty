@@ -27,7 +27,6 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.agent_channel_endpoint import AgentChannelEndpoint
@@ -2657,7 +2656,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-        channel=ChannelKind.APP_WS,
+channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )

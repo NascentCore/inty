@@ -10,10 +10,6 @@ TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
-
-
-TODO(rename-channel-to-gateway): Move ``output_format_prompt_slice_for_runtime_channel`` to — #3548
-``agent_channel/gateway_traits.py`` (#3409).
 """
 
 from __future__ import annotations
@@ -97,7 +93,9 @@ def output_format_prompt_slice_for_runtime_channel(
     match runtime_channel:
         case channel if is_im_runtime_channel(channel):
             return bundle.output_format_im_dm_md
-        case ChannelKind.APP_WS:
+        case ChannelKind.APP_WS | ChannelKind.SMS:
+            return ""
+        case _:
             return ""
 
 

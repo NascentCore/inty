@@ -1,8 +1,8 @@
 """Per-user active runtime channel registry (prototype: in-process only).
 
-TODO(rename-channel-to-gateway): Rename registry/types to Gateway; key by ``GatewayKind`` — #3548
-from ``agent_channel/gateway.py``.
-TODO(telegram-demo-channel-multiplex): Unify with Weixin bridge and WS presence in one registry — #3350
+TODO(cross-channel-same-user-association): #3491 — associate channels for the same
+canonical user across devices; today exclusivity is per-process user_id only.
+TODO(telegram-channel-ws-guard): Extend registry across Ops replicas — #3351
 """
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from __future__ import annotations
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-
 
 _active_by_user_id: dict[str, ChannelKind] = {}
 

@@ -1,6 +1,6 @@
 """ORM for agent-channel endpoint bindings (multi-medium, no legacy chats row).
 
-TODO(rename-channel-to-gateway): Store ``GatewayKind`` wire values; optional model/table — #3548
+TODO(rename-channel-to-gateway): Store ``ChannelKind`` wire values; optional model/table — #3548
 rename is out of scope for #3548 — track separately if needed.
 """
 

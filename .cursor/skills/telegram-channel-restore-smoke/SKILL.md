@@ -1,12 +1,12 @@
 ---
-name: telegram-demo-restore-smoke
+name: telegram-channel-restore-smoke
 description: >-
-  Manual release smoke for Ops Telegram demo Postgres persistence and Ops-restart
+  Manual release smoke for Ops Telegram channel Postgres persistence and Ops-restart
   restore. Use when verifying telegram binding resume, agent_channel_endpoints,
   restore_persisted_bindings, or release smoke before merge.
 ---
 
-# Telegram demo restore smoke
+# Telegram channel restore smoke
 
 ## Prerequisites
 
@@ -22,13 +22,13 @@ description: >-
 4. **Returning** — send `/start onboard` again: italic *Welcome back…* only (no second greeting).
 5. Check bindings (**requires `app.debug: true` on Ops**, e.g. local/dev):
    ```bash
-   curl -s http://127.0.0.1:8001/api/v1/telegram-demo/bindings | jq
+   curl -s http://127.0.0.1:8001/api/v1/telegram/debug/bindings | jq
    ```
    Product bot metadata: `curl -s http://127.0.0.1:8001/api/v1/telegram/bot-info | jq`
    Expect bindings `count >= 1` with your `telegram_chat_id`.
 6. **Restart Ops** (Ctrl+C on start.sh, relaunch).
 7. Send another message **without** re-scanning QR.
-8. Expect reply; logs should show `telegram-demo: restored N agent_channel endpoint(s)`.
+8. Expect reply; logs should show `telegram-channel: restored N agent_channel endpoint(s)`.
 
 ## Optional: proactive after restore
 
@@ -50,8 +50,8 @@ SELECT id, last_update_id FROM ops_telegram_demo_poll_state;
 
 ## 汇报
 
-- 全过：`[telegram-demo-restore-smoke] RESULT: PASS`
-- 任一步失败：`[telegram-demo-restore-smoke] RESULT: FAIL (<一步>)`
+- 全过：`[telegram-channel-restore-smoke] RESULT: PASS`
+- 任一步失败：`[telegram-channel-restore-smoke] RESULT: FAIL (<一步>)`
 
 ## Pre-ad paid flight (#3536, epic #3531)
 

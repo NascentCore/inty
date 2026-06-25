@@ -82,6 +82,10 @@ def companion_guest_agent_name(
             return f"telegram-{tag}"
         case ChannelKind.WECHAT_WEIXIN:
             return f"weixin-companion-{tag}"
+        case ChannelKind.SMS:
+            return f"sms-{tag}"
+        case _:
+            raise AssertionError(f"unsupported channel: {channel!r}")
 
 
 async def add_guest_user(db: AsyncSession, input: GuestUserInput) -> User:

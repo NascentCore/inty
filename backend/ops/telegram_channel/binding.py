@@ -1,4 +1,4 @@
-"""Parse Telegram ``/start`` deep-link payloads for telegram-demo routing."""
+"""Parse Telegram ``/start`` deep-link payloads for Telegram channel routing."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _start_remainder(text: str) -> str | None:
 
 
 def parse_start_payload(text: str) -> StartPayload:
-    """Classify ``/start`` variants that trigger telegram-demo onboard."""
+    """Classify ``/start`` variants that trigger Telegram channel onboard."""
     remainder = _start_remainder(text)
     if remainder is None:
         return StartPayload(kind=StartPayloadKind.NONE)
