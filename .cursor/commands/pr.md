@@ -13,7 +13,7 @@ Create a pull request for the current working branch
    - 输出中文 (output in Mandarin)
    - Summarize changes clearly in PR title
    - In PR description:
-     - Describe changed behaviors from the user's persecptive.
+     - Describe changed behaviors from the user's perspective.
      - Include context and motivation.
      - Include references to GitHub issues as followups.
 

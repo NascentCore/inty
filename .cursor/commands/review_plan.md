@@ -15,11 +15,15 @@ Make sure that the implementation plan meets the following objectives:
 
 ## Detailed review items
 
-- Use alembic cli to generate database version files
-- Sufficient testing that gurantees correctness of the changes
-- Refactoring plan is well-organized according to best practices
-- No excessive layers in the abstration hierarchy. The abstraction hierarchy has roughly 3 layers
+Check each item against the corresponding section in [plan.md](/.cursor/commands/plan.md):
+
+- [ ] **Alembic** — plan includes alembic skill for new ORM models; no hand-written version files ([plan.md § Use alembic cli](/.cursor/commands/plan.md))
+- [ ] **Testing** — plan includes tests at key junctures; smoke/regression coverage where applicable ([plan.md § Testing](/.cursor/commands/plan.md))
+- [ ] **Refactoring** — refactoring steps follow implement → test → integrate → test → optional delete ([plan.md § Refactoring](/.cursor/commands/plan.md))
+- [ ] **Layering** — no excessive abstraction; hierarchy has roughly 3 layers; prefer rewrite over wrapper stacking ([plan.md § Limited layering](/.cursor/commands/plan.md))
+- [ ] **Architecture fitness** - fits the architecture design and common best practices (modularity, composability, encapsulation)
 
 ## References
 
+- [plan.md](/.cursor/commands/plan.md) — implementation plan conventions
 - When choosing from different options, consider the overall [companion harness design](/docs/imate/companion_harness/DESIGN.md)

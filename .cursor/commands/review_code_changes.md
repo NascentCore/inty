@@ -15,7 +15,7 @@ Review architecture of the pending changes' fitness to the [companion harness de
 ### Enhance
 
 - Propose architecture improvement to improve structural clarity
-- Propose wholistic solution instead of duct-tape fixes
+- Propose holistic solution instead of duct-tape fixes
 - Consolidate overlapping or repeated code paths into shared constructs
 
 ### Identify code smells
@@ -56,6 +56,6 @@ that means the code lacks hierarchy.
 - [ ] Confirm that changes match user intention
 - [ ] Critique the architecture
 - [ ] Tests are added if needed
-- [ ] Reviwed code smells
+- [ ] Reviewed code smells
 - [ ] Changes passed tests, fix test failures if needed
 - [ ] Referenced GitHub issues updated
