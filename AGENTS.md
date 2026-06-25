@@ -76,7 +76,7 @@ You should only changes and use code in the following dirs:
 
 ## Writing code
 
-Read [agent-conduct-and-code](/.agents/guidelines/agent-conduct-and-code.md) for more guideliens.
+Read [agent_conduct_and_code](/.agents/guidelines/agent_conduct_and_code.md) for more guideliens.
 
 - Adhere to implementation plan
 - Write few & dense code to accomplish the requests
