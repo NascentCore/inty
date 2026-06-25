@@ -37,22 +37,31 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
+)
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
 
 USER_FEEDBACK_JSONL_REL = ".companion_user_feedback.jsonl"
 COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME = "companion_record_user_feedback"
 
-# TODO(memdoc-path-constants): Snapshot paths from canonical MemDoc path constants. #3413
+# Snapshot paths from canonical MemDoc path constants (#3413).
 SNAPSHOT_DOC_PATHS: tuple[str, ...] = (
-    "context.json",
-    "IDENTITY.md",
-    "SOUL.md",
-    "STYLE.md",
-    "USER.md",
-    "MEMORY.md",
+    CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+    MEMORY_MD_REL,
 )
-TRANSCRIPT_REL = "transcript.jsonl"
+TRANSCRIPT_REL = TRANSCRIPT_JSONL_REL
 TRANSCRIPT_TAIL_MAX_CHARS = 12_000
 MEMORY_DOC_MAX_CHARS = 4_000
 
@@ -183,11 +192,11 @@ def build_harness_snapshot(
 ) -> HarnessSnapshot:
     feedback_id = str(uuid.uuid4())
     scope = store.scope
-    context_json = store.read_document_if_exists("context.json") or ""
+    context_json = store.read_document_if_exists(CONTEXT_JSON_REL) or ""
     transcript_raw = store.read_document_if_exists(TRANSCRIPT_REL) or ""
     memory_docs: dict[str, str] = {}
     for rel in SNAPSHOT_DOC_PATHS:
-        if rel == "context.json":
+        if rel == CONTEXT_JSON_REL:
             continue
         body = store.read_document_if_exists(rel)
         if body:
