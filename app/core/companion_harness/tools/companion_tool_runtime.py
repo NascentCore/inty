@@ -692,6 +692,7 @@ async def _dispatch(
         else:
             return "ERROR: max_bullets must be a positive integer or omitted"
         return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
+    # TODO(#3675): dispatch browse_web via Browserbase adapter — epic #3672.
     if name == "generate_image":
         prompt = arguments.get("prompt")
         if not isinstance(prompt, str):

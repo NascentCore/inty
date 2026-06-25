@@ -503,6 +503,7 @@ class AgentConfig(BaseModel):
     class CompanionHarnessConfig(BaseModel):
         model_config = ConfigDict(extra="ignore")
 
+        # TODO(#3673): Browserbase config (enabled, project_id); BROWSERBASE_API_KEY via env — epic #3672.
         # TODO: Change to Chinese OSS model when releasing to prod.
         dreaming_llm: str = Field(
             default="xiaomi/mimo-v2.5",
