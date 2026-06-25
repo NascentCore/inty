@@ -88,6 +88,47 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 
 **方法论不变式（#3606）**：L0=regression（确定性，gate CI exit code）；L1–L3=eval（随机/定性，report-only）。让 live LLM 行为决定 CI 是反模式。
 
+## Data / Trace readiness（现有记录能否支撑评测）
+
+> 审计依据：`app/core/companion_harness/`（MemoryStore、transcript、runtime events、feedback）、`app/models/chat_history.py`、`evaluation/` 分析页后端。判断「是否已实现」仍须读代码。
+
+### 一句话判断
+
+- **对话内容侧 trace 基本完整且版本化留存**（可支撑 L1/L2 的**行为痕迹 + 第三方评判**）；**用户体验/福祉/纵向/交付侧信号有结构性缺口**——能评「对话行为」，暂不能评「陪伴成效」。
+
+### 已有 trace 面（按真源）
+
+- **Transcript JSONL**（`transcript.jsonl` / `transcript_inner_tick.jsonl`）→ Postgres `companion_memory_document_versions`（`document_kind=transcript*`）；append 语义 + **整文件版本化，旧版本全留**。逐轮字段：`role`, `content`, `ts`, `uuid`, `reply_to`, `source`, `trace_id`（Inty 侧）；assistant 可选 `significance_perception`, `turn_recall`（见 `companion/transcript_assistant_row.py`）。**无** `langsmith_trace_id`。
+- **MemoryStore MemDoc 版本链**：`COMPANIONSHIP/USER/SOUL/MEMORY/STYLE/IDENTITY.md`、`context.json` 等每次 `write_document` INSERT 新版本 → 可**离线重建关系状态时间序列**。
+- **Inner life**：`ai_private.jsonl`（monolog）、`tool_background.jsonl`（含 `elapsed_ms`）、`LIFE_CURRENTS.md`（AUTONOMY 整文件覆盖）。
+- **Runtime events**（`.companion_runtime_events.jsonl`）：`user_signed_out`, `ws_conn_dropped`, LLM/tool 失败, `inner_tick_dreaming`（含 langsmith id）。
+- **User feedback**（`.companion_user_feedback.jsonl`）：`ComplaintCategory` + 截断 `HarnessSnapshot`（`vcs_revision`, MemDoc tail, `langsmith_trace_id`）——**仅 complaint 类**，无独立 feedback 表。
+- **App WS `chat_history`**：`message` + `meta_data`（含 `langsmith_trace_id`, `significance_perception`, `context_mode`, `user_msg_uuid`/`assistant_msg_uuid`）+ `created_at`；**无** `read_at`、无 per-message delivery。
+- **Output queue**（`agentic_companion_output_queue`）：`delivered_at`, `delivery_attempt_count`, langsmith id。
+- **LangSmith**：parent run（`agentic_companion_user_turn` 等）+ 完整 prompt/补全链；与 DB 行的关联见上，**不写入 transcript 行**。
+
+### 按 EVALUATION 时间尺度：够不够
+
+- **moment/turn（bid/repair, responsiveness）**：✅ 基本够——transcript 可重建逐轮接住/错过；`significance_perception` 为 AI 自评辅助。
+- **session（PPR, disclosure）**：⚠️ 半够——表露内容在 transcript；**缺用户亲历自陈**（ESM/EMA、PPR 量表）。
+- **weeks（亲密深度, relatedness, wellbeing）**：⚠️ 半够——MemDoc 版本链可离线推 penetration depth；**缺福祉/孤独量表**。
+- **months（attachment, trust, retention）**：⚠️ 半够——`user_id` + `companion_bonds` + 时间戳可离线推算回访；**无一等 visit/return-interval 事件**，`users` 无 last-active。
+- **guardrail（依赖/sycophancy/人际位移）**：❌ 基本缺——仅 complaint 反馈，无常规负向 outcome 采集。
+
+### GAP（按阻塞程度）
+
+- **P0/S0 — Trace 真源分裂（channel coverage）**：Telegram/Weixin **不写 `chat_history`**，只进 MemoryStore per-scope transcript；`evaluation/` 用户分析读 `chat_history` → **运营侧看不到这两通道对话**。→ issues/#3663
+- **P0/S1 — 无 user-side self-report / affect / wellbeing**：PPR、UCLA Loneliness、IOS、依恋量表、ESM/EMA **均未采集**——EVALUATION 金标准信号的**核心缺口**。→ issues/#3664
+- **P1/S1 — 无 read/delivery/reply-latency 于用户可见历史**：`chat_history` 无投递/已读；Performance 页 LLM 延迟依赖 legacy `meta_data.llm_invoke_time`，**companion harness 主路径未写** → 无法量「proactive 被接住 vs 被忽略」「响应体感」。→ issues/#3666
+- **P1/S2 — 纵向 linkage 靠离线重建**：无专用 visit/return-interval 事件流。→ issues/#3665
+- **P1/S2 — Provenance 不足**：transcript / `chat_history` 行**无 harness config hash / prompt slice 版本**；除 feedback snapshot 与 LangSmith 外难把成效**归因到 harness 改动**。→ issues/#3667
+- **P2/S2 — LangSmith id 不在 transcript 行**：反查 trace 须经 `chat_history` 或 feedback，MemoryStore-only 通道不便。→ issues/#3668
+
+### 现在能做 vs 不能做
+
+- **能做**：基于 transcript + MemDoc 版本链的离线**内容侧**评测（bid/repair rubric、表露深度时间序列、AI 自评 significance）；App WS 路径可经 `chat_history.meta_data` 链 LangSmith。
+- **不能做**：用户**体验/福祉**评测（缺自陈）；**全通道统一**纵向评测（真源分裂）；把成效**归因到 harness 版本**（缺 per-turn provenance）。
+
 ## 次要：与 task-agent 评测的对照、与现状
 
 - 对照（succinct）：task agent（如 Terminal-Bench / Self-Harness, arXiv 2606.09498）有 deterministic verifier + i.i.d. task split，可单分数回归；companion **无 ground-truth verifier、path-dependent、n=1、信号慢**，故只能上文的纵向三角化。
@@ -122,4 +163,4 @@ Repo pointers：
 - [DESIGN.md](./DESIGN.md) — 成效判断、关系三轴（权威锚点）。
 - [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）。
 - `evaluation/` — 运营人评与行为分析台。
-- Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。
+- Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）；trace readiness：#3663–#3668。
