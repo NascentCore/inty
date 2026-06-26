@@ -6,10 +6,18 @@ must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` s
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
 
+Legacy imperative assembly for greeting, proactive, scheduled, monolog, and dual-LLM
+paths. Target memory projection lives in ``prompting.projection`` + ``PromptBuilder`` (#3521).
+
 TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
+
+TODO(memory-projection-pipeline): Converge track assembly onto projection pipeline. — #3521
+
+TODO(world-engine-mailbox-prompt): Inject unread mailbox messages into companion
+prompt slices; user never sees sub-agent directly — #3708 (epic #3700).
 """
 
 from __future__ import annotations

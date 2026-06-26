@@ -3,6 +3,10 @@
 The runtime behavior still lives in ``turn._run_companion_turn_core``. This module names the
 front half of that function as explicit stages so the production pipeline can
 be split without changing WebSocket, MemoryStore, or tool-background behavior.
+
+Loads transcript rows for the **conversation projection region**: verbatim window cap
+(``transcript_for_llm_turn``), dreaming checkpoint trim, and inner-tick merge. Target:
+projected transcript (not literal replay), anchored to dreaming cycle (#3376, #3714).
 """
 
 from __future__ import annotations
@@ -43,7 +47,9 @@ from .models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from .turn_track import turn_flags_for_track
 from .dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,

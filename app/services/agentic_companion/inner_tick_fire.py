@@ -133,6 +133,8 @@ async def try_fire_scheduled_inner_tick(
     fire_input: InnerTickFireInput,
 ) -> bool:
     # TODO(#3473): gate proactive + scheduled fire on token budget before turn_lock.
+    # TODO(scheduled-presence-independent): sole caller is presence-bound
+    # ``run_inner_tick_poll``; refactor so due tasks fire from scope worker — #3689
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
     coords = await resolve_inner_tick_scope_coords(
         fire_input,

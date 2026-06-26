@@ -1,4 +1,8 @@
-"""Postgres persistence for agent-channel endpoints."""
+"""Postgres persistence for agent-channel endpoints.
+
+TODO(channel-identity-registry): #3491 — extend or companion module for canonical
+channel identity registry (channel + channel user id → User.id); parent epic.
+"""
 
 from __future__ import annotations
 

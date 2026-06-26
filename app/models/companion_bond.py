@@ -1,4 +1,8 @@
-"""ORM for explicit user-companion active bond state."""
+"""ORM for explicit user-companion active bond state.
+
+TODO(companion-bond-db-invariant): #3696 — add SEALED state and DB uniqueness for
+active user/agent; parent epic #3491.
+"""
 
 from enum import StrEnum
 

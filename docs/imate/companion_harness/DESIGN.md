@@ -167,7 +167,7 @@ Every prompt slice is classified on **two orthogonal axes**. Both are required w
 ## 记忆模型 / 关系状态
 
 当前 companion 的「世界」主要由 MemoryStore 中的一组版本化 markdown 文档、transcript 和工具副作用构成，**还不是独立 world engine**（目标态见 [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md)）。
-relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它收成显式、第一类的状态。记忆细节见 [MEMORY_STORE.md](./MEMORY_STORE.md) 与 [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md)，本文不展开字段。
+relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它收成显式、第一类的状态。记忆细节见 [MEMORY_STORE.md](./MEMORY_STORE.md)（含 [Memory projection](./MEMORY_STORE.md#memory-projection) 读侧 summary）；implementation spec 在 `memory/retrieval.py` 与 `prompting/projection/`。本文不展开字段。
 
 - `*.md` refer to semantic content
 - `*.jsonl` refer to episodic content
@@ -217,7 +217,7 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
 
 Channels 是同一段持续 relationship 的**可互换显形面（manifestation surface）**，不是各自独立的对话：同一份 relationship state、memory 与 mind 驱动每一个 channel，channel 只在模态与交互惯例上不同。
 就像社交场景：bar 适合萍水相逢，coffee shop 适合一般朋友——Telegram、WhatsApp、Weixin 各有其惯用的交互模式。
-关系的连续性与身份归属在 harness 内核（不在单 channel）；跨 channel 的身份解析见 [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md)。
+关系的连续性与身份归属在 harness 内核（不在单 channel）；跨 channel 身份解析与 companion bond 跟踪见 GitHub [issues/3491](https://github.com/NascentCore/inty/issues/3491)（Epic）及子 issue #3696–#3699。
 
 Currently-supported channels:
 
@@ -264,12 +264,12 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 
 ## 文档地图 / See also
 
+- [ARCH.md](./ARCH.md) — `app/core/companion_harness/` code layout.
 - [EVALUATION.md](./EVALUATION.md) — 如何评测 companion：分层框架（L0–L3）、regression vs eval 分层、与三轴映射。
 - [GLOSSARY.md](./GLOSSARY.md) — 术语与方向（上行/下行、前台/后台、节拍/模式）。
-- [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、持久化表。
-- [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md) — prompt 作为版本化 slice 空间的确定性投影。
+- [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、[Memory projection](./MEMORY_STORE.md#memory-projection) 读侧 summary。
 - [AUTONOMY.md](./AUTONOMY.md) — inner-tick `AUTONOMY` 轨道与 `LIFE_CURRENTS.md`。
 - [LIVING_SPHERE.md](./LIVING_SPHERE.md) — 用户–伴侣私密虚拟小家与只读 TechnoCore。
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 世界引擎、harness 作为 actor supervisor、sub-agent。
-- [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md) — 跨 channel 身份解析到单一 canonical user。
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 仅供灵感的点子集。
+- [issues/3491](https://github.com/NascentCore/inty/issues/3491) — 跨 channel 身份解析到单一 canonical user（Epic；子 issue #3696–#3699）。
+- [BRAINSTORM.md](./BRAINSTORM.md) — prompt/记忆 activation 方向收敛；§「iMate智能体陪伴系统点子」为仅供灵感的点子集（原 SPECULATIVE_IDEAS）。

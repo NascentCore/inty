@@ -51,6 +51,7 @@ from app.utils.config import Environment
 
 init_logger()
 
+# TODO(issues/3688): Remove /docs, /redoc, /openapi.json from all FastAPI backends (set docs_url/redoc_url/openapi_url to None unconditionally).
 # 根据debug模式决定是否开启OpenAPI docs
 app = FastAPI(
     title=global_config_loaded_from_config_yaml.app.name,
@@ -328,6 +329,7 @@ def custom_openapi():
     return app.openapi_schema
 
 
+# TODO(issues/3688): Delete custom_openapi() once OpenAPI serving is removed.
 # 只在debug模式下设置自定义OpenAPI
 if global_config_loaded_from_config_yaml.app.debug:
     app.openapi = custom_openapi

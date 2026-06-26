@@ -1,4 +1,9 @@
-"""Service-level invariants for active companion bonds."""
+"""Service-level invariants for active companion bonds.
+
+TODO(companion-bond-db-invariant): #3696 — enforce one active companion per canonical
+user via database constraints (ACTIVE/SEALED states, audit/repair script).
+Parent epic: #3491.
+"""
 
 from __future__ import annotations
 
@@ -242,6 +247,10 @@ async def list_active_companion_agent_scope_keys(
             continue
         keys.add((scope.user_id, scope.agent_id))
     return frozenset(keys)
+
+
+# TODO(companion-reset-policy): #3698 — product-approved reset/terminate path (blocked by
+# #3699 UX contract). Parent epic #3491. See deactivate_companion_bond below.
 
 
 async def deactivate_companion_bond(

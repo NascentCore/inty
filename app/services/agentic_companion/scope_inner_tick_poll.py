@@ -33,7 +33,12 @@ async def run_scope_inner_tick_poll_for_scope(
     *,
     scope: CompanionScope,
 ) -> bool:
-    """Run one scope poll wake: monolog → autonomy → dreaming (#3255)."""
+    """Run one scope poll wake: monolog → autonomy → dreaming (#3255).
+
+    TODO(scheduled-presence-independent): also fire due ``schedule_queue`` tasks here
+    (or via a sibling scope worker track) so scheduled reminders are not gated on
+    ``run_inner_tick_poll`` / user presence — #3689
+    """
     coords = InnerTickCoords(
         user_id=scope.user_id,
         agent_id=scope.companion_id,

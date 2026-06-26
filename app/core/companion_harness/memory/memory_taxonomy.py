@@ -3,6 +3,9 @@
 Maps logical paths to daily gist / semantic terminology used in system injection
 headings and docs. Daily gist lives at ``memory/daily/{date}.md``; semantic at ``MEMORY.md``.
 
+Target: **slot** moves membership + heading from code into MemDoc frontmatter data;
+this module's headings become defaults until ``MemDocFrontmatter.heading`` lands (#3549, #3713).
+
 TODO(memory-hierarchy-design): Design conceptual & logical memory hierarchy (layers, naming, — #3405
 lifecycle, injection rules)—#3405. Current headings are placeholders until design closes;
 conversation options (Letta context hierarchy, five-layer sketch, etc.) are candidates only.

@@ -17,6 +17,9 @@ TODO(companion-channel-tools): Channel-specific tool schemas + ``CompanionToolNa
   (e.g. companion_set_status_line); filter by ``runtime_context.channel`` — #3362
 TODO(telegram-meta-ops-tools): Telegram meta tools (e.g. telegram_set_bot_name) — #3397;
   gated on dedicated-bot bonding #3361; shared-bot path #3396
+
+TODO(world-engine-summon-dismiss): Register ``summon`` / ``dismiss`` inner-tick
+tools only (no ``command_behavior``); Phase 2 — #3706 (epic #3700).
 """
 
 from __future__ import annotations

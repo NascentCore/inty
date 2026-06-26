@@ -3,6 +3,10 @@
 Assembles immutable inputs for one turn (messages, tools, tracing, outbound
 queue handles) from values already built upstream. Does not decide prompt
 wording or call the language model.
+
+TODO(world-engine-agent-profile): Introduce ``AgentBehavior`` protocol and
+``AgentProfile`` / ``CompanionProfile`` / ``SubAgentProfile`` config — #3701
+(epic #3700).
 """
 
 from __future__ import annotations

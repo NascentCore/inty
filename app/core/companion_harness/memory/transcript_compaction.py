@@ -4,6 +4,12 @@ Ported from experimental/agentic_ai_companion/memory_compaction.py for productio
 companion kernel: when the OpenAI-style message list for a turn exceeds a character
 budget, older dialogue is folded into a single structured system snapshot while
 keeping recent user/assistant turns verbatim.
+
+**Projection note**: this module is an **associative-tier prototype** for the
+conversation/MemDoc read path. Target retrieval/selection is ``memory.retrieval`` (#3523);
+align or replace this compaction when tiered selection lands.
+
+TODO(memory-retrieval-selection): Converge with verbatim window + associative fetch policy. — #3523
 """
 
 from __future__ import annotations

@@ -60,6 +60,7 @@ from backend.ops.api.v1.router import api_router
 
 init_logger()
 
+# TODO(issues/3688): Remove /docs, /redoc, /openapi.json from all FastAPI backends (set docs_url/redoc_url/openapi_url to None unconditionally).
 app = FastAPI(
     title=f"{global_config_loaded_from_config_yaml.app.name} Ops",
     description="Inty Ops – evaluation and shared API",
@@ -224,6 +225,7 @@ async def shutdown_event():
         logger.exception("应用关闭过程中出错")
 
 
+# TODO(issues/3688): Delete custom_openapi() once OpenAPI serving is removed.
 if global_config_loaded_from_config_yaml.app.debug:
 
     def custom_openapi():
