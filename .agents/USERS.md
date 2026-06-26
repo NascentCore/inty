@@ -22,3 +22,4 @@ Always try to understand your human partner!
 
 - 产品经理，本科学历，6 年工作经验，多款 AIGC、AI 陪伴产品经验
 - 评价产品体验
+- 主要修改 `/research/`，不应该修改生产代码
