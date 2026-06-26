@@ -13,7 +13,6 @@ from __future__ import annotations
 from enum import StrEnum
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_store_path_constants import USER_MD_REL
 from app.models.user import Gender
 from app.schemas.user import UserProfileSnapshot
 

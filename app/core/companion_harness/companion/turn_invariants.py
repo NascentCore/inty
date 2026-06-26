@@ -79,6 +79,5 @@ AWAKE_TURN_ALLOWED_STORE_MUTATIONS: frozenset[str] = frozenset(
 AWAKE_TURN_FORBIDDEN_STORE_MUTATIONS: frozenset[str] = frozenset(
     {
         "write_document",
-        "append_line",
     }
 )
