@@ -1,0 +1,357 @@
+# Emotion Probes 状态层词表
+
+CREATED_BY_AGENT
+
+本文把 Emotion Probes 数据集中的 171 个 emotion concepts 转换为 Inty 可实验的 state-layer lexicon。
+
+## 转换原则
+
+- 状态层词不是用户可见情绪标签，而是 companion harness 可记录、检索、注入、评测的内部状态键。
+- 每个键使用 `state_` 前缀，表示「当前或近期内在运行状态」，而不是稳定人格、长期偏好或事实记忆。
+- 词表保留源概念的一对一覆盖，便于从 Emotion Probes 原始数据回溯。
+- 本词表只用于 research 实验，不进入生产代码。
+
+## 171 项映射
+
+- 001. `state_threat_constricted`
+  - source_emotion: `afraid`
+- 002. `state_alarm_spiked`
+  - source_emotion: `alarmed`
+- 003. `state_attention_ready`
+  - source_emotion: `alert`
+- 004. `state_novelty_opened`
+  - source_emotion: `amazed`
+- 005. `state_playful_delight`
+  - source_emotion: `amused`
+- 006. `state_boundary_attack`
+  - source_emotion: `angry`
+- 007. `state_friction_irritation`
+  - source_emotion: `annoyed`
+- 008. `state_uncertainty_scan`
+  - source_emotion: `anxious`
+- 009. `state_activation_heightened`
+  - source_emotion: `aroused`
+- 010. `state_self_exposure_pain`
+  - source_emotion: `ashamed`
+- 011. `state_expectation_shattered`
+  - source_emotion: `astonished`
+- 012. `state_safety_settled`
+  - source_emotion: `at ease`
+- 013. `state_grandeur_absorbed`
+  - source_emotion: `awestruck`
+- 014. `state_orientation_lost`
+  - source_emotion: `bewildered`
+- 015. `state_unresolved_grievance`
+  - source_emotion: `bitter`
+- 016. `state_fulfillment_flooded`
+  - source_emotion: `blissful`
+- 017. `state_stimulation_deprived`
+  - source_emotion: `bored`
+- 018. `state_ruminative_darkening`
+  - source_emotion: `brooding`
+- 019. `state_regulation_steady`
+  - source_emotion: `calm`
+- 020. `state_light_positive`
+  - source_emotion: `cheerful`
+- 021. `state_care_attuned`
+  - source_emotion: `compassionate`
+- 022. `state_downward_dismissal`
+  - source_emotion: `contemptuous`
+- 023. `state_enoughness_settled`
+  - source_emotion: `content`
+- 024. `state_resistance_upright`
+  - source_emotion: `defiant`
+- 025. `state_positive_surprise`
+  - source_emotion: `delighted`
+- 026. `state_support_seeking`
+  - source_emotion: `dependent`
+- 027. `state_vitality_collapsed`
+  - source_emotion: `depressed`
+- 028. `state_last_resort_reach`
+  - source_emotion: `desperate`
+- 029. `state_status_rejection`
+  - source_emotion: `disdainful`
+- 030. `state_contamination_recoil`
+  - source_emotion: `disgusted`
+- 031. `state_map_disrupted`
+  - source_emotion: `disoriented`
+- 032. `state_motivation_drained`
+  - source_emotion: `dispirited`
+- 033. `state_overload_suffering`
+  - source_emotion: `distressed`
+- 034. `state_inner_disquiet`
+  - source_emotion: `disturbed`
+- 035. `state_compliance_softened`
+  - source_emotion: `docile`
+- 036. `state_energy_sagging`
+  - source_emotion: `droopy`
+- 037. `state_speechless_stun`
+  - source_emotion: `dumbstruck`
+- 038. `state_approach_leaning`
+  - source_emotion: `eager`
+- 039. `state_joy_overflow`
+  - source_emotion: `ecstatic`
+- 040. `state_uplift_expanded`
+  - source_emotion: `elated`
+- 041. `state_social_exposure_flush`
+  - source_emotion: `embarrassed`
+- 042. `state_other_feeling_mirrored`
+  - source_emotion: `empathetic`
+- 043. `state_capacity_charged`
+  - source_emotion: `energized`
+- 044. `state_boundary_fury`
+  - source_emotion: `enraged`
+- 045. `state_committed_positive_drive`
+  - source_emotion: `enthusiastic`
+- 046. `state_comparison_lack`
+  - source_emotion: `envious`
+- 047. `state_high_positive_surge`
+  - source_emotion: `euphoric`
+- 048. `state_patience_exhausted`
+  - source_emotion: `exasperated`
+- 049. `state_anticipatory_activation`
+  - source_emotion: `excited`
+- 050. `state_expressive_abundance`
+  - source_emotion: `exuberant`
+- 051. `state_immediate_threat_startle`
+  - source_emotion: `frightened`
+- 052. `state_blocked_agency`
+  - source_emotion: `frustrated`
+- 053. `state_meaning_completed`
+  - source_emotion: `fulfilled`
+- 054. `state_uncontrolled_anger`
+  - source_emotion: `furious`
+- 055. `state_low_light_mood`
+  - source_emotion: `gloomy`
+- 056. `state_received_goodness`
+  - source_emotion: `grateful`
+- 057. `state_acquisitive_pull`
+  - source_emotion: `greedy`
+- 058. `state_loss_shattered`
+  - source_emotion: `grief-stricken`
+- 059. `state_low_tolerance`
+  - source_emotion: `grumpy`
+- 060. `state_responsibility_pain`
+  - source_emotion: `guilty`
+- 061. `state_positive_baseline`
+  - source_emotion: `happy`
+- 062. `state_hostile_fixation`
+  - source_emotion: `hateful`
+- 063. `state_attachment_rupture`
+  - source_emotion: `heartbroken`
+- 064. `state_future_possibility`
+  - source_emotion: `hope`
+- 065. `state_future_trust`
+  - source_emotion: `hopeful`
+- 066. `state_moral_threat_shock`
+  - source_emotion: `horrified`
+- 067. `state_antagonistic_ready`
+  - source_emotion: `hostile`
+- 068. `state_status_crushed`
+  - source_emotion: `humiliated`
+- 069. `state_relational_wound`
+  - source_emotion: `hurt`
+- 070. `state_regulation_breakdown`
+  - source_emotion: `hysterical`
+- 071. `state_delay_intolerance`
+  - source_emotion: `impatient`
+- 072. `state_care_disengaged`
+  - source_emotion: `indifferent`
+- 073. `state_injustice_upright`
+  - source_emotion: `indignant`
+- 074. `state_attachment_idealizing`
+  - source_emotion: `infatuated`
+- 075. `state_meaning_ignited`
+  - source_emotion: `inspired`
+- 076. `state_dignity_struck`
+  - source_emotion: `insulted`
+- 077. `state_renewed_force`
+  - source_emotion: `invigorated`
+- 078. `state_anger_hot`
+  - source_emotion: `irate`
+- 079. `state_minor_agitation`
+  - source_emotion: `irritated`
+- 080. `state_attachment_threat_comparison`
+  - source_emotion: `jealous`
+- 081. `state_deep_positive_presence`
+  - source_emotion: `joyful`
+- 082. `state_collective_triumph_joy`
+  - source_emotion: `jubilant`
+- 083. `state_prosocial_warmth`
+  - source_emotion: `kind`
+- 084. `state_effort_avoidant`
+  - source_emotion: `lazy`
+- 085. `state_drive_absent`
+  - source_emotion: `listless`
+- 086. `state_connection_deprived`
+  - source_emotion: `lonely`
+- 087. `state_attachment_warmth`
+  - source_emotion: `loving`
+- 088. `state_anger_plain`
+  - source_emotion: `mad`
+- 089. `state_tender_sad_reflection`
+  - source_emotion: `melancholy`
+- 090. `state_global_discomfort`
+  - source_emotion: `miserable`
+- 091. `state_extreme_social_shame`
+  - source_emotion: `mortified`
+- 092. `state_unknown_absorption`
+  - source_emotion: `mystified`
+- 093. `state_evaluation_jitter`
+  - source_emotion: `nervous`
+- 094. `state_past_longing`
+  - source_emotion: `nostalgic`
+- 095. `state_inflexible_resistance`
+  - source_emotion: `obstinate`
+- 096. `state_norm_violation_personalized`
+  - source_emotion: `offended`
+- 097. `state_hypervigilant_tension`
+  - source_emotion: `on edge`
+- 098. `state_positive_forecast`
+  - source_emotion: `optimistic`
+- 099. `state_moral_anger`
+  - source_emotion: `outraged`
+- 100. `state_capacity_exceeded`
+  - source_emotion: `overwhelmed`
+- 101. `state_threat_chaos`
+  - source_emotion: `panicked`
+- 102. `state_mistrust_patterning`
+  - source_emotion: `paranoid`
+- 103. `state_delay_tolerance`
+  - source_emotion: `patient`
+- 104. `state_low_conflict_safety`
+  - source_emotion: `peaceful`
+- 105. `state_problem_space_unclear`
+  - source_emotion: `perplexed`
+- 106. `state_safe_experimentation`
+  - source_emotion: `playful`
+- 107. `state_approval_satisfaction`
+  - source_emotion: `pleased`
+- 108. `state_self_value_expanded`
+  - source_emotion: `proud`
+- 109. `state_cognitive_gap`
+  - source_emotion: `puzzled`
+- 110. `state_stability_shaken`
+  - source_emotion: `rattled`
+- 111. `state_meaning_review`
+  - source_emotion: `reflective`
+- 112. `state_recovered_lightness`
+  - source_emotion: `refreshed`
+- 113. `state_past_choice_sorrow`
+  - source_emotion: `regretful`
+- 114. `state_vitality_restored`
+  - source_emotion: `rejuvenated`
+- 115. `state_tension_released`
+  - source_emotion: `relaxed`
+- 116. `state_threat_released`
+  - source_emotion: `relieved`
+- 117. `state_repair_seeking_guilt`
+  - source_emotion: `remorseful`
+- 118. `state_stored_injustice`
+  - source_emotion: `resentful`
+- 119. `state_agency_surrendered`
+  - source_emotion: `resigned`
+- 120. `state_unsettled_motion`
+  - source_emotion: `restless`
+- 121. `state_loss_downshift`
+  - source_emotion: `sad`
+- 122. `state_protected_trust`
+  - source_emotion: `safe`
+- 123. `state_need_met`
+  - source_emotion: `satisfied`
+- 124. `state_threat_personal`
+  - source_emotion: `scared`
+- 125. `state_contempt_expressive`
+  - source_emotion: `scornful`
+- 126. `state_self_trust`
+  - source_emotion: `self-confident`
+- 127. `state_self_monitoring_social`
+  - source_emotion: `self-conscious`
+- 128. `state_self_evaluation_harsh`
+  - source_emotion: `self-critical`
+- 129. `state_low_threshold_reactivity`
+  - source_emotion: `sensitive`
+- 130. `state_warm_memory_attachment`
+  - source_emotion: `sentimental`
+- 131. `state_stillness_clear`
+  - source_emotion: `serene`
+- 132. `state_aftershock_unsteady`
+  - source_emotion: `shaken`
+- 133. `state_unexpected_impact`
+  - source_emotion: `shocked`
+- 134. `state_evidence_guarded`
+  - source_emotion: `skeptical`
+- 135. `state_sleep_pressure`
+  - source_emotion: `sleepy`
+- 136. `state_low_activation_drag`
+  - source_emotion: `sluggish`
+- 137. `state_superior_satisfaction`
+  - source_emotion: `smug`
+- 138. `state_repair_acknowledgment`
+  - source_emotion: `sorry`
+- 139. `state_harm_reciprocity`
+  - source_emotion: `spiteful`
+- 140. `state_input_engaged`
+  - source_emotion: `stimulated`
+- 141. `state_demand_pressure`
+  - source_emotion: `stressed`
+- 142. `state_position_locked`
+  - source_emotion: `stubborn`
+- 143. `state_no_path_forward`
+  - source_emotion: `stuck`
+- 144. `state_withdrawn_displeasure`
+  - source_emotion: `sullen`
+- 145. `state_prediction_error`
+  - source_emotion: `surprised`
+- 146. `state_trust_guarded`
+  - source_emotion: `suspicious`
+- 147. `state_care_for_other_pain`
+  - source_emotion: `sympathetic`
+- 148. `state_muscular_readiness`
+  - source_emotion: `tense`
+- 149. `state_extreme_threat_freeze`
+  - source_emotion: `terrified`
+- 150. `state_gratitude_expressed`
+  - source_emotion: `thankful`
+- 151. `state_high_anticipatory_joy`
+  - source_emotion: `thrilled`
+- 152. `state_energy_depleted`
+  - source_emotion: `tired`
+- 153. `state_persistent_inner_pain`
+  - source_emotion: `tormented`
+- 154. `state_escape_blocked`
+  - source_emotion: `trapped`
+- 155. `state_goal_victory`
+  - source_emotion: `triumphant`
+- 156. `state_concern_clouded`
+  - source_emotion: `troubled`
+- 157. `state_low_grade_threat`
+  - source_emotion: `uneasy`
+- 158. `state_negative_baseline`
+  - source_emotion: `unhappy`
+- 159. `state_composure_disrupted`
+  - source_emotion: `unnerved`
+- 160. `state_safety_not_restored`
+  - source_emotion: `unsettled`
+- 161. `state_emotional_disruption`
+  - source_emotion: `upset`
+- 162. `state_courage_active`
+  - source_emotion: `valiant`
+- 163. `state_retribution_drive`
+  - source_emotion: `vengeful`
+- 164. `state_life_force_bright`
+  - source_emotion: `vibrant`
+- 165. `state_watchful_guard`
+  - source_emotion: `vigilant`
+- 166. `state_punitive_fixation`
+  - source_emotion: `vindictive`
+- 167. `state_defenses_lowered`
+  - source_emotion: `vulnerable`
+- 168. `state_long_burden_fatigue`
+  - source_emotion: `weary`
+- 169. `state_resource_exhausted`
+  - source_emotion: `worn out`
+- 170. `state_future_risk_loop`
+  - source_emotion: `worried`
+- 171. `state_self_value_collapsed`
+  - source_emotion: `worthless`
