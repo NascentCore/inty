@@ -281,6 +281,7 @@ class AppConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str = "inty-backend"
+    # TODO(issues/3688): Clarify or decouple debug from OpenAPI/docs once /docs endpoints are removed from all backends.
     # OpenAPI/docs and some non-fatal init failures (e.g. optional Firebase). Log level is not tied to this flag; use logging.level / INTY_* env.
     debug: bool = False
     # DEPRECATED: Do not use.
