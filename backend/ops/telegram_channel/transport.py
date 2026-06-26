@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 from enum import StrEnum
+from urllib.error import HTTPError
 
 from loguru import logger
 
@@ -97,6 +98,25 @@ def _format_transport_notice(body: str) -> str:
     return f"<i>{body}</i>"
 
 
+def _log_poll_http_error(exc: HTTPError) -> None:
+    """Log ``getUpdates`` HTTP failure; 409 is shared-bot long-poll contention."""
+    match exc.code:
+        case 409:
+            logger.warning(
+                "telegram-channel getUpdates HTTP 409 Conflict: another process is already "
+                "long-polling this bot token (Telegram allows only one getUpdates client); "
+                "stop other Ops instances, regression runs, or teammate machines using the "
+                "same agent.channels.telegram.bot_token, or use a dedicated bot_token in "
+                "config.yaml.local"
+            )
+        case _:
+            logger.warning(
+                "telegram-channel getUpdates HTTP {} {}: poll iteration failed; retrying",
+                exc.code,
+                exc.reason,
+            )
+
+
 class TelegramTransport:
     """Shared-bot ``getUpdates`` loop routing DMs via ``agent_channel_endpoints``."""
 
@@ -130,8 +150,13 @@ class TelegramTransport:
                     await self._handle_inbound(inbound)
             except asyncio.CancelledError:
                 raise
+            except HTTPError as exc:
+                _log_poll_http_error(exc)
+                await asyncio.sleep(2.0)
             except Exception:
-                logger.exception("telegram-channel poll iteration failed")
+                logger.exception(
+                    "telegram-channel poll iteration failed: unexpected error"
+                )
                 await asyncio.sleep(2.0)
 
     async def stop(self) -> None:

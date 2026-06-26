@@ -49,6 +49,9 @@ from .prompts.system_messages import (
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
 )
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+)
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
 
@@ -191,7 +194,10 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_inner_tick_scheduled(
                 bundle, context
             )
-        case CompanionTurnTrack.INNER_TICK_MONOLOG | CompanionTurnTrack.INNER_TICK_AUTONOMY:
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
             out = _async_tool_system_messages_for_track(
                 track=track,
                 route_mode=route_mode,
@@ -226,7 +232,9 @@ def companion_system_messages_for_track(
     )
     if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
         out.append(weixin_clawbot_contact_alias_system_message())
-    return out
+    # Chat-only tracks (greeting, proactive, scheduled, …) and dual-LLM chat-leg
+    # prefixes; bootstrap/settled single-LLM use PromptBuilder instead.
+    return append_configured_fixed_reply_language_system_messages(out)
 
 
 def companion_turn_tools_and_system_messages(
@@ -315,7 +323,10 @@ def refresh_companion_turn_prompt_stack(
                 "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
                 "refresh_single_llm_bootstrap_chat_prompt_prefix"
             )
-        case CompanionTurnTrack.INNER_TICK_MONOLOG | CompanionTurnTrack.INNER_TICK_AUTONOMY:
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
             refreshed = _async_tool_system_messages_for_track(
                 track=track,
                 route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,

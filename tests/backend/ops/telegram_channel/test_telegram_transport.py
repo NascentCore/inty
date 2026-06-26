@@ -14,6 +14,7 @@ from urllib.parse import parse_qs
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from loguru import logger
 from sqlalchemy import delete, select
 
 from app.core.companion_harness.companion.runtime_channel import (
@@ -60,6 +61,7 @@ from backend.ops.telegram_channel.transport import (
     _ONBOARD_NOTICE_NEW,
     _ONBOARD_NOTICE_RETURNING,
     _format_transport_notice,
+    _log_poll_http_error,
 )
 
 
@@ -114,6 +116,35 @@ def test_transport_onboard_copy_is_english() -> None:
 
 def test_format_transport_notice_wraps_body_in_italic_html() -> None:
     assert _format_transport_notice("hello") == "<i>hello</i>"
+
+
+@pytest.fixture
+def log_capture():
+    """Capture loguru WARNING+ lines for poll error assertions."""
+    records: list[str] = []
+
+    def _sink(message) -> None:
+        records.append(message.record["message"])
+
+    handler_id = logger.add(_sink, level="WARNING")
+    yield records
+    logger.remove(handler_id)
+
+
+def test_log_poll_http_error_states_getupdates_409_root_cause(
+    log_capture: list[str],
+) -> None:
+    exc = HTTPError(
+        "https://api.telegram.org/botx/getUpdates",
+        409,
+        "Conflict",
+        hdrs=None,
+        fp=BytesIO(),
+    )
+    _log_poll_http_error(exc)
+    assert any(
+        "409 Conflict" in line and "bot token" in line for line in log_capture
+    )
 
 
 @pytest.mark.asyncio
