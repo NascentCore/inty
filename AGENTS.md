@@ -35,7 +35,7 @@ Always run from repo root and use repo-root-relative paths to reference files.
 You should only changes and use code in the following dirs:
 
 - Agentic companion core modules
-  - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding.
+  - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding. Docs: [DESIGN.md](/docs/imate/companion_harness/DESIGN.md), [ARCH.md](/docs/imate/companion_harness/ARCH.md).
   - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
   - [techno_core](/techno_core/)：collective virtual world of all Inty.
   - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.

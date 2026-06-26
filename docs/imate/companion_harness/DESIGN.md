@@ -264,6 +264,7 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 
 ## 文档地图 / See also
 
+- [ARCH.md](./ARCH.md) — `app/core/companion_harness/` code layout.
 - [EVALUATION.md](./EVALUATION.md) — 如何评测 companion：分层框架（L0–L3）、regression vs eval 分层、与三轴映射。
 - [GLOSSARY.md](./GLOSSARY.md) — 术语与方向（上行/下行、前台/后台、节拍/模式）。
 - [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、持久化表。
