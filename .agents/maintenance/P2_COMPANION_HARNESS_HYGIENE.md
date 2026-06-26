@@ -74,6 +74,6 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-20** ruff F401: `user_md_identity.py` — re-export `USER_MD_REL` from `memory_store_path_constants` (HYGIENE-2026-19 left import without public re-export). `claimed` `cursor/agent-maintenance-tasks-9bc3`.
-- [ ] **HYGIENE-2026-21** ruff F401: remove unused `TurnRuntimeContext` import in `tests/.../test_companion_drain_scripted_llm.py`. `claimed` `cursor/agent-maintenance-tasks-9bc3`.
-- [ ] **HYGIENE-2026-22** ruff UP017: remaining `timezone.utc` in `test_harness_orchestration_scripted_llm.py`, `test_turn_tail_user.py`, `test_projection_stubs.py`. `claimed` `cursor/agent-maintenance-tasks-9bc3`.
+- [x] **HYGIENE-2026-20** ruff F401: `user_md_identity.py` — re-export `USER_MD_REL` from `memory_store_path_constants` (HYGIENE-2026-19 left import without public re-export). Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
+- [x] **HYGIENE-2026-21** ruff F401: remove unused `TurnRuntimeContext` import in `tests/.../test_companion_drain_scripted_llm.py`. Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
+- [x] **HYGIENE-2026-22** ruff UP017: remaining `timezone.utc` in `test_harness_orchestration_scripted_llm.py`, `test_turn_tail_user.py`, `test_projection_stubs.py`. Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
