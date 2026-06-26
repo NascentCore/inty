@@ -18,6 +18,6 @@ an explicit selection stage. Eager reads via ``load_prompt_bundle`` (#3521).
 **AwakeTurn invariant**: projection only reads MemoryStore; MemDoc curation stays in
 dreaming batch (``consolidate_memory_during_dreaming``).
 
-TODO(memory-projection-pipeline): Wire ``project_slices_to_prompt_plan`` after
+TODO(memory-projection-pipeline): Wire ``project_slices_to_prompt_plan`` after — #3521
 ``select_slices_for_turn`` lands (#3523).
 """

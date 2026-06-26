@@ -9,7 +9,7 @@ Importance sorts only within a stability band:
 
 **Today**: no score-based sort — assembly order is fixed in ``PromptBuilder`` / ``tracks``.
 
-TODO(memory-projection-pipeline): Implement ``compute_effective_order`` when selection
+TODO(memory-projection-pipeline): Implement ``compute_effective_order`` when selection — #3521
 stage lands (#3521).
 """
 

@@ -5,6 +5,10 @@ transcript window, optional private-thought splice, time context, and tail user.
 Bootstrap and settled single-LLM user chat compose through this module; dual-LLM
 and inner-tick tracks still use legacy ``prompt_stack`` entrypoints (#3398).
 
+``PromptPlan`` is the **output** of the memory projection stage (target pipeline:
+MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly
+is imperative and skips an explicit selection stage (#3521).
+
 TODO(!3453): Named-slot system slices should use declarative templates instead
 of imperative assembly.
 https://github.com/NascentCore/inty/issues/3453
@@ -99,7 +103,7 @@ class PromptMessage:
 
 @dataclass(frozen=True)
 class PromptPlan:
-    """Abstract composition of prompt slices bolted together through abstract data types.
+    """Abstract composition of prompt slices — target output of memory projection.
 
     Holds ordered messages plus tool definitions and optional tool-choice hint
     for the first model call in an in-turn sync tool loop.
@@ -114,6 +118,8 @@ class PromptPlan:
     TODO(#3453): Should be ordered list of messages, and allow tools to update the content and order.
     The meta-description of a PromptPlan object can be output as description for LLM
     to reorder and update the messages.
+
+    TODO(prompt-plan-e2e): Typed end-to-end carrier; wire conversion only in AsyncLlmClient. — #3629
     """
 
     messages: tuple[

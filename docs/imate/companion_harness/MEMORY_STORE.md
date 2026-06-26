@@ -22,6 +22,26 @@ MemDoc is human-redable with file-system-like semantic addressing.
 - **Non-persistable slice** 无 Memory doc 对应体，或仅有包内种子、不以会话文档为真源：`BOOTSTRAP`、`TOOLS`、`SIGNIFICANCE_PERCEPTION`、`AXIOM` / `SAFETY` 等。
 - **Slice 还可来自代码**：固定 doctrine、channel output-format、`user-time-context` 尾缀、inner-tick 合成句等——这些不是 Memory doc，但是 prompt slice。
 
+## Memory projection
+
+Prompt 是 versioned slice space（MemDoc + conversation turns，仅 TTL 不同）的 **budget-bounded、可 replay 重建** 的投影（非 function-determinism）；agent 通过 slice 内容/metadata 编辑与 offline slot-algebra morphs 塑形。
+
+读侧管线：
+
+```
+MemoryStore → [RETRIEVAL/SELECTION] → [PROJECTION] → PromptPlan
+```
+
+- **Static backbone** — doctrine、capability、output contract；代码固定顺序，无 MemDoc metadata。
+- **Dynamic MemDoc region** — persona / relationship / world / memory；按 score 投影排序。
+- **Conversation region** — projected transcript（非字面 replay）；旧 turn 迁入 memory slice；ephemeral turn 用后丢弃。
+
+Retrieval tiers：**resident**（恒为候选）/ **verbatim window**（近期原话，dreaming 周期锚定 [#3376](https://github.com/NascentCore/inty/issues/3376)）/ **associative**（按 relevance 按需取）。
+
+Write ↔ read 闭环：dreaming consolidation 写入 MemDoc ↔ 本节 activation 读回 prompt；见 [DESIGN.md](./DESIGN.md) § 记忆模型。
+
+Implementation spec：`memory/retrieval.py`、`prompting/projection/`、`prompt_builder.py`、`dreaming_consolidation.py`。Issues：#3521、#3523、#3522、#3453、#3713、#3714。Speculative 见 [BRAINSTORM.md](./BRAINSTORM.md) § Memory projection（待定）。
+
 ## 当前 MemDoc：四类状态
 
 MemoryStore 把一次 companion 会话的状态切成四个角色。逻辑接口都是 POSIX 格式相对路径（对模型友好），权威存储在 Postgres `companion_memory_document_versions`，每条文档由 `document_kind` 标签分类。

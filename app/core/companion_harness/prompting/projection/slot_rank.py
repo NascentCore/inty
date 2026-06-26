@@ -8,7 +8,7 @@ once slot membership lives in data (#3549).
 **Today**: ranks mirror hardcoded ``PromptBuilder`` / ``tracks`` assembly order using
 scope-relative paths as stand-ins until slot model lands (#3453).
 
-TODO(track-driven-system-messages-building): Replace path keys with slot ids when
+TODO(track-driven-system-messages-building): Replace path keys with slot ids when — #3453
 PromptTemplate / named-slot assembly lands.
 """
 

@@ -51,7 +51,16 @@ def user_visible_assistant_text(text: str) -> str | None:
 
 
 class TranscriptProjection(StrEnum):
-    """Which ``transcript.jsonl`` rows a consumer sees."""
+    """Which ``transcript.jsonl`` rows a consumer sees (conversation projection region).
+
+    Target: projected transcript — not literal replay. Old turns migrate into memory
+    slices; ephemeral/synthetic turns (e.g. proactive eliciting message) drop after use.
+    Extend modes (e.g. PROMPT_LLM) when wiring tiered retrieval (#3714, #3523).
+
+    **Today**: ``FULL`` returns all parsed rows; ``USER_VISIBLE`` filters UI/history views.
+
+    TODO(conversation-projection): Add PROMPT_LLM mode; drop ephemeral synthetic turns (#3714).
+    """
 
     FULL = "full"
     USER_VISIBLE = "user_visible"
@@ -368,6 +377,10 @@ def load_prompt_bundle(
 ) -> PromptBundle:
     # TODO(memdoc-path-constants): read_document paths → DEFAULT_MEMORY_STORE_SCOPE_PATHS. #3413
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
+
+    **Projection note (target)**: eager read of fixed persona paths — to be replaced by
+    ``memory.retrieval.select_slices_for_turn`` + ``prompting.projection`` (#3523, #3521).
+    **Today**: all listed MemDocs loaded every turn regardless of relevance.
 
     私人记忆两层（见 ``memory_taxonomy``）：``memory/daily/<日期>.md`` daily gist（dreaming 写入），
     ``MEMORY.md`` semantic 语义记忆。

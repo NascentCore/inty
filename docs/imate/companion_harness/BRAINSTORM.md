@@ -23,6 +23,16 @@ agentic companion 之所以「机械」，在于 prompt 是 hardcoded 组装；�
 
 - **facet/tag schema**：哪些 facet 为 first-class（category、phase、resident/anchor flag、recency、valence、CRS-axis relevance）。此 schema 是 activation scorer、FS-skin 工具、L2 rubric **共同读取**的同一份契约——定好它，其余基本 mechanical。
 
+## Memory projection（待定 / speculative）
+
+自原 MEMORY_PROJECTION.md 迁入；decided 设计已 dispersed 至代码 docstring 与 [MEMORY_STORE.md](./MEMORY_STORE.md#memory-projection)。
+
+- **Typed message ADTs**（system/user/assistant/tool）— stable identity + provenance，支持 doc-keyed targeted refresh（#3453）。
+- **LLM-proposed slots and morphs** — harness 校验并分配 rank + budget。
+- **Cross-slot token-budget allocation** — 在 within-slot priority 之上的层间预算策略。
+- **PromptPlan meta-description** — 暴露给模型的 plan 描述，约束为 metadata 编辑而非自由 reorder（#3453）。
+- **Per-turn slice snapshot** — eval reproducibility 与 compacted branch 重放（#3694）。
+
 ## GitHub issues（扩展上下文）
 
 - **issues/3692** — [Epic] Brainstorm 收敛：situational activation × eval-anchored prompt 组装（含完整讨论脉络 + [transcript gist](https://gist.github.com/yxzhao6/6a7b9ff7d29b21ef772f0a72d90e7aa0)）
@@ -36,7 +46,7 @@ agentic companion 之所以「机械」，在于 prompt 是 hardcoded 组装；�
 
 - [DESIGN.md](./DESIGN.md) — CRS 三轴、「成效判断」、autonomy/dynamism。
 - [EVALUATION.md](./EVALUATION.md) — 第一性原理、latent constructs、L0–L3、net-wellbeing veto、proxy/Goodhart 警示。
-- [MEMORY_PROJECTION.md](./MEMORY_PROJECTION.md) — 形状（resident → associative → decay）可用，determinism dogma 已弃。
+- [MEMORY_STORE.md](./MEMORY_STORE.md#memory-projection) — resident → associative → decay 形状；设计已 dispersed 至代码，determinism dogma 已弃。
 - [MEMORY_STORE.md](./MEMORY_STORE.md) — MemDoc 与 prompt slice、持久化。
 - Issues：#3341（CRS）、#3521（MemDoc projection）、#3523（retrieval tiers）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价）、#72（本地 inty-eval）。
 

@@ -8,8 +8,14 @@ merges inner-tick / ``ai_private.jsonl`` / ``LIFE_CURRENTS.md`` into the slice (
 optional long-cycle reflection #3366).
 Only invoked from the dreaming inner-tick path — no awake post-turn updates.
 
+**Slot algebra (target, offline)**: GENERATE / AGGREGATE (day→week→month) / SPLIT with
+``derived_from`` provenance; compaction ladder places durable gist at prompt head and
+verbatim turns at tail (#3522). **Today**: day→daily gist→MEMORY rollup only.
+
 Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — batch
 curation entry is ``consolidate_memory_during_dreaming`` only.
+
+TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming batch. — #3522
 
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
 
