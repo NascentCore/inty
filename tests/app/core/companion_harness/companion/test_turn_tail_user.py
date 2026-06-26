@@ -5,7 +5,7 @@ Generated entirely by Cursor agent.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import json
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
@@ -66,7 +66,7 @@ def _batch(*records: InputQueueRecord) -> AgenticLoopInputBatch:
 
 
 def test_resolve_tail_user_messages_defaults_to_single_fallback() -> None:
-    ts = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    ts = datetime(2026, 1, 1, tzinfo=UTC)
     tail = resolve_turn_tail_user_messages(
         mode=BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES,
         input_batch=None,
@@ -82,8 +82,8 @@ def test_resolve_tail_user_messages_defaults_to_single_fallback() -> None:
 
 
 def test_resolve_tail_user_messages_joins_batch_for_join_mode() -> None:
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     tail = resolve_turn_tail_user_messages(
         mode=BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE,
         input_batch=_batch(
@@ -104,8 +104,8 @@ def test_resolve_tail_user_messages_joins_batch_for_join_mode() -> None:
 def test_resolve_tail_user_messages_preserves_batch_order_for_multi_mode() -> (
     None
 ):
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     tail = resolve_turn_tail_user_messages(
         mode=BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES,
         input_batch=_batch(
@@ -125,8 +125,8 @@ def test_resolve_tail_user_messages_preserves_batch_order_for_multi_mode() -> (
 
 
 def test_append_tail_user_messages_for_llm_appends_separate_user_rows() -> None:
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     messages: list[dict[str, str]] = [{"role": "system", "content": "sys"}]
 
     append_tail_user_messages_for_llm(
@@ -151,8 +151,8 @@ def test_implicit_sign_on_multi_batch_crashes_in_llm_tail_without_resolve_guard(
     None
 ):
     """Documents pre-fix failure: MULTI batch + implicit sign-on hits assert in LLM tail."""
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     tail = resolve_turn_tail_user_messages(
         mode=BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES,
         input_batch=_batch(
@@ -173,8 +173,8 @@ def test_implicit_sign_on_multi_batch_crashes_in_llm_tail_without_resolve_guard(
 
 
 def test_implicit_sign_on_multi_batch_rejected_at_resolve() -> None:
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     with pytest.raises(AssertionError):
         resolve_turn_tail_user_messages(
             mode=BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES,
@@ -190,7 +190,7 @@ def test_implicit_sign_on_multi_batch_rejected_at_resolve() -> None:
 
 
 def test_implicit_sign_on_single_batch_tail_yields_one_llm_content() -> None:
-    ts = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    ts = datetime(2026, 1, 1, tzinfo=UTC)
     tail = resolve_turn_tail_user_messages(
         mode=BatchUserMessagesLlmCallMode.MULTI_USER_MESSAGES,
         input_batch=_batch(
@@ -210,8 +210,8 @@ def test_implicit_sign_on_single_batch_tail_yields_one_llm_content() -> None:
 
 
 def test_append_tail_user_transcript_rows_persists_each_user_message() -> None:
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
     store = MemoryStore(
         scope=CompanionScope("user-1", "agent-1", "chat-1"),
         repository=None,

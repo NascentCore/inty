@@ -15,10 +15,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import delete, select
 
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
-)
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.companion import (
     AgenticCompanion,

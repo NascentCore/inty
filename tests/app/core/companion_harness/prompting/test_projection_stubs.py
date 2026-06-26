@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 from pydantic import ValidationError
@@ -35,7 +35,7 @@ def test_memdoc_frontmatter_validates() -> None:
         slot="persona.core",
         priority=50,
         pinned=True,
-        expires_at=datetime(2026, 6, 25, tzinfo=timezone.utc),
+        expires_at=datetime(2026, 6, 25, tzinfo=UTC),
     )
     assert meta.slot == "persona.core"
     assert meta.pinned is True

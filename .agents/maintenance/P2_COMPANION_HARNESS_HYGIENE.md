@@ -65,3 +65,15 @@ Open PRs checked: #3682 (`.agents/guidelines` rename) — no overlap.
 - [x] **HYGIENE-2026-17** #3413: `companion_user_feedback.py` snapshot paths + transcript from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-471f`.
 - [x] **HYGIENE-2026-18** #3413: `companion_tool_definitions.py` write allowlists from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-471f`.
 - [x] **HYGIENE-2026-19** #3413: `user_md_identity.py` import `USER_MD_REL` from `memory_store_path_constants` (drop duplicate). Fixed in `cursor/agent-maintenance-tasks-471f`.
+
+## 2026-06-26 scan
+
+Source: open PR overlap check (#3716 `MemoryStore.append_line` removal); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` on `app/core/companion_harness/` + tests.
+
+Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-20** ruff F401: `user_md_identity.py` — re-export `USER_MD_REL` from `memory_store_path_constants` (HYGIENE-2026-19 left import without public re-export). Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
+- [x] **HYGIENE-2026-21** ruff F401: remove unused `TurnRuntimeContext` import in `tests/.../test_companion_drain_scripted_llm.py`. Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
+- [x] **HYGIENE-2026-22** ruff UP017: remaining `timezone.utc` in `test_harness_orchestration_scripted_llm.py`, `test_turn_tail_user.py`, `test_projection_stubs.py`. Fixed in `cursor/agent-maintenance-tasks-9bc3` / pull/3717.
