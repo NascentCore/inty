@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 
@@ -128,7 +128,7 @@ def _input_record(
         channel=ChannelKind.APP_WS,
         wire_id="wire-1",
         text=text,
-        received_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 
