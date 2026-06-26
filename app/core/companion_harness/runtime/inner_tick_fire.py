@@ -3,6 +3,12 @@
 Due checks and kernel ``run_inner_tick_*`` execution only. Callers must hold
 scope ``CompanionSession.turn_lock``. Chat history, WebSocket payloads, and ORM
 scope resolution belong in ``app.services.agentic_companion`` glue.
+
+TODO(world-engine-firefly-clock): Activate firefly per-agent clock in production
+(inner-tick summon path); independent cadence from companion — #3707 (epic #3700).
+
+TODO(world-engine-tracer-bullet): E2E tracer bullet — idle user → summon → firefly
+tick → mailbox → dismiss + MEMORY echo → user hears about it — #3711 (epic #3700).
 """
 
 from __future__ import annotations
@@ -246,7 +252,10 @@ async def kernel_fire_throttled(
                 )
             )
             reply_stripped = str(companion_turn.assistant_text or "").strip()
-            if not reply_stripped and not companion_turn.tool_background_started:
+            if (
+                not reply_stripped
+                and not companion_turn.tool_background_started
+            ):
                 logger.info("inner_tick_monolog kernel monolog_empty")
         case InnerTickKind.AUTONOMY:
             companion_turn = (

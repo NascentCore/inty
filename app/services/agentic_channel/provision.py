@@ -7,8 +7,8 @@ may still touch it). Enforced by ``chat_ws_boundary.companion_surface_readable_i
 TODO(telegram-dedicated-bot-bonding): Triage portal to provision per-user bot token and
   bind 1 user : 1 bot : 1 agent — #3361 (epic #3395; Option A constraints #3396)
 
-TODO(cross-channel-consistent-identity): #3491 — route this onboard path through
-  canonical channel identity resolution before provisioning.
+TODO(shared-companion-provisioning): #3697 — route this onboard path through the
+  shared provisioning service and canonical channel identity resolution (epic #3491).
 """
 
 from __future__ import annotations
@@ -231,7 +231,7 @@ async def provision_agent_for_channel_onboard(
         try:
             scope = await provision_guest_scope(
                 db,
-ProvisionGuestScopeInput(
+                ProvisionGuestScopeInput(
                     channel=channel,
                     nickname_prefix="Guest",
                     meta_data=_guest_meta_data_for_channel(channel),

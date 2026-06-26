@@ -10,6 +10,9 @@ TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).
+
+TODO(world-engine-mailbox-prompt): Inject unread mailbox messages into companion
+prompt slices; user never sees sub-agent directly — #3708 (epic #3700).
 """
 
 from __future__ import annotations

@@ -103,7 +103,9 @@ from .companion_tool_definitions import (
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import USER_MD_REL
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    USER_MD_REL,
+)
 from app.core.companion_harness.memory.user_md_identity import (
     USER_PROFILE_SECTION,
     UserIdentityFieldLabel,
@@ -111,6 +113,7 @@ from app.core.companion_harness.memory.user_md_identity import (
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
+
 
 def _companion_tool_validation_error_message(exc: ValidationError) -> str:
     detail = "; ".join(
@@ -383,6 +386,10 @@ def tool_memory_store_write_document(
 def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
     _ = store, relative_path
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
+
+
+# TODO(world-engine-experience-feedback): Read ``techno_core_events.jsonl`` and
+# feed autonomy experience back into companion hidden state — #3710 (epic #3700).
 
 
 def tool_techno_core_record_event(
@@ -900,4 +907,3 @@ async def execute_tool_call(
     else:
         logger.debug("tool {} ok ({} chars)", name, len(out))
     return out
-

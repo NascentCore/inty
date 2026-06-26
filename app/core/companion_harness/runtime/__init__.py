@@ -21,4 +21,14 @@ entry points after resolving a ``CompanionSession``.
 - Scope inner-tick worker (#3255) runs monolog, autonomy, dreaming without presence
   via ``scope_inner_tick_poll`` / ``scope_inner_tick_fire``.
 - Postgres advisory lock for multi-process (#3271) remains future work.
+
+TODO(world-engine-agent-harness): Extract shared AgentHarness turn spine
+(perceive → load hidden state → BehaviorPolicy → mailbox emit → evolve state);
+CompanionHarness delegates transparently — #3702 (epic #3700).
+
+TODO(world-engine-mailbox-spawn): Add Mailbox send/receive and SpawnRegistry
+(spawn/dismiss/hibernate) APIs; Phase 1 API-only, no prompt injection — #3703.
+
+TODO(world-engine-firefly-test): Firefly runner + SubAgentSupervisor (pytest harness
+only; no production LLM) — #3705 (epic #3700).
 """

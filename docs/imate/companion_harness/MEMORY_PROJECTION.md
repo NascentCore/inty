@@ -75,7 +75,7 @@ COMPACTION LADDER (same data, increasing abstraction)
 
 ## References
 
-- Docs: MEMORY_STORE.md, AUTONOMY.md, DESIGN.md, SPECULATIVE_IDEAS.md, GLOSSARY.md
+- Docs: MEMORY_STORE.md, AUTONOMY.md, DESIGN.md, BRAINSTORM.md, GLOSSARY.md
 - Issues: #3453 (PromptTemplate named-slot), #3398 (dual vs single-LLM epic), #3460 (AgenticLoop consolidation), #3376 (dreaming day rollup)
 - Code: app/core/companion_harness/prompt_builder.py, app/core/companion_harness/prompting/tracks.py, app/core/companion_harness/memory/dreaming_consolidation.py
 - External inspiration: fuzzy-trace theory (verbatim vs gist), Ebbinghaus forgetting curve, Pie programmable serving, claude-mem, Human-like Memory

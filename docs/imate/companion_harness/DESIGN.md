@@ -217,7 +217,7 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
 
 Channels 是同一段持续 relationship 的**可互换显形面（manifestation surface）**，不是各自独立的对话：同一份 relationship state、memory 与 mind 驱动每一个 channel，channel 只在模态与交互惯例上不同。
 就像社交场景：bar 适合萍水相逢，coffee shop 适合一般朋友——Telegram、WhatsApp、Weixin 各有其惯用的交互模式。
-关系的连续性与身份归属在 harness 内核（不在单 channel）；跨 channel 的身份解析见 [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md)。
+关系的连续性与身份归属在 harness 内核（不在单 channel）；跨 channel 身份解析与 companion bond 跟踪见 GitHub [issues/3491](https://github.com/NascentCore/inty/issues/3491)（Epic）及子 issue #3696–#3699。
 
 Currently-supported channels:
 
@@ -272,5 +272,5 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 - [AUTONOMY.md](./AUTONOMY.md) — inner-tick `AUTONOMY` 轨道与 `LIFE_CURRENTS.md`。
 - [LIVING_SPHERE.md](./LIVING_SPHERE.md) — 用户–伴侣私密虚拟小家与只读 TechnoCore。
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 世界引擎、harness 作为 actor supervisor、sub-agent。
-- [FR_CROSS_CHANNEL_USER_IDENTITY.md](./FR_CROSS_CHANNEL_USER_IDENTITY.md) — 跨 channel 身份解析到单一 canonical user。
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — 仅供灵感的点子集。
+- [issues/3491](https://github.com/NascentCore/inty/issues/3491) — 跨 channel 身份解析到单一 canonical user（Epic；子 issue #3696–#3699）。
+- [BRAINSTORM.md](./BRAINSTORM.md) — prompt/记忆 activation 方向收敛；§「iMate智能体陪伴系统点子」为仅供灵感的点子集（原 SPECULATIVE_IDEAS）。

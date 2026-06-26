@@ -13,7 +13,7 @@
 由此推出三条不可回避的判断：
 
 - 评测对象**不是「回答对不对」**，而是关系科学已验证的一组 **latent relational constructs**（被理解、依恋安全、连接质量、关系变深、孤独缓解）。这些 construct 无法用一次 turn 的 pass/fail 表达。
-- 评测的**金标准是用户的体验与福祉**，不是代理指标（DAU、消息条数、停留时长）。把代理当目标会触发 surrogation / Goodhart（Strathern 1997；Goodhart's law），并与「快感泵 vs 意义型福祉」的取向冲突（见 SPECULATIVE_IDEAS.md：eudaimonic 而非 hedonic；Ryan & Deci 2001）。
+- 评测的**金标准是用户的体验与福祉**，不是代理指标（DAU、消息条数、停留时长）。把代理当目标会触发 surrogation / Goodhart（Strathern 1997；Goodhart's law），并与「快感泵 vs 意义型福祉」的取向冲突（见 [BRAINSTORM.md](./BRAINSTORM.md) §「现代复杂中的简单情感」：eudaimonic 而非 hedonic；Ryan & Deci 2001）。
 - 因为是 **n=1、有状态、慢信号**的关系，方法必须是 **within-subject 纵向 + 多方法三角化**，而非横向单分数。
 
 “好”的定义里**必须含 net-positive 约束**：缓解孤独而非制造依赖、补充而非替代人际关系。companion 评测因此天然包含**福祉与安全的负向闸**（over-dependence、sycophancy、人际位移），不能只测「关系更黏」。
@@ -32,7 +32,7 @@
   - 来源：Bowlby 1969/1982、Ainsworth 1978；成人依恋 Hazan & Shaver 1987；AI companion 依恋的实证 Pentina et al. 2023。
   - 何以重要：长期陪伴的疗效在于成为 secure base / safe haven（proximity-seeking、separation distress、安心探索）。对应 CRS 的 Attachment posture 轴与「主动触达被感知为惦记」。
 - **逐轮连接质量与 repair（互动层）**。
-  - 来源：Gottman & Levenson；Sound Relationship House、bids for connection 与 repair attempts、正负比（Gottman & DeClaire 2001）。已在 SPECULATIVE_IDEAS.md 引用。
+  - 来源：Gottman & Levenson；Sound Relationship House、bids for connection 与 repair attempts、正负比（Gottman & DeClaire 2001）。已在 [BRAINSTORM.md](./BRAINSTORM.md) §「Modeling love relationship」引用。
   - 何以重要：关系由无数微观「bid → 接住 / 错过 / rupture → repair」累积而成。对应 CRS 的 Gottman moment 轴。
 - **Relatedness 与 eudaimonic wellbeing（用户活得更好没有）**。
   - 来源：Self-Determination Theory，Deci & Ryan 2000；relatedness 是基本心理需求之一；eudaimonia 见 Ryan & Deci 2001。
@@ -120,6 +120,6 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 Repo pointers：
 
 - [DESIGN.md](./DESIGN.md) — 成效判断、关系三轴（权威锚点）。
-- [SPECULATIVE_IDEAS.md](./SPECULATIVE_IDEAS.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）。
+- [BRAINSTORM.md](./BRAINSTORM.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）；见 §「iMate智能体陪伴系统点子」。
 - `evaluation/` — 运营人评与行为分析台。
 - Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。

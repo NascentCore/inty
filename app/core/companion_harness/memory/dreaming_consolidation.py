@@ -12,6 +12,9 @@ Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — 
 curation entry is ``consolidate_memory_during_dreaming`` only.
 
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
+
+TODO(world-engine-l2-echo): On sub-agent dismiss, merge bounded encounter echo
+into companion ``MEMORY.md``; generalize bounded-coherent curation — #3709 (epic #3700).
 """
 
 from __future__ import annotations

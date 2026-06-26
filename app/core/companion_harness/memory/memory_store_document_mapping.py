@@ -52,6 +52,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     CHANNELS = "channels"
     COMPANIONSHIP = "companionship"
     TECHNO_CORE = "techno_core"
+    # TODO(world-engine-firefly-kind): Add FIREFLY sub-agent hidden-state document kind — #3704
     TECHNO_CORE_EVENTS_JSONL = "techno_core_events_jsonl"
     LIVING_SPHERE = "living_sphere"
     LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"

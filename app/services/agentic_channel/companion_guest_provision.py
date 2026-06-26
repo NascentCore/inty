@@ -6,8 +6,11 @@ Enforced by ``chat_ws_boundary.companion_surface_readable_id_references``.
 TODO(#3358): DB still has unique constraints on ``readable_id`` for legacy HTTP paths;
 do not drop until those callers migrate — see issue for Alembic plan.
 
-TODO(companion-bond-invariant): #3491 — harden active companion uniqueness with
+TODO(companion-bond-db-invariant): #3696 — harden active companion uniqueness with
 database constraints after v1 service-level checks settle.
+
+TODO(shared-companion-provisioning): #3697 — route all channel onboard paths through
+the shared provisioning service (parent epic #3491).
 
 **Not** ``agent_service.create_agent``: that path is maintenance-mode HTTP only
 (readable_id allocation, avatar crop, opening-voice enqueue, subscription limits).
@@ -70,9 +73,7 @@ def guest_nickname(*, prefix: str, user_id: str) -> str:
     return f"{prefix}_{user_id[-8:]}"
 
 
-def companion_guest_agent_name(
-    *, channel: ChannelKind, tag: str
-) -> str:
+def companion_guest_agent_name(*, channel: ChannelKind, tag: str) -> str:
     """Channel-specific display name only; legacy character-card fields stay NULL."""
     assert tag != ""
     match channel:

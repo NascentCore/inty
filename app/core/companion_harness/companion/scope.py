@@ -1,4 +1,8 @@
-"""Logical companion session scope (replaces implicit Path semantics for registry keys)."""
+"""Logical companion session scope (replaces implicit Path semantics for registry keys).
+
+TODO(world-engine-agent-scope): Generalize MemoryStore scope to ``agent_id``
+(companion + sub-agent each own a scope) — #3704 (epic #3700).
+"""
 
 from __future__ import annotations
 

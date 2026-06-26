@@ -9,6 +9,8 @@ Deferred work (not in MVP):
   without ``user_signed_on``.
 - ``TODO(companion-presence-weixin)`` — Weixin ``try_register`` / cross-channel.
 - ``TODO(companion-presence-lease-distributed)`` — multi-process / Redis lease.
+- ``TODO(world-engine-clock-transport)`` — per-agent clock decoupled from WS;
+  presence only gates downlink — #3712 (epic #3700).
 - ``TODO(companion-presence-switching)`` — user-initiated channel switch UX.
 - ``TODO(companion-ws-query-agent-id-at-connect)`` — accept-time agent bind (#3272).
 """

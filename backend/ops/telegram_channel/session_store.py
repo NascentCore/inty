@@ -86,8 +86,8 @@ async def restore_persisted_bindings(*, api: TelegramBotApi) -> None:
     for record in records:
         scope = record.to_scope()
         try:
-            # TODO(!3491): Move ACTIVE-bond restore filtering into a shared
-            # agent_channel restore service used by Telegram, Weixin, and future channels.
+            # TODO(shared-companion-provisioning): #3697 — move ACTIVE-bond restore filtering
+            # into shared agent_channel restore service (parent epic #3491).
             async with AsyncSessionLocal() as db:
                 bond_active = await has_active_companion_bond(db, scope)
                 bond = (
