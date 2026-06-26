@@ -9,6 +9,11 @@ Each poll wake tries at most one activity, in priority order: proactive → sche
 
 Scope tracks (monolog, autonomy, dreaming) run on ``scope_inner_tick_poll`` (#3255).
 
+TODO(scheduled-presence-independent): ``try_fire_scheduled_inner_tick`` here ties due
+``schedule_queue`` tasks to signed-on presence; move fire to ``scope_inner_tick_poll``
+(or a dedicated scheduler) so reminders run at exec time without waiting for the user
+to be online — #3689
+
 TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
 be skipped when proactive fires) — product decision #3273
 https://github.com/NascentCore/inty/issues/3273
@@ -50,4 +55,5 @@ async def run_inner_tick_poll(
     # TODO(inner-tick-poll-multi-track): #3273 — do not early-return; attempt each due track per wake.
     if await inner_tick_fire.try_fire_proactive_chat_inner_tick(fire_input):
         return
+    # TODO(scheduled-presence-independent): scheduled must not be presence-only — #3689
     await inner_tick_fire.try_fire_scheduled_inner_tick(fire_input)

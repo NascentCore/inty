@@ -23,6 +23,9 @@ Concurrency vocabulary (human terms — three layers, not interchangeable):
 
 Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255): monolog, autonomy,
 dreaming without signed-on user. Presence poll: proactive + scheduled delivery only.
+
+TODO(scheduled-presence-independent): scheduled delivery should not require presence;
+move scheduled fire to scope worker (see ``scope_inner_tick_poll``) — #3689
 """
 
 from __future__ import annotations
@@ -88,9 +91,7 @@ def apply_inner_tick_coords(
     prev_agent = inner_tick_ctx.get("agent_id")
     prev_chat = inner_tick_ctx.get("chat_id")
     prev_mono = inner_tick_ctx.get("_last_monolog_inner_tick_monotonic")
-    prev_line_count = inner_tick_ctx.get(
-        "_last_monolog_transcript_line_count"
-    )
+    prev_line_count = inner_tick_ctx.get("_last_monolog_transcript_line_count")
     prev_autonomy_mono = inner_tick_ctx.get(
         "_last_autonomy_inner_tick_monotonic"
     )
@@ -109,9 +110,7 @@ def apply_inner_tick_coords(
     if same_coords and prev_mono is not None:
         inner_tick_ctx["_last_monolog_inner_tick_monotonic"] = prev_mono
     if same_coords and prev_line_count is not None:
-        inner_tick_ctx["_last_monolog_transcript_line_count"] = (
-            prev_line_count
-        )
+        inner_tick_ctx["_last_monolog_transcript_line_count"] = prev_line_count
     if same_coords and prev_autonomy_mono is not None:
         inner_tick_ctx["_last_autonomy_inner_tick_monotonic"] = (
             prev_autonomy_mono
@@ -231,14 +230,10 @@ class Coordinator:
         return {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
 
     def last_monolog_inner_tick_monotonic(self) -> Any:
-        return self.inner_tick_context.get(
-            "_last_monolog_inner_tick_monotonic"
-        )
+        return self.inner_tick_context.get("_last_monolog_inner_tick_monotonic")
 
     def last_monolog_transcript_line_count(self) -> int | None:
-        raw = self.inner_tick_context.get(
-            "_last_monolog_transcript_line_count"
-        )
+        raw = self.inner_tick_context.get("_last_monolog_transcript_line_count")
         if raw is None:
             return None
         return int(raw)
