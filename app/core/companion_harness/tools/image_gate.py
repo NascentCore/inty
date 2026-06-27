@@ -8,13 +8,14 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    GENERATED_IMAGES_INDEX_JSONL_REL,
+)
 from app.core.companion_harness.memory.memory_store_scope import (
     IDENTITY_MD_REL,
     SOUL_MD_REL,
     USER_MD_REL,
 )
-
-_IMAGE_ASSET_INDEX_REL = "generated_images/index.jsonl"
 
 
 def _read_profile_doc(store: MemoryStore, relative_path: str) -> str:
@@ -47,11 +48,11 @@ def current_persona_revision_id(store: MemoryStore) -> str:
 def append_image_asset_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
-    store.append_jsonl_record(_IMAGE_ASSET_INDEX_REL, record)
+    store.append_jsonl_record(GENERATED_IMAGES_INDEX_JSONL_REL, record)
 
 
 def list_image_asset_records(store: MemoryStore) -> list[dict[str, Any]]:
-    body = store.read_document_if_exists(_IMAGE_ASSET_INDEX_REL)
+    body = store.read_document_if_exists(GENERATED_IMAGES_INDEX_JSONL_REL)
     if body is None or not body.strip():
         return []
     out: list[dict[str, Any]] = []

@@ -25,8 +25,9 @@ from app.core.companion_harness.companion.transcript_anchor import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-
-AI_PRIVATE_JSONL_REL = "ai_private.jsonl"
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    AI_PRIVATE_JSONL_REL,
+)
 
 AI_PRIVATE_SURFACED_KIND: Literal["surfaced"] = "surfaced"
 

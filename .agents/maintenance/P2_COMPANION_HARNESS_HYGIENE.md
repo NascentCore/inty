@@ -86,6 +86,6 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-23** #3413: `image_gate.py` — use `GENERATED_IMAGES_INDEX_JSONL_REL` from `memory_store_path_constants` (drop `_IMAGE_ASSET_INDEX_REL`). **claimed** `cursor/agent-maintenance-tasks-3d69`.
-- [ ] **HYGIENE-2026-24** #3413: `ai_private_prompt.py` — import `AI_PRIVATE_JSONL_REL` from `memory_store_path_constants` (drop duplicate). **claimed** `cursor/agent-maintenance-tasks-3d69`.
-- [ ] **HYGIENE-2026-25** #3413: `companion_tool_definitions.py` — replace `AI_PRIVATE_JSONL_RELATIVE_PATH` with canonical `AI_PRIVATE_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-3d69`.
+- [x] **HYGIENE-2026-23** #3413: `image_gate.py` — use `GENERATED_IMAGES_INDEX_JSONL_REL` from `memory_store_path_constants` (drop `_IMAGE_ASSET_INDEX_REL`). Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
+- [x] **HYGIENE-2026-24** #3413: `ai_private_prompt.py` — import `AI_PRIVATE_JSONL_REL` from `memory_store_path_constants` (drop duplicate). Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
+- [x] **HYGIENE-2026-25** #3413: `companion_tool_definitions.py` — replace `AI_PRIVATE_JSONL_RELATIVE_PATH` with canonical `AI_PRIVATE_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
