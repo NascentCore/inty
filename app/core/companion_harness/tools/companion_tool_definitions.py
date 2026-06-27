@@ -34,6 +34,7 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    AI_PRIVATE_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
@@ -111,7 +112,6 @@ assert LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME == "living_sphere_record_update"
 
 
 AI_PRIVATE_APPEND_TOOL_NAME = "ai_private_append"
-AI_PRIVATE_JSONL_RELATIVE_PATH = "ai_private.jsonl"
 
 
 class CompanionToolName(StrEnum):
@@ -292,7 +292,7 @@ AI_PRIVATE_APPEND_TOOL = LlmFunctionTool(
     name=CompanionToolName.AI_PRIVATE_APPEND,
     description=(
         "Append one inner monolog line about the user or relationship to "
-        f"``{AI_PRIVATE_JSONL_RELATIVE_PATH}`` (append-only). Use during MONOLOG "
+        f"``{AI_PRIVATE_JSONL_REL}`` (append-only). Use during MONOLOG "
         "inner-tick to record feelings, unsaid thoughts, or relationship scene beats—"
         "not virtual-world activity (that belongs in LIFE_CURRENTS / AUTONOMY). "
         "Never visible to the user directly; may inform later proactive or user chat."
