@@ -8,15 +8,11 @@ from pathlib import Path
 from typing import Final
 
 from .memory_store_path_constants import (
-    AI_PRIVATE_JSONL_REL,
-    AI_PRIVATE_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
-    MEMORY_DAILY_DIR_REL,
-    MEMORY_DIR_REL,
     MEMORY_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
@@ -144,24 +140,8 @@ class MemoryStoreScopePaths:
         return TRANSCRIPT_INNER_TICK_JSONL_REL
 
     @property
-    def ai_private_md(self) -> str:
-        return AI_PRIVATE_MD_REL
-
-    @property
-    def ai_private_jsonl(self) -> str:
-        return AI_PRIVATE_JSONL_REL
-
-    @property
     def context_json(self) -> str:
         return CONTEXT_JSON_REL
-
-    @property
-    def memory_dir(self) -> str:
-        return MEMORY_DIR_REL
-
-    @property
-    def memory_daily_dir(self) -> str:
-        return MEMORY_DAILY_DIR_REL
 
     def memory_daily_gist(self, day: str) -> str:
         """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""

@@ -25,8 +25,6 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.tools_md == "TOOLS.md"
     assert p.transcript == "transcript.jsonl"
     assert p.context_json == "context.json"
-    assert p.memory_dir == "memory"
-    assert p.memory_daily_dir == "memory/daily"
     assert p.memory_daily_gist("2026-04-05") == "memory/daily/2026-04-05.md"
     assert (
         p.living_sphere_curator_state_json
