@@ -11,6 +11,8 @@ from .memory_store_path_constants import (
     AI_PRIVATE_JSONL_REL,
     AI_PRIVATE_MD_REL,
     CHANNELS_MD_REL,
+    COMPANION_RUNTIME_EVENTS_JSONL_REL,
+    COMPANION_USER_FEEDBACK_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     GENERATED_IMAGES_INDEX_JSONL_REL,
@@ -145,11 +147,11 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON,
         None,
     ),
-    ".companion_runtime_events.jsonl": (
+    COMPANION_RUNTIME_EVENTS_JSONL_REL: (
         CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
         None,
     ),
-    ".companion_user_feedback.jsonl": (
+    COMPANION_USER_FEEDBACK_JSONL_REL: (
         CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
         None,
     ),
