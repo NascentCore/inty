@@ -44,23 +44,9 @@ AWAKE_TURN_FORBIDDEN_IMPORT_SUBSTRINGS: Final[frozenset[str]] = frozenset(
     }
 )
 
-AWAKE_TURN_FORBIDDEN_CALL_NAMES: Final[frozenset[str]] = frozenset(
-    {
-        "consolidate_memory_during_dreaming",
-    }
-)
-
-AWAKE_TURN_KERNEL_FORBIDDEN_STORE_METHODS: Final[frozenset[str]] = frozenset(
-    {
-        "write_document",
-    }
-)
-
 DREAMING_BATCH_ORCHESTRATOR_MODULE_PATH: Final[str] = (
     "app/core/companion_harness/runtime/dreaming_batch.py"
 )
-
-DREAMING_BATCH_ORCHESTRATOR_FUNCTION: Final[str] = "run_dreaming_batch_if_due"
 
 DREAMING_MEMORY_CURATION_ENTRY: Final[str] = (
     "consolidate_memory_during_dreaming"

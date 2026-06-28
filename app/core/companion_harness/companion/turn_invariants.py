@@ -16,11 +16,7 @@ short-frame awake tracks cannot batch-curate long-frame MemoryDocs (canon #3365,
 
 from __future__ import annotations
 
-from .models import CompanionTurnTrack
-
 DREAMING_BATCH_CURATION_ENTRY = "consolidate_memory_during_dreaming"
-
-AWAKE_TURN_TRACKS: frozenset[CompanionTurnTrack] = frozenset(CompanionTurnTrack)
 
 # Dot-module paths under repo root (``app/...`` → ``app....``).
 CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST: frozenset[str] = frozenset(
@@ -68,12 +64,6 @@ FORBIDDEN_LEGACY_MEMORY_SYMBOLS: frozenset[str] = frozenset(
 
 AWAKE_TURN_TRANSCRIPT_ONLY_RELATIVE_PATH: str = (
     "app/core/companion_harness/companion/turn.py"
-)
-
-AWAKE_TURN_ALLOWED_STORE_MUTATIONS: frozenset[str] = frozenset(
-    {
-        "append_jsonl_record",
-    }
 )
 
 AWAKE_TURN_FORBIDDEN_STORE_MUTATIONS: frozenset[str] = frozenset(
