@@ -694,16 +694,6 @@ COMPANION_LLM_TOOLS_BY_NAME: dict[CompanionToolName, LlmFunctionTool] = {
     tool.name: tool for tool in COMPANION_LLM_TOOLS
 }
 
-OPENAI_TOOLS_BASE_NAMES: tuple[CompanionToolName, ...] = (
-    CompanionToolName.MEMORY_STORE_LIST_PATHS,
-    CompanionToolName.MEMORY_STORE_READ_DOCUMENT,
-    CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT,
-    CompanionToolName.MEMORY_STORE_MKDIR,
-    CompanionToolName.UPDATE_USER_MD,
-    CompanionToolName.TECHNO_CORE_RECORD_EVENT,
-    CompanionToolName.SCHEDULE_TASK,
-)
-
 TOOL_NAMES_SHARED_HEAD: tuple[CompanionToolName, ...] = (
     CompanionToolName.COMPANION_RECORD_USER_FEEDBACK,
     CompanionToolName.UPDATE_USER_MD,
