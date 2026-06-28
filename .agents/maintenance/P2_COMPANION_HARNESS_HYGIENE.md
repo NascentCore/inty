@@ -89,3 +89,17 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 - [x] **HYGIENE-2026-23** #3413: `image_gate.py` — use `GENERATED_IMAGES_INDEX_JSONL_REL` from `memory_store_path_constants` (drop `_IMAGE_ASSET_INDEX_REL`). Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
 - [x] **HYGIENE-2026-24** #3413: `ai_private_prompt.py` — import `AI_PRIVATE_JSONL_REL` from `memory_store_path_constants` (drop duplicate). Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
 - [x] **HYGIENE-2026-25** #3413: `companion_tool_definitions.py` — replace `AI_PRIVATE_JSONL_RELATIVE_PATH` with canonical `AI_PRIVATE_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-3d69` / pull/3719.
+
+## 2026-06-28 scan
+
+Source: open PR overlap check (#3716 `MemoryStore.append_line` removal); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — harness modules still import `*_RELATIVE_PATH` from `living_sphere` / `techno_core` models or duplicate dot-prefixed JSONL literals.
+
+Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-26** #3413: `companion_tool_runtime.py` — use `TECHNO_CORE_EVENTS_JSONL_REL` / `LIVING_SPHERE_UPDATES_JSONL_REL` from `memory_store_path_constants` (drop model `*_RELATIVE_PATH` imports). Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
+- [x] **HYGIENE-2026-27** #3413: `companion_tool_definitions.py` — same canonical path constants in tool descriptions. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
+- [x] **HYGIENE-2026-28** #3413: `living_sphere_curator.py` — use `LIVING_SPHERE_MD_REL` / `LIVING_SPHERE_UPDATES_JSONL_REL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
+- [x] **HYGIENE-2026-29** #3413: add `COMPANION_RUNTIME_EVENTS_JSONL_REL` to `memory_store_path_constants`; migrate `runtime_events.py` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
+- [x] **HYGIENE-2026-30** #3413: add `COMPANION_USER_FEEDBACK_JSONL_REL` to `memory_store_path_constants`; migrate `companion_user_feedback.py` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.

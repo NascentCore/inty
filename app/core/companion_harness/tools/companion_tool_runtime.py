@@ -58,13 +58,11 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
-    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
     LivingSphereUpdate,
 )
 from app.techno_core.models import (
     Sphere,
     TechnoCoreEvent,
-    TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     Visibility,
 )
@@ -104,6 +102,8 @@ from .companion_tool_definitions import (
     openai_tools_for_names,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIVING_SPHERE_UPDATES_JSONL_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
     USER_MD_REL,
 )
 from app.core.companion_harness.memory.user_md_identity import (
@@ -455,7 +455,7 @@ def tool_techno_core_record_event(
         return f"ERROR: {exc}"
 
     store.append_jsonl_record(
-        TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
+        TECHNO_CORE_EVENTS_JSONL_REL,
         event.model_dump(mode="json"),
     )
     return f"OK recorded techno_core event_id={event.event_id}"
@@ -488,7 +488,7 @@ def tool_living_sphere_record_update(
     except ValidationError as exc:
         return f"ERROR: {exc}"
     store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
+        LIVING_SPHERE_UPDATES_JSONL_REL,
         update.model_dump(mode="json"),
     )
     return f"OK recorded update_id={update.update_id}"

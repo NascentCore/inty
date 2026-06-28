@@ -38,9 +38,11 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
     IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
     USER_MD_REL,
 )
 from app.core.companion_harness.tools.openai_tools_prepare import (
@@ -49,10 +51,8 @@ from app.core.companion_harness.tools.openai_tools_prepare import (
 from app.schemas.user import UserAgeGroup
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
-    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
 )
 from app.techno_core.models import (
-    TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH,
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )
 
@@ -323,7 +323,7 @@ LIVING_SPHERE_RECORD_UPDATE_TOOL = LlmFunctionTool(
     name=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
     description=(
         "Record a user-directed change to the private LivingSphere home "
-        f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH}``). "
+        f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_REL}``). "
         "Call when the user **explicitly** asks to add, move, or re-layout "
         "objects or anchors in the virtual home—not for TechnoCore collective "
         "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
@@ -545,7 +545,7 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
     name=CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     description=(
         "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
-        f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH}`` (append-only). "
+        f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_REL}`` (append-only). "
         "Primary use: **monolog inner-tick** when the user thread is idle (small "
         "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
         "**Do not** use for user-directed home layout or object changes—use "

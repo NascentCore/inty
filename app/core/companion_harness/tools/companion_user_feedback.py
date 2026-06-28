@@ -38,6 +38,7 @@ from app.core.companion_harness.companion.runtime_events import (
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANION_USER_FEEDBACK_JSONL_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
@@ -49,7 +50,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
 
-USER_FEEDBACK_JSONL_REL = ".companion_user_feedback.jsonl"
+USER_FEEDBACK_JSONL_REL = COMPANION_USER_FEEDBACK_JSONL_REL
 COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME = "companion_record_user_feedback"
 
 # Snapshot paths from canonical MemDoc path constants (#3413).
