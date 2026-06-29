@@ -93,6 +93,9 @@ from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TOOL_BACKGROUND_JSONL_REL,
+)
 
 from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
@@ -539,7 +542,7 @@ def _append_background_log(
     if trace_id.strip():
         row["trace_id"] = trace_id
     store.append_jsonl_record(
-        "tool_background.jsonl",
+        TOOL_BACKGROUND_JSONL_REL,
         row,
     )
 

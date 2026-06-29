@@ -112,9 +112,9 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-31** #3413: `lifecycle_invariants.py` — `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `memory_store_path_constants`. Branch `cursor/agent-maintenance-tasks-20fc`.
-- [claimed] **HYGIENE-2026-32** #3413: `companion_tool_runtime.py` — transcript rel guard from canonical path constants. Branch `cursor/agent-maintenance-tasks-20fc`.
-- [claimed] **HYGIENE-2026-33** #3413: `tool_background.py` — `append_jsonl_record` uses `TOOL_BACKGROUND_JSONL_REL`. Branch `cursor/agent-maintenance-tasks-20fc`.
-- [claimed] **HYGIENE-2026-34** #3413: `models.py` — `load_context_meta` + `transcript_jsonl_rel_for_turn` from canonical constants. Branch `cursor/agent-maintenance-tasks-20fc`.
-- [claimed] **HYGIENE-2026-35** #3413: `bootstrap.py`, `manager.py`, `agentic_companion/turn.py` — `CONTEXT_JSON_REL` (drop inline TODOs). Branch `cursor/agent-maintenance-tasks-20fc`.
-- [claimed] **HYGIENE-2026-36** #3413: `inner_tick_schedule.py`, `proactive_chat.py` — `TRANSCRIPT_JSONL_REL` for transcript projection loads. Branch `cursor/agent-maintenance-tasks-20fc`.
+- [x] **HYGIENE-2026-31** #3413: `lifecycle_invariants.py` — `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+- [x] **HYGIENE-2026-32** #3413: `companion_tool_runtime.py` — transcript rel guard from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+- [x] **HYGIENE-2026-33** #3413: `tool_background.py` — `append_jsonl_record` uses `TOOL_BACKGROUND_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+- [x] **HYGIENE-2026-34** #3413: `models.py` — `load_context_meta` + `transcript_jsonl_rel_for_turn` from canonical constants. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+- [x] **HYGIENE-2026-35** #3413: `bootstrap.py`, `manager.py`, `agentic_companion/turn.py` — `CONTEXT_JSON_REL` (drop inline TODOs). Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+- [x] **HYGIENE-2026-36** #3413: `inner_tick_schedule.py`, `proactive_chat.py` — `TRANSCRIPT_JSONL_REL` for transcript projection loads. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
