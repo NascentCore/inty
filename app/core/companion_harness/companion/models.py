@@ -32,6 +32,11 @@ from app.core.companion_harness.memory.memory_store_scope import (
     ensure_template_seeded_core_documents_in_store,
     load_template_seed_text,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -433,8 +438,7 @@ def load_prompt_bundle(
 
 
 def load_context_meta(*, store: MemoryStore) -> ContextMeta:
-    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
-    body = store.read_document_if_exists("context.json")
+    body = store.read_document_if_exists(CONTEXT_JSON_REL)
     if body is not None and body.strip():
         try:
             raw = json.loads(body)
@@ -602,5 +606,5 @@ def transcript_relative_path_for_turn_persistence(
     )
     if inner_tick_turn and not tick_proactive:
         # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3400
-        return "transcript_inner_tick.jsonl"
-    return "transcript.jsonl"
+        return TRANSCRIPT_INNER_TICK_JSONL_REL
+    return TRANSCRIPT_JSONL_REL

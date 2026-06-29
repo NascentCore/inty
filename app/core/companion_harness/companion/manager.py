@@ -36,6 +36,9 @@ from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from .models import CompanionTurnResult
 from app.core.companion_harness.companion.runtime_channel import ChannelKind, TurnRuntimeContext
 from .scope import CompanionScope
@@ -176,8 +179,7 @@ class CompanionManager:
                 self._config.memory_bootstrap_type
                 == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
             )
-            # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
-            existing_ctx = store.read_document_if_exists("context.json")
+            existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
             parsed_ctx: dict[str, object] | None = None
             write_full_context = False
             if existing_ctx is None:
@@ -224,7 +226,7 @@ class CompanionManager:
                     json.dumps(context_data, indent=2, ensure_ascii=False)
                     + "\n"
                 )
-                store.write_document("context.json", context_json)
+                store.write_document(CONTEXT_JSON_REL, context_json)
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)

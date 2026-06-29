@@ -12,7 +12,20 @@ import ast
 from pathlib import Path
 from typing import Final
 
+from app.core.companion_harness.memory import memory_store_path_constants as _memdoc_path_constants
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TOOL_BACKGROUND_JSONL_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+)
+
 _REPO_ROOT = Path(__file__).resolve().parents[4]
+
+_MEMDOC_PATH_CONSTANT_NAMES: Final[frozenset[str]] = frozenset(
+    name
+    for name, value in vars(_memdoc_path_constants).items()
+    if name.endswith("_REL") and isinstance(value, str)
+)
 
 # run_companion_*_turn → _run_companion_turn_core transcript persistence
 AWAKE_TURN_KERNEL_MODULE_PATHS: Final[tuple[str, ...]] = (
@@ -31,12 +44,12 @@ AWAKE_TURN_TOOL_BACKGROUND_MODULE_PATH: Final[str] = (
 
 AWAKE_TURN_ALLOWED_APPEND_JSONL: Final[frozenset[str]] = frozenset(
     {
-        "transcript.jsonl",
-        "transcript_inner_tick.jsonl",
+        TRANSCRIPT_JSONL_REL,
+        TRANSCRIPT_INNER_TICK_JSONL_REL,
     }
 )
 
-AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL: Final[str] = "tool_background.jsonl"
+AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL: Final[str] = TOOL_BACKGROUND_JSONL_REL
 
 AWAKE_TURN_FORBIDDEN_IMPORT_SUBSTRINGS: Final[frozenset[str]] = frozenset(
     {
@@ -137,7 +150,7 @@ def module_calls_store_method(
 
 
 def append_jsonl_literal_paths(relative_path: str) -> list[str]:
-    """String-literal first arguments to append_jsonl_record in a module."""
+    """Resolved first arguments to append_jsonl_record in a module."""
     tree = parse_module_ast(relative_path)
     paths: list[str] = []
     for node in ast.walk(tree):
@@ -154,6 +167,9 @@ def append_jsonl_literal_paths(relative_path: str) -> list[str]:
         first = node.args[0]
         if isinstance(first, ast.Constant) and isinstance(first.value, str):
             paths.append(first.value)
+            continue
+        if isinstance(first, ast.Name) and first.id in _MEMDOC_PATH_CONSTANT_NAMES:
+            paths.append(getattr(_memdoc_path_constants, first.id))
     return paths
 
 

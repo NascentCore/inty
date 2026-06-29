@@ -36,6 +36,9 @@ from app.models.user import Gender
 from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from .models import ContextMeta
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -181,7 +184,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     ``ERROR`` status string because the LLM tool loop consumes the result text.
     """
 
-    rel = "context.json"
+    rel = CONTEXT_JSON_REL
     st = store
     raw_body = st.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
@@ -234,7 +237,7 @@ def tool_companion_set_experience_profile(
     """Persist ``experience_directives`` and mapped ``context_mode`` in ``context.json``."""
 
     normalized = context_mode_for_session_intent(tool_input.experience_intent)
-    rel_ctx = "context.json"
+    rel_ctx = CONTEXT_JSON_REL
     st = store
     raw_body = st.read_document_if_exists(rel_ctx)
     if raw_body is None or not str(raw_body).strip():

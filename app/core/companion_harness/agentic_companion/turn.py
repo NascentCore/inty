@@ -112,8 +112,7 @@ def manager_and_session_for_injected_runtime(
 def _mark_agent_channel_session_system_written(
     session: CompanionSession,
 ) -> None:
-    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
-    rel = "context.json"
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
         return
@@ -140,7 +139,9 @@ async def _maybe_append_agent_channel_session_system(
         return
     if meta.companion_ws_session_system_written:
         return
-    ctx_raw = session.store.read_document_if_exists("context.json")
+    ctx_raw = session.store.read_document_if_exists(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+    )
     if ctx_raw:
         ctx_data = json.loads(ctx_raw)
         if isinstance(ctx_data, dict) and ctx_data.get(
