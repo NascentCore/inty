@@ -103,3 +103,18 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 - [x] **HYGIENE-2026-28** #3413: `living_sphere_curator.py` — use `LIVING_SPHERE_MD_REL` / `LIVING_SPHERE_UPDATES_JSONL_REL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
 - [x] **HYGIENE-2026-29** #3413: add `COMPANION_RUNTIME_EVENTS_JSONL_REL` to `memory_store_path_constants`; migrate `runtime_events.py` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
 - [x] **HYGIENE-2026-30** #3413: add `COMPANION_USER_FEEDBACK_JSONL_REL` to `memory_store_path_constants`; migrate `companion_user_feedback.py` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-cac4` / pull/3722.
+
+## 2026-06-29 scan
+
+Source: open PR overlap check (#3716 `MemoryStore.append_line` removal); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — harness modules still use scattered `context.json` / `transcript.jsonl` / `tool_background.jsonl` literals.
+
+Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks below.
+
+### Open tasks
+
+- [claimed] **HYGIENE-2026-31** #3413: `lifecycle_invariants.py` — `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `memory_store_path_constants`. Branch `cursor/agent-maintenance-tasks-20fc`.
+- [claimed] **HYGIENE-2026-32** #3413: `companion_tool_runtime.py` — transcript rel guard from canonical path constants. Branch `cursor/agent-maintenance-tasks-20fc`.
+- [claimed] **HYGIENE-2026-33** #3413: `tool_background.py` — `append_jsonl_record` uses `TOOL_BACKGROUND_JSONL_REL`. Branch `cursor/agent-maintenance-tasks-20fc`.
+- [claimed] **HYGIENE-2026-34** #3413: `models.py` — `load_context_meta` + `transcript_jsonl_rel_for_turn` from canonical constants. Branch `cursor/agent-maintenance-tasks-20fc`.
+- [claimed] **HYGIENE-2026-35** #3413: `bootstrap.py`, `manager.py`, `agentic_companion/turn.py` — `CONTEXT_JSON_REL` (drop inline TODOs). Branch `cursor/agent-maintenance-tasks-20fc`.
+- [claimed] **HYGIENE-2026-36** #3413: `inner_tick_schedule.py`, `proactive_chat.py` — `TRANSCRIPT_JSONL_REL` for transcript projection loads. Branch `cursor/agent-maintenance-tasks-20fc`.
