@@ -127,6 +127,6 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-37** #3413: `dreaming_consolidation.py` — `read_document` / `write_document` paths from `memory_store_path_constants`. **claimed** `cursor/agent-maintenance-tasks-eaf7`.
-- [ ] **HYGIENE-2026-38** #3413: `models.py` — `load_prompt_bundle_from_store` MemDoc paths from canonical constants. **claimed** `cursor/agent-maintenance-tasks-eaf7`.
-- [ ] **HYGIENE-2026-39** #3413: add dot-prefixed state JSON `*_REL` constants; wire `memory_store_document_mapping.py` + `MemoryStoreScopePaths`. **claimed** `cursor/agent-maintenance-tasks-eaf7`.
+- [x] **HYGIENE-2026-37** #3413: `dreaming_consolidation.py` — `read_document` / `write_document` paths from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
+- [x] **HYGIENE-2026-38** #3413: `models.py` — `load_prompt_bundle_from_store` MemDoc paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
+- [x] **HYGIENE-2026-39** #3413: add dot-prefixed state JSON `*_REL` constants; wire `memory_store_document_mapping.py` + `MemoryStoreScopePaths`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
