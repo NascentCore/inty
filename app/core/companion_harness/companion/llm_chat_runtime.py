@@ -412,7 +412,6 @@ def end_companion_turn_root_run_safe(
 
 __all__ = [
     "companion_turn_langsmith_parent_enabled",
-    "companion_turn_langsmith_parent_enabled_from_app_config",
     "companion_turn_langsmith_parent_run_id_str",
     "companion_turn_langsmith_parent_trace_id_str",
     "create_companion_turn_root_run",
