@@ -9,9 +9,16 @@ from typing import Final
 
 from .memory_store_path_constants import (
     CHANNELS_MD_REL,
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+    COMPANION_DREAMING_STATE_JSON_REL,
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+    COMPANION_SCHEDULE_TASKS_JSON_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
+    INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
@@ -149,19 +156,41 @@ class MemoryStoreScopePaths:
 
     @property
     def living_sphere_curator_state_json(self) -> str:
-        return f"{self.state_file_prefix}_living_sphere_curator.json"
+        match self.state_file_prefix:
+            case ".companion":
+                return COMPANION_LIVING_SPHERE_CURATOR_JSON_REL
+            case ".inty_v2":
+                return INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL
+            case _:
+                return f"{self.state_file_prefix}_living_sphere_curator.json"
 
     @property
     def context_compaction_state_json(self) -> str:
-        return f"{self.state_file_prefix}_context_compaction_state.json"
+        match self.state_file_prefix:
+            case ".companion":
+                return COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL
+            case ".inty_v2":
+                return INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL
+            case _:
+                return f"{self.state_file_prefix}_context_compaction_state.json"
 
     @property
     def schedule_queue_json(self) -> str:
-        return f"{self.state_file_prefix}_schedule_tasks.json"
+        match self.state_file_prefix:
+            case ".companion":
+                return COMPANION_SCHEDULE_TASKS_JSON_REL
+            case ".inty_v2":
+                return INTY_V2_SCHEDULE_TASKS_JSON_REL
+            case _:
+                return f"{self.state_file_prefix}_schedule_tasks.json"
 
     @property
     def dreaming_state_json(self) -> str:
-        return f"{self.state_file_prefix}_dreaming_state.json"
+        match self.state_file_prefix:
+            case ".companion":
+                return COMPANION_DREAMING_STATE_JSON_REL
+            case _:
+                return f"{self.state_file_prefix}_dreaming_state.json"
 
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
