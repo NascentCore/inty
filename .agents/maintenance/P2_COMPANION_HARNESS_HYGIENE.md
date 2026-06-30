@@ -118,3 +118,15 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 - [x] **HYGIENE-2026-34** #3413: `models.py` — `load_context_meta` + `transcript_jsonl_rel_for_turn` from canonical constants. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
 - [x] **HYGIENE-2026-35** #3413: `bootstrap.py`, `manager.py`, `agentic_companion/turn.py` — `CONTEXT_JSON_REL` (drop inline TODOs). Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
 - [x] **HYGIENE-2026-36** #3413: `inner_tick_schedule.py`, `proactive_chat.py` — `TRANSCRIPT_JSONL_REL` for transcript projection loads. Fixed in `cursor/agent-maintenance-tasks-20fc` / pull/3725.
+
+## 2026-06-30 scan
+
+Source: open PR overlap check (#3716 `append_line` removal); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — production modules still use hardcoded MemDoc path strings in dreaming curation and prompt bundle load.
+
+Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-37** #3413: `dreaming_consolidation.py` — `read_document` / `write_document` paths from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
+- [x] **HYGIENE-2026-38** #3413: `models.py` — `load_prompt_bundle_from_store` MemDoc paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
+- [x] **HYGIENE-2026-39** #3413: add dot-prefixed state JSON `*_REL` constants; wire `memory_store_document_mapping.py` + `MemoryStoreScopePaths`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.

@@ -33,9 +33,20 @@ from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    LIVING_SPHERE_MD_REL,
+    MEMORY_MD_REL,
+    SIGNIFICANCE_PERCEPTION_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_MD_REL,
+    TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 
 if TYPE_CHECKING:
@@ -380,7 +391,6 @@ def load_prompt_bundle(
     *,
     meta: ContextMeta | None = None,
 ) -> PromptBundle:
-    # TODO(memdoc-path-constants): read_document paths → DEFAULT_MEMORY_STORE_SCOPE_PATHS. #3413
     """从 MemoryStore 读取组装 PromptBundle 所需的语义文档。
 
     **Projection note (target)**: eager read of fixed persona paths — to be replaced by
@@ -396,7 +406,7 @@ def load_prompt_bundle(
     inject_private = experience_profile_injects_private_memory(m.context_mode)
 
     daily_md = ""
-    memory_long = _read_memory_document_required(store, "MEMORY.md")
+    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
     if inject_private:
         daily_md = _read_memory_document_optional(
             store,
@@ -407,27 +417,27 @@ def load_prompt_bundle(
         memory_long = ""
 
     return PromptBundle(
-        identity=_read_memory_document_required(store, "IDENTITY.md"),
-        soul=_read_memory_document_required(store, "SOUL.md"),
-        style_md=_read_memory_document_required(store, "STYLE.md"),
-        user_md=_read_memory_document_required(store, "USER.md"),
+        identity=_read_memory_document_required(store, IDENTITY_MD_REL),
+        soul=_read_memory_document_required(store, SOUL_MD_REL),
+        style_md=_read_memory_document_required(store, STYLE_MD_REL),
+        user_md=_read_memory_document_required(store, USER_MD_REL),
         memory_md=memory_long,
-        techno_core_md=_read_memory_document_optional(store, "TECHNO_CORE.md"),
+        techno_core_md=_read_memory_document_optional(store, TECHNO_CORE_MD_REL),
         living_sphere_md=_read_memory_document_optional(
-            store, "LIVING_SPHERE.md"
+            store, LIVING_SPHERE_MD_REL
         ),
         tools_md=_template_doc_truncated(
-            "TOOLS.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+            TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         harness_md=_template_doc_truncated(
             HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
-        channels_md=_read_memory_document_required(store, "CHANNELS.md"),
+        channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
         companionship_md=_read_memory_document_required(
-            store, "COMPANIONSHIP.md"
+            store, COMPANIONSHIP_MD_REL
         ),
         significance_perception_md=_template_doc_truncated(
-            "SIGNIFICANCE_PERCEPTION.md", max_chars=_OPTIONAL_DOC_MAX_CHARS
+            SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         output_format_im_dm_md=_template_doc_truncated(
             OUTPUT_FORMAT_IM_DM_MD,

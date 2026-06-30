@@ -11,12 +11,19 @@ from .memory_store_path_constants import (
     AI_PRIVATE_JSONL_REL,
     AI_PRIVATE_MD_REL,
     CHANNELS_MD_REL,
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+    COMPANION_DREAMING_STATE_JSON_REL,
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
     COMPANION_RUNTIME_EVENTS_JSONL_REL,
+    COMPANION_SCHEDULE_TASKS_JSON_REL,
     COMPANION_USER_FEEDBACK_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     GENERATED_IMAGES_INDEX_JSONL_REL,
     IDENTITY_MD_REL,
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
+    INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
@@ -135,15 +142,15 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
         None,
     ),
-    ".companion_living_sphere_curator.json": (
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL: (
         CompanionMemoryDocumentKind.COMPANION_LIVING_SPHERE_CURATOR_JSON,
         None,
     ),
-    ".companion_context_compaction_state.json": (
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL: (
         CompanionMemoryDocumentKind.COMPANION_CONTEXT_COMPACTION_STATE_JSON,
         None,
     ),
-    ".companion_schedule_tasks.json": (
+    COMPANION_SCHEDULE_TASKS_JSON_REL: (
         CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON,
         None,
     ),
@@ -155,19 +162,19 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
         None,
     ),
-    ".companion_dreaming_state.json": (
+    COMPANION_DREAMING_STATE_JSON_REL: (
         CompanionMemoryDocumentKind.COMPANION_DREAMING_STATE_JSON,
         None,
     ),
-    ".inty_v2_living_sphere_curator.json": (
+    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL: (
         CompanionMemoryDocumentKind.INTY_V2_LIVING_SPHERE_CURATOR_JSON,
         None,
     ),
-    ".inty_v2_context_compaction_state.json": (
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL: (
         CompanionMemoryDocumentKind.INTY_V2_CONTEXT_COMPACTION_STATE_JSON,
         None,
     ),
-    ".inty_v2_schedule_tasks.json": (
+    INTY_V2_SCHEDULE_TASKS_JSON_REL: (
         CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON,
         None,
     ),

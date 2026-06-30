@@ -33,3 +33,18 @@ TOOL_BACKGROUND_JSONL_REL: Final[str] = "tool_background.jsonl"
 GENERATED_IMAGES_INDEX_JSONL_REL: Final[str] = "generated_images/index.jsonl"
 COMPANION_RUNTIME_EVENTS_JSONL_REL: Final[str] = ".companion_runtime_events.jsonl"
 COMPANION_USER_FEEDBACK_JSONL_REL: Final[str] = ".companion_user_feedback.jsonl"
+COMPANION_DREAMING_STATE_JSON_REL: Final[str] = ".companion_dreaming_state.json"
+COMPANION_LIVING_SPHERE_CURATOR_JSON_REL: Final[str] = (
+    ".companion_living_sphere_curator.json"
+)
+COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL: Final[str] = (
+    ".companion_context_compaction_state.json"
+)
+COMPANION_SCHEDULE_TASKS_JSON_REL: Final[str] = ".companion_schedule_tasks.json"
+INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL: Final[str] = (
+    ".inty_v2_living_sphere_curator.json"
+)
+INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL: Final[str] = (
+    ".inty_v2_context_compaction_state.json"
+)
+INTY_V2_SCHEDULE_TASKS_JSON_REL: Final[str] = ".inty_v2_schedule_tasks.json"

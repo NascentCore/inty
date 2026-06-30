@@ -43,12 +43,17 @@ from app.core.companion_harness.companion.utc import local_date_str
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
+from .memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+)
 from .memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
-
-# TODO(memdoc-path-constants): Curator read/write still hardcodes paths; use scope path constants. #3413
 
 _MEMORY_DAILY_GIST_CTX_MAX = 12_000
 _SOUL_MEMORY_CTX_MAX = 12_000
@@ -243,7 +248,7 @@ def _rewrite_memory_md(
             day_summary_ctx = ds[: _MEMORY_DAILY_GIST_CTX_MAX - 1] + "…"
         else:
             day_summary_ctx = ds
-    memory_body = store.read_document("MEMORY.md")
+    memory_body = store.read_document(MEMORY_MD_REL)
     user_block = (
         f"Current day gist ({rel}):\n\n{day_summary_ctx}\n\n---\n\n"
         f"Current MEMORY.md:\n\n{memory_body}\n\n---\n\n"
@@ -254,7 +259,7 @@ def _rewrite_memory_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "memory")
-    store.write_document("MEMORY.md", new_body.strip() + "\n")
+    store.write_document(MEMORY_MD_REL, new_body.strip() + "\n")
 
 
 def _rewrite_user_md(
@@ -264,8 +269,8 @@ def _rewrite_user_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    user_body = store.read_document("USER.md")
-    memory_body = store.read_document("MEMORY.md")
+    user_body = store.read_document(USER_MD_REL)
+    memory_body = store.read_document(MEMORY_MD_REL)
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -280,7 +285,7 @@ def _rewrite_user_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "user")
-    store.write_document("USER.md", new_body.strip() + "\n")
+    store.write_document(USER_MD_REL, new_body.strip() + "\n")
 
 
 def _rewrite_style_md(
@@ -290,8 +295,8 @@ def _rewrite_style_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    style_body = store.read_document("STYLE.md")
-    memory_body = store.read_document("MEMORY.md")
+    style_body = store.read_document(STYLE_MD_REL)
+    memory_body = store.read_document(MEMORY_MD_REL)
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -306,7 +311,7 @@ def _rewrite_style_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "style")
-    store.write_document("STYLE.md", new_body.strip() + "\n")
+    store.write_document(STYLE_MD_REL, new_body.strip() + "\n")
 
 
 def _rewrite_soul_md(
@@ -316,9 +321,9 @@ def _rewrite_soul_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    soul_body = store.read_document("SOUL.md")
+    soul_body = store.read_document(SOUL_MD_REL)
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
-    memory_body = store.read_document("MEMORY.md")
+    memory_body = store.read_document(MEMORY_MD_REL)
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -336,7 +341,7 @@ def _rewrite_soul_md(
     new_body = new_body.strip()
     if frozen_appearance is not None:
         new_body = _merge_soul_frozen_appearance(new_body, frozen_appearance)
-    store.write_document("SOUL.md", new_body.strip() + "\n")
+    store.write_document(SOUL_MD_REL, new_body.strip() + "\n")
 
 
 def _rewrite_companionship_md(
@@ -347,10 +352,10 @@ def _rewrite_companionship_md(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
     # assistant_text unused: bond curation reads the full dreaming slice via user_text.
-    companionship_body = store.read_document_if_exists("COMPANIONSHIP.md")
+    companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
     if companionship_body is None:
-        companionship_body = load_template_seed_text("COMPANIONSHIP.md")
-    memory_body = store.read_document("MEMORY.md")
+        companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
+    memory_body = store.read_document(MEMORY_MD_REL)
     if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
         memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
     else:
@@ -365,7 +370,7 @@ def _rewrite_companionship_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "companionship")
-    store.write_document("COMPANIONSHIP.md", new_body.strip() + "\n")
+    store.write_document(COMPANIONSHIP_MD_REL, new_body.strip() + "\n")
 
 
 def consolidate_memory_during_dreaming(
