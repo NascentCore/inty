@@ -46,5 +46,4 @@ class LivingSphereUpdate(BaseModel):
         return out or None
 
 
-LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH = "living_sphere_updates.jsonl"
 LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME = "living_sphere_record_update"
