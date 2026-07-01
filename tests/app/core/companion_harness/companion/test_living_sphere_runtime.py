@@ -17,6 +17,9 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIVING_SPHERE_MD_REL,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
@@ -25,10 +28,7 @@ from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LivingSphereUpdate,
 )
-from app.living_sphere.seeding import (
-    LIVING_SPHERE_RELATIVE_PATH,
-    ensure_living_sphere_seeded,
-)
+from app.living_sphere.seeding import ensure_living_sphere_seeded
 
 
 def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
@@ -49,13 +49,13 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
-    seeded = store.read_document(LIVING_SPHERE_RELATIVE_PATH)
+    seeded = store.read_document(LIVING_SPHERE_MD_REL)
     assert "世界：TechnoCore" in seeded
     assert "当前默认位置：" in seeded
     assert "不要冒充现实地理位置" in seeded
 
     ensure_living_sphere_seeded(store)
-    assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == seeded
+    assert store.read_document(LIVING_SPHERE_MD_REL) == seeded
 
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
@@ -108,7 +108,7 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
 
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         if model_role == "memory":
-            body = store.read_document(LIVING_SPHERE_RELATIVE_PATH)
+            body = store.read_document(LIVING_SPHERE_MD_REL)
             return body.replace("氛围：", "氛围：落地灯旁更暖，")
         return "noop\n"
 

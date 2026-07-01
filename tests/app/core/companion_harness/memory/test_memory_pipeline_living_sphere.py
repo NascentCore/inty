@@ -14,11 +14,11 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.living_sphere.models import LivingSphereUpdate
-from app.living_sphere.seeding import (
-    LIVING_SPHERE_RELATIVE_PATH,
-    seed_living_sphere_markdown,
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIVING_SPHERE_MD_REL,
 )
+from app.living_sphere.models import LivingSphereUpdate
+from app.living_sphere.seeding import seed_living_sphere_markdown
 
 
 def _idle_tool_bg() -> threading.Event:
@@ -38,7 +38,7 @@ def _seed_store(store: MemoryStore) -> None:
     ):
         store.write_document(name, body)
     store.write_document(
-        LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown()
+        LIVING_SPHERE_MD_REL, seed_living_sphere_markdown()
     )
 
 
@@ -96,7 +96,7 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
         is True
     )
     assert "memory" in roles
-    assert "合并" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
+    assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
     state = json.loads(
         store.read_document(".companion_living_sphere_curator.json")
     )
@@ -113,7 +113,7 @@ def test_dreaming_consolidation_skips_living_sphere_curator_without_pending(
         repository=None,
     )
     _seed_store(store)
-    original = store.read_document(LIVING_SPHERE_RELATIVE_PATH)
+    original = store.read_document(LIVING_SPHERE_MD_REL)
 
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         return "noop\n"
@@ -124,7 +124,7 @@ def test_dreaming_consolidation_skips_living_sphere_curator_without_pending(
         fake_complete,
         tool_bg_idle_event=_idle_tool_bg(),
     )
-    assert store.read_document(LIVING_SPHERE_RELATIVE_PATH) == original
+    assert store.read_document(LIVING_SPHERE_MD_REL) == original
 
 
 def test_dreaming_consolidation_waits_for_tool_background_before_compact(
@@ -171,4 +171,4 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
         store.read_document(".companion_living_sphere_curator.json")
     )
     assert state["living_sphere_curated_through_update_id"] == update.update_id
-    assert "合并" in store.read_document(LIVING_SPHERE_RELATIVE_PATH)
+    assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
