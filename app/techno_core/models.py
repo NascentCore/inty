@@ -85,8 +85,5 @@ class TechnoCoreEvent(BaseModel):
         return out or None
 
 
-# MemoryStore scope-relative append-only log (see ``memory_store_document_mapping``).
-TECHNO_CORE_EVENTS_JSONL_RELATIVE_PATH = "techno_core_events.jsonl"
-
 # OpenAI tool name in companion harness (``companion_tool_runtime``); keep literal in one place.
 TECHNO_CORE_RECORD_EVENT_TOOL_NAME = "techno_core_record_event"

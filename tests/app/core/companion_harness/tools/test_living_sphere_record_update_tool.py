@@ -7,13 +7,13 @@ import pytest
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIVING_SPHERE_UPDATES_JSONL_REL,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
-from app.living_sphere.models import (
-    LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
-    LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH,
-)
+from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 
 @pytest.mark.asyncio
@@ -32,7 +32,7 @@ async def test_living_sphere_record_update_appends_jsonl(
         json.dumps({"change_request": "把沙发挪到窗边"}, ensure_ascii=False),
     )
     assert out.startswith("OK recorded update_id=")
-    body = store.read_document(LIVING_SPHERE_UPDATES_JSONL_RELATIVE_PATH)
+    body = store.read_document(LIVING_SPHERE_UPDATES_JSONL_REL)
     lines = [ln for ln in body.strip().split("\n") if ln.strip()]
     assert len(lines) == 1
     row = json.loads(lines[0])
