@@ -11,13 +11,13 @@ from app.core.companion_harness.memory.living_sphere_curator import (
     wait_for_tool_background_before_living_sphere_compact,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIVING_SPHERE_MD_REL,
+)
 from app.living_sphere.models import (
     LivingSphereUpdate,
 )
-from app.living_sphere.seeding import (
-    LIVING_SPHERE_RELATIVE_PATH,
-    seed_living_sphere_markdown,
-)
+from app.living_sphere.seeding import seed_living_sphere_markdown
 
 
 def test_compact_waits_for_tool_background_idle(tmp_path: Path) -> None:
@@ -28,7 +28,7 @@ def test_compact_waits_for_tool_background_idle(tmp_path: Path) -> None:
         repository=None,
     )
     store.write_document(
-        LIVING_SPHERE_RELATIVE_PATH, seed_living_sphere_markdown()
+        LIVING_SPHERE_MD_REL, seed_living_sphere_markdown()
     )
     ev = threading.Event()
     ev.clear()

@@ -130,3 +130,16 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 - [x] **HYGIENE-2026-37** #3413: `dreaming_consolidation.py` — `read_document` / `write_document` paths from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
 - [x] **HYGIENE-2026-38** #3413: `models.py` — `load_prompt_bundle_from_store` MemDoc paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
 - [x] **HYGIENE-2026-39** #3413: add dot-prefixed state JSON `*_REL` constants; wire `memory_store_document_mapping.py` + `MemoryStoreScopePaths`. Fixed in `cursor/agent-maintenance-tasks-eaf7` / pull/3728.
+
+## 2026-07-01 scan
+
+Source: open PR overlap check (#3716 `MemoryStore.append_line` removal); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — bootstrap seed rels, template seed filenames, harness tests still import `*_RELATIVE_PATH` from `living_sphere` / `techno_core`.
+
+Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-40** #3413: `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` from `MEMORY_MD_REL` / `SOUL_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-41** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` MemDoc filenames from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-42** #3413: harness tests — `LIVING_SPHERE_RELATIVE_PATH` → `LIVING_SPHERE_MD_REL` (3 files). Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-43** #3413: `test_techno_core_runtime.py` — `TECHNO_CORE_RELATIVE_PATH` → `TECHNO_CORE_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
