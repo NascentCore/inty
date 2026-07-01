@@ -38,6 +38,8 @@ from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
 )
 from .models import ContextMeta
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -50,10 +52,10 @@ _BOOTSTRAP_TELEGRAM_PROFILE_PATH = (
     _PKG_DIR / "prompts" / "BOOTSTRAP_TELEGRAM_PROFILE.md"
 )
 
-# TODO(memdoc-path-constants): Seed-only rels from canonical MemDoc path constants. #3413
+# Seed-only rels from canonical MemDoc path constants (#3413).
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
-    "MEMORY.md",
-    "SOUL.md",
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
 )
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
