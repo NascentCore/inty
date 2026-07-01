@@ -39,13 +39,13 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         "AXIOM.md",
         "BOOTSTRAP.md",
-        "CHANNELS.md",
+        CHANNELS_MD_REL,
         "HARNESS.md",
         "INTY.md",
         "OUTPUT_FORMAT_IM_DM.md",
         "SAFETY.md",
-        "TOOLS.md",
-        "SIGNIFICANCE_PERCEPTION.md",
+        TOOLS_MD_REL,
+        SIGNIFICANCE_PERCEPTION_MD_REL,
     }
 )
 # TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from — #3506
