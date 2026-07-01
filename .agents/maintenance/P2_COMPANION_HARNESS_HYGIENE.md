@@ -139,7 +139,7 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-40** #3413: `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` from `MEMORY_MD_REL` / `SOUL_MD_REL`. **claimed** `cursor/agent-maintenance-tasks-13af`
-- [ ] **HYGIENE-2026-41** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` MemDoc filenames from canonical path constants. **claimed** `cursor/agent-maintenance-tasks-13af`
-- [ ] **HYGIENE-2026-42** #3413: harness tests — `LIVING_SPHERE_RELATIVE_PATH` → `LIVING_SPHERE_MD_REL` (3 files). **claimed** `cursor/agent-maintenance-tasks-13af`
-- [ ] **HYGIENE-2026-43** #3413: `test_techno_core_runtime.py` — `TECHNO_CORE_RELATIVE_PATH` → `TECHNO_CORE_MD_REL`. **claimed** `cursor/agent-maintenance-tasks-13af`
+- [x] **HYGIENE-2026-40** #3413: `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` from `MEMORY_MD_REL` / `SOUL_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-41** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` MemDoc filenames from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-42** #3413: harness tests — `LIVING_SPHERE_RELATIVE_PATH` → `LIVING_SPHERE_MD_REL` (3 files). Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+- [x] **HYGIENE-2026-43** #3413: `test_techno_core_runtime.py` — `TECHNO_CORE_RELATIVE_PATH` → `TECHNO_CORE_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
