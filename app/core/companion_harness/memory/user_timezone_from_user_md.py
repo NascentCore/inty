@@ -11,6 +11,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from loguru import logger
 
+from app.core.companion_harness.memory.user_md_identity import (
+    USER_PROFILE_SECTION,
+)
+
 _IANA_PATTERN = re.compile(
     r"\b([A-Za-z][A-Za-z0-9_+-]*/[A-Za-z][A-Za-z0-9_+-]*)\b"
 )
@@ -19,7 +23,6 @@ _TIMEZONE_LABEL_MARKERS = (
     "timezone",
     "time zone",
 )
-_IDENTITY_SECTION = "## 身份信息"
 
 
 def _valid_iana_timezone(name: str) -> str | None:
@@ -46,9 +49,9 @@ def _first_iana_in_line(line: str) -> str | None:
 
 def _identity_section_lines(user_md: str) -> list[str]:
     lines = user_md.splitlines()
-    if _IDENTITY_SECTION not in lines:
+    if USER_PROFILE_SECTION not in lines:
         return lines
-    start = lines.index(_IDENTITY_SECTION) + 1
+    start = lines.index(USER_PROFILE_SECTION) + 1
     out: list[str] = []
     for line in lines[start:]:
         if line.startswith("## "):
