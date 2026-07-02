@@ -1,11 +1,91 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+
+_CAMPAIGN_START_PREFIX = "c_"
+_CAMPAIGN_FIELD_SEPARATOR = "_"
+_CAMPAIGN_FIELD_COUNT = 3
+_START_PARAMETER_MAX_LENGTH = 64
+_CAMPAIGN_FIELD_PATTERN = re.compile(r"^[A-Za-z0-9-]+$")
+
+
+@dataclass(frozen=True)
+class CampaignAttribution:
+    """First-touch marketing attribution carried by a Telegram ``/start`` deep link.
+
+    Encodes the campaign source, medium and campaign name into one compact
+    start parameter so that a storefront funnel can be split per placement.
+    """
+
+    source: str
+    medium: str
+    campaign: str
+
+
+def _assert_campaign_field(value: str) -> None:
+    assert value != ""
+    assert _CAMPAIGN_FIELD_PATTERN.match(value) is not None, (
+        f"campaign field must match {_CAMPAIGN_FIELD_PATTERN.pattern} "
+        f"(no underscore, since it is the field separator): {value!r}"
+    )
+
+
+def encode_campaign_start_parameter(attribution: CampaignAttribution) -> str:
+    """Build the ``c_<source>_<medium>_<campaign>`` Telegram start parameter.
+
+    Enforces the Telegram deep-link limits (charset and 64-character cap) so
+    that the token is never silently dropped by Telegram at tap time.
+    """
+    assert attribution is not None
+    _assert_campaign_field(attribution.source)
+    _assert_campaign_field(attribution.medium)
+    _assert_campaign_field(attribution.campaign)
+    token = (
+        f"{_CAMPAIGN_START_PREFIX}{attribution.source}"
+        f"{_CAMPAIGN_FIELD_SEPARATOR}{attribution.medium}"
+        f"{_CAMPAIGN_FIELD_SEPARATOR}{attribution.campaign}"
+    )
+    assert len(token) <= _START_PARAMETER_MAX_LENGTH, (
+        f"start parameter exceeds {_START_PARAMETER_MAX_LENGTH} chars: {token!r}"
+    )
+    return token
+
+
+def parse_campaign_start_parameter(
+    start_parameter: str,
+) -> CampaignAttribution | None:
+    """Decode a campaign start parameter, or ``None`` when it is not one.
+
+    Only ``c_<source>_<medium>_<campaign>`` with exactly three non-empty,
+    charset-valid fields is accepted; anything else (bare onboard, ``agent_``
+    promotion links, malformed tokens) returns ``None`` so callers fall back
+    to their existing routing.
+    """
+    assert start_parameter is not None
+    if not start_parameter.startswith(_CAMPAIGN_START_PREFIX):
+        return None
+    if len(start_parameter) > _START_PARAMETER_MAX_LENGTH:
+        return None
+    body = start_parameter[len(_CAMPAIGN_START_PREFIX) :]
+    fields = body.split(
+        _CAMPAIGN_FIELD_SEPARATOR, _CAMPAIGN_FIELD_COUNT - 1
+    )
+    if len(fields) != _CAMPAIGN_FIELD_COUNT:
+        return None
+    for field in fields:
+        if field == "" or _CAMPAIGN_FIELD_PATTERN.match(field) is None:
+            return None
+    return CampaignAttribution(
+        source=fields[0],
+        medium=fields[1],
+        campaign=fields[2],
+    )
 
 
 @dataclass(frozen=True)

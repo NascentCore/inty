@@ -18,8 +18,10 @@ from dataclasses import dataclass
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.external_services.telegram_bot import CampaignAttribution
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
@@ -383,6 +385,46 @@ async def provision_owned_agent_for_channel(
         is_new_user=False,
         channel_address=channel_address,
         channel_user_id=channel_user_id,
+    )
+
+
+async def record_guest_campaign_attribution(
+    *,
+    user_id: str,
+    campaign: CampaignAttribution,
+) -> None:
+    """Persist first-touch Telegram campaign attribution onto a guest user.
+
+    Localized, additive write invoked only on new-user onboard so the shared
+    ``provision_agent_for_channel_onboard`` signature stays untouched. Writes
+    under ``meta_data.campaign`` and is idempotent per first ``/start``.
+    """
+    assert user_id != ""
+    assert campaign is not None
+    async with AsyncSessionLocal() as db:
+        user_row = await db.execute(select(User).where(User.id == user_id))
+        user = user_row.scalar_one_or_none()
+        if user is None:
+            logger.warning(
+                "campaign attribution skipped: user not found user_id={}",
+                user_id,
+            )
+            return
+        meta = dict(user.meta_data) if isinstance(user.meta_data, dict) else {}
+        meta["campaign"] = {
+            "source": campaign.source,
+            "medium": campaign.medium,
+            "campaign": campaign.campaign,
+        }
+        user.meta_data = meta
+        flag_modified(user, "meta_data")
+        await db.commit()
+    logger.info(
+        "campaign attribution recorded user_id={} source={} medium={} campaign={}",
+        user_id,
+        campaign.source,
+        campaign.medium,
+        campaign.campaign,
     )
 
 
