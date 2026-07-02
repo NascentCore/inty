@@ -20,6 +20,7 @@ from app.models.user import User
 from app.services.agentic_channel.companion_bonds import (
     active_companion_scope_for_user,
     create_active_companion_bond,
+    deactivate_active_companion_bond_for_owned_scope,
     deactivate_companion_bond,
     ensure_active_companion_bond_for_owned_scope,
     get_companion_bond_for_scope,
@@ -205,6 +206,92 @@ async def test_require_active_companion_bond_rejects_deleted_rows() -> None:
         with pytest.raises(CompanionBondInvariantError):
             await require_active_companion_bond(db, scope)
         await db.rollback()
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_active_companion_bond_for_owned_scope_active() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+
+        changed = await deactivate_active_companion_bond_for_owned_scope(
+            db, scope
+        )
+        assert changed is True
+        assert not await has_active_companion_bond(db, scope)
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_active_companion_bond_for_owned_scope_no_bond() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await db.commit()
+
+        changed = await deactivate_active_companion_bond_for_owned_scope(
+            db, scope
+        )
+        assert changed is False
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_active_companion_bond_for_owned_scope_already_inactive() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        bond = await create_active_companion_bond(db, scope)
+        bond.state = CompanionBondState.INACTIVE
+        bond.inactive_at = datetime.now(UTC)
+        await db.commit()
+
+        changed = await deactivate_active_companion_bond_for_owned_scope(
+            db, scope
+        )
+        assert changed is False
+        await _delete_scope(db, scope)
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_deactivate_active_companion_bond_for_owned_scope_all_duplicates() -> (
+    None
+):
+    async with AsyncSessionLocal() as db:
+        scope = await _create_unbonded_scope(db)
+        await create_active_companion_bond(db, scope)
+        db.add(
+            CompanionBond(
+                id=str(uuid.uuid4()),
+                user_id=scope.user_id,
+                agent_id=scope.agent_id,
+                state=CompanionBondState.ACTIVE,
+            )
+        )
+        await db.commit()
+
+        changed = await deactivate_active_companion_bond_for_owned_scope(
+            db, scope
+        )
+        assert changed is True
+        result = await db.execute(
+            select(CompanionBond).where(
+                CompanionBond.user_id == scope.user_id,
+                CompanionBond.agent_id == scope.agent_id,
+                CompanionBond.state == CompanionBondState.ACTIVE,
+            )
+        )
+        assert list(result.scalars().all()) == []
         await _delete_scope(db, scope)
         await db.commit()
 

@@ -32,6 +32,7 @@ from app.models.chat import Chat
 from app.models.resource import Resource
 from app.models.user import User
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.agent.agent import agent_manager
 from app.core.agent.prompt_template import (
     has_template_variable,
@@ -55,6 +56,9 @@ from app.services.cache_service import cache_service
 from app.services.global_services import telegram_bot_service
 from app.services.image_transform_service import image_transform_service
 from app.services.resource_service import async_create_image_resource
+from app.services.agentic_channel.companion_bonds import (
+    deactivate_active_companion_bond_for_owned_scope,
+)
 from app.services.voice_service import (
     GENDER_VOICE_MAPPING,
     VoiceService,
@@ -1676,6 +1680,13 @@ async def delete_agent(db: AsyncSession, db_agent: Agent) -> Agent:
         from datetime import datetime, timezone
 
         db_agent.deleted_at = datetime.now(timezone.utc)
+
+        assert db_agent.creator_id != ""
+        bond_scope = AgentScope(
+            user_id=db_agent.creator_id,
+            agent_id=db_agent.id,
+        )
+        await deactivate_active_companion_bond_for_owned_scope(db, bond_scope)
 
         # TODO: soft delete all chats and chat_settings associated with this agent
         # 这个 agent 关联的所有数据都标记成 deleted_at 不为空

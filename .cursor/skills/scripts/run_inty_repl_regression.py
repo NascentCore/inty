@@ -148,6 +148,8 @@ class TargetPreset:
     skip_db_checks: bool
     scope: RegressionScope
     proactive_min_rounds_default: int
+    db_checks_label: str
+    turn_scope_label: str
 
 
 def _target_presets(target: RegressionTarget, repo_root: Path) -> TargetPreset:
@@ -161,6 +163,8 @@ def _target_presets(target: RegressionTarget, repo_root: Path) -> TargetPreset:
                 skip_db_checks=False,
                 scope=RegressionScope.FULL,
                 proactive_min_rounds_default=_DEFAULT_PROACTIVE_MIN_ROUNDS,
+                db_checks_label="Postgres verified",
+                turn_scope_label="Full regression",
             )
         case RegressionTarget.DEV:
             return TargetPreset(
@@ -169,6 +173,8 @@ def _target_presets(target: RegressionTarget, repo_root: Path) -> TargetPreset:
                 skip_db_checks=True,
                 scope=RegressionScope.FULL,
                 proactive_min_rounds_default=0,
+                db_checks_label="WS + gh only (no direct Postgres)",
+                turn_scope_label="Full regression",
             )
         case RegressionTarget.PROD:
             return TargetPreset(
@@ -177,7 +183,43 @@ def _target_presets(target: RegressionTarget, repo_root: Path) -> TargetPreset:
                 skip_db_checks=True,
                 scope=RegressionScope.SAFE_SUBSET,
                 proactive_min_rounds_default=0,
+                db_checks_label="WS only",
+                turn_scope_label="Safe subset: greeting + one settled turn",
             )
+
+
+def _format_target_preset_table(repo_root: Path) -> str:
+    """Render the ``--target`` preset table for the CLI epilog from ``_target_presets``."""
+    assert repo_root.is_dir()
+    rows: list[tuple[str, str, str, str, str]] = []
+    for target in RegressionTarget:
+        preset = _target_presets(target, repo_root)
+        rows.append(
+            (
+                target.value,
+                preset.api_base,
+                preset.config_path,
+                preset.db_checks_label,
+                preset.turn_scope_label,
+            )
+        )
+    headers = ("target", "api_base", "config", "db_checks", "turn_scope")
+    widths = [
+        max(len(headers[i]), max(len(row[i]) for row in rows))
+        for i in range(len(headers))
+    ]
+    header_line = "  ".join(
+        headers[i].ljust(widths[i]) for i in range(len(headers))
+    )
+    body_lines = [
+        "  ".join(row[i].ljust(widths[i]) for i in range(len(row)))
+        for row in rows
+    ]
+    return (
+        "--target presets (from _target_presets; same values used at runtime):\n\n"
+        f"{header_line}\n"
+        + "\n".join(body_lines)
+    )
 
 
 def _extract_github_issue_url(text: str) -> tuple[str, int]:
@@ -443,6 +485,88 @@ def _login_and_cache_bearer_token(
     assert token != ""
     token_path.parent.mkdir(parents=True, exist_ok=True)
     token_path.write_text(token, encoding="utf-8")
+
+
+def _purge_regression_bootstrap_agents_via_api(
+    *,
+    api_base: str,
+    token_path: str,
+    http_timeout: float,
+    stderr: TextIO,
+) -> int:
+    """DELETE owned agents whose name starts with bootstrap-test- prefix; return count deleted."""
+    import urllib.error
+    import urllib.request
+
+    from tools.scripts.create_bootstrap_test_agent import (
+        BOOTSTRAP_TEST_AGENT_NAME_PREFIX,
+    )
+
+    assert api_base != ""
+    assert token_path != ""
+    tok = Path(token_path).read_text(encoding="utf-8").strip()
+    assert tok != ""
+
+    base = api_base.rstrip("/")
+    page_limit = 100
+    skip = 0
+    agent_ids_to_delete: list[str] = []
+    while True:
+        list_url = f"{base}/api/v1/ai/agents/me?skip={skip}&limit={page_limit}"
+        list_req = urllib.request.Request(
+            list_url,
+            headers={"Authorization": f"Bearer {tok}"},
+            method="GET",
+        )
+        with urllib.request.urlopen(list_req, timeout=http_timeout) as resp:
+            list_body = json.loads(resp.read().decode("utf-8"))
+        if list_body.get("code") != 200:
+            raise RuntimeError(
+                f"list agents failed: code={list_body.get('code')!r} "
+                f"message={list_body.get('message')!r}"
+            )
+        data = list_body.get("data")
+        if not isinstance(data, list):
+            raise RuntimeError(f"list agents unexpected data: {list_body!r}")
+
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("name") or "")
+            agent_id = str(row.get("id") or "").strip()
+            if not agent_id or not name.startswith(BOOTSTRAP_TEST_AGENT_NAME_PREFIX):
+                continue
+            agent_ids_to_delete.append(agent_id)
+
+        if len(data) < page_limit:
+            break
+        skip += page_limit
+
+    deleted = 0
+    for agent_id in agent_ids_to_delete:
+        delete_url = f"{base}/api/v1/ai/agents/{agent_id}"
+        del_req = urllib.request.Request(
+            delete_url,
+            headers={"Authorization": f"Bearer {tok}"},
+            method="DELETE",
+        )
+        try:
+            with urllib.request.urlopen(del_req, timeout=http_timeout) as del_resp:
+                del_body = json.loads(del_resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode("utf-8", errors="replace")
+            if exc.code == 400 and "Agent has been deleted" in raw:
+                continue
+            raise RuntimeError(
+                f"delete agent {agent_id!r} failed: HTTP {exc.code}: {raw[:800]}"
+            ) from exc
+        if del_body.get("code") != 200:
+            raise RuntimeError(
+                f"delete agent {agent_id!r} failed: code={del_body.get('code')!r} "
+                f"message={del_body.get('message')!r}"
+            )
+        deleted += 1
+    return deleted
 
 
 def _create_agent_id(
@@ -3701,7 +3825,9 @@ def main(argv: list[str] | None = None) -> int:
     ).strip() or _DEFAULT_CONFIG
 
     p = argparse.ArgumentParser(
-        description="Automated Ops WebSocket regression for companion queue-serving."
+        description="Automated Ops WebSocket regression for companion queue-serving.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=_format_target_preset_table(repo_root),
     )
     p.add_argument(
         "--target",
@@ -3727,7 +3853,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--create-agent",
         action="store_true",
-        help="POST a fresh PRIVATE agent before the regression run",
+        help=(
+            "POST a fresh PRIVATE agent before the regression run; on dev/prod also "
+            "DELETE owned bootstrap-test-* agents first (server deactivates bond)"
+        ),
     )
     p.add_argument(
         "--api-base",
@@ -3862,28 +3991,33 @@ def main(argv: list[str] | None = None) -> int:
                 config_path,
                 user_id=str(args.user_id).strip(),
             )
+            if remaining:
+                print(
+                    f"{_TAG} warning: {remaining} ACTIVE companion bond(s) remain for "
+                    f"user {args.user_id!r} after deactivate",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"{_TAG} deactivated prior ACTIVE companion bonds for "
+                    f"user {args.user_id!r}",
+                    file=sys.stderr,
+                )
         else:
-            print(
-                f"{_TAG} skip companion bond deactivate (no db)",
-                file=sys.stderr,
+            purged = _purge_regression_bootstrap_agents_via_api(
+                api_base=api_base,
+                token_path=str(token_path),
+                http_timeout=float(args.create_timeout),
+                stderr=sys.stderr,
             )
-            remaining = 0
-        if remaining:
             print(
-                f"{_TAG} warning: {remaining} ACTIVE companion bond(s) remain for "
-                f"user {args.user_id!r} after deactivate",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"{_TAG} deactivated prior ACTIVE companion bonds for "
-                f"user {args.user_id!r}",
+                f"{_TAG} purged {purged} bootstrap-test agent(s) via API",
                 file=sys.stderr,
             )
         agent_id = _create_agent_id(
             repo_root=repo_root,
             api_base=api_base,
-            token_path=str(args.token_file).strip(),
+            token_path=str(token_path),
             http_timeout=float(args.create_timeout),
             stderr=sys.stderr,
         )
@@ -3934,7 +4068,7 @@ def main(argv: list[str] | None = None) -> int:
         proactive_target_rounds=proactive_target_rounds,
         dreaming_wait_sec=dreaming_wait,
         report_path=report_path,
-        token_path=str(args.token_file).strip(),
+        token_path=str(token_path),
         stderr=sys.stderr,
         skip_db_checks=preset.skip_db_checks,
         scope=preset.scope,

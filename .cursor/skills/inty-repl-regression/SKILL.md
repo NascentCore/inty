@@ -45,13 +45,9 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 
 Helper: [`.cursor/skills/scripts/run_inty_repl_regression.py`](../scripts/run_inty_repl_regression.py). Repository root cwd; uses the same WebSocket transport as REPL.
 
-**`--target` is required.** It resolves `api_base`, config YAML, DB verification mode, and turn scope together.
+Run `python3 .cursor/skills/scripts/run_inty_repl_regression.py --help` for the full flag reference and the live `--target` preset table (epilog generated from `_target_presets()`, the same function the driver runs — cannot drift from runtime behavior).
 
-| `--target` | API base | Config | DB checks | Turn scope |
-|---|---|---|---|---|
-| `local` | `http://127.0.0.1:8001` | `devops/config.yaml.regression_tests` | Postgres verified | Full regression |
-| `dev` | `https://dev.ops.inty.cc` | `devops/config.yaml.dev` | WS + `gh` only (no direct Postgres) | Full regression |
-| `prod` | `https://ops.inty.cc` | `devops/config.yaml.prod` | WS only | Safe subset: greeting + one settled turn |
+**`--target` is required.** It resolves `api_base`, config YAML, DB verification mode, and turn scope together.
 
 Local (export config before Ops **and** regression driver sets the same preset):
 
@@ -87,14 +83,12 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 - `--login-email` / `--login-password` (optional pair): obtain bearer token via `POST /api/v1/auth/google/login` and write to `--token-file`. Required for remote targets unless a valid token file already exists.
 - `--api-base`, `--config`, `--proactive-*`, `--dreaming-wait-sec` still override preset defaults when explicitly set.
 - Remote runs (`dev`, `prod`) skip direct Postgres per `devops/README.md`; skipped DB bits do not fail the pass gate.
+- Remote `--create-agent`: before POST create, driver **purges** owned agents whose `name` starts with `bootstrap-test-` via `GET /api/v1/ai/agents/me` + `DELETE /api/v1/ai/agents/{id}`. Delete cascades ACTIVE companion bond to `INACTIVE` on the server (requires deployed backend with bond deactivate on `delete_agent`). If a user's ACTIVE bond is on a **non**-`bootstrap-test-*` agent, purge will not clear it — delete that agent manually or resolve the bond before re-running.
+- **Deploy dependency:** dev/prod smoke for `--create-agent` needs the Ops image that includes `delete_agent` bond cascade; updating only the regression script against an older backend still leaves bonds ACTIVE after purge.
 - Exit **0** only when mandatory checks for the selected target/scope pass.
 - When `app.debug: true` (regression `config.yaml.regression_tests`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
-- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.regression_tests`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Driver flags:
-  - `--proactive-wait-sec` (**120** default): wall-clock listen duration after github_issue phase
-  - `--proactive-min-rounds` (**1** default): **pass gate** — at least this many proactive rounds (WS and/or DB)
-  - `--proactive-target-rounds` (**2** default): stretch goal in summary only; **does not fail** the run
-  - `--dreaming-wait-sec` (**900** default): poll Postgres for `.companion_dreaming_state.json` + `MEMORY.md` update after proactive (scope inner-tick worker must be running on Ops). Scope-worker dreaming batches can take several minutes; avoid parallel regression runs that backlog the worker.
+- Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.regression_tests`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Scope-worker dreaming batches can take several minutes; avoid parallel regression runs that backlog the worker.
 - A **silent first proactive** (`output_to_user=false`) leaves the transcript without an assistant reply, so the scheduler will **not** fire a second round until a visible proactive happens — waiting longer cannot fix that.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).

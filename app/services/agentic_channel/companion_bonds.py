@@ -253,6 +253,30 @@ async def list_active_companion_agent_scope_keys(
 # #3699 UX contract). Parent epic #3491. See deactivate_companion_bond below.
 
 
+async def deactivate_active_companion_bond_for_owned_scope(
+    db: AsyncSession,
+    scope: AgentScope,
+) -> bool:
+    """Mark ACTIVE bonds for one owned scope INACTIVE; no-op when none exist."""
+    assert scope.user_id != ""
+    assert scope.agent_id != ""
+    result = await db.execute(
+        select(CompanionBond).where(
+            CompanionBond.user_id == scope.user_id,
+            CompanionBond.agent_id == scope.agent_id,
+            CompanionBond.state == CompanionBondState.ACTIVE,
+        )
+    )
+    bonds = list(result.scalars().all())
+    if not bonds:
+        return False
+    inactive_at = datetime.now(UTC)
+    for bond in bonds:
+        bond.state = CompanionBondState.INACTIVE
+        bond.inactive_at = inactive_at
+    return True
+
+
 async def deactivate_companion_bond(
     db: AsyncSession,
     scope: AgentScope,

@@ -19,6 +19,7 @@ import uuid
 from typing import Any, TextIO
 
 _TAG = "[create-bootstrap-test-agent]"
+BOOTSTRAP_TEST_AGENT_NAME_PREFIX = "bootstrap-test-"
 
 
 def _read_bearer_token(token_path: str, stderr: TextIO) -> str | None:
@@ -54,7 +55,7 @@ def run_create(
     url = f"{base}/api/v1/ai/agents"
     tag = uuid.uuid4().hex[:10]
     body: dict[str, Any] = {
-        "name": f"bootstrap-test-{tag}",
+        "name": f"{BOOTSTRAP_TEST_AGENT_NAME_PREFIX}{tag}",
         "gender": "FEMALE",
         "visibility": "PRIVATE",
         "intro": "Bootstrap process test agent.",

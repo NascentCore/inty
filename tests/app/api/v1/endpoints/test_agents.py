@@ -7,14 +7,20 @@ from sqlalchemy.orm import sessionmaker
 
 from app.api import deps
 from app.api.v1.endpoints import agents as agents_v1
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.security import create_access_token
 from app.core.uuid import get_new_user_id
+from app.db.session import AsyncSessionLocal
 from app.models.agent import Agent
 from app.models.resource import Resource, ResourceType
 from app.models.subscription import SubscriptionUsage
 from app.models.user import AuthType, Gender, User
 from app.schemas.response import BusinessErrorCode
+from app.services.agentic_channel.companion_bonds import (
+    create_active_companion_bond,
+    has_active_companion_bond,
+)
 from app.services.user_service import generate_next_readable_id_sync
 from app.services.global_services import subscription_service
 from tests.app.api.test_client import TestClient
@@ -780,3 +786,31 @@ def test_agent_status_line_put_and_get_roundtrip(integration_client):
         ), f"GET agent should include status_line, got {got}"
     finally:
         integration_client.delete_agent(agent_id)
+
+
+@pytest.mark.asyncio
+async def test_delete_agent_deactivates_companion_bond_e2e(
+    integration_client: TestClient,
+) -> None:
+    """DELETE /api/v1/ai/agents/{id} releases ACTIVE companion bond for that scope."""
+    me_resp = integration_client.client.get(
+        f"{integration_client.base_url}/api/v1/users/me",
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    user_id = me_resp.json()["data"]["id"]
+    agent_id = integration_client.create_agent(
+        name=f"bond-delete-e2e-{uuid.uuid4().hex[:6]}",
+        visibility="PRIVATE",
+    )
+
+    async with AsyncSessionLocal() as db:
+        scope = AgentScope(user_id=user_id, agent_id=agent_id)
+        await create_active_companion_bond(db, scope)
+        await db.commit()
+    integration_client.delete_agent(agent_id)
+    async with AsyncSessionLocal() as db:
+        scope = AgentScope(user_id=user_id, agent_id=agent_id)
+        assert not await has_active_companion_bond(db, scope)
+    integration_client._created_agents = [
+        aid for aid in integration_client._created_agents if aid != agent_id
+    ]

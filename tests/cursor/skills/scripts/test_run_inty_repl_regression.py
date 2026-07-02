@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import sys
 from pathlib import Path
 
@@ -532,6 +533,8 @@ def test_target_presets_local() -> None:
     assert (
         preset.proactive_min_rounds_default == mod._DEFAULT_PROACTIVE_MIN_ROUNDS
     )
+    assert preset.db_checks_label == "Postgres verified"
+    assert preset.turn_scope_label == "Full regression"
 
 
 def test_target_presets_dev() -> None:
@@ -543,6 +546,8 @@ def test_target_presets_dev() -> None:
     assert preset.skip_db_checks is True
     assert preset.scope == mod.RegressionScope.FULL
     assert preset.proactive_min_rounds_default == 0
+    assert preset.db_checks_label == "WS + gh only (no direct Postgres)"
+    assert preset.turn_scope_label == "Full regression"
 
 
 def test_target_presets_prod() -> None:
@@ -554,6 +559,8 @@ def test_target_presets_prod() -> None:
     assert preset.skip_db_checks is True
     assert preset.scope == mod.RegressionScope.SAFE_SUBSET
     assert preset.proactive_min_rounds_default == 0
+    assert preset.db_checks_label == "WS only"
+    assert preset.turn_scope_label == "Safe subset: greeting + one settled turn"
 
 
 def test_extract_github_issue_url() -> None:
@@ -807,3 +814,271 @@ def test_main_requires_target() -> None:
     with pytest.raises(SystemExit) as exc:
         mod.main([])
     assert exc.value.code == 2
+
+
+def test_format_target_preset_table_matches_target_presets() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    table = mod._format_target_preset_table(repo_root)
+    row_by_target = {
+        line.split()[0]: line
+        for line in table.splitlines()
+        if line.startswith(("local ", "dev ", "prod "))
+    }
+    for target in mod.RegressionTarget:
+        preset = mod._target_presets(target, repo_root)
+        row = row_by_target[target.value]
+        assert preset.api_base in row
+        assert preset.config_path in row
+        assert preset.db_checks_label in row
+        assert preset.turn_scope_label in row
+
+
+def test_main_help_includes_target_preset_table(capsys) -> None:
+    mod = _load_regression_module()
+    with pytest.raises(SystemExit) as exc:
+        mod.main(["--help"])
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert mod._DEV_API_BASE in captured.out
+    assert mod._PROD_API_BASE in captured.out
+    assert "Safe subset: greeting + one settled turn" in captured.out
+
+
+def test_purge_regression_bootstrap_agents_deletes_prefix_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    token_path = tmp_path / "token.txt"
+    token_path.write_text("bearer-tok", encoding="utf-8")
+    calls: list[tuple[str, str]] = []
+
+    class _FakeResponse:
+        def __init__(self, payload: dict) -> None:
+            self._payload = payload
+
+        def read(self) -> bytes:
+            return json.dumps(self._payload).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_urlopen(request, timeout=0.0):  # noqa: ANN001
+        url = request.full_url
+        method = request.method
+        calls.append((method, url))
+        if method == "GET":
+            return _FakeResponse(
+                {
+                    "code": 200,
+                    "data": [
+                        {"id": "agent-bootstrap", "name": "bootstrap-test-abc"},
+                        {"id": "agent-other", "name": "my-other-agent"},
+                    ],
+                }
+            )
+        if method == "DELETE" and url.endswith("/agent-bootstrap"):
+            return _FakeResponse(
+                {"code": 200, "data": {"id": "agent-bootstrap"}}
+            )
+        raise AssertionError(f"unexpected request: {method} {url}")
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    deleted = mod._purge_regression_bootstrap_agents_via_api(
+        api_base="https://dev.ops.inty.cc",
+        token_path=str(token_path),
+        http_timeout=30.0,
+        stderr=io.StringIO(),
+    )
+    assert deleted == 1
+    delete_calls = [url for method, url in calls if method == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0].endswith("/api/v1/ai/agents/agent-bootstrap")
+
+
+def test_purge_regression_bootstrap_agents_empty_list(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    token_path = tmp_path / "token.txt"
+    token_path.write_text("bearer-tok", encoding="utf-8")
+
+    class _FakeResponse:
+        def read(self) -> bytes:
+            return b'{"code": 200, "data": []}'
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    import urllib.request
+
+    monkeypatch.setattr(
+        urllib.request, "urlopen", lambda *a, **k: _FakeResponse()
+    )
+    deleted = mod._purge_regression_bootstrap_agents_via_api(
+        api_base="https://dev.ops.inty.cc",
+        token_path=str(token_path),
+        http_timeout=30.0,
+        stderr=io.StringIO(),
+    )
+    assert deleted == 0
+
+
+def test_purge_regression_bootstrap_agents_paginates_before_delete(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    token_path = tmp_path / "token.txt"
+    token_path.write_text("bearer-tok", encoding="utf-8")
+    calls: list[tuple[str, str]] = []
+    first_page = [
+        {"id": f"agent-other-{idx}", "name": f"other-{idx}"}
+        for idx in range(99)
+    ]
+    first_page.append({"id": "agent-first", "name": "bootstrap-test-first"})
+    second_page = [{"id": "agent-second", "name": "bootstrap-test-second"}]
+
+    class _FakeResponse:
+        def __init__(self, payload: dict) -> None:
+            self._payload = payload
+
+        def read(self) -> bytes:
+            return json.dumps(self._payload).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_urlopen(request, timeout=0.0):  # noqa: ANN001
+        url = request.full_url
+        calls.append((request.method, url))
+        if request.method == "GET" and "skip=0" in url:
+            return _FakeResponse({"code": 200, "data": first_page})
+        if request.method == "GET" and "skip=100" in url:
+            return _FakeResponse({"code": 200, "data": second_page})
+        if request.method == "DELETE":
+            return _FakeResponse({"code": 200, "data": {}})
+        raise AssertionError(f"unexpected request: {request.method} {url}")
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    deleted = mod._purge_regression_bootstrap_agents_via_api(
+        api_base="https://dev.ops.inty.cc",
+        token_path=str(token_path),
+        http_timeout=30.0,
+        stderr=io.StringIO(),
+    )
+    assert deleted == 2
+    assert [method for method, _ in calls] == ["GET", "GET", "DELETE", "DELETE"]
+
+
+def test_purge_regression_bootstrap_agents_delete_failure_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    token_path = tmp_path / "token.txt"
+    token_path.write_text("bearer-tok", encoding="utf-8")
+
+    class _FakeResponse:
+        def read(self) -> bytes:
+            return json.dumps(
+                {
+                    "code": 200,
+                    "data": [
+                        {"id": "agent-bootstrap", "name": "bootstrap-test-x"}
+                    ],
+                }
+            ).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    import urllib.error
+    import urllib.request
+
+    def fake_urlopen(request, timeout=0.0):  # noqa: ANN001
+        if request.method == "GET":
+            return _FakeResponse()
+        raise urllib.error.HTTPError(
+            request.full_url,
+            500,
+            "server error",
+            hdrs=None,
+            fp=io.BytesIO(b"internal error"),
+        )
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError, match="delete agent"):
+        mod._purge_regression_bootstrap_agents_via_api(
+            api_base="https://dev.ops.inty.cc",
+            token_path=str(token_path),
+            http_timeout=30.0,
+            stderr=io.StringIO(),
+        )
+
+
+def test_main_dev_create_agent_purges_before_create(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    order: list[str] = []
+    stderr_buf = io.StringIO()
+
+    def fake_purge(**kwargs: object) -> int:
+        order.append("purge")
+        return 2
+
+    def fake_create(**kwargs: object) -> str:
+        order.append("create")
+        return "new-agent-id"
+
+    def fake_run_regression(**kwargs: object) -> int:
+        order.append("run")
+        return 0
+
+    monkeypatch.setattr(
+        mod,
+        "_purge_regression_bootstrap_agents_via_api",
+        fake_purge,
+    )
+    monkeypatch.setattr(mod, "_create_agent_id", fake_create)
+    monkeypatch.setattr(mod, "run_regression", fake_run_regression)
+    monkeypatch.setattr(
+        sys,
+        "stderr",
+        stderr_buf,
+    )
+    rc = mod.main(
+        [
+            "--target",
+            "dev",
+            "--create-agent",
+            "--report",
+            str(tmp_path / "report.json"),
+        ]
+    )
+    assert rc == 0
+    assert order == ["purge", "create", "run"]
+    assert "purged 2 bootstrap-test agent(s) via API" in stderr_buf.getvalue()
+    assert (
+        "deactivated prior ACTIVE companion bonds" not in stderr_buf.getvalue()
+    )

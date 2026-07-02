@@ -1,7 +1,6 @@
 # Tests
 
 - Do not write tests for
-  `/tools/`
   `/experimental/`
   `/research/`
 - Tests for non-Python code are not under this dir.
@@ -9,7 +8,8 @@
 
 - Add test files should be named after the corresponding source files, by appending `test_` prefix
 
-- Never use mocks or monkeypatch in tests, always assume tests can access local service instance
+- Avoid using mocks or monkeypatch in tests
+- Always assume tests can access local service instance
 - When checking multiline text, split text to array of lines and compare with the expected array.
   ```python
   text_lines = text.split("\n")
