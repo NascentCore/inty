@@ -15,6 +15,7 @@ Inty 后端服务（及关联服务和代码）部署到云端服务器
 - 密钥：目前写入配置文件、应改为写入环境变量
 - 所有系统配置文件须提交本代码仓库
 - 部署环境抽象：典型顺序是 **建库 → 为该环境写独立 config 变体 → 接入 CI/CD**——细节随基础设施演进，以同目录 README 为准。
+- **VM 当前容器与端口**：见 [DEPLOYMENT_STATE.md](DEPLOYMENT_STATE.md)（随运维变更更新）。
 - iOS Android App 相关内容也在这里
 
 ## Database setup

@@ -79,7 +79,7 @@ docker build -f devops/docker/Dockerfile \
   -t inty-server:imate-dev .
 
 # 示例：运行（宿主机端口按 VM 规划替换 8010，且必须与 IntelliMate 已占用端口不冲突）
-sudo docker run --detach --log-driver=gcplogs \
+sudo docker run --detach \
   --name inty-backend-imate-dev \
   --restart unless-stopped \
   --publish 8010:8000 \
@@ -87,7 +87,6 @@ sudo docker run --detach --log-driver=gcplogs \
   --volume /opt/inty-imate-dev/inty-firebase-key.json:/inty-firebase-key.json \
   --label application=inty-backend-imate \
   --label environment=imate-dev \
-  --log-opt labels=application,environment \
   inty-server:imate-dev
 ```
 
@@ -98,7 +97,7 @@ sudo docker run --detach --log-driver=gcplogs \
 [iMate Ops](/.github/workflows/build_and_deploy_ops.yml) 与 IntelliMate Ops 共用同一 workflow；选择 `imate-dev` / `imate-prod` 时使用 `devops/config.yaml.imate_*`，容器 `inty-ops-imate-*`（与 `inty-ops-dev` 等并行）。`imate` 专用配置文件**未**列入 Ops 的 `on.push.paths`，避免误触发 IntelliMate Ops 重部署；iMate Ops 以 **手动** workflow 为主。
 
 1. 在 GitHub Environments 中配置 `imate-dev`、`imate-prod` 的 `vars`：`SERVICE_PORT_ON_HOST`、`SERVICE_PUBLIC_URL`；部署 Ops 时另加 `OPS_SERVICE_PORT_ON_HOST`、`OPS_SERVICE_PUBLIC_URL`。
-2. **禁止**在误选 `dev`/`prod` 时期望部署 iMate；也禁止在脚本中混用环境名导致对 `inty-backend-dev` / `inty-backend-prod` 的 stop/rm（iMate 路径仅操作 `inty-backend-imate-*`，由 `map` 输出保证）。
+2. **禁止**在误选 `dev`/`prod` 时期望部署 iMate；也禁止在脚本中混用环境名导致对 **`inty-backend-prod`** 的 stop/rm（prod 须保持在线）。`inty-backend-dev` 可能有意停止，见 [DEPLOYMENT_STATE.md](../DEPLOYMENT_STATE.md)；iMate 路径仅操作 `inty-backend-imate-*`，由 `map` 输出保证。
 
 若 CI 不可用，**手动**在目标 VM 上按 7.1 拉取已构建镜像 digest 或本地 build 部署即可。
 
@@ -119,8 +118,8 @@ sudo docker run --detach --log-driver=gcplogs \
 ## 10. 验收检查（DoD）
 
 - iMate：健康检查 URL 可用；`alembic_version` 与已部署代码 revision 一致且该次 migration 使用的 `-x config` 为 iMate 专用文件；带 `X-App-Id: imate_android`（若采用）时聊天数据仅写入 `imate_*` 表；缺失或非法 `X-App-Id` 时**不得**写入 `imate_*`（见 FR 7.4）。
-- **IntelliMate 不受影响（强制）**：部署 iMate 前后，IntelliMate 容器仍在运行且名称未变；`config` 内 DSN/bucket 仍指向 IntelliMate 资源；IntelliMate 公网入口行为与部署前一致（可用 spot check：`curl` 或版本检查接口）。
-- 结构化日志中 `application`/`environment` 标签可过滤出 iMate 实例，且不与 IntelliMate 日志混为一谈。
+- **IntelliMate 不受影响（强制）**：部署 iMate 前后，IntelliMate **prod** 容器仍在运行且名称未变；`config` 内 DSN/bucket 仍指向 IntelliMate 资源；IntelliMate 公网入口行为与部署前一致（可用 spot check：`curl` 或版本检查接口）。
+- VM 上可用容器名区分 iMate 与 IntelliMate 实例日志（`docker logs`）；部署现状见 [DEPLOYMENT_STATE.md](../DEPLOYMENT_STATE.md)。
 
 ## 11. 关联文档
 

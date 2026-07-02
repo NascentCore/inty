@@ -56,7 +56,6 @@ docker build \
 docker run -d \
   --name inty-push-worker \
   --restart unless-stopped \
-  --log-driver=gcplogs \
   --label application=inty-push-worker \
   --label environment=dev \
   --volume /opt/inty-dev/inty-backend-key.json:/inty-backend-key.json \

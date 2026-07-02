@@ -18,7 +18,7 @@ This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](.
 - **Apt** ([`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh)): Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`, `google-cloud-cli`.
 - **Python**: `.venv` from `requirements.txt` + `tests/requirements.txt`; dev tools (`uv`, `ruff`, `black`, `pylint`, `vulture`) into `.venv/bin/`.
 - **Config**: copies `devops/config.yaml.test` → `config.yaml` when missing.
-- **`gcloud` auth** (not in install script): use Cursor Secrets (`GOOGLE_APPLICATION_CREDENTIALS`) or dashboard snapshot after `gcloud auth login` — required for `devops/fetch_inty_container_logs.sh`.
+- **Remote VM logs**: `devops/fetch_inty_vm_container_logs.sh`（SSH；见 [DEPLOYMENT_STATE.md](/devops/DEPLOYMENT_STATE.md)）。
 
 ### Not in `install` (on-demand or dashboard snapshot)
 
@@ -192,7 +192,7 @@ echo "Emulator booted"
 
 ## Gotchas
 
-- **`gcloud` auth**: install script only installs the CLI. For `devops/fetch_inty_container_logs.sh`, set Cursor Secrets with a GCP service account (`GOOGLE_APPLICATION_CREDENTIALS` pointing at the key file path) or use a dashboard snapshot taken after `gcloud auth login`.
+- **`gcloud` auth**: install script only installs the CLI; IntelliMate VM 容器日志用 SSH + `devops/fetch_inty_vm_container_logs.sh`（见 [DEPLOYMENT_STATE.md](/devops/DEPLOYMENT_STATE.md)），不依赖 `gcloud logging read`。
 - Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
 - `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
 - Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).

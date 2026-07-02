@@ -45,9 +45,9 @@ git tag $GIT_TAG && git push --tags
 
 ## 推送服务（Push Worker）发布/部署
 
-推送服务与后端服务在同一个工作流中部署（同样通过 docker image 发布）。
+推送服务通过**独立** GitHub Actions workflow 构建与部署（镜像与后端同源 monorepo，但 workflow 分离）。
 
-- **Workflow**：`.github/workflows/build_and_deploy_backend.yml`
+- **Workflow**：`.github/workflows/build_and_deploy_push_worker.yml`
 - **镜像名称**：`ghcr.io/nascentcore/inty-backend/inty-push-worker`
 - **容器名称**：`inty-push-worker-{environment}`（如 `inty-push-worker-dev`、`inty-push-worker-prod`）
 - **Dockerfile**：`devops/docker/Dockerfile.push-worker`
@@ -56,7 +56,7 @@ git tag $GIT_TAG && git push --tags
 - **挂载卷**：
   - `/opt/inty-{environment}/inty-backend-key.json`
   - `/opt/inty-{environment}/inty-firebase-key.json`
-- **日志**：使用 GCP Cloud Logging 驱动，标签为 `application=inty-push-worker`、`environment={environment}`
+- **日志**：Docker 默认 `json-file`（stdout 在 VM 本地；见 [DEPLOYMENT_STATE.md](DEPLOYMENT_STATE.md)）
 
 验证部署：
 

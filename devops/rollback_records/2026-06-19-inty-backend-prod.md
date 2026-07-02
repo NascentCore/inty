@@ -2,7 +2,9 @@
 
 # inty-backend-prod rollback record: 2026-06-19
 
-This file records the currently running production `inty-backend-prod` container before deploying a newer version, so the old setup can be restored if the new deployment breaks.
+> **当前 prod 部署态**见 [DEPLOYMENT_STATE.md](../DEPLOYMENT_STATE.md)。下文为 2026-06-19 捕获的**历史镜像**回滚参考；日志驱动当时为 `gcplogs`，现已改为 Docker 默认 `json-file`。
+
+This file records the production `inty-backend-prod` container before deploying a newer version, so the old **image** can be restored if needed.
 
 ## Captured container
 
@@ -33,8 +35,7 @@ This file records the currently running production `inty-backend-prod` container
   - `application=inty-backend`
   - `environment=prod`
   - `org.opencontainers.image.revision=4a7c0a98abe50a20063081aee466c87353652f25`
-- Docker log driver: `gcplogs`
-- Docker log labels: `application,environment`
+- Docker log driver at capture time: `gcplogs`（已废弃，见 [DEPLOYMENT_STATE.md](../DEPLOYMENT_STATE.md)）
 - Environment keys present:
   - `LANGCHAIN_TRACING_V2`
   - `LANGCHAIN_PROJECT`
@@ -55,8 +56,6 @@ docker pull ghcr.io/nascentcore/inty-backend/inty-server@sha256:27f08f65828e3873
 docker run --detach \
   --name inty-backend-prod \
   --restart unless-stopped \
-  --log-driver gcplogs \
-  --log-opt labels=application,environment \
   --label application=inty-backend \
   --label environment=prod \
   --label org.opencontainers.image.revision=4a7c0a98abe50a20063081aee466c87353652f25 \

@@ -30,7 +30,7 @@ After running the helper, append one line:
 ### Effectiveness review (open — revisit after 2–3 real uses)
 
 - **LangSmith rate limits** — broad windows + many keywords trigger 429; may need higher `--read-delay-seconds` or server-side name filter.
-- **Log correlation** — local `.inty/inty.log` grep hints only; dev/prod VM (`gcplogs`) not automated.
+- **Log correlation** — local `.inty/inty.log` grep hints only; dev/prod VM logs via `devops/fetch_inty_vm_container_logs.sh` or SSH `docker logs` (not automated in this skill).
 - **Screenshot without clock** — workflow assumes bubble timestamp; fallback is manual date + transcript keyword only.
 - **Generic keywords** — short/common snippets (e.g. `可以`) rank poorly; skill depends on distinctive snippets.
 - **Prod project** — `inty-backend-prod` may be absent; confirm project name per deployment before searching.
@@ -96,7 +96,7 @@ Helper script path: [`.cursor/skills/scripts/telegram_screenshot_trace_match.py`
 ## Server logs correlation
 
 - **Local Ops** — `.inty/inty.log` (`INTY_LOG_FILE` from `backend/ops/start.sh`; default workspace `.inty` under repo root)
-- **Dev/prod VM** — Docker `gcplogs` on GCP VM; SSH to Ops host; filter by `application=inty-backend` label
+- **Dev/prod VM** — `ssh inty` + `sudo docker logs inty-ops-dev` / `inty-ops-prod`，或 `devops/fetch_inty_vm_container_logs.sh`
 
 **Grep patterns** (after you have `trace_id` / `agent_id` from LangSmith):
 

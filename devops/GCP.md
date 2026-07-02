@@ -59,8 +59,7 @@ alembic -c backend/alembic/alembic.ini -x config=devops/config.yaml.imate_prod u
 
 ### 日志
 
-- Cloud logging：prod container streaming logs https://cloudlogging.app.goo.gl/o8QRPguGe78soGUY9
-- 使用 docker `gcplogs` driver（概念与选项参考）：https://docs.docker.com/engine/logging/drivers/gcplogs/
+- IntelliMate 容器 stdout：Docker 默认 `json-file`（VM 本地）。`sudo docker logs <container>`；本机拉取见 [fetch_inty_vm_container_logs.sh](fetch_inty_vm_container_logs.sh) 与 [DEPLOYMENT_STATE.md](DEPLOYMENT_STATE.md)。
 
 ### 其它外部依赖/平台账号（便于排查）
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # 从 GCP VM（SSH 别名 inty，见 devops/gcp_vm_inty_ssh_config）拉取 Docker 容器日志到本机。
-# Cloud Logging（gcplogs）拉取见 devops/fetch_inty_container_logs.sh。
 #
 # 前置：~/.ssh/config 已包含 host inty（IdentityFile、User 等与 gcp_vm_inty_ssh_config 一致）。
 #

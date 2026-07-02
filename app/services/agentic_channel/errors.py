@@ -14,7 +14,7 @@ class CompanionBondInvariantError(ValueError):
 
 
 def integrity_error_detail(exc: IntegrityError) -> str:
-    """Summarize Postgres constraint info for Cloud Logging (INFO/WARNING sinks)."""
+    """Summarize Postgres constraint info for structured log lines."""
     orig = exc.orig
     if orig is None:
         return repr(exc)
