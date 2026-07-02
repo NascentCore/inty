@@ -16,8 +16,8 @@ hierarchy (design issue; options include in-context vs retrieval-required splits
 
 TODO(memory-projection-pipeline): Converge track assembly onto projection pipeline. — #3521
 
-TODO(world-engine-mailbox-prompt): Inject unread mailbox messages into companion
-prompt slices; user never sees sub-agent directly — #3708 (epic #3700).
+TODO(world-engine-mailbox-prompt): Inject unread mailbox messages into companion — #3708
+prompt slices; user never sees sub-agent directly (epic #3700).
 """
 
 from __future__ import annotations

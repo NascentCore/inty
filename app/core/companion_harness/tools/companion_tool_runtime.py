@@ -390,8 +390,8 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
     return "OK mkdir (logical prefix only; companion MemoryStore has no host filesystem dirs)"
 
 
-# TODO(world-engine-experience-feedback): Read ``techno_core_events.jsonl`` and
-# feed autonomy experience back into companion hidden state — #3710 (epic #3700).
+# TODO(world-engine-experience-feedback): Read ``techno_core_events.jsonl`` and — #3710
+# feed autonomy experience back into companion hidden state (epic #3700).
 
 
 def tool_techno_core_record_event(

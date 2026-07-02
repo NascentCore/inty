@@ -49,8 +49,8 @@ https://github.com/NascentCore/inty/issues/3113 (WS turn_lock).
 
 TODO(!3409): Move this module into a focused sub-package; consider renaming to ``track.py``.
 
-TODO(world-engine-turn-spine): Delegate ``_run_companion_turn_core`` to shared
-AgentHarness turn skeleton via CompanionProfile — #3702 (epic #3700).
+TODO(world-engine-turn-spine): Delegate ``_run_companion_turn_core`` to shared — #3702
+AgentHarness turn skeleton via CompanionProfile (epic #3700).
 """
 
 from __future__ import annotations
