@@ -19,8 +19,8 @@ TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming
 
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
 
-TODO(world-engine-l2-echo): On sub-agent dismiss, merge bounded encounter echo
-into companion ``MEMORY.md``; generalize bounded-coherent curation — #3709 (epic #3700).
+TODO(world-engine-l2-echo): On sub-agent dismiss, merge bounded encounter echo — #3709
+into companion ``MEMORY.md``; generalize bounded-coherent curation (epic #3700).
 """
 
 from __future__ import annotations

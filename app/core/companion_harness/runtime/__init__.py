@@ -22,13 +22,13 @@ entry points after resolving a ``CompanionSession``.
   via ``scope_inner_tick_poll`` / ``scope_inner_tick_fire``.
 - Postgres advisory lock for multi-process (#3271) remains future work.
 
-TODO(world-engine-agent-harness): Extract shared AgentHarness turn spine
-(perceive → load hidden state → BehaviorPolicy → mailbox emit → evolve state);
-CompanionHarness delegates transparently — #3702 (epic #3700).
+TODO(world-engine-agent-harness): Extract shared AgentHarness turn spine — #3702
+(perceive → load hidden state → BehaviorPolicy → mailbox emit → evolve state).
+CompanionHarness delegates transparently (epic #3700).
 
-TODO(world-engine-mailbox-spawn): Add Mailbox send/receive and SpawnRegistry
-(spawn/dismiss/hibernate) APIs; Phase 1 API-only, no prompt injection — #3703.
+TODO(world-engine-mailbox-spawn): Add Mailbox send/receive and SpawnRegistry — #3703
+(spawn/dismiss/hibernate) APIs; Phase 1 API-only, no prompt injection (epic #3700).
 
-TODO(world-engine-firefly-test): Firefly runner + SubAgentSupervisor (pytest harness
-only; no production LLM) — #3705 (epic #3700).
+TODO(world-engine-firefly-test): Firefly runner + SubAgentSupervisor — #3705
+(pytest harness only; no production LLM) (epic #3700).
 """

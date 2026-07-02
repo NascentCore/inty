@@ -4,11 +4,11 @@ Due checks and kernel ``run_inner_tick_*`` execution only. Callers must hold
 scope ``CompanionSession.turn_lock``. Chat history, WebSocket payloads, and ORM
 scope resolution belong in ``app.services.agentic_companion`` glue.
 
-TODO(world-engine-firefly-clock): Activate firefly per-agent clock in production
-(inner-tick summon path); independent cadence from companion — #3707 (epic #3700).
+TODO(world-engine-firefly-clock): Activate firefly per-agent clock in production — #3707
+(inner-tick summon path); independent cadence from companion (epic #3700).
 
-TODO(world-engine-tracer-bullet): E2E tracer bullet — idle user → summon → firefly
-tick → mailbox → dismiss + MEMORY echo → user hears about it — #3711 (epic #3700).
+TODO(world-engine-tracer-bullet): E2E tracer bullet — idle user → summon → firefly — #3711
+tick → mailbox → dismiss + MEMORY echo → user hears about it (epic #3700).
 """
 
 from __future__ import annotations

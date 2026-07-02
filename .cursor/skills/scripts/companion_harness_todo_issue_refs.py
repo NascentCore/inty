@@ -68,6 +68,19 @@ TAG_TO_ISSUE: dict[str, int] = {
     "experience-profile": 3343,
     "bootstrap-cohort-overlays": 3628,
     "track-compose-unify": 3398,
+    "world-engine-agent-harness": 3702,
+    "world-engine-agent-profile": 3701,
+    "world-engine-agent-scope": 3704,
+    "world-engine-firefly-kind": 3704,
+    "world-engine-mailbox-spawn": 3703,
+    "world-engine-firefly-test": 3705,
+    "world-engine-summon-dismiss": 3706,
+    "world-engine-firefly-clock": 3707,
+    "world-engine-mailbox-prompt": 3708,
+    "world-engine-l2-echo": 3709,
+    "world-engine-experience-feedback": 3710,
+    "world-engine-tracer-bullet": 3711,
+    "world-engine-turn-spine": 3702,
 }
 
 ROOTS = (
@@ -79,20 +92,43 @@ ISSUE_REF_RE = re.compile(r"(?:!|#)\d+")
 TAG_RE = re.compile(r"TODO\(([^)]+)\)")
 
 
-def _annotate_line(line: str) -> str:
-    if "TODO" not in line or ISSUE_REF_RE.search(line):
-        return line
-    m = TAG_RE.search(line)
-    if not m:
-        return line
-    tag = m.group(1).strip()
-    issue = TAG_TO_ISSUE.get(tag)
-    if issue is None:
-        return line
-    stripped = line.rstrip("\n")
-    if stripped.endswith((".", "。", ")", "]", "`")):
-        return f"{stripped} — #{issue}\n"
-    return f"{stripped} — #{issue}\n"
+def _todo_block_has_ref(lines: list[str], start_idx: int) -> bool:
+    block = lines[start_idx]
+    for j in range(start_idx + 1, min(start_idx + 5, len(lines))):
+        nxt = lines[j]
+        if nxt.strip().startswith(("def ", "class ", "@", "TODO(")):
+            break
+        block += "\n" + nxt
+        if nxt.rstrip().endswith((".", "。", ")", "]", "`", "—", ";")):
+            break
+    return bool(ISSUE_REF_RE.search(block))
+
+
+def _annotate_lines(lines: list[str]) -> list[str]:
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if "TODO" not in line or ISSUE_REF_RE.search(line) or _todo_block_has_ref(lines, i):
+            out.append(line)
+            i += 1
+            continue
+        m = TAG_RE.search(line)
+        if not m:
+            out.append(line)
+            i += 1
+            continue
+        tag = m.group(1).strip()
+        issue = TAG_TO_ISSUE.get(tag)
+        if issue is None:
+            out.append(line)
+            i += 1
+            continue
+        stripped = line.rstrip("\n")
+        keepends = line[len(stripped) :]
+        out.append(f"{stripped} — #{issue}{keepends}")
+        i += 1
+    return out
 
 
 def main() -> int:
@@ -107,11 +143,16 @@ def main() -> int:
             if path.suffix not in {".py", ".md"}:
                 continue
             text = path.read_text(encoding="utf-8")
-            lines = text.splitlines(keepends=True)
-            new_lines = [_annotate_line(line) for line in lines]
-            if new_lines != lines:
+            raw_lines = text.splitlines(keepends=True)
+            plain = [line.rstrip("\n") for line in raw_lines]
+            annotated = _annotate_lines(plain)
+            new_lines = []
+            for orig, new in zip(raw_lines, annotated, strict=True):
+                keepends = orig[len(orig.rstrip("\n")) :]
+                new_lines.append(new + keepends)
+            if new_lines != raw_lines:
                 path.write_text("".join(new_lines), encoding="utf-8")
-                delta = sum(1 for a, b in zip(lines, new_lines, strict=True) if a != b)
+                delta = sum(1 for a, b in zip(raw_lines, new_lines, strict=True) if a != b)
                 changed_files += 1
                 changed_lines += delta
                 print(f"updated {path.relative_to(repo)} ({delta} lines)")
