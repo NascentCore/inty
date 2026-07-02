@@ -74,65 +74,68 @@ def create_user(
 
     # Create database session
     db: Session = SessionLocal()
-    # Check if admin user already exists
-    existing_user = db.query(User).filter(User.id == user_id).first()
+    try:
+        # Check if admin user already exists
+        existing_user = db.query(User).filter(User.id == user_id).first()
 
-    if existing_user:
-        logger.warning(f"Admin user already exists with ID: {user_id}")
-        if existing_user.is_superuser != is_superuser:
-            existing_user.is_superuser = is_superuser
+        if existing_user:
+            logger.warning(f"Admin user already exists with ID: {user_id}")
+            if existing_user.is_superuser != is_superuser:
+                existing_user.is_superuser = is_superuser
+                db.commit()
+                db.refresh(existing_user)
+            created_user = existing_user
+        else:
+            # Create new admin user
+            created_user = User(
+                id=user_id,
+                nickname="admin",
+                email="admin@sxwl.ai",
+                gender=Gender.MALE,
+                age_group="18-24",
+                description="An admin user",
+                is_superuser=is_superuser,
+                auth_type=AuthType.GOOGLE,
+                readable_id=generate_readable_id(),
+            )
+
+            # Add to database
+            db.add(created_user)
             db.commit()
-            db.refresh(existing_user)
-        created_user = existing_user
-    else:
-        # Create new admin user
-        created_user = User(
-            id=user_id,
-            nickname="admin",
-            email="admin@sxwl.ai",
-            gender=Gender.MALE,
-            age_group="18-24",
-            description="An admin user",
-            is_superuser=is_superuser,
-            auth_type=AuthType.GOOGLE,
-            readable_id=generate_readable_id(),
+
+        if token_file is not None and token_file.is_file():
+            existing_token = token_file.read_text(encoding="utf-8").strip()
+            if existing_token != "" and existing_bearer_token_usable(
+                existing_token, created_user.id
+            ):
+                logger.info(
+                    f"Reusing bearer token in {token_file} "
+                    f"(≥{LOCAL_OPS_BEARER_MIN_LIFETIME} remaining)"
+                )
+                print(f"🔑 Bearer Token: {existing_token} (reused)")
+                if agent_id_file is not None:
+                    _write_agent_id_file(db, created_user, agent_id_file)
+                return
+
+        access_token = create_access_token(
+            created_user.id, expires_delta=local_ops_bearer_expires_delta()
         )
 
-        # Add to database
-        db.add(created_user)
-        db.commit()
+        logger.info("Admin user created successfully!")
+        logger.info(f"User ID: {created_user.id}")
+        logger.info(f"Email: {created_user.email}")
+        logger.info(f"Readable ID: {created_user.readable_id}")
+        logger.info(f"🔑 Bearer Token: {access_token}")
+        print(f"🔑 Bearer Token: {access_token}")
 
-    if token_file is not None and token_file.is_file():
-        existing_token = token_file.read_text(encoding="utf-8").strip()
-        if existing_token != "" and existing_bearer_token_usable(
-            existing_token, created_user.id
-        ):
-            logger.info(
-                f"Reusing bearer token in {token_file} "
-                f"(≥{LOCAL_OPS_BEARER_MIN_LIFETIME} remaining)"
-            )
-            print(f"🔑 Bearer Token: {existing_token} (reused)")
-            if agent_id_file is not None:
-                _write_agent_id_file(db, created_user, agent_id_file)
-            return
+        if token_file is not None:
+            token_file.write_text(access_token + "\n")
+            logger.info(f"Token written to {token_file}")
 
-    access_token = create_access_token(
-        created_user.id, expires_delta=local_ops_bearer_expires_delta()
-    )
-
-    logger.info("Admin user created successfully!")
-    logger.info(f"User ID: {created_user.id}")
-    logger.info(f"Email: {created_user.email}")
-    logger.info(f"Readable ID: {created_user.readable_id}")
-    logger.info(f"🔑 Bearer Token: {access_token}")
-    print(f"🔑 Bearer Token: {access_token}")
-
-    if token_file is not None:
-        token_file.write_text(access_token + "\n")
-        logger.info(f"Token written to {token_file}")
-
-    if agent_id_file is not None:
-        _write_agent_id_file(db, created_user, agent_id_file)
+        if agent_id_file is not None:
+            _write_agent_id_file(db, created_user, agent_id_file)
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
