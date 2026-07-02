@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_scope import MEMORY_MD_REL
+from app.core.companion_harness.memory.memory_store_path_constants import MEMORY_MD_REL
 _MAX_HTML_BYTES = 2_000_000
 _DEFAULT_BULLETS = 10
 _MIN_BULLETS = 3

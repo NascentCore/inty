@@ -14,9 +14,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     LangsmithChannelSource,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
-)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -28,6 +25,14 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 )
 from app.utils.models_catalog import resolve_chat_text_model
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
+)
 from app.core.companion_harness.tools.tool_background import (
     _initial_tool_bg_completion_with_fallbacks,
     run_tool_background_loop,
@@ -154,12 +159,12 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         scope=CompanionScope("u", "a", str(tmp_path.resolve())),
         repository=None,
     )
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
-    store.write_document("IDENTITY.md", "id\n")
-    store.write_document("SOUL.md", "soul\n")
-    store.write_document("USER.md", "user\n")
-    store.write_document("MEMORY.md", "memory\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
+    store.write_document(IDENTITY_MD_REL, "id\n")
+    store.write_document(SOUL_MD_REL, "soul\n")
+    store.write_document(USER_MD_REL, "user\n")
+    store.write_document(MEMORY_MD_REL, "memory\n")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     await run_tool_background_loop(
         memory_store=store,

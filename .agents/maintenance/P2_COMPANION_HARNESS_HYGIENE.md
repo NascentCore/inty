@@ -152,10 +152,10 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no o
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-44** #3413: `read_web_page.py` — import `MEMORY_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export). **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-45** #3413: `client_time_from_memory_store.py` — import `USER_MD_REL` from `memory_store_path_constants`. **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-46** #3413: `test_tool_background_transcript_metadata.py` — `TRANSCRIPT_JSONL_REL` for seed + read. **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-47** #3413: `test_ai_private_append_tool.py` — `AI_PRIVATE_JSONL_REL` for read assertion. **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-48** #3413: `test_read_web_page_tool.py` — `MEMORY_MD_REL` for read assertion. **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-49** #3413: `test_tool_background_langsmith_channel.py` — seed store paths from canonical constants. **claimed** `cursor/agent-maintenance-tasks-4be2`
-- [ ] **HYGIENE-2026-50** #3413: `test_langsmith_turn_parent.py` — seed store paths from canonical constants. **claimed** `cursor/agent-maintenance-tasks-4be2`
+- [x] **HYGIENE-2026-44** #3413: `read_web_page.py` — import `MEMORY_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export). Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-45** #3413: `client_time_from_memory_store.py` — import `USER_MD_REL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-46** #3413: `test_tool_background_transcript_metadata.py` — `TRANSCRIPT_JSONL_REL` for seed + read. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-47** #3413: `test_ai_private_append_tool.py` — `AI_PRIVATE_JSONL_REL` for read assertion. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-48** #3413: `test_read_web_page_tool.py` — `MEMORY_MD_REL` for read assertion. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-49** #3413: `test_tool_background_langsmith_channel.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-50** #3413: `test_langsmith_turn_parent.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.

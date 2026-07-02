@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import MEMORY_MD_REL
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.read_web_page import (
     run_read_web_page_sync,
@@ -44,9 +45,9 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(
     assert not out.startswith("ERROR:")
     assert "# Example Article" in out
     assert "- " in out
-    assert "MEMORY.md" in out
+    assert MEMORY_MD_REL in out
 
-    mem = store.read_document_if_exists("MEMORY.md")
+    mem = store.read_document_if_exists(MEMORY_MD_REL)
     assert mem is not None
     assert "read_web_page" in mem
     assert "https://example.com/page" in mem

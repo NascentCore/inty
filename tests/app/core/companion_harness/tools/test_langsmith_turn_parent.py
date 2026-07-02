@@ -33,6 +33,14 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.tool_background import (
     start_tool_background_job,
@@ -524,12 +532,12 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
         scope=CompanionScope("ls", "agent", str(tmp_path.resolve())),
         repository=None,
     )
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
-    store.write_document("IDENTITY.md", "id\n")
-    store.write_document("SOUL.md", "s\n")
-    store.write_document("USER.md", "u\n")
-    store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
+    store.write_document(IDENTITY_MD_REL, "id\n")
+    store.write_document(SOUL_MD_REL, "s\n")
+    store.write_document(USER_MD_REL, "u\n")
+    store.write_document(MEMORY_MD_REL, "m\n")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     sentinel = MagicMock()
     parent_kwargs: list[dict[str, Any]] = []

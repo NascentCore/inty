@@ -15,7 +15,7 @@ from loguru import logger
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_scope import USER_MD_REL
+from app.core.companion_harness.memory.memory_store_path_constants import USER_MD_REL
 from app.core.companion_harness.memory.user_timezone_from_user_md import (
     infer_iana_timezone_from_user_md,
 )
