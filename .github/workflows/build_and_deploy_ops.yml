@@ -131,7 +131,7 @@ jobs:
             sudo docker stop inty-ops-${{ steps.prep.outputs.environment }} || true
             sudo docker rm inty-ops-${{ steps.prep.outputs.environment }} || true
             LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
-            sudo docker run --detach --log-driver=gcplogs \
+            sudo docker run --detach \
               --name inty-ops-${{ steps.prep.outputs.environment }} \
               --restart unless-stopped \
               ${LOCAL_PG_DOCKER_HOST_ARGS} \
@@ -141,7 +141,6 @@ jobs:
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
               --label application=inty-ops \
               --label environment=${{ steps.prep.outputs.environment }} \
-              --log-opt labels=application,environment \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}

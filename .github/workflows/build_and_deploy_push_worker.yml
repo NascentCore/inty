@@ -129,7 +129,7 @@ jobs:
             sudo docker stop inty-push-worker-${{ steps.prep.outputs.environment }} || true
             sudo docker rm inty-push-worker-${{ steps.prep.outputs.environment }} || true
             LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
-            sudo docker run --detach --log-driver=gcplogs \
+            sudo docker run --detach \
               --name inty-push-worker-${{ steps.prep.outputs.environment }} \
               --restart unless-stopped \
               ${LOCAL_PG_DOCKER_HOST_ARGS} \
@@ -138,7 +138,6 @@ jobs:
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
               --label application=inty-push-worker \
               --label environment=${{ steps.prep.outputs.environment }} \
-              --log-opt labels=application,environment \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_PUSH_WORKER_IMAGE }}@${{ steps.build-push-worker-image.outputs.digest }}
@@ -163,14 +162,14 @@ jobs:
               if [ "$log_check" = "found" ]; then
                 echo "Push worker service initialized successfully (found in logs)!"
               else
-                echo "Note: Initialization message not found in docker logs (expected when using gcplogs driver)."
-                echo "Service is running. Check Google Cloud Logging for detailed logs."
+                echo "Note: Initialization message not found in docker logs."
+                echo "Service is running. Check docker logs on the VM for detailed logs."
               fi
             else
               echo "Error: Push worker service failed to start within ${max_wait} seconds"
               echo "Container status:"
               sudo docker ps -a | grep "inty-push-worker-${{ steps.prep.outputs.environment }}" || echo "Container not found"
-              echo "Attempting to get logs (may be empty with gcplogs):"
+              echo "Attempting to get logs:"
               sudo docker logs inty-push-worker-${{ steps.prep.outputs.environment }} 2>&1 || true
               exit 1
             fi

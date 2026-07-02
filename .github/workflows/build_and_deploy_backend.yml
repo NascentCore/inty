@@ -185,7 +185,7 @@ jobs:
             if [ "${{ steps.prep.outputs.environment }}" = "prod" ]; then
               SKIP_ALEMBIC_ENV="--env INTY_SKIP_ALEMBIC_UPGRADE=1"
             fi
-            sudo docker run --detach --log-driver=gcplogs \
+            sudo docker run --detach \
               --name ${{ vars.INTY_BACKEND_CONTAINER_NAME }} \
               --restart unless-stopped \
               ${LOCAL_PG_DOCKER_HOST_ARGS} \
@@ -196,7 +196,6 @@ jobs:
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
               --label application=${{ steps.map.outputs.app_label }} \
               --label environment=${{ steps.prep.outputs.environment }} \
-              --log-opt labels=application,environment \
               --volume ${{ steps.map.outputs.keys_dir }}/inty-backend-key.json:/inty-backend-key.json \
               --volume ${{ steps.map.outputs.keys_dir }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_SERVER_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
