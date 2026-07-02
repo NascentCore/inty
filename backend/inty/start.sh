@@ -41,18 +41,31 @@ done
 # This is for launching the backend server in docker container.
 # You should use docker compose to launch the server locally.
 
-# Run database migrations
-echo "Starting database migrations..."
 export PYTHONPATH=.
 # TODO(INTY_CONFIG_YAML): if unset, export devops/config.yaml.test (--test) or devops/config.yaml.dev (--dev)
 export ALEMBIC_CONFIG="${ALEMBIC_CONFIG:-${REPO_ROOT}/backend/alembic/alembic.ini}"
-# 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
-# 所有预置角色均由这个用户创建。也支持管理系统的登录。
-# 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
-# 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
-# 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
-# python tools/scripts/init_admin_user.py
-python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
+
+_inty_skip_alembic_upgrade_enabled() {
+  case "${INTY_SKIP_ALEMBIC_UPGRADE:-}" in
+    1 | true | TRUE | yes | YES | on | ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Run database migrations unless shared Postgres is already ahead of this image
+# (e.g. inty-backend-prod compat on VM inty-pg). See devops/rollback_records/2026-06-19-inty-pg-alembic-compat-prod.md
+if _inty_skip_alembic_upgrade_enabled; then
+  echo "Skipping database migrations (INTY_SKIP_ALEMBIC_UPGRADE is set)."
+else
+  echo "Starting database migrations..."
+  # 初始化管理员用户 user-01JWZ34Y4D1C92GD86A5R6EWYJ，这个算是预置的用户。
+  # 所有预置角色均由这个用户创建。也支持管理系统的登录。
+  # 只能手动运行下面的命令，因为其与后面的 alembic upgrade head 命令冲突。
+  # 即：init_admin_user.py 需要 users 表存在。所以要先运行 alembic upgrade head。
+  # 但 alembic upgrade head 需要 init_admin_user.py 运行完成生成的默认管理员 id。
+  # python tools/scripts/init_admin_user.py
+  python -m alembic -c "$ALEMBIC_CONFIG" upgrade head
+fi
 
 # 初始化订阅计划，写入信息会提供给 app 作为向 google play 查询订阅计划详情到依据。
 python tools/scripts/init_subscription_plans_simple.py

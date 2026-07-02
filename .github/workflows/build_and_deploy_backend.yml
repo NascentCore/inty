@@ -181,10 +181,15 @@ jobs:
             sudo docker rm ${{ vars.INTY_BACKEND_CONTAINER_NAME }} || true
             # config.yaml.{dev,prod} use database.host host.docker.internal -> VM inty-pg on :5432
             LOCAL_PG_DOCKER_HOST_ARGS="--add-host=host.docker.internal:host-gateway"
+            SKIP_ALEMBIC_ENV=""
+            if [ "${{ steps.prep.outputs.environment }}" = "prod" ]; then
+              SKIP_ALEMBIC_ENV="--env INTY_SKIP_ALEMBIC_UPGRADE=1"
+            fi
             sudo docker run --detach --log-driver=gcplogs \
               --name ${{ vars.INTY_BACKEND_CONTAINER_NAME }} \
               --restart unless-stopped \
               ${LOCAL_PG_DOCKER_HOST_ARGS} \
+              ${SKIP_ALEMBIC_ENV} \
               --publish ${{ vars.SERVICE_PORT_ON_HOST }}:8000 \
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=${{ steps.map.outputs.langchain_project }} \
