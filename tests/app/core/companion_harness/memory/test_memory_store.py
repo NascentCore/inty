@@ -119,13 +119,6 @@ def test_memory_store_no_disk_files(tmp_path) -> None:
     assert store.read_document("SOUL.md") == "# soul\n"
 
 
-def test_memory_store_append_line(tmp_path) -> None:
-    store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
-    store.append_line("log.txt", "line1")
-    store.append_line("log.txt", "line2")
-    assert store.read_document("log.txt") == "line1\nline2\n"
-
-
 def test_memory_store_iter_stored_relative_paths_in_memory(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
     store.write_document("A.md", "a")

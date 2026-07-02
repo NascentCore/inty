@@ -302,20 +302,6 @@ class MemoryStore:
             )
         self._cache.put_committed(committed)
 
-    def append_line(self, relative_path: str, line: str) -> None:
-        with self._append_lock:
-            rel = self._normalize_relative_path(relative_path)
-            cur = self.read_document_if_exists(rel)
-            if cur is None:
-                cur = ""
-            merged = cur
-            if merged and not merged.endswith("\n"):
-                merged += "\n"
-            merged += line
-            if not line.endswith("\n"):
-                merged += "\n"
-            self.write_document(rel, merged)
-
     def append_jsonl_record(
         self, relative_path: str, record: dict[str, Any]
     ) -> None:

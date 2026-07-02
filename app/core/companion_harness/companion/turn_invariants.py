@@ -69,6 +69,5 @@ AWAKE_TURN_TRANSCRIPT_ONLY_RELATIVE_PATH: str = (
 AWAKE_TURN_FORBIDDEN_STORE_MUTATIONS: frozenset[str] = frozenset(
     {
         "write_document",
-        "append_line",
     }
 )
