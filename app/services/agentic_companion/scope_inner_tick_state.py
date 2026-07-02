@@ -79,6 +79,8 @@ class ScopeInnerTickState:
         return idle_ev is not None and (not idle_ev.is_set())
 
 
+# TODO(dreaming-completion-notify): #3744 — add per-scope dreaming checkpoint Event +
+# last_memory_sequence snapshot; mirror monolog/autonomy tool_bg Event pattern.
 def get_scope_inner_tick_state(scope: CompanionScope) -> ScopeInnerTickState:
     """Return singleton inner-tick state for one companion scope."""
     key = scope.registry_key()

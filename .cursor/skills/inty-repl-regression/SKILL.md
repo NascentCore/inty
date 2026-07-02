@@ -45,22 +45,49 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 
 Helper: [`.cursor/skills/scripts/run_inty_repl_regression.py`](../scripts/run_inty_repl_regression.py). Repository root cwd; uses the same WebSocket transport as REPL.
 
+**`--target` is required.** It resolves `api_base`, config YAML, DB verification mode, and turn scope together.
+
+| `--target` | API base | Config | DB checks | Turn scope |
+|---|---|---|---|---|
+| `local` | `http://127.0.0.1:8001` | `devops/config.yaml.regression_tests` | Postgres verified | Full regression |
+| `dev` | `https://dev.ops.inty.cc` | `devops/config.yaml.dev` | WS + `gh` only (no direct Postgres) | Full regression |
+| `prod` | `https://ops.inty.cc` | `devops/config.yaml.prod` | WS only | Safe subset: greeting + one settled turn |
+
+Local (export config before Ops **and** regression driver sets the same preset):
+
 ```bash
-python3 tools/scripts/create_bootstrap_test_agent.py
+export INTY_CONFIG_YAML=devops/config.yaml.regression_tests
+backend/ops/start.sh --local --no-build-frontend
+
 python3 .cursor/skills/scripts/run_inty_repl_regression.py \
-  --agent-id <AGENT_ID> \
-  --api-base http://127.0.0.1:8001
+  --target local \
+  --create-agent
 ```
 
-Or create agent and run in one step:
+Dev (full turn sequence; DB-dependent checks reported as `skipped`; GitHub issue verified via WS text + `gh` CLI):
 
 ```bash
 python3 .cursor/skills/scripts/run_inty_repl_regression.py \
+  --target dev \
   --create-agent \
-  --api-base http://127.0.0.1:8001
+  --login-email test1@sxwl.ai \
+  --login-password '<password>'
 ```
 
-- Exit **0** only when settled queue turn passes, bootstrap is complete (`workspace_bootstrap_user_interactive_completed`), **github_issue_e2e** passes, inner-tick proactive is present, and InputQueue / OutputQueue rows are all `delivered`.
+Prod (health check only — no bootstrap MemDoc writes, no complaint/GitHub issue turn):
+
+```bash
+python3 .cursor/skills/scripts/run_inty_repl_regression.py \
+  --target prod \
+  --create-agent \
+  --login-email <your-prod-account> \
+  --login-password '<password>'
+```
+
+- `--login-email` / `--login-password` (optional pair): obtain bearer token via `POST /api/v1/auth/google/login` and write to `--token-file`. Required for remote targets unless a valid token file already exists.
+- `--api-base`, `--config`, `--proactive-*`, `--dreaming-wait-sec` still override preset defaults when explicitly set.
+- Remote runs (`dev`, `prod`) skip direct Postgres per `devops/README.md`; skipped DB bits do not fail the pass gate.
+- Exit **0** only when mandatory checks for the selected target/scope pass.
 - When `app.debug: true` (regression `config.yaml.regression_tests`), also require **`github_issue_disclosed_in_chat: pass`**: harness prepends the GitHub issue URL from the deterministic tool result to the tool-leg WS reply (prod `app.debug: false` skips this — issues still filed async, chat stays opaque).
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
 - Proactive idle uses `agent.companion_harness.inner_tick.proactive_chat.base_idle_seconds` (**10s**, config minimum) and `poll_seconds` (**3s**) in `devops/config.yaml.regression_tests`. Dreaming uses `agent.companion_harness.dreaming_idle_seconds` (**10s** locally; default prod **7200s**). Driver flags:

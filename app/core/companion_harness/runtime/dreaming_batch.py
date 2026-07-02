@@ -134,7 +134,9 @@ def _run_dreaming_batch_locked(
                 _complete_fn,
                 tool_bg_idle_event=session.tool_bg_idle,
             )
-            assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
+            assert_dreaming_transcript_boundary_unchanged(
+                session.store, candidate
+            )
             state = dreaming_state_from_candidate(
                 candidate, processed_at=datetime.now(UTC)
             )
@@ -157,4 +159,6 @@ def _run_dreaming_batch_locked(
         candidate=candidate,
         langsmith_root_run=langsmith_root_run,
     )
+    # TODO(dreaming-completion-notify): #3744 — signal per-scope in-process notifier
+    # (threading.Event) so REPL regression can wait without Postgres MemDoc polling.
     return DreamingBatchOutcome.CHECKPOINT_SAVED

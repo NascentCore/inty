@@ -351,4 +351,6 @@ async def try_fire_dreaming_for_scope(
                 resolved.agent_id,
                 resolved.chat_row_id,
             )
+            # TODO(dreaming-completion-notify): #3744 — wake in-process waiters / WS meta
+            # instead of relying on external Postgres polling in regression driver.
         return outcome == DreamingBatchOutcome.CHECKPOINT_SAVED

@@ -9,8 +9,11 @@ the ``inty-repl-regression`` skill.
 from __future__ import annotations
 
 import importlib.util
+import io
 import sys
 from pathlib import Path
+
+import pytest
 
 
 def _load_regression_module():
@@ -311,6 +314,9 @@ def test_regression_pass_gate_passed() -> None:
         proactive_silent_ok=True,
         github_issue_ok=True,
         github_disclosure_ok=True,
+        scope=mod.RegressionScope.FULL,
+        skip_db_checks=False,
+        proactive_min_rounds=1,
     )
     assert gate.passed() is True
     gate_fail = mod.RegressionPassGate(
@@ -327,6 +333,9 @@ def test_regression_pass_gate_passed() -> None:
         proactive_silent_ok=True,
         github_issue_ok=True,
         github_disclosure_ok=True,
+        scope=mod.RegressionScope.FULL,
+        skip_db_checks=False,
+        proactive_min_rounds=1,
     )
     assert gate_fail.passed() is False
 
@@ -392,6 +401,9 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         in_all_delivered=True,
         out_all_delivered=True,
         companion_bond_state="ACTIVE",
+        skip_db_checks=False,
+        scope=mod.RegressionScope.FULL,
+        proactive_min_rounds=1,
     )
     assert summary["github_issue_disclosed_in_chat"] == "pass"
     assert gate.github_disclosure_ok is True
@@ -455,6 +467,9 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         in_all_delivered=True,
         out_all_delivered=True,
         companion_bond_state="ACTIVE",
+        skip_db_checks=False,
+        scope=mod.RegressionScope.FULL,
+        proactive_min_rounds=1,
     )
     assert summary_skip["github_issue_disclosed_in_chat"] == "skipped"
     assert gate_skip.github_disclosure_ok is True
@@ -493,6 +508,7 @@ def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
             tmp_path / "missing.yaml",
             user_id="user-testing",
             agent_id="agent-1",
+            skip_db_checks=False,
         )
     finally:
         mod._psql = original
@@ -503,3 +519,291 @@ def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
     assert result.soul_unchanged is True
     assert result.memory_unchanged is True
     assert result.errors == ()
+
+
+def test_target_presets_local() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    preset = mod._target_presets(mod.RegressionTarget.LOCAL, repo_root)
+    assert preset.api_base == mod._DEFAULT_API_BASE
+    assert preset.config_path == mod._DEFAULT_CONFIG
+    assert preset.skip_db_checks is False
+    assert preset.scope == mod.RegressionScope.FULL
+    assert (
+        preset.proactive_min_rounds_default == mod._DEFAULT_PROACTIVE_MIN_ROUNDS
+    )
+
+
+def test_target_presets_dev() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    preset = mod._target_presets(mod.RegressionTarget.DEV, repo_root)
+    assert preset.api_base == mod._DEV_API_BASE
+    assert preset.config_path == mod._DEV_CONFIG
+    assert preset.skip_db_checks is True
+    assert preset.scope == mod.RegressionScope.FULL
+    assert preset.proactive_min_rounds_default == 0
+
+
+def test_target_presets_prod() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    preset = mod._target_presets(mod.RegressionTarget.PROD, repo_root)
+    assert preset.api_base == mod._PROD_API_BASE
+    assert preset.config_path == mod._PROD_CONFIG
+    assert preset.skip_db_checks is True
+    assert preset.scope == mod.RegressionScope.SAFE_SUBSET
+    assert preset.proactive_min_rounds_default == 0
+
+
+def test_extract_github_issue_url() -> None:
+    mod = _load_regression_module()
+    url = "https://github.com/NascentCore/inty/issues/3732"
+    text = f"Filed your feedback: {url}"
+    assert mod._extract_github_issue_url(text) == (url, 3732)
+    assert mod._extract_github_issue_url("no issue here") == ("", 0)
+
+
+def test_wait_input_delivered_skip_db_checks(tmp_path) -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    ok = mod._wait_input_delivered(
+        repo_root,
+        tmp_path / "missing.yaml",
+        agent_id="agent-1",
+        client_message_id="msg-1",
+        timeout_sec=1.0,
+        label="test",
+        stderr=io.StringIO(),
+        skip_db_checks=True,
+    )
+    assert ok is True
+
+
+def test_verify_bootstrap_memdocs_skip_db_checks(tmp_path) -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    result = mod._verify_bootstrap_memdocs(
+        repo_root,
+        tmp_path / "missing.yaml",
+        user_id="user-testing",
+        agent_id="agent-1",
+        skip_db_checks=True,
+    )
+    assert result.errors == ()
+    assert result.warnings
+
+
+def test_build_regression_summary_skip_db_checks() -> None:
+    mod = _load_regression_module()
+    github = mod.GithubIssueE2eResult(
+        "u1",
+        "https://github.com/o/r/issues/1",
+        1,
+        True,
+        True,
+        True,
+        False,
+        None,
+    )
+    summary, gate = mod._build_regression_summary(
+        bootstrap_done="true",
+        context_mode="roleplay",
+        greeting_result=mod.ImplicitSignOnGreetingResult(
+            present=True,
+            source_greeting=True,
+            text_preview="hi",
+            langsmith_trace_id="t",
+        ),
+        memdoc_result=mod.BootstrapMemDocResult(
+            user_customized=False,
+            identity_customized=False,
+            style_customized=False,
+            soul_unchanged=False,
+            memory_unchanged=False,
+            user_sequence_id=0,
+            identity_sequence_id=0,
+            style_sequence_id=0,
+            memory_sequence_id=0,
+            errors=("would fail",),
+            warnings=("skipped: no direct DB access to remote environment",),
+        ),
+        experience_profile_ok=True,
+        dreaming_result=mod.DreamingConsolidationResult(
+            checkpoint_present=False,
+            memory_updated=False,
+            memory_sequence_before=0,
+            memory_sequence_after=0,
+            error="would fail",
+        ),
+        github_result=github,
+        app_debug=True,
+        settled_ok=True,
+        report_errors=[],
+        proactive_summary={
+            "total": 0,
+            "visible": 0,
+            "silent": 0,
+            "silent_token_leaks": 0,
+        },
+        proactive_target_met=False,
+        proactive_present=False,
+        proactive_silent_ok=True,
+        in_q="",
+        out_q="",
+        in_all_delivered=False,
+        out_all_delivered=False,
+        companion_bond_state="",
+        skip_db_checks=True,
+        scope=mod.RegressionScope.FULL,
+        proactive_min_rounds=0,
+    )
+    assert (
+        summary["bootstrap_memdocs"] == mod.RegressionCheckStatus.SKIPPED.value
+    )
+    assert (
+        summary["dreaming_consolidation"]
+        == mod.RegressionCheckStatus.SKIPPED.value
+    )
+    assert gate.passed() is True
+
+
+_SAMPLE_DREAMING_LOG = """\
+2026-07-02 19:44:04.195 | INFO | dreaming_consolidation.py | dreaming_consolidation start ws=user-testing:agent-a:agent-scope:user-testing:agent-a rows=25 chars=2942
+2026-07-02 19:45:15.021 | INFO | dreaming_consolidation.py | dreaming_consolidation curated step=daily_gist_md:2026-07-02 ms=70826 ws=user-testing:agent-a:agent-scope:user-testing:agent-a
+2026-07-02 19:45:45.100 | INFO | dreaming_consolidation.py | dreaming_consolidation curated step=dreaming_memory_md ms=30100 ws=user-testing:agent-a:agent-scope:user-testing:agent-a
+2026-07-02 19:47:48.975 | INFO | dreaming_consolidation.py | dreaming_consolidation done total_ms=243780 ws=user-testing:agent-a:agent-scope:user-testing:agent-a curated=True
+2026-07-02 19:50:01.000 | INFO | dreaming_consolidation.py | dreaming_consolidation start ws=user-testing:agent-b:agent-scope:user-testing:agent-b rows=3 chars=120
+2026-07-02 19:50:30.000 | INFO | dreaming_consolidation.py | dreaming_consolidation curated step=dreaming_soul_md ms=99999 ws=user-testing:agent-b:agent-scope:user-testing:agent-b
+"""
+
+
+def test_parse_dreaming_curation_timings_from_log_text() -> None:
+    mod = _load_regression_module()
+    timing = mod._parse_dreaming_curation_timings_from_log_text(
+        _SAMPLE_DREAMING_LOG,
+        user_id="user-testing",
+        agent_id="agent-a",
+    )
+    assert timing is not None
+    assert timing.rows == 25
+    assert timing.chars == 2942
+    assert timing.total_curation_ms == 243780.0
+    assert timing.step_timings == (
+        mod.DreamingStepTiming("daily_gist_md:2026-07-02", 70826.0),
+        mod.DreamingStepTiming("dreaming_memory_md", 30100.0),
+    )
+    summary = mod._summarize_dreaming_step_timings(timing.step_timings)
+    assert summary["daily_gist_md:2026-07-02"] == 70826.0
+    assert summary["dreaming_memory_md"] == 30100.0
+
+
+def test_parse_dreaming_curation_timings_ignores_other_agent() -> None:
+    mod = _load_regression_module()
+    timing = mod._parse_dreaming_curation_timings_from_log_text(
+        _SAMPLE_DREAMING_LOG,
+        user_id="user-testing",
+        agent_id="agent-b",
+    )
+    assert timing is not None
+    assert timing.rows == 3
+    assert timing.step_timings == (
+        mod.DreamingStepTiming("dreaming_soul_md", 99999.0),
+    )
+    assert timing.total_curation_ms is None
+
+
+_INTERLEAVED_DREAMING_LOG = """\
+2026-07-02 19:44:04.195 | INFO | dreaming_consolidation start ws=user-testing:agent-a:agent-scope:user-testing:agent-a rows=25 chars=2942
+2026-07-02 19:44:10.000 | INFO | dreaming_consolidation start ws=user-testing:agent-b:agent-scope:user-testing:agent-b rows=3 chars=120
+2026-07-02 19:45:15.021 | INFO | dreaming_consolidation curated step=daily_gist_md:2026-07-02 ms=70826 ws=user-testing:agent-a:agent-scope:user-testing:agent-a
+2026-07-02 19:47:48.975 | INFO | dreaming_consolidation done total_ms=243780 ws=user-testing:agent-a:agent-scope:user-testing:agent-a curated=True
+"""
+
+
+def test_parse_dreaming_curation_timings_survives_interleaved_agents() -> None:
+    mod = _load_regression_module()
+    timing = mod._parse_dreaming_curation_timings_from_log_text(
+        _INTERLEAVED_DREAMING_LOG,
+        user_id="user-testing",
+        agent_id="agent-a",
+    )
+    assert timing is not None
+    assert timing.total_curation_ms == 243780.0
+    assert len(timing.step_timings) == 1
+    assert timing.step_timings[0].step == "daily_gist_md:2026-07-02"
+
+
+def test_dreaming_report_fields_includes_step_timings() -> None:
+    mod = _load_regression_module()
+    result = mod.DreamingConsolidationResult(
+        checkpoint_present=True,
+        memory_updated=True,
+        memory_sequence_before=1,
+        memory_sequence_after=2,
+        error=None,
+        log_timing=mod.DreamingLogTiming(
+            step_timings=(
+                mod.DreamingStepTiming("daily_gist_md:2026-07-02", 70826.0),
+                mod.DreamingStepTiming("dreaming_memory_md", 30100.0),
+            ),
+            total_curation_ms=243780.0,
+            rows=25,
+            chars=2942,
+            timing_source=".inty/inty.log",
+        ),
+    )
+    fields = mod._dreaming_report_fields(result)
+    assert fields["step_timings"] == [
+        {"step": "daily_gist_md:2026-07-02", "ms": 70826.0},
+        {"step": "dreaming_memory_md", "ms": 30100.0},
+    ]
+    assert fields["total_curation_ms"] == 243780.0
+    assert fields["rows"] == 25
+    assert fields["chars"] == 2942
+    assert fields["timing_source"] == ".inty/inty.log"
+
+
+def test_load_dreaming_curation_timings_prefers_inty_log(
+    tmp_path: Path,
+) -> None:
+    mod = _load_regression_module()
+    inty_dir = tmp_path / ".inty"
+    inty_dir.mkdir()
+    (inty_dir / "inty.log").write_text(_SAMPLE_DREAMING_LOG, encoding="utf-8")
+    timing = mod._load_dreaming_curation_timings_from_logs(
+        tmp_path,
+        user_id="user-testing",
+        agent_id="agent-a",
+    )
+    assert timing is not None
+    assert timing.timing_source == ".inty/inty.log"
+    assert timing.total_curation_ms == 243780.0
+
+
+def test_load_dreaming_curation_timings_falls_back_to_inty_log_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_regression_module()
+    inty_dir = tmp_path / ".inty"
+    inty_dir.mkdir()
+    (inty_dir / "inty.log").write_text("unrelated log line\n", encoding="utf-8")
+    alt_log = tmp_path / "alt-inty.log"
+    alt_log.write_text(_SAMPLE_DREAMING_LOG, encoding="utf-8")
+    monkeypatch.setenv("INTY_LOG_FILE", str(alt_log))
+    timing = mod._load_dreaming_curation_timings_from_logs(
+        tmp_path,
+        user_id="user-testing",
+        agent_id="agent-a",
+    )
+    assert timing is not None
+    assert timing.timing_source == "alt-inty.log"
+    assert timing.total_curation_ms == 243780.0
+
+
+def test_main_requires_target() -> None:
+    mod = _load_regression_module()
+    with pytest.raises(SystemExit) as exc:
+        mod.main([])
+    assert exc.value.code == 2

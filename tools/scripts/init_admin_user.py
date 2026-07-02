@@ -2,6 +2,10 @@
 """
 Script to initialize an admin user in the database.
 This script creates a superuser with admin privileges.
+
+Local Ops bearer (``--token-file``): JWT lifetime is at least 2 hours; an existing
+token in the file is reused when it still has ≥2 hours until ``exp`` (avoids
+invalidating REPL/regression clients on every ``backend/ops/start.sh --local`` restart).
 """
 
 import random
@@ -17,7 +21,12 @@ import cyclopts
 from loguru import logger
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token
+from app.core.security import (
+    LOCAL_OPS_BEARER_MIN_LIFETIME,
+    create_access_token,
+    existing_bearer_token_usable,
+    local_ops_bearer_expires_delta,
+)
 from app.db.base import SessionLocal
 from app.models.agent import Agent
 from app.models.registry import load_model_modules
@@ -31,6 +40,24 @@ DEFAULT_ADMIN_USER_ID = "user-01JWZ34Y4D1C92GD86A5R6EWYJ"
 def generate_readable_id() -> str:
     """Generate a random 8-digit readable_id (0-9)."""
     return "".join(str(random.randint(0, 9)) for _ in range(8))
+
+
+def _write_agent_id_file(db: Session, created_user: User, agent_id_file: Path) -> None:
+    agent_id = (
+        db.query(Agent.id)
+        .filter(Agent.creator_id == created_user.id)
+        .filter(Agent.deleted_at.is_(None))
+        .order_by(Agent.created_at.desc(), Agent.id.desc())
+        .limit(1)
+        .scalar()
+    )
+    if agent_id is None:
+        if agent_id_file.exists():
+            agent_id_file.unlink()
+        logger.warning(f"No active agent found for user {created_user.id}")
+        return
+    agent_id_file.write_text(agent_id + "\n")
+    logger.info(f"Agent ID written to {agent_id_file}")
 
 
 def create_user(
@@ -75,10 +102,23 @@ def create_user(
         db.add(created_user)
         db.commit()
 
-    # TODO: skip create_access_token + token_file write when user exists and
-    # token_file is non-empty with a still-valid JWT (avoids rotating JWT on
-    # every `backend/ops/start.sh --local` restart; sync REPL .env if rotated).
-    access_token = create_access_token(created_user.id)
+    if token_file is not None and token_file.is_file():
+        existing_token = token_file.read_text(encoding="utf-8").strip()
+        if existing_token != "" and existing_bearer_token_usable(
+            existing_token, created_user.id
+        ):
+            logger.info(
+                f"Reusing bearer token in {token_file} "
+                f"(≥{LOCAL_OPS_BEARER_MIN_LIFETIME} remaining)"
+            )
+            print(f"🔑 Bearer Token: {existing_token} (reused)")
+            if agent_id_file is not None:
+                _write_agent_id_file(db, created_user, agent_id_file)
+            return
+
+    access_token = create_access_token(
+        created_user.id, expires_delta=local_ops_bearer_expires_delta()
+    )
 
     logger.info("Admin user created successfully!")
     logger.info(f"User ID: {created_user.id}")
@@ -92,21 +132,7 @@ def create_user(
         logger.info(f"Token written to {token_file}")
 
     if agent_id_file is not None:
-        agent_id = (
-            db.query(Agent.id)
-            .filter(Agent.creator_id == created_user.id)
-            .filter(Agent.deleted_at.is_(None))
-            .order_by(Agent.created_at.desc(), Agent.id.desc())
-            .limit(1)
-            .scalar()
-        )
-        if agent_id is None:
-            if agent_id_file.exists():
-                agent_id_file.unlink()
-            logger.warning(f"No active agent found for user {created_user.id}")
-        else:
-            agent_id_file.write_text(agent_id + "\n")
-            logger.info(f"Agent ID written to {agent_id_file}")
+        _write_agent_id_file(db, created_user, agent_id_file)
 
 
 if __name__ == "__main__":

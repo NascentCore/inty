@@ -44,6 +44,7 @@ import argparse
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -114,6 +115,78 @@ _PROACTIVE_LEGACY_SILENT_TOKEN = "[SILENT]"
 _PROACTIVE_RECV_CHUNK_SEC = 5.0
 _POST_PROACTIVE_DRAIN_QUIET_SEC = 5.0
 _POST_PROACTIVE_DRAIN_MAX_SEC = 20.0
+_GITHUB_ISSUE_URL_RE = re.compile(
+    r"https://github\.com/[^/\s]+/[^/\s]+/issues/(\d+)"
+)
+_DEV_API_BASE = "https://dev.ops.inty.cc"
+_PROD_API_BASE = "https://ops.inty.cc"
+_DEV_CONFIG = "devops/config.yaml.dev"
+_PROD_CONFIG = "devops/config.yaml.prod"
+
+
+class RegressionTarget(StrEnum):
+    """Deployment endpoint selected by required ``--target``."""
+
+    LOCAL = "local"
+    DEV = "dev"
+    PROD = "prod"
+
+
+class RegressionScope(StrEnum):
+    """How many regression phases execute for one target."""
+
+    FULL = "full"
+    SAFE_SUBSET = "safe_subset"
+
+
+@dataclass(frozen=True)
+class TargetPreset:
+    """Resolved endpoint defaults for one ``RegressionTarget``."""
+
+    api_base: str
+    config_path: str
+    skip_db_checks: bool
+    scope: RegressionScope
+    proactive_min_rounds_default: int
+
+
+def _target_presets(target: RegressionTarget, repo_root: Path) -> TargetPreset:
+    """Single source of truth for per-target api_base, config, DB mode, and scope."""
+    assert repo_root.is_dir()
+    match target:
+        case RegressionTarget.LOCAL:
+            return TargetPreset(
+                api_base=_DEFAULT_API_BASE,
+                config_path=_DEFAULT_CONFIG,
+                skip_db_checks=False,
+                scope=RegressionScope.FULL,
+                proactive_min_rounds_default=_DEFAULT_PROACTIVE_MIN_ROUNDS,
+            )
+        case RegressionTarget.DEV:
+            return TargetPreset(
+                api_base=_DEV_API_BASE,
+                config_path=_DEV_CONFIG,
+                skip_db_checks=True,
+                scope=RegressionScope.FULL,
+                proactive_min_rounds_default=0,
+            )
+        case RegressionTarget.PROD:
+            return TargetPreset(
+                api_base=_PROD_API_BASE,
+                config_path=_PROD_CONFIG,
+                skip_db_checks=True,
+                scope=RegressionScope.SAFE_SUBSET,
+                proactive_min_rounds_default=0,
+            )
+
+
+def _extract_github_issue_url(text: str) -> tuple[str, int]:
+    """Parse the first ``github.com/.../issues/N`` URL from WS-visible chat text."""
+    match = _GITHUB_ISSUE_URL_RE.search(text)
+    if match is None:
+        return ("", 0)
+    issue_number = int(match.group(1))
+    return (match.group(0), issue_number)
 
 
 class DeliveryQueueKind(StrEnum):
@@ -176,22 +249,41 @@ class RegressionPassGate:
     proactive_silent_ok: bool
     github_issue_ok: bool
     github_disclosure_ok: bool
+    scope: RegressionScope
+    skip_db_checks: bool
+    proactive_min_rounds: int
 
     def passed(self) -> bool:
+        if self.scope == RegressionScope.SAFE_SUBSET:
+            return (
+                self.settled_ok
+                and not self.has_report_errors
+                and self.greeting_present
+            )
+        memdoc_ok = self.skip_db_checks or not self.memdoc_errors
+        dreaming_ok_gate = self.skip_db_checks or self.dreaming_ok
+        input_ok = self.skip_db_checks or self.input_all_delivered
+        output_ok = self.skip_db_checks or self.output_all_delivered
+        proactive_ok = (
+            self.proactive_min_rounds == 0
+            or (self.proactive_present and self.proactive_silent_ok)
+        )
+        # ``scope == SAFE_SUBSET`` already returned above; below this point scope is
+        # always FULL, so gates here only need to account for ``skip_db_checks``.
+        bootstrap_ok = self.bootstrap_done or self.skip_db_checks
         return (
             self.settled_ok
             and not self.has_report_errors
-            and self.input_all_delivered
-            and self.output_all_delivered
-            and self.bootstrap_done
+            and input_ok
+            and output_ok
+            and bootstrap_ok
             and self.greeting_present
-            and not self.memdoc_errors
+            and memdoc_ok
             and self.experience_profile_ok
-            and self.proactive_present
-            and self.proactive_silent_ok
+            and proactive_ok
             and self.github_issue_ok
             and self.github_disclosure_ok
-            and self.dreaming_ok
+            and dreaming_ok_gate
         )
 
 
@@ -257,6 +349,25 @@ class BootstrapMemDocResult:
 
 
 @dataclass(frozen=True)
+class DreamingStepTiming:
+    """One dreaming curation step duration parsed from backend logs."""
+
+    step: str
+    ms: float
+
+
+@dataclass(frozen=True)
+class DreamingLogTiming:
+    """Per-step curation timings parsed from Ops/backend log lines."""
+
+    step_timings: tuple[DreamingStepTiming, ...]
+    total_curation_ms: float | None
+    rows: int | None
+    chars: int | None
+    timing_source: str | None = None
+
+
+@dataclass(frozen=True)
 class DreamingConsolidationResult:
     """Dreaming batch checkpoint + MEMORY.md update checks."""
 
@@ -265,6 +376,7 @@ class DreamingConsolidationResult:
     memory_sequence_before: int
     memory_sequence_after: int
     error: str | None
+    log_timing: DreamingLogTiming | None = None
 
 
 @dataclass(frozen=True)
@@ -303,6 +415,34 @@ def _read_bearer(repo_root: Path, token_path: str) -> str:
     tok = p.read_text(encoding="utf-8").strip()
     assert tok != ""
     return tok
+
+
+def _login_and_cache_bearer_token(
+    api_base: str,
+    email: str,
+    password: str,
+    token_path: Path,
+) -> None:
+    """POST ``/api/v1/auth/google/login`` and write bearer token to ``token_path``."""
+    import urllib.request
+
+    assert api_base != ""
+    assert email != ""
+    assert password != ""
+    url = f"{api_base.rstrip('/')}/api/v1/auth/google/login"
+    payload = json.dumps({"email": email, "password": password}).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=60.0) as response:
+        body = json.loads(response.read().decode("utf-8"))
+    token = str((body.get("data") or {}).get("token") or "").strip()
+    assert token != ""
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    token_path.write_text(token, encoding="utf-8")
 
 
 def _create_agent_id(
@@ -473,6 +613,7 @@ def _wait_phase_infra_settled(
     agent_id: str,
     stderr: TextIO,
     spec: PhaseSettleSpec,
+    skip_db_checks: bool,
 ) -> bool:
     """Wait for WS quiet and optional Input/Output queue idle before a phase."""
     ok = True
@@ -498,6 +639,7 @@ def _wait_phase_infra_settled(
         timeout_sec=spec.output_timeout(),
         label=spec.label,
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     ):
         _append_phase_settle_error(
             report,
@@ -513,6 +655,7 @@ def _wait_phase_infra_settled(
         timeout_sec=spec.input_timeout(),
         label=spec.label,
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     ):
         _append_phase_settle_error(
             report,
@@ -588,7 +731,14 @@ def _wait_queue_idle(
     timeout_sec: float,
     label: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
+    if skip_db_checks:
+        print(
+            f"{_TAG} skip {kind.value} queue idle ({label}; no db)",
+            flush=True,
+        )
+        return True
     deadline = time.monotonic() + timeout_sec
     while time.monotonic() < deadline:
         counts = _query_queue_status_counts(
@@ -635,6 +785,7 @@ def _wait_output_queue_idle(
     timeout_sec: float,
     label: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     return _wait_queue_idle(
         repo_root,
@@ -644,6 +795,7 @@ def _wait_output_queue_idle(
         timeout_sec=timeout_sec,
         label=label,
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     )
 
 
@@ -685,6 +837,7 @@ def _wait_input_queue_idle(
     timeout_sec: float,
     label: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     return _wait_queue_idle(
         repo_root,
@@ -694,6 +847,7 @@ def _wait_input_queue_idle(
         timeout_sec=timeout_sec,
         label=label,
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     )
 
 
@@ -706,8 +860,16 @@ def _wait_input_delivered(
     timeout_sec: float,
     label: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     assert client_message_id != ""
+    if skip_db_checks:
+        print(
+            f"{_TAG} skip input delivered ({label}; no db) "
+            f"client_message_id={client_message_id}",
+            flush=True,
+        )
+        return True
     deadline = time.monotonic() + timeout_sec
     while time.monotonic() < deadline:
         status = _query_input_status_for_client_message_id(
@@ -1014,10 +1176,14 @@ def _wait_bootstrap_complete_flag(
     agent_id: str,
     timeout_sec: float,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     """Poll ``context.json`` until interactive bootstrap is marked complete."""
     assert user_id != ""
     assert agent_id != ""
+    if skip_db_checks:
+        print(f"{_TAG} skip bootstrap_complete flag poll (no db)", flush=True)
+        return True
     scope_chat = _agent_scope_chat_id(user_id, agent_id)
     deadline = time.monotonic() + timeout_sec
     last_raw = ""
@@ -1059,8 +1225,15 @@ def _poll_context_mode(
     timeout_sec: float,
     bridge: Any | None,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     assert expected != ""
+    if skip_db_checks:
+        print(
+            f"{_TAG} skip context_mode poll expected={expected!r} (no db)",
+            flush=True,
+        )
+        return True
     deadline = time.monotonic() + timeout_sec
     while time.monotonic() < deadline:
         if bridge is not None:
@@ -1098,8 +1271,23 @@ def _verify_bootstrap_memdocs(
     *,
     user_id: str,
     agent_id: str,
+    skip_db_checks: bool,
 ) -> BootstrapMemDocResult:
     """Check bootstrap wrote USER/IDENTITY/STYLE while SOUL/MEMORY stay at template seed."""
+    if skip_db_checks:
+        return BootstrapMemDocResult(
+            user_customized=False,
+            identity_customized=False,
+            style_customized=False,
+            soul_unchanged=False,
+            memory_unchanged=False,
+            user_sequence_id=0,
+            identity_sequence_id=0,
+            style_sequence_id=0,
+            memory_sequence_id=0,
+            errors=(),
+            warnings=("skipped: no direct DB access to remote environment",),
+        )
     _ensure_import_path(repo_root)
     from app.core.companion_harness.memory.memory_store_scope import (
         load_template_seed_text,
@@ -1218,6 +1406,227 @@ def _dreaming_checkpoint_present(
     return doc is not None and bool(doc.content.strip())
 
 
+# TODO(dreaming-completion-notify): #3744 — replace log scraping with in-process
+# completion signal once per-scope dreaming Event is wired (scope_inner_tick_state).
+_DREAMING_START_LINE_RE = re.compile(
+    r"dreaming_consolidation start ws=(?P<ws>\S+) rows=(?P<rows>\d+) chars=(?P<chars>\d+)"
+)
+_DREAMING_CURATED_LINE_RE = re.compile(
+    r"dreaming_consolidation curated step=(?P<step>\S+) ms=(?P<ms>\d+(?:\.\d+)?)\s+ws=(?P<ws>\S+)"
+)
+_DREAMING_DONE_LINE_RE = re.compile(
+    r"dreaming_consolidation done total_ms=(?P<total_ms>\d+(?:\.\d+)?)\s+ws=(?P<ws>\S+)"
+)
+
+
+def _dreaming_registry_ws(user_id: str, agent_id: str) -> str:
+    """``MemoryStore.scope.registry_key()`` value for agent-scope dreaming logs."""
+    scope_chat = _agent_scope_chat_id(user_id, agent_id)
+    return f"{user_id}:{agent_id}:{scope_chat}"
+
+
+@dataclass
+class _DreamingLogBatch:
+    """Mutable accumulator while scanning one dreaming consolidation batch."""
+
+    rows: int | None
+    chars: int | None
+    step_timings: list[DreamingStepTiming]
+    total_curation_ms: float | None = None
+
+
+def _parse_dreaming_curation_timings_from_log_text(
+    log_text: str,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> DreamingLogTiming | None:
+    """Extract the latest scoped dreaming batch timings from backend log text."""
+    assert user_id
+    assert agent_id
+    target_ws = _dreaming_registry_ws(user_id, agent_id)
+    current: _DreamingLogBatch | None = None
+    latest_complete: _DreamingLogBatch | None = None
+    latest_partial: _DreamingLogBatch | None = None
+    for line in log_text.splitlines():
+        start_match = _DREAMING_START_LINE_RE.search(line)
+        if start_match is not None:
+            ws = start_match.group("ws")
+            if ws == target_ws:
+                current = _DreamingLogBatch(
+                    rows=int(start_match.group("rows")),
+                    chars=int(start_match.group("chars")),
+                    step_timings=[],
+                )
+            continue
+        curated_match = _DREAMING_CURATED_LINE_RE.search(line)
+        if curated_match is not None:
+            ws = curated_match.group("ws")
+            if ws == target_ws:
+                if current is None:
+                    current = _DreamingLogBatch(
+                        rows=None,
+                        chars=None,
+                        step_timings=[],
+                    )
+                current.step_timings.append(
+                    DreamingStepTiming(
+                        step=curated_match.group("step"),
+                        ms=float(curated_match.group("ms")),
+                    )
+                )
+            continue
+        done_match = _DREAMING_DONE_LINE_RE.search(line)
+        if done_match is not None:
+            ws = done_match.group("ws")
+            if ws == target_ws:
+                if current is None:
+                    current = _DreamingLogBatch(
+                        rows=None,
+                        chars=None,
+                        step_timings=[],
+                    )
+                current.total_curation_ms = float(done_match.group("total_ms"))
+                latest_complete = current
+                latest_partial = current
+                current = None
+    if current is not None and current.step_timings:
+        latest_partial = current
+    chosen = latest_complete if latest_complete is not None else latest_partial
+    if chosen is None:
+        return None
+    return DreamingLogTiming(
+        step_timings=tuple(chosen.step_timings),
+        total_curation_ms=chosen.total_curation_ms,
+        rows=chosen.rows,
+        chars=chosen.chars,
+    )
+
+
+def _resolve_dreaming_timing_log_paths(repo_root: Path) -> list[Path]:
+    """Prefer repo-root ``.inty/inty.log``, then ``INTY_LOG_FILE`` when set."""
+    paths: list[Path] = []
+    inty_log = repo_root / ".inty" / "inty.log"
+    if inty_log.is_file():
+        paths.append(inty_log)
+    env_log = os.environ.get("INTY_LOG_FILE", "").strip()
+    if env_log:
+        env_path = Path(env_log)
+        if not env_path.is_absolute():
+            env_path = repo_root / env_path
+        if env_path.is_file() and env_path not in paths:
+            paths.append(env_path)
+    return paths
+
+
+def _load_dreaming_curation_timings_from_logs(
+    repo_root: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> DreamingLogTiming | None:
+    """Load scoped dreaming step timings from Ops/backend logs."""
+    for log_path in _resolve_dreaming_timing_log_paths(repo_root):
+        log_text = log_path.read_text(encoding="utf-8", errors="replace")
+        parsed = _parse_dreaming_curation_timings_from_log_text(
+            log_text,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+        if parsed is None:
+            continue
+        try:
+            timing_source = str(log_path.relative_to(repo_root))
+        except ValueError:
+            timing_source = str(log_path)
+        return DreamingLogTiming(
+            step_timings=parsed.step_timings,
+            total_curation_ms=parsed.total_curation_ms,
+            rows=parsed.rows,
+            chars=parsed.chars,
+            timing_source=timing_source,
+        )
+    return None
+
+
+def _dreaming_result_with_log_timings(
+    result: DreamingConsolidationResult,
+    *,
+    repo_root: Path,
+    user_id: str,
+    agent_id: str,
+) -> DreamingConsolidationResult:
+    """Attach parsed backend log timings to a dreaming poll result."""
+    timing = _load_dreaming_curation_timings_from_logs(
+        repo_root,
+        user_id=user_id,
+        agent_id=agent_id,
+    )
+    if timing is None:
+        return result
+    return DreamingConsolidationResult(
+        checkpoint_present=result.checkpoint_present,
+        memory_updated=result.memory_updated,
+        memory_sequence_before=result.memory_sequence_before,
+        memory_sequence_after=result.memory_sequence_after,
+        error=result.error,
+        log_timing=timing,
+    )
+
+
+def _dreaming_report_fields(result: DreamingConsolidationResult) -> dict[str, Any]:
+    """JSON-report dreaming block including optional log-derived step timings."""
+    timing = result.log_timing
+    return {
+        "checkpoint_present": result.checkpoint_present,
+        "memory_updated": result.memory_updated,
+        "memory_sequence_before": result.memory_sequence_before,
+        "memory_sequence_after": result.memory_sequence_after,
+        "error": result.error,
+        "step_timings": [
+            {"step": entry.step, "ms": entry.ms}
+            for entry in (timing.step_timings if timing is not None else ())
+        ],
+        "total_curation_ms": timing.total_curation_ms if timing is not None else None,
+        "rows": timing.rows if timing is not None else None,
+        "chars": timing.chars if timing is not None else None,
+        "timing_source": timing.timing_source if timing is not None else None,
+    }
+
+
+def _summarize_dreaming_step_timings(
+    step_timings: tuple[DreamingStepTiming, ...],
+) -> dict[str, float]:
+    """Map step name → duration ms for compact regression assertions."""
+    return {entry.step: entry.ms for entry in step_timings}
+
+
+def _finalize_dreaming_poll_result(
+    *,
+    repo_root: Path,
+    user_id: str,
+    agent_id: str,
+    checkpoint_present: bool,
+    memory_updated: bool,
+    memory_sequence_before: int,
+    memory_sequence_after: int,
+    error: str | None,
+) -> DreamingConsolidationResult:
+    """Build dreaming poll result and attach scoped log timings when available."""
+    return _dreaming_result_with_log_timings(
+        DreamingConsolidationResult(
+            checkpoint_present=checkpoint_present,
+            memory_updated=memory_updated,
+            memory_sequence_before=memory_sequence_before,
+            memory_sequence_after=memory_sequence_after,
+            error=error,
+        ),
+        repo_root=repo_root,
+        user_id=user_id,
+        agent_id=agent_id,
+    )
+
+
 def _wait_dreaming_consolidation(
     repo_root: Path,
     config_path: Path,
@@ -1227,9 +1636,25 @@ def _wait_dreaming_consolidation(
     memory_sequence_before: int,
     wait_sec: float,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> DreamingConsolidationResult:
     """Poll until scope dreaming checkpoint exists and MEMORY.md advances."""
+    # TODO(dreaming-completion-notify): #3744 — replace Postgres MemDoc polling with
+    # in-process notifier or WS completion meta; unlock immediately on signal; lower
+    # local default wait_sec once notifier is wired (epic #3373).
     assert wait_sec >= 0.0
+    if skip_db_checks:
+        print(f"{_TAG} skip dreaming consolidation poll (no db)", flush=True)
+        return _finalize_dreaming_poll_result(
+            repo_root=repo_root,
+            user_id=user_id,
+            agent_id=agent_id,
+            checkpoint_present=False,
+            memory_updated=False,
+            memory_sequence_before=memory_sequence_before,
+            memory_sequence_after=memory_sequence_before,
+            error=None,
+        )
     _ensure_import_path(repo_root)
     from app.core.companion_harness.memory.memory_store_scope import (
         load_template_seed_text,
@@ -1261,7 +1686,10 @@ def _wait_dreaming_consolidation(
                 f"memory_sequence={memory_seq} checkpoint=true",
                 flush=True,
             )
-            return DreamingConsolidationResult(
+            return _finalize_dreaming_poll_result(
+                repo_root=repo_root,
+                user_id=user_id,
+                agent_id=agent_id,
                 checkpoint_present=True,
                 memory_updated=True,
                 memory_sequence_before=memory_sequence_before,
@@ -1273,7 +1701,10 @@ def _wait_dreaming_consolidation(
         repo_root, config_path, user_id=user_id, agent_id=agent_id
     )
     memory_updated = last_memory_seq > memory_sequence_before
-    return DreamingConsolidationResult(
+    return _finalize_dreaming_poll_result(
+        repo_root=repo_root,
+        user_id=user_id,
+        agent_id=agent_id,
         checkpoint_present=checkpoint_present,
         memory_updated=memory_updated,
         memory_sequence_before=memory_sequence_before,
@@ -1449,29 +1880,33 @@ def _finalize_proactive_report(
     config_path: Path,
     user_id: str,
     agent_id: str,
-    run_started_at_utc: str,
+    run_started_at_utc: datetime,
     proactive_min_rounds: int,
     proactive_target_rounds: int,
+    skip_db_checks: bool,
 ) -> dict[str, int]:
     """Merge DB proactive rows, summarize rounds, and flag legacy ``[SILENT]`` leaks."""
-    proactive_rows = _query_proactive_chat_history_rows(
-        repo_root,
-        config_path,
-        user_id=user_id,
-        agent_id=agent_id,
-        run_started_at_utc=run_started_at_utc,
-    )
-    if proactive_rows:
-        report["db"]["proactive_chat_history"] = [
-            {
-                "chat_history_id": row.chat_history_id,
-                "content_preview": row.content_preview,
-                "created_at": row.created_at,
-                "silent": not row.has_assistant_reply,
-            }
-            for row in proactive_rows
-        ]
-        _record_proactive_from_db(report, proactive_rows)
+    if not skip_db_checks:
+        proactive_rows = _query_proactive_chat_history_rows(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+            run_started_at_utc=run_started_at_utc,
+        )
+        if proactive_rows:
+            report["db"]["proactive_chat_history"] = [
+                {
+                    "chat_history_id": row.chat_history_id,
+                    "content_preview": row.content_preview,
+                    "created_at": row.created_at,
+                    "silent": not row.has_assistant_reply,
+                }
+                for row in proactive_rows
+            ]
+            _record_proactive_from_db(report, proactive_rows)
+    else:
+        print(f"{_TAG} skip proactive chat_history DB merge (no db)", flush=True)
 
     summary = _summarize_proactive_rounds(report["proactive"])
     report["proactive_summary"] = summary
@@ -1500,7 +1935,7 @@ def _finalize_proactive_report(
                 ),
             }
         )
-    if summary["total"] < proactive_min_rounds:
+    if summary["total"] < proactive_min_rounds and proactive_min_rounds > 0:
         report["errors"].append(
             {
                 "turn": "proactive_multi_round",
@@ -1852,6 +2287,9 @@ def _invoke_user_feedback_tool_fallback(
     return ok
 
 
+# TODO(github-issue-e2e-turn-loop): #3745 — this shares most of its turn-loop / WS
+# downlink wait / issue-close logic with ``_run_github_issue_e2e_phase_ws_only`` below;
+# extract a common helper and keep only the DB-vs-WS-only verification branches distinct.
 def _run_github_issue_e2e_phase(
     *,
     bridge: Any,
@@ -1862,6 +2300,7 @@ def _run_github_issue_e2e_phase(
     user_id: str,
     turn_text: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> GithubIssueE2eResult:
     user_msg_uuid = ""
     issue_url = ""
@@ -1930,6 +2369,7 @@ def _run_github_issue_e2e_phase(
                     timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
                     label="github_issue",
                     stderr=stderr,
+                    skip_db_checks=skip_db_checks,
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
                     break
@@ -2055,6 +2495,138 @@ def _run_github_issue_e2e_phase(
     )
 
 
+# TODO(github-issue-e2e-turn-loop): #3745 — duplicates the turn-loop in
+# ``_run_github_issue_e2e_phase`` above; see that TODO for the planned extraction.
+def _run_github_issue_e2e_phase_ws_only(
+    *,
+    bridge: Any,
+    report: dict[str, Any],
+    agent_id: str,
+    turn_text: str,
+    stderr: TextIO,
+) -> GithubIssueE2eResult:
+    """WS + ``gh`` CLI github_issue phase without Postgres feedback JSONL polling."""
+    user_msg_uuid = ""
+    issue_url = ""
+    issue_number = 0
+    disclosed_in_chat = False
+    error: str | None = None
+    closed = False
+    assistant_reply = ""
+
+    try:
+        prereq_err = _require_user_feedback_github_prereqs(stderr)
+        if prereq_err is not None:
+            error = prereq_err
+        else:
+            turn_attempts = (turn_text, _GITHUB_ISSUE_RETRY_TURN)
+            for attempt_idx, current_turn in enumerate(turn_attempts):
+                if attempt_idx == 1 and issue_number > 0:
+                    break
+                if attempt_idx == 1:
+                    print(
+                        f"{_TAG} github_issue ws_only retry turn: {current_turn!r}",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"{_TAG} github_issue ws_only turn: {current_turn!r}",
+                        flush=True,
+                    )
+                user_msg_uuid = _send_turn(bridge, agent_id, current_turn)
+                text, meta, err = _wait_downlink_for_user_msg_uuid(
+                    bridge,
+                    report,
+                    expected_user_msg_uuid=user_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label="github_issue",
+                    trailing_label="github_issue_mismatch",
+                )
+                if err is not None:
+                    error = f"ws downlink: {err}"
+                    print(f"{_TAG} ERROR github_issue: {err}", file=stderr, flush=True)
+                    break
+                assert text is not None
+                report["turns"].append(
+                    {
+                        "kind": "github_issue",
+                        "user": current_turn,
+                        "user_msg_uuid": user_msg_uuid,
+                        "text_preview": text[:120],
+                        "meta": meta,
+                    }
+                )
+                assistant_reply = text + _drain_turn_trailing_frames(
+                    bridge, report, label="github_issue"
+                )
+                for extra_text, extra_meta in _drain_until_quiet(
+                    bridge,
+                    quiet_sec=_TURN_TRAILING_QUIET_SEC,
+                    max_sec=_GITHUB_ISSUE_POLL_SEC,
+                ):
+                    assistant_reply += extra_text
+                    _record_trailing_downlink(
+                        report,
+                        label="github_issue_ws_drain",
+                        text=extra_text,
+                        meta=extra_meta,
+                    )
+                issue_url, issue_number = _extract_github_issue_url(assistant_reply)
+                if issue_number > 0:
+                    break
+            if issue_number <= 0 and error is None:
+                error = "no GitHub issue URL disclosed in chat"
+                print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
+            if issue_number > 0 and error is None:
+                issue_row = FeedbackGithubIssueRow(
+                    issue_url=issue_url,
+                    issue_number=issue_number,
+                    user_msg_uuid=user_msg_uuid,
+                    feedback_id="",
+                )
+                _verify_github_issue_via_gh(
+                    issue_row,
+                    expected_user_msg_uuid=user_msg_uuid,
+                )
+                disclosed_in_chat = _assistant_reply_discloses_issue_url(
+                    assistant_reply,
+                    issue_url,
+                    issue_number,
+                )
+                print(
+                    f"{_TAG} github_issue ws_only verified issue=#{issue_number} "
+                    f"url={issue_url} disclosed_in_chat={disclosed_in_chat}",
+                    flush=True,
+                )
+    except (RuntimeError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+        error = str(exc)
+        print(f"{_TAG} ERROR github_issue_e2e_ws_only: {error}", file=stderr, flush=True)
+    finally:
+        if issue_number > 0:
+            closed = _close_github_issue(issue_number)
+            if closed:
+                print(
+                    f"{_TAG} github_issue closed issue=#{issue_number}",
+                    flush=True,
+                )
+            else:
+                msg = f"gh issue close failed for #{issue_number}"
+                print(f"{_TAG} ERROR {msg}", file=stderr, flush=True)
+                if error is None:
+                    error = msg
+
+    return GithubIssueE2eResult(
+        user_msg_uuid,
+        issue_url,
+        issue_number,
+        issue_number > 0,
+        closed,
+        disclosed_in_chat,
+        False,
+        error,
+    )
+
+
 def _run_experience_profile_phase(
     *,
     bridge: Any,
@@ -2066,6 +2638,7 @@ def _run_experience_profile_phase(
     experience_profile_turn: str,
     experience_profile_context_mode: str,
     stderr: TextIO,
+    skip_db_checks: bool,
 ) -> bool:
     """Drive one USER_CHAT_BOOTSTRAP/settled turn that must call ``companion_set_experience_profile``."""
     _wait_phase_infra_settled(
@@ -2084,6 +2657,7 @@ def _run_experience_profile_phase(
             queue_timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
             input_queue_timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
         ),
+        skip_db_checks=skip_db_checks,
     )
     print(f"{_TAG} experience_profile turn: {experience_profile_turn!r}", flush=True)
     experience_msg_uuid = _send_turn(bridge, agent_id, experience_profile_turn)
@@ -2123,6 +2697,7 @@ def _run_experience_profile_phase(
         timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
         label="experience_profile",
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     ):
         report["errors"].append(
             {
@@ -2139,15 +2714,20 @@ def _run_experience_profile_phase(
         timeout_sec=_EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC,
         bridge=bridge,
         stderr=stderr,
+        skip_db_checks=skip_db_checks,
     )
     report["experience_profile"] = {
         "expected_context_mode": experience_profile_context_mode,
         "matched": matched,
-        "actual_context_mode": _query_context_mode(
-            repo_root,
-            config_path,
-            user_id=user_id,
-            agent_id=agent_id,
+        "actual_context_mode": (
+            "skipped"
+            if skip_db_checks
+            else _query_context_mode(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+            )
         ),
     }
     if not matched:
@@ -2175,10 +2755,13 @@ def _run_experience_profile_phase(
             wait_output_queue=True,
             queue_timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
         ),
+        skip_db_checks=skip_db_checks,
     )
     return matched
 
 
+# TODO(regression-summary-args): #3746 — 20+ keyword args exceed the repo's "group into
+# dataclass past 3-5 args" style rule; split into per-phase frozen dataclasses.
 def _build_regression_summary(
     *,
     bootstrap_done: str,
@@ -2200,6 +2783,9 @@ def _build_regression_summary(
     in_all_delivered: bool,
     out_all_delivered: bool,
     companion_bond_state: str,
+    skip_db_checks: bool,
+    scope: RegressionScope,
+    proactive_min_rounds: int,
 ) -> tuple[dict[str, Any], RegressionPassGate]:
     """Compute JSON summary + mandatory pass gate from phase results."""
     github_issue_ok = github_result.error is None and github_result.closed
@@ -2221,8 +2807,53 @@ def _build_regression_summary(
         proactive_silent_ok=proactive_silent_ok,
         github_issue_ok=github_issue_ok,
         github_disclosure_ok=github_disclosure_ok,
+        scope=scope,
+        skip_db_checks=skip_db_checks,
+        proactive_min_rounds=proactive_min_rounds,
+    )
+    memdoc_status = (
+        RegressionCheckStatus.SKIPPED.value
+        if skip_db_checks
+        else (
+            RegressionCheckStatus.PASS.value
+            if not memdoc_result.errors
+            else RegressionCheckStatus.FAIL.value
+        )
+    )
+    dreaming_status = (
+        RegressionCheckStatus.SKIPPED.value
+        if skip_db_checks
+        else (
+            RegressionCheckStatus.PASS.value
+            if gate.dreaming_ok
+            else RegressionCheckStatus.FAIL.value
+        )
+    )
+    input_delivery_status = (
+        RegressionCheckStatus.SKIPPED.value
+        if skip_db_checks
+        else (
+            RegressionCheckStatus.PASS.value
+            if in_all_delivered
+            else RegressionCheckStatus.FAIL.value
+        )
+    )
+    output_delivery_status = (
+        RegressionCheckStatus.SKIPPED.value
+        if skip_db_checks
+        else (
+            RegressionCheckStatus.PASS.value
+            if out_all_delivered
+            else RegressionCheckStatus.FAIL.value
+        )
     )
     summary = {
+        "target_scope": scope.value,
+        "db_checks": (
+            RegressionCheckStatus.SKIPPED.value
+            if skip_db_checks
+            else RegressionCheckStatus.PASS.value
+        ),
         "bootstrap": "complete" if gate.bootstrap_done else "incomplete",
         "context_mode": context_mode,
         "implicit_sign_on_greeting": (
@@ -2230,52 +2861,68 @@ def _build_regression_summary(
             if greeting_result.present
             else RegressionCheckStatus.FAIL.value
         ),
-        "bootstrap_memdocs": (
-            RegressionCheckStatus.PASS.value
-            if not memdoc_result.errors
-            else RegressionCheckStatus.FAIL.value
-        ),
+        "bootstrap_memdocs": memdoc_status,
         "experience_profile": (
-            RegressionCheckStatus.PASS.value
-            if experience_profile_ok
-            else RegressionCheckStatus.FAIL.value
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET
+            else (
+                RegressionCheckStatus.PASS.value
+                if experience_profile_ok
+                else RegressionCheckStatus.FAIL.value
+            )
         ),
-        "dreaming_consolidation": (
-            RegressionCheckStatus.PASS.value
-            if gate.dreaming_ok
-            else RegressionCheckStatus.FAIL.value
-        ),
+        "dreaming_consolidation": dreaming_status,
         "settled_queue_turn": (
             RegressionCheckStatus.PASS.value
             if settled_ok and not report_errors
             else RegressionCheckStatus.FAIL.value
         ),
         "github_issue_e2e": (
-            RegressionCheckStatus.PASS.value
-            if github_issue_ok
-            else RegressionCheckStatus.FAIL.value
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET
+            else (
+                RegressionCheckStatus.PASS.value
+                if github_issue_ok
+                else RegressionCheckStatus.FAIL.value
+            )
         ),
         "github_issue_disclosed_in_chat": (
-            RegressionCheckStatus.PASS.value
-            if github_disclosure_ok and github_issue_ok
-            else RegressionCheckStatus.FAIL.value
-            if app_debug
-            else RegressionCheckStatus.SKIPPED.value
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET
+            else (
+                RegressionCheckStatus.PASS.value
+                if github_disclosure_ok and github_issue_ok
+                else RegressionCheckStatus.FAIL.value
+                if app_debug
+                else RegressionCheckStatus.SKIPPED.value
+            )
         ),
-        "proactive_inner_tick": "present" if proactive_present else "missing",
-        "proactive_target_rounds": "met" if proactive_target_met else "miss",
+        "proactive_inner_tick": (
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
+            else ("present" if proactive_present else "missing")
+        ),
+        "proactive_target_rounds": (
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
+            else ("met" if proactive_target_met else "miss")
+        ),
         "proactive_silent_rounds": proactive_summary["silent"],
         "proactive_visible_rounds": proactive_summary["visible"],
         "proactive_no_silent_token": (
-            RegressionCheckStatus.PASS.value
-            if proactive_silent_ok
-            else RegressionCheckStatus.FAIL.value
+            RegressionCheckStatus.SKIPPED.value
+            if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
+            else (
+                RegressionCheckStatus.PASS.value
+                if proactive_silent_ok
+                else RegressionCheckStatus.FAIL.value
+            )
         ),
         "companion_bond_state": companion_bond_state or "missing",
         "input_queue_counts": in_q.strip(),
         "output_queue_counts": out_q.strip(),
-        "input_all_delivered": in_all_delivered,
-        "output_all_delivered": out_all_delivered,
+        "input_all_delivered": input_delivery_status,
+        "output_all_delivered": output_delivery_status,
     }
     return summary, gate
 
@@ -2299,6 +2946,8 @@ def run_regression(
     report_path: Path,
     token_path: str,
     stderr: TextIO,
+    skip_db_checks: bool,
+    scope: RegressionScope,
 ) -> int:
     os.environ["INTY_CONFIG_YAML"] = str(config_path.resolve())
     _ensure_import_path(repo_root)
@@ -2316,6 +2965,8 @@ def run_regression(
     bridge = BackendChatWsBridge(ws_url=ws_url, bearer_token=bearer)
     report: dict[str, Any] = {
         "agent_id": agent_id,
+        "target_scope": scope.value,
+        "skip_db_checks": skip_db_checks,
         "turns": [],
         "proactive": [],
         "errors": [],
@@ -2324,6 +2975,7 @@ def run_regression(
         "bootstrap_memdocs": {},
         "experience_profile": {},
         "dreaming": {},
+        "db": {},
     }
     print(f"{_TAG} agent_id={agent_id}", flush=True)
     run_started_at_utc = datetime.now(timezone.utc)
@@ -2357,6 +3009,7 @@ def run_regression(
         warnings=(),
     )
     experience_profile_ok = False
+    bootstrap_complete_flag = False
     dreaming_result = DreamingConsolidationResult(
         checkpoint_present=False,
         memory_updated=False,
@@ -2421,261 +3074,23 @@ def run_regression(
                 flush=True,
             )
 
-        for idx, user_text in enumerate(bootstrap_turns, start=1):
-            print(f"{_TAG} bootstrap turn {idx}: {user_text!r}", flush=True)
-            bootstrap_msg_uuid = _send_turn(bridge, agent_id, user_text)
-            text, meta, err = _wait_downlink_for_user_msg_uuid(
-                bridge,
-                report,
-                expected_user_msg_uuid=bootstrap_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label=f"bootstrap-{idx}",
-                trailing_label=f"bootstrap-{idx}_mismatch",
-            )
-            if err is not None:
-                report["errors"].append({"turn": f"bootstrap-{idx}", "error": err})
-                print(f"{_TAG} ERROR bootstrap-{idx}: {err}", file=stderr, flush=True)
-                continue
-            assert text is not None
-            report["turns"].append(
-                {
-                    "kind": "bootstrap",
-                    "user": user_text,
-                    "user_msg_uuid": bootstrap_msg_uuid,
-                    "text_preview": text[:120],
-                    "meta": meta,
-                }
-            )
-            print(
-                f"{_TAG} reply preview={text[:80]!r} "
-                f"context_mode={meta.get('context_mode')}",
-                flush=True,
-            )
-            _drain_turn_trailing_frames(
-                bridge, report, label=f"bootstrap-{idx}"
-            )
-            if not _wait_input_delivered(
-                repo_root,
-                config_path,
-                agent_id=agent_id,
-                client_message_id=bootstrap_msg_uuid,
-                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-                label=f"bootstrap-{idx}",
-                stderr=stderr,
-            ):
-                report["errors"].append(
-                    {
-                        "turn": f"bootstrap-{idx}-delivered",
-                        "error": (408, f"input not delivered: {bootstrap_msg_uuid}"),
-                    }
-                )
-            if idx == len(bootstrap_turns):
-                if not _wait_ws_turn_settled(
-                    bridge,
-                    report,
-                    label=f"bootstrap-{idx}",
-                    settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
-                    max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-                    stderr=stderr,
-                ):
-                    report["errors"].append(
-                        {
-                            "turn": f"bootstrap-{idx}-settled",
-                            "error": (
-                                408,
-                                f"bootstrap turn {idx} ws not settled before experience_profile",
-                            ),
-                        }
-                    )
-
-        experience_profile_ok = _run_experience_profile_phase(
-            bridge=bridge,
-            report=report,
-            repo_root=repo_root,
-            config_path=config_path,
-            agent_id=agent_id,
-            user_id=user_id,
-            experience_profile_turn=experience_profile_turn,
-            experience_profile_context_mode=experience_profile_context_mode,
-            stderr=stderr,
-        )
-
-        print(f"{_TAG} bootstrap finish turn: {bootstrap_finish_turn!r}", flush=True)
-        bootstrap_finish_msg_uuid = _send_turn(bridge, agent_id, bootstrap_finish_turn)
-        text, meta, err = _wait_downlink_for_user_msg_uuid(
-            bridge,
-            report,
-            expected_user_msg_uuid=bootstrap_finish_msg_uuid,
-            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            label="bootstrap-finish",
-            trailing_label="bootstrap-finish_mismatch",
-        )
-        if err is not None:
-            report["errors"].append({"turn": "bootstrap-finish", "error": err})
-            print(f"{_TAG} ERROR bootstrap-finish: {err}", file=stderr, flush=True)
-        else:
-            assert text is not None
-            report["turns"].append(
-                {
-                    "kind": "bootstrap_finish",
-                    "user": bootstrap_finish_turn,
-                    "user_msg_uuid": bootstrap_finish_msg_uuid,
-                    "text_preview": text[:120],
-                    "meta": meta,
-                }
-            )
-            print(
-                f"{_TAG} bootstrap-finish reply={text[:80]!r} "
-                f"context_mode={meta.get('context_mode')}",
-                flush=True,
-            )
-        _drain_turn_trailing_frames(bridge, report, label="bootstrap-finish")
-        if not _wait_input_delivered(
-            repo_root,
-            config_path,
-            agent_id=agent_id,
-            client_message_id=bootstrap_finish_msg_uuid,
-            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            label="bootstrap-finish",
-            stderr=stderr,
-        ):
-            report["errors"].append(
-                {
-                    "turn": "bootstrap-finish-delivered",
-                    "error": (
-                        408,
-                        f"input not delivered: {bootstrap_finish_msg_uuid}",
-                    ),
-                }
-            )
-        bootstrap_complete = _wait_bootstrap_complete_flag(
-            repo_root,
-            config_path,
-            user_id=user_id,
-            agent_id=agent_id,
-            timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
-            stderr=stderr,
-        )
-        if not bootstrap_complete:
-            report["errors"].append(
-                {
-                    "turn": "bootstrap-finish",
-                    "error": (422, "bootstrap_complete flag still false"),
-                }
-            )
-
-        if not _wait_input_queue_idle(
-            repo_root,
-            config_path,
-            agent_id=agent_id,
-            timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
-            label="pre-settled",
-            stderr=stderr,
-        ):
-            report["errors"].append(
-                {"turn": "pre-settled", "error": (408, "input queue not idle")}
-            )
-        else:
-            memdoc_result = _verify_bootstrap_memdocs(
-                repo_root,
-                config_path,
-                user_id=user_id,
-                agent_id=agent_id,
-            )
-            report["bootstrap_memdocs"] = {
-                "user_customized": memdoc_result.user_customized,
-                "identity_customized": memdoc_result.identity_customized,
-                "style_customized": memdoc_result.style_customized,
-                "soul_unchanged": memdoc_result.soul_unchanged,
-                "memory_unchanged": memdoc_result.memory_unchanged,
-                "user_sequence_id": memdoc_result.user_sequence_id,
-                "identity_sequence_id": memdoc_result.identity_sequence_id,
-                "style_sequence_id": memdoc_result.style_sequence_id,
-                "memory_sequence_id": memdoc_result.memory_sequence_id,
-                "errors": list(memdoc_result.errors),
-                "warnings": list(memdoc_result.warnings),
-            }
-            if memdoc_result.errors:
-                report["errors"].append(
-                    {
-                        "turn": "bootstrap_memdocs",
-                        "error": (422, "; ".join(memdoc_result.errors)),
-                    }
-                )
-                print(
-                    f"{_TAG} ERROR bootstrap_memdocs: {memdoc_result.errors}",
-                    file=stderr,
-                    flush=True,
-                )
-            else:
-                print(
-                    f"{_TAG} bootstrap_memdocs ok "
-                    f"user_seq={memdoc_result.user_sequence_id} "
-                    f"identity_seq={memdoc_result.identity_sequence_id} "
-                    f"style_seq={memdoc_result.style_sequence_id}",
-                    flush=True,
-                )
-            if memdoc_result.warnings:
-                print(
-                    f"{_TAG} bootstrap_memdocs warnings: {memdoc_result.warnings}",
-                    flush=True,
-                )
-
-        print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
-        settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
-
-        if not _wait_input_delivered(
-            repo_root,
-            config_path,
-            agent_id=agent_id,
-            client_message_id=settled_msg_uuid,
-            timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
-            label="settled",
-            stderr=stderr,
-        ):
-            report["errors"].append(
-                {
-                    "turn": "settled-delivered",
-                    "error": (408, f"input not delivered: {settled_msg_uuid}"),
-                }
-            )
-            github_result = GithubIssueE2eResult(
-                "",
-                "",
-                0,
-                False,
-                False,
-                False,
-                False,
-                "skipped: settled input not delivered",
-            )
-            report["github_issue"] = _github_issue_e2e_result_to_report(
-                github_result
-            )
-        else:
+        if scope == RegressionScope.SAFE_SUBSET:
+            print(f"{_TAG} safe_subset settled turn: {settled_turn!r}", flush=True)
+            settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
             text, meta, err = _wait_downlink_for_user_msg_uuid(
                 bridge,
                 report,
                 expected_user_msg_uuid=settled_msg_uuid,
                 timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
-                label="settled",
-                trailing_label="settled_mismatch",
+                label="safe_subset_settled",
+                trailing_label="safe_subset_settled_mismatch",
             )
             if err is not None:
-                report["errors"].append({"turn": "settled", "error": err})
-                print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
-                github_result = GithubIssueE2eResult(
-                    "",
-                    "",
-                    0,
-                    False,
-                    False,
-                    False,
-                    False,
-                    "skipped: settled downlink failed",
-                )
-                report["github_issue"] = _github_issue_e2e_result_to_report(
-                    github_result
+                report["errors"].append({"turn": "safe_subset_settled", "error": err})
+                print(
+                    f"{_TAG} ERROR safe_subset_settled: {err}",
+                    file=stderr,
+                    flush=True,
                 )
             else:
                 assert text is not None
@@ -2689,153 +3104,454 @@ def run_regression(
                     }
                 )
                 print(
-                    f"{_TAG} settled reply={text[:80]!r} "
-                    f"user_msg_uuid={settled_msg_uuid} "
-                    f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                    f"{_TAG} safe_subset settled reply={text[:80]!r} "
+                    f"user_msg_uuid={settled_msg_uuid}",
                     flush=True,
                 )
-                _drain_turn_trailing_frames(bridge, report, label="settled")
-                # TODO(#3652): tool_fallback bypasses harness WS disclosure; see issues/3651.
-                github_result = _run_github_issue_e2e_phase(
-                    bridge=bridge,
-                    report=report,
-                    repo_root=repo_root,
-                    config_path=config_path,
+                _drain_turn_trailing_frames(
+                    bridge, report, label="safe_subset_settled"
+                )
+
+        if scope == RegressionScope.FULL:
+            for idx, user_text in enumerate(bootstrap_turns, start=1):
+                print(f"{_TAG} bootstrap turn {idx}: {user_text!r}", flush=True)
+                bootstrap_msg_uuid = _send_turn(bridge, agent_id, user_text)
+                text, meta, err = _wait_downlink_for_user_msg_uuid(
+                    bridge,
+                    report,
+                    expected_user_msg_uuid=bootstrap_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label=f"bootstrap-{idx}",
+                    trailing_label=f"bootstrap-{idx}_mismatch",
+                )
+                if err is not None:
+                    report["errors"].append({"turn": f"bootstrap-{idx}", "error": err})
+                    print(f"{_TAG} ERROR bootstrap-{idx}: {err}", file=stderr, flush=True)
+                    continue
+                assert text is not None
+                report["turns"].append(
+                    {
+                        "kind": "bootstrap",
+                        "user": user_text,
+                        "user_msg_uuid": bootstrap_msg_uuid,
+                        "text_preview": text[:120],
+                        "meta": meta,
+                    }
+                )
+                print(
+                    f"{_TAG} reply preview={text[:80]!r} "
+                    f"context_mode={meta.get('context_mode')}",
+                    flush=True,
+                )
+                _drain_turn_trailing_frames(
+                    bridge, report, label=f"bootstrap-{idx}"
+                )
+                if not _wait_input_delivered(
+                    repo_root,
+                    config_path,
                     agent_id=agent_id,
-                    user_id=user_id,
-                    turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                    client_message_id=bootstrap_msg_uuid,
+                    timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                    label=f"bootstrap-{idx}",
                     stderr=stderr,
+                    skip_db_checks=skip_db_checks,
+                ):
+                    report["errors"].append(
+                        {
+                            "turn": f"bootstrap-{idx}-delivered",
+                            "error": (408, f"input not delivered: {bootstrap_msg_uuid}"),
+                        }
+                    )
+                if idx == len(bootstrap_turns):
+                    if not _wait_ws_turn_settled(
+                        bridge,
+                        report,
+                        label=f"bootstrap-{idx}",
+                        settle_quiet_sec=_BOOTSTRAP_TURN_SETTLE_QUIET_SEC,
+                        max_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                        stderr=stderr,
+                    ):
+                        report["errors"].append(
+                            {
+                                "turn": f"bootstrap-{idx}-settled",
+                                "error": (
+                                    408,
+                                    f"bootstrap turn {idx} ws not settled before experience_profile",
+                                ),
+                            }
+                        )
+
+            experience_profile_ok = _run_experience_profile_phase(
+                bridge=bridge,
+                report=report,
+                repo_root=repo_root,
+                config_path=config_path,
+                agent_id=agent_id,
+                user_id=user_id,
+                experience_profile_turn=experience_profile_turn,
+                experience_profile_context_mode=experience_profile_context_mode,
+                stderr=stderr,
+                skip_db_checks=skip_db_checks,
+            )
+
+            print(f"{_TAG} bootstrap finish turn: {bootstrap_finish_turn!r}", flush=True)
+            bootstrap_finish_msg_uuid = _send_turn(bridge, agent_id, bootstrap_finish_turn)
+            text, meta, err = _wait_downlink_for_user_msg_uuid(
+                bridge,
+                report,
+                expected_user_msg_uuid=bootstrap_finish_msg_uuid,
+                timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                label="bootstrap-finish",
+                trailing_label="bootstrap-finish_mismatch",
+            )
+            if err is not None:
+                report["errors"].append({"turn": "bootstrap-finish", "error": err})
+                print(f"{_TAG} ERROR bootstrap-finish: {err}", file=stderr, flush=True)
+            else:
+                assert text is not None
+                report["turns"].append(
+                    {
+                        "kind": "bootstrap_finish",
+                        "user": bootstrap_finish_turn,
+                        "user_msg_uuid": bootstrap_finish_msg_uuid,
+                        "text_preview": text[:120],
+                        "meta": meta,
+                    }
+                )
+                print(
+                    f"{_TAG} bootstrap-finish reply={text[:80]!r} "
+                    f"context_mode={meta.get('context_mode')}",
+                    flush=True,
+                )
+            _drain_turn_trailing_frames(bridge, report, label="bootstrap-finish")
+            if not _wait_input_delivered(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                client_message_id=bootstrap_finish_msg_uuid,
+                timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                label="bootstrap-finish",
+                stderr=stderr,
+                skip_db_checks=skip_db_checks,
+            ):
+                report["errors"].append(
+                    {
+                        "turn": "bootstrap-finish-delivered",
+                        "error": (
+                            408,
+                            f"input not delivered: {bootstrap_finish_msg_uuid}",
+                        ),
+                    }
+                )
+            bootstrap_complete_flag = _wait_bootstrap_complete_flag(
+                repo_root,
+                config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+                timeout_sec=_BOOTSTRAP_TURN_SETTLE_MAX_SEC,
+                stderr=stderr,
+                skip_db_checks=skip_db_checks,
+            )
+            if not bootstrap_complete_flag:
+                report["errors"].append(
+                    {
+                        "turn": "bootstrap-finish",
+                        "error": (422, "bootstrap_complete flag still false"),
+                    }
+                )
+
+            if not _wait_input_queue_idle(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                timeout_sec=_TURN_REPLY_TIMEOUT_SEC,
+                label="pre-settled",
+                stderr=stderr,
+                skip_db_checks=skip_db_checks,
+            ):
+                report["errors"].append(
+                    {"turn": "pre-settled", "error": (408, "input queue not idle")}
+                )
+            else:
+                memdoc_result = _verify_bootstrap_memdocs(
+                    repo_root,
+                    config_path,
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    skip_db_checks=skip_db_checks,
+                )
+                report["bootstrap_memdocs"] = {
+                    "user_customized": memdoc_result.user_customized,
+                    "identity_customized": memdoc_result.identity_customized,
+                    "style_customized": memdoc_result.style_customized,
+                    "soul_unchanged": memdoc_result.soul_unchanged,
+                    "memory_unchanged": memdoc_result.memory_unchanged,
+                    "user_sequence_id": memdoc_result.user_sequence_id,
+                    "identity_sequence_id": memdoc_result.identity_sequence_id,
+                    "style_sequence_id": memdoc_result.style_sequence_id,
+                    "memory_sequence_id": memdoc_result.memory_sequence_id,
+                    "errors": list(memdoc_result.errors),
+                    "warnings": list(memdoc_result.warnings),
+                }
+                if memdoc_result.errors:
+                    report["errors"].append(
+                        {
+                            "turn": "bootstrap_memdocs",
+                            "error": (422, "; ".join(memdoc_result.errors)),
+                        }
+                    )
+                    print(
+                        f"{_TAG} ERROR bootstrap_memdocs: {memdoc_result.errors}",
+                        file=stderr,
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"{_TAG} bootstrap_memdocs ok "
+                        f"user_seq={memdoc_result.user_sequence_id} "
+                        f"identity_seq={memdoc_result.identity_sequence_id} "
+                        f"style_seq={memdoc_result.style_sequence_id}",
+                        flush=True,
+                    )
+                if memdoc_result.warnings:
+                    print(
+                        f"{_TAG} bootstrap_memdocs warnings: {memdoc_result.warnings}",
+                        flush=True,
+                    )
+
+            print(f"{_TAG} settled turn: {settled_turn!r}", flush=True)
+            settled_msg_uuid = _send_turn(bridge, agent_id, settled_turn)
+
+            if not _wait_input_delivered(
+                repo_root,
+                config_path,
+                agent_id=agent_id,
+                client_message_id=settled_msg_uuid,
+                timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
+                label="settled",
+                stderr=stderr,
+                skip_db_checks=skip_db_checks,
+            ):
+                report["errors"].append(
+                    {
+                        "turn": "settled-delivered",
+                        "error": (408, f"input not delivered: {settled_msg_uuid}"),
+                    }
+                )
+                github_result = GithubIssueE2eResult(
+                    "",
+                    "",
+                    0,
+                    False,
+                    False,
+                    False,
+                    False,
+                    "skipped: settled input not delivered",
                 )
                 report["github_issue"] = _github_issue_e2e_result_to_report(
                     github_result
                 )
-                if github_result.error is not None:
-                    report["errors"].append(
+            else:
+                text, meta, err = _wait_downlink_for_user_msg_uuid(
+                    bridge,
+                    report,
+                    expected_user_msg_uuid=settled_msg_uuid,
+                    timeout_sec=_SETTLED_TURN_TIMEOUT_SEC,
+                    label="settled",
+                    trailing_label="settled_mismatch",
+                )
+                if err is not None:
+                    report["errors"].append({"turn": "settled", "error": err})
+                    print(f"{_TAG} ERROR settled: {err}", file=stderr, flush=True)
+                    github_result = GithubIssueE2eResult(
+                        "",
+                        "",
+                        0,
+                        False,
+                        False,
+                        False,
+                        False,
+                        "skipped: settled downlink failed",
+                    )
+                    report["github_issue"] = _github_issue_e2e_result_to_report(
+                        github_result
+                    )
+                else:
+                    assert text is not None
+                    report["turns"].append(
                         {
-                            "turn": "github_issue_e2e",
-                            "error": (500, github_result.error),
+                            "kind": "settled",
+                            "user": settled_turn,
+                            "user_msg_uuid": settled_msg_uuid,
+                            "text_preview": text[:120],
+                            "meta": meta,
                         }
                     )
-
-                print(
-                    f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
-                    f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
-                    f"idle 10s + poll 3s; after github_issue)...",
-                    flush=True,
-                )
-                proactive_deadline = time.monotonic() + proactive_wait_sec
-                while time.monotonic() < proactive_deadline:
-                    text, meta, err = _wait_downlink(
-                        bridge,
-                        timeout_sec=min(
-                            _PROACTIVE_RECV_CHUNK_SEC,
-                            proactive_deadline - time.monotonic(),
-                        ),
-                        label="proactive",
+                    print(
+                        f"{_TAG} settled reply={text[:80]!r} "
+                        f"user_msg_uuid={settled_msg_uuid} "
+                        f"langsmith_trace_id={meta.get('langsmith_trace_id')}",
+                        flush=True,
                     )
-                    if err is not None and err[0] == 408:
-                        continue
-                    if err is not None:
-                        report["errors"].append({"turn": "proactive", "error": err})
-                        break
-                    if text is None:
-                        continue
-                    if not _is_inner_tick_proactive(meta):
-                        kind = meta.get("source") or meta.get("inner_tick_activity")
+                    _drain_turn_trailing_frames(bridge, report, label="settled")
+                    # TODO(#3652): tool_fallback bypasses harness WS disclosure; see issues/3651.
+                    if skip_db_checks:
+                        github_result = _run_github_issue_e2e_phase_ws_only(
+                            bridge=bridge,
+                            report=report,
+                            agent_id=agent_id,
+                            turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                            stderr=stderr,
+                        )
+                    else:
+                        github_result = _run_github_issue_e2e_phase(
+                            bridge=bridge,
+                            report=report,
+                            repo_root=repo_root,
+                            config_path=config_path,
+                            agent_id=agent_id,
+                            user_id=user_id,
+                            turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
+                            stderr=stderr,
+                            skip_db_checks=skip_db_checks,
+                        )
+                    report["github_issue"] = _github_issue_e2e_result_to_report(
+                        github_result
+                    )
+                    if github_result.error is not None:
+                        report["errors"].append(
+                            {
+                                "turn": "github_issue_e2e",
+                                "error": (500, github_result.error),
+                            }
+                        )
+
+                    print(
+                        f"{_TAG} waiting up to {proactive_wait_sec}s for proactive inner-tick "
+                        f"(pass >={proactive_min_rounds} round(s), target {proactive_target_rounds}; "
+                        f"idle 10s + poll 3s; after github_issue)...",
+                        flush=True,
+                    )
+                    proactive_deadline = time.monotonic() + proactive_wait_sec
+                    while time.monotonic() < proactive_deadline:
+                        text, meta, err = _wait_downlink(
+                            bridge,
+                            timeout_sec=min(
+                                _PROACTIVE_RECV_CHUNK_SEC,
+                                proactive_deadline - time.monotonic(),
+                            ),
+                            label="proactive",
+                        )
+                        if err is not None and err[0] == 408:
+                            continue
+                        if err is not None:
+                            report["errors"].append({"turn": "proactive", "error": err})
+                            break
+                        if text is None:
+                            continue
+                        if not _is_inner_tick_proactive(meta):
+                            kind = meta.get("source") or meta.get("inner_tick_activity")
+                            if str(meta.get("source") or "") == "chat":
+                                _record_trailing_downlink(
+                                    report,
+                                    label="proactive_wait_late",
+                                    text=text,
+                                    meta=meta,
+                                )
+                            else:
+                                print(
+                                    f"{_TAG} ignore non-proactive downlink source={kind!r}",
+                                    flush=True,
+                                )
+                            continue
+                        report["proactive"].append(
+                            {
+                                "text_preview": text[:120],
+                                "meta": meta,
+                                "silent": False,
+                            }
+                        )
+                        print(
+                            f"{_TAG} proactive text={text[:80]!r} "
+                            f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
+                            f"round={len(report['proactive']) + 1}",
+                            flush=True,
+                        )
+                    print(
+                        f"{_TAG} post-proactive drain "
+                        f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
+                        f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
+                        flush=True,
+                    )
+                    # TODO(dreaming-completion-notify): #3744 — keep WS open through dreaming
+                    # or subscribe to in-process notifier; avoid disconnect-then-DB-poll.
+                    for text, meta in _drain_until_quiet(
+                        bridge,
+                        quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
+                        max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
+                    ):
                         if str(meta.get("source") or "") == "chat":
                             _record_trailing_downlink(
                                 report,
-                                label="proactive_wait_late",
+                                label="post_proactive",
                                 text=text,
                                 meta=meta,
                             )
-                        else:
-                            print(
-                                f"{_TAG} ignore non-proactive downlink source={kind!r}",
-                                flush=True,
-                            )
-                        continue
-                    report["proactive"].append(
-                        {
-                            "text_preview": text[:120],
-                            "meta": meta,
-                            "silent": False,
-                        }
-                    )
-                    print(
-                        f"{_TAG} proactive text={text[:80]!r} "
-                        f"langsmith_trace_id={meta.get('langsmith_trace_id')} "
-                        f"round={len(report['proactive']) + 1}",
-                        flush=True,
-                    )
-                print(
-                    f"{_TAG} post-proactive drain "
-                    f"(quiet={_POST_PROACTIVE_DRAIN_QUIET_SEC}s, "
-                    f"max={_POST_PROACTIVE_DRAIN_MAX_SEC}s) before disconnect...",
-                    flush=True,
-                )
-                for text, meta in _drain_until_quiet(
-                    bridge,
-                    quiet_sec=_POST_PROACTIVE_DRAIN_QUIET_SEC,
-                    max_sec=_POST_PROACTIVE_DRAIN_MAX_SEC,
-                ):
-                    if str(meta.get("source") or "") == "chat":
-                        _record_trailing_downlink(
-                            report,
-                            label="post_proactive",
-                            text=text,
-                            meta=meta,
-                        )
 
-                memory_doc = _query_latest_memdoc_version(
-                    repo_root,
-                    config_path,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    document_kind="memory",
-                )
-                memory_seq_before_dreaming = (
-                    memory_doc.sequence_id if memory_doc else 0
-                )
-                print(
-                    f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
-                    f"(scope worker; dreaming_idle_seconds=10 in config; "
-                    f"memory_sequence_before={memory_seq_before_dreaming})...",
-                    flush=True,
-                )
-                dreaming_result = _wait_dreaming_consolidation(
-                    repo_root,
-                    config_path,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                    memory_sequence_before=memory_seq_before_dreaming,
-                    wait_sec=dreaming_wait_sec,
-                    stderr=stderr,
-                )
-                report["dreaming"] = {
-                    "checkpoint_present": dreaming_result.checkpoint_present,
-                    "memory_updated": dreaming_result.memory_updated,
-                    "memory_sequence_before": dreaming_result.memory_sequence_before,
-                    "memory_sequence_after": dreaming_result.memory_sequence_after,
-                    "error": dreaming_result.error,
-                }
-                if dreaming_result.error:
-                    report["errors"].append(
-                        {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                    memory_doc = _query_latest_memdoc_version(
+                        repo_root,
+                        config_path,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                        document_kind="memory",
+                    )
+                    memory_seq_before_dreaming = (
+                        memory_doc.sequence_id if memory_doc else 0
                     )
                     print(
-                        f"{_TAG} ERROR dreaming: {dreaming_result.error}",
-                        file=stderr,
+                        f"{_TAG} waiting up to {dreaming_wait_sec}s for dreaming consolidation "
+                        f"(scope worker; dreaming_idle_seconds=10 in config; "
+                        f"memory_sequence_before={memory_seq_before_dreaming})...",
                         flush=True,
                     )
+                    dreaming_result = _wait_dreaming_consolidation(
+                        repo_root,
+                        config_path,
+                        user_id=user_id,
+                        agent_id=agent_id,
+                        memory_sequence_before=memory_seq_before_dreaming,
+                        wait_sec=dreaming_wait_sec,
+                        stderr=stderr,
+                        skip_db_checks=skip_db_checks,
+                    )
+                    report["dreaming"] = _dreaming_report_fields(dreaming_result)
+                    if dreaming_result.error:
+                        report["errors"].append(
+                            {"turn": "dreaming", "error": (408, dreaming_result.error)}
+                        )
+                        print(
+                            f"{_TAG} ERROR dreaming: {dreaming_result.error}",
+                            file=stderr,
+                            flush=True,
+                        )
     finally:
         bridge.stop()
 
     scope_chat = f"agent-scope:{user_id}:{agent_id}"
-    ctx_rows = _psql(
-        repo_root,
-        config_path,
-        f"""
+    if skip_db_checks:
+        print(f"{_TAG} skip final Postgres summary block (no db)", flush=True)
+        ctx_rows = ""
+        in_q = ""
+        out_q = ""
+        out_latest = ""
+        bootstrap_done = "true" if bootstrap_complete_flag else "unknown"
+        context_mode = "unknown"
+        companion_bond_state = None
+    else:
+        ctx_rows = _psql(
+            repo_root,
+            config_path,
+            f"""
 SELECT sequence_id,
        trim(content)::json->>'context_mode' AS context_mode,
        trim(content)::json->>'workspace_bootstrap_user_interactive_completed' AS bootstrap_completed
@@ -2848,30 +3564,40 @@ WHERE companion_id = '{agent_id}'
 ORDER BY sequence_id DESC
 LIMIT 3;
 """,
-    )
-    in_q = _psql(
-        repo_root,
-        config_path,
-        f"SELECT status, COUNT(*) FROM agentic_companion_input_queue "
-        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
-    )
-    out_q = _psql(
-        repo_root,
-        config_path,
-        f"SELECT status, COUNT(*) FROM agentic_companion_output_queue "
-        f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
-    )
-    out_latest = _psql(
-        repo_root,
-        config_path,
-        f"""
+        )
+        in_q = _psql(
+            repo_root,
+            config_path,
+            f"SELECT status, COUNT(*) FROM agentic_companion_input_queue "
+            f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+        )
+        out_q = _psql(
+            repo_root,
+            config_path,
+            f"SELECT status, COUNT(*) FROM agentic_companion_output_queue "
+            f"WHERE agent_id = '{agent_id}' GROUP BY status ORDER BY status;",
+        )
+        out_latest = _psql(
+            repo_root,
+            config_path,
+            f"""
 SELECT sequence_id, status, batch_id, left(text, 80), langsmith_trace_id, langsmith_run_id
 FROM agentic_companion_output_queue
 WHERE agent_id = '{agent_id}'
 ORDER BY sequence_id DESC
 LIMIT 8;
 """,
-    )
+        )
+        ctx_line = ctx_rows.strip().split("\n")[0] if ctx_rows.strip() else ""
+        parts = ctx_line.split("|") if ctx_line else []
+        bootstrap_done = parts[2] if len(parts) >= 3 else "unknown"
+        context_mode = parts[1] if len(parts) >= 2 else "unknown"
+        companion_bond_state = _query_active_companion_bond_agent_id(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
 
     report["db"] = {
         "context_json": ctx_rows.strip(),
@@ -2889,14 +3615,13 @@ LIMIT 8;
         run_started_at_utc=run_started_at_utc,
         proactive_min_rounds=proactive_min_rounds,
         proactive_target_rounds=proactive_target_rounds,
+        skip_db_checks=skip_db_checks,
     )
 
-    ctx_line = ctx_rows.strip().split("\n")[0] if ctx_rows.strip() else ""
-    parts = ctx_line.split("|") if ctx_line else []
-    bootstrap_done = parts[2] if len(parts) >= 3 else "unknown"
-    context_mode = parts[1] if len(parts) >= 2 else "unknown"
-
-    proactive_present = proactive_summary["total"] >= proactive_min_rounds
+    proactive_present = (
+        proactive_min_rounds == 0
+        or proactive_summary["total"] >= proactive_min_rounds
+    )
     proactive_target_met = proactive_summary["total"] >= proactive_target_rounds
     proactive_silent_ok = proactive_summary["silent_token_leaks"] == 0
     settled_ok = any(
@@ -2918,12 +3643,6 @@ LIMIT 8;
         and bool(out_q.strip())
     )
 
-    companion_bond_state = _query_active_companion_bond_agent_id(
-        repo_root,
-        config_path,
-        user_id=user_id,
-        agent_id=agent_id,
-    )
     report["companion_bond"] = {
         "user_id": user_id,
         "agent_id": agent_id,
@@ -2951,6 +3670,9 @@ LIMIT 8;
         in_all_delivered=in_all_delivered,
         out_all_delivered=out_all_delivered,
         companion_bond_state=companion_bond_state or "",
+        skip_db_checks=skip_db_checks,
+        scope=scope,
+        proactive_min_rounds=proactive_min_rounds,
     )
     report["summary"] = summary
 
@@ -2980,6 +3702,22 @@ def main(argv: list[str] | None = None) -> int:
 
     p = argparse.ArgumentParser(
         description="Automated Ops WebSocket regression for companion queue-serving."
+    )
+    p.add_argument(
+        "--target",
+        required=True,
+        choices=[RegressionTarget.LOCAL.value, RegressionTarget.DEV.value, RegressionTarget.PROD.value],
+        help="Deployment target preset (required)",
+    )
+    p.add_argument(
+        "--login-email",
+        default="",
+        help="Login email to obtain bearer token via /api/v1/auth/google/login",
+    )
+    p.add_argument(
+        "--login-password",
+        default="",
+        help="Login password (pair with --login-email)",
     )
     p.add_argument(
         "--agent-id",
@@ -3061,12 +3799,55 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     _ensure_import_path(repo_root)
-    config_path = Path(str(args.config).strip())
-    if not config_path.is_absolute():
-        config_path = repo_root / config_path
+    target = RegressionTarget(str(args.target).strip())
+    preset = _target_presets(target, repo_root)
+    os.environ["INTY_CONFIG_YAML"] = preset.config_path
+    print(
+        f"{_TAG} INTY_CONFIG_YAML={preset.config_path} "
+        f"(start Ops with: export INTY_CONFIG_YAML={preset.config_path} "
+        f"&& backend/ops/start.sh --local --no-build-frontend)",
+        flush=True,
+    )
+
+    api_base = str(args.api_base).strip()
+    if api_base == default_api:
+        api_base = preset.api_base
+    config_raw = str(args.config).strip()
+    if config_raw == default_config or config_raw == _DEFAULT_CONFIG:
+        config_path = repo_root / preset.config_path
+    else:
+        config_path = Path(config_raw)
+        if not config_path.is_absolute():
+            config_path = repo_root / config_path
     if not config_path.is_file():
         print(f"error: config not found: {config_path}", file=sys.stderr)
         return 2
+
+    login_email = str(args.login_email).strip()
+    login_password = str(args.login_password).strip()
+    token_path = Path(str(args.token_file).strip())
+    if not token_path.is_absolute():
+        token_path = repo_root / token_path
+    if login_email or login_password:
+        if not login_email or not login_password:
+            print(
+                "error: --login-email and --login-password must be used together",
+                file=sys.stderr,
+            )
+            return 2
+        _login_and_cache_bearer_token(
+            api_base=api_base,
+            email=login_email,
+            password=login_password,
+            token_path=token_path,
+        )
+
+    proactive_min_rounds = int(args.proactive_min_rounds)
+    if proactive_min_rounds == _DEFAULT_PROACTIVE_MIN_ROUNDS and (
+        str(args.config).strip() == default_config
+        or str(args.config).strip() == _DEFAULT_CONFIG
+    ):
+        proactive_min_rounds = preset.proactive_min_rounds_default
 
     agent_id = str(args.agent_id).strip()
     if args.create_agent:
@@ -3075,11 +3856,18 @@ def main(argv: list[str] | None = None) -> int:
                 f"{_TAG} warning: --agent-id ignored when --create-agent is set",
                 file=sys.stderr,
             )
-        remaining = _deactivate_active_companion_bonds_for_user(
-            repo_root,
-            config_path,
-            user_id=str(args.user_id).strip(),
-        )
+        if not preset.skip_db_checks:
+            remaining = _deactivate_active_companion_bonds_for_user(
+                repo_root,
+                config_path,
+                user_id=str(args.user_id).strip(),
+            )
+        else:
+            print(
+                f"{_TAG} skip companion bond deactivate (no db)",
+                file=sys.stderr,
+            )
+            remaining = 0
         if remaining:
             print(
                 f"{_TAG} warning: {remaining} ACTIVE companion bond(s) remain for "
@@ -3094,7 +3882,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         agent_id = _create_agent_id(
             repo_root=repo_root,
-            api_base=str(args.api_base).strip(),
+            api_base=api_base,
             token_path=str(args.token_file).strip(),
             http_timeout=float(args.create_timeout),
             stderr=sys.stderr,
@@ -3115,9 +3903,8 @@ def main(argv: list[str] | None = None) -> int:
     if proactive_wait < 0:
         print("error: --proactive-wait-sec must be >= 0", file=sys.stderr)
         return 2
-    proactive_min_rounds = int(args.proactive_min_rounds)
-    if proactive_min_rounds < 1:
-        print("error: --proactive-min-rounds must be >= 1", file=sys.stderr)
+    if proactive_min_rounds < 0:
+        print("error: --proactive-min-rounds must be >= 0", file=sys.stderr)
         return 2
     proactive_target_rounds = int(args.proactive_target_rounds)
     if proactive_target_rounds < proactive_min_rounds:
@@ -3134,7 +3921,7 @@ def main(argv: list[str] | None = None) -> int:
     return run_regression(
         repo_root=repo_root,
         agent_id=agent_id,
-        api_base=str(args.api_base).strip(),
+        api_base=api_base,
         config_path=config_path,
         user_id=str(args.user_id).strip(),
         bootstrap_turns=_DEFAULT_BOOTSTRAP_TURNS,
@@ -3149,6 +3936,8 @@ def main(argv: list[str] | None = None) -> int:
         report_path=report_path,
         token_path=str(args.token_file).strip(),
         stderr=sys.stderr,
+        skip_db_checks=preset.skip_db_checks,
+        scope=preset.scope,
     )
 
 

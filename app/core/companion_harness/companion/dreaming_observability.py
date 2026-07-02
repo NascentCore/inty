@@ -169,6 +169,8 @@ def record_dreaming_batch_observability(
         inty_trace_id,
         ls_trace_id,
     )
+    # TODO(dreaming-completion-notify): #3744 — on CHECKPOINT_SAVED, set scope dreaming
+    # completion Event (see scope_inner_tick_state) for in-process waiters.
 
 
 def new_dreaming_batch_trace_id() -> str:
