@@ -1,9 +1,32 @@
 """Tests for `tools/scripts/init_admin_user.py` DB session lifecycle."""
 
+from __future__ import annotations
+
+import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from tools.scripts import init_admin_user
+
+def _load_init_admin_user_module():
+    """Load the repo script by file path (avoids site-packages ``tools`` shadowing)."""
+    module_path = (
+        Path(__file__).resolve().parents[2]
+        / "tools"
+        / "scripts"
+        / "init_admin_user.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "init_admin_user_script",
+        module_path,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+init_admin_user = _load_init_admin_user_module()
 
 
 def test_create_user_closes_db_session_on_reused_token_early_return(
