@@ -143,3 +143,19 @@ Open PRs checked: #3716 (`append_line` dead path) — no overlap with tasks belo
 - [x] **HYGIENE-2026-41** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` MemDoc filenames from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
 - [x] **HYGIENE-2026-42** #3413: harness tests — `LIVING_SPHERE_RELATIVE_PATH` → `LIVING_SPHERE_MD_REL` (3 files). Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
 - [x] **HYGIENE-2026-43** #3413: `test_techno_core_runtime.py` — `TECHNO_CORE_RELATIVE_PATH` → `TECHNO_CORE_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-13af` / pull/3731.
+
+## 2026-07-02 scan
+
+Source: open PR overlap check (#3748 Telegram Business promotion — no harness overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — two production modules still import `*_REL` from `memory_store_scope` re-exports; harness tests still seed/read MemDoc paths as string literals.
+
+Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-44** #3413: `read_web_page.py` — import `MEMORY_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export). Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-45** #3413: `client_time_from_memory_store.py` — import `USER_MD_REL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-46** #3413: `test_tool_background_transcript_metadata.py` — `TRANSCRIPT_JSONL_REL` for seed + read. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-47** #3413: `test_ai_private_append_tool.py` — `AI_PRIVATE_JSONL_REL` for read assertion. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-48** #3413: `test_read_web_page_tool.py` — `MEMORY_MD_REL` for read assertion. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-49** #3413: `test_tool_background_langsmith_channel.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+- [x] **HYGIENE-2026-50** #3413: `test_langsmith_turn_parent.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
