@@ -25,6 +25,10 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools_inner_tick,
     build_openai_repl_tools_inner_tick_autonomy,
@@ -143,12 +147,12 @@ async def test_async_dual_calls_foreground_chat_without_tools_and_starts_backgro
 ) -> None:
     loop = asyncio.get_running_loop()
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("USER.md", "u\n")
     store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     bg_jobs: list[dict[str, Any]] = []
 
@@ -202,7 +206,7 @@ async def test_async_dual_run_turn_persists_turn_recall_on_transcript(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("STYLE.md", "st\n")
@@ -210,7 +214,7 @@ async def test_async_dual_run_turn_persists_turn_recall_on_transcript(
     store.write_document("MEMORY.md", "m\n")
     store.write_document("CHANNELS.md", "ch\n")
     store.write_document("COMPANIONSHIP.md", "bond\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     monkeypatch.setattr(
         "app.core.companion_harness.companion.turn.start_tool_background_job",
@@ -228,7 +232,7 @@ async def test_async_dual_run_turn_persists_turn_recall_on_transcript(
     )
 
     assert out.turn_recall == "用户提到下周见面"
-    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    msgs = load_transcript_from_store(store, TRANSCRIPT_JSONL_REL)
     assistant_rows = [m for m in msgs if m.role == "assistant"]
     assert len(assistant_rows) == 1
     assert assistant_rows[0].turn_recall == "用户提到下周见面"
@@ -241,12 +245,12 @@ async def test_async_dual_inner_tick_passes_tick_context_and_inner_tick_tools(
 ) -> None:
     loop = asyncio.get_running_loop()
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("USER.md", "u\n")
     store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     bg_jobs: list[dict[str, Any]] = []
 
@@ -287,12 +291,12 @@ async def test_async_dual_inner_tick_autonomy_uses_autonomy_system_messages(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("USER.md", "u\n")
     store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     bg_jobs: list[dict[str, Any]] = []
 
@@ -346,12 +350,12 @@ async def test_proactive_inner_tick_proactive_chat_sync_still_calls_llm(
 ) -> None:
     """PROACTIVE inner tick is PROACTIVE_CHAT_SYNC (no async dual branch); no foreground skip."""
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("USER.md", "u\n")
     store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     client = _FakeAsyncDualLLMClient()
     await run_companion_inner_tick_proactive_chat_turn(
@@ -407,12 +411,12 @@ async def test_async_dual_empty_user_facing_reply_keeps_required_and_skips_injec
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = _store(tmp_path)
-    store.write_document("context.json", '{"context_mode": "intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
     store.write_document("IDENTITY.md", "id\n")
     store.write_document("SOUL.md", "s\n")
     store.write_document("USER.md", "u\n")
     store.write_document("MEMORY.md", "m\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
     bg_jobs: list[dict[str, Any]] = []
 

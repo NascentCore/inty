@@ -44,6 +44,9 @@ from app.core.companion_harness.loop.context import (
     AgenticLoopLangsmithContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
 )
@@ -100,12 +103,12 @@ def _loop_store() -> MemoryStore:
         scope=CompanionScope("user-1", "agent-1", "chat-1"),
         repository=None,
     )
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
     return store
 
 
 def _assert_user_transcript_row(store: MemoryStore) -> None:
-    transcript_lines = store.read_document("transcript.jsonl").splitlines()
+    transcript_lines = store.read_document(TRANSCRIPT_JSONL_REL).splitlines()
     assert len(transcript_lines) == 1
     transcript_row = json.loads(transcript_lines[0])
     assert transcript_row["role"] == "user"
@@ -145,7 +148,7 @@ def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             foreground_source=SOURCE_SINGLE_COMPLETION,
@@ -680,7 +683,7 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             foreground_source="foreground_dual_llm_envelope",
@@ -778,7 +781,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             foreground_source="foreground_dual_llm_envelope",
@@ -879,7 +882,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             foreground_source="foreground_dual_llm_envelope",
@@ -970,7 +973,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             foreground_source="foreground_dual_llm_envelope",

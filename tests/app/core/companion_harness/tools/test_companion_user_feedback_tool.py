@@ -14,6 +14,10 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
@@ -80,8 +84,8 @@ async def test_record_user_feedback_appends_snapshot_jsonl(
     rid = uuid.uuid4().hex[:12]
     scope = CompanionScope(f"u-ufb-{rid}", f"c-ufb-{rid}", f"chat-ufb-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document("context.json", '{"context_mode":"intimate"}\n')
-    store.write_document("transcript.jsonl", '{"role":"user"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
+    store.write_document(TRANSCRIPT_JSONL_REL, '{"role":"user"}\n')
     store.write_document("USER.md", "# USER\n")
 
     bind = LlmRuntimeEventBind(
@@ -315,7 +319,7 @@ async def test_record_user_feedback_hidden_starts_async_job(
     rid = uuid.uuid4().hex[:8]
     scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document("context.json", '{"context_mode":"intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
 
     out = await execute_tool_call(
         store,
@@ -353,7 +357,7 @@ async def test_record_user_feedback_visible_sync_create(monkeypatch) -> None:
 
     scope = CompanionScope("u", "c", "chat")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document("context.json", "{}\n")
+    store.write_document(CONTEXT_JSON_REL, "{}\n")
 
     out = await execute_tool_call(
         store,
@@ -386,7 +390,7 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
     scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
     store = MemoryStore(scope=scope, repository=None)
     store.write_document("MEMORY.md", "# MEM\ntest memory")
-    store.write_document("context.json", '{"context_mode":"public"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"public"}\n')
 
     snap = build_harness_snapshot(
         store,
@@ -408,7 +412,7 @@ def test_build_harness_snapshot_transcript_tail_is_recent_lines(
     prefix = '{"role":"user","content":"EARLY_ONLY"}\n'
     filler = '{"role":"user","content":"f"}\n' * 800
     recent_marker = '{"role":"user","content":"RECENT_COMPLAINT"}\n'
-    store.write_document("transcript.jsonl", prefix + filler + recent_marker)
+    store.write_document(TRANSCRIPT_JSONL_REL, prefix + filler + recent_marker)
 
     snap = build_harness_snapshot(
         store,

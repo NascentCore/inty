@@ -168,7 +168,7 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no o
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-51** #3413: `test_turn_async_dual_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
-- [ ] **HYGIENE-2026-52** #3413: `test_companion_user_feedback_tool.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
-- [ ] **HYGIENE-2026-53** #3413: `test_agentic_loop_output_queue.py` + `context_builder_test_support.py` — `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
-- [ ] **HYGIENE-2026-54** #3413: `test_proactive_chat.py` — `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
+- [x] **HYGIENE-2026-51** #3413: `test_turn_async_dual_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
+- [x] **HYGIENE-2026-52** #3413: `test_companion_user_feedback_tool.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
+- [x] **HYGIENE-2026-53** #3413: `test_agentic_loop_output_queue.py` + `context_builder_test_support.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
+- [x] **HYGIENE-2026-54** #3413: `test_proactive_chat.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.

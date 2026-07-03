@@ -22,6 +22,9 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 
 
 def runtime_context_for_builder_tests() -> TurnRuntimeContext:
@@ -63,7 +66,7 @@ def base_user_chat_loop_builder_kwargs() -> dict:
                 received_at_utc=ts_user,
             ),
         ),
-        "transcript_rel": "transcript.jsonl",
+        "transcript_rel": TRANSCRIPT_JSONL_REL,
         "langsmith_slice": langsmith_slice_for_builder_tests(),
         "runtime_context": runtime_context_for_builder_tests(),
         "memory_bootstrap_type": "user_interactive",
