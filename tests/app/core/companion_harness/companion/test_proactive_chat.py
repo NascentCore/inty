@@ -11,12 +11,15 @@ from app.core.companion_harness.companion.proactive_chat import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 
 
 def test_proactive_chat_empty_transcript(tmp_path: Path) -> None:
     scope = CompanionScope("pc-empty", "a", tmp_path.name)
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
     cfg = ProactiveChatConfig(min_transcript_lines=1)
     assert next_proactive_chat_wait_seconds(store, cfg) == 86400.0 * 365.0
 
@@ -32,15 +35,15 @@ def test_next_proactive_chat_wait_seconds_anchors_on_last_assistant_only(
     t2 = t1 + timedelta(seconds=5)
     t3 = t2 + timedelta(seconds=5)
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "real user", "ts": t0.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "reply", "ts": t1.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {
             "role": "user",
             "content": "[SYSTEM PROACTIVE CHAT]",
@@ -49,7 +52,7 @@ def test_next_proactive_chat_wait_seconds_anchors_on_last_assistant_only(
         },
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {
             "role": "assistant",
             "content": "proactive reply",
@@ -82,31 +85,31 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
     t6 = t5 + timedelta(seconds=1)
     t7 = t6 + timedelta(seconds=1)
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "u0", "ts": t0.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "a0", "ts": t1.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "u1", "ts": t2.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "a1", "ts": t3.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "u2", "ts": t4.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "a2", "ts": t5.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {
             "role": "user",
             "content": "pc",
@@ -115,7 +118,7 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
         },
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "last", "ts": t7.isoformat()},
     )
     cfg = ProactiveChatConfig(
@@ -134,11 +137,11 @@ def test_proactive_chat_stops_after_silence_threshold(tmp_path: Path) -> None:
     t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=5)
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "real user", "ts": t0.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "reply", "ts": t1.isoformat()},
     )
     cfg = ProactiveChatConfig(
@@ -163,11 +166,11 @@ def test_proactive_chat_exponential_doubles_with_each_round(
     t0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(seconds=1)
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "user", "content": "u", "ts": t0.isoformat()},
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "a", "ts": t1.isoformat()},
     )
     cfg = ProactiveChatConfig(
@@ -182,7 +185,7 @@ def test_proactive_chat_exponential_doubles_with_each_round(
     t2 = t1 + timedelta(seconds=15)
     t3 = t2 + timedelta(seconds=1)
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {
             "role": "user",
             "content": "pc",
@@ -191,7 +194,7 @@ def test_proactive_chat_exponential_doubles_with_each_round(
         },
     )
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {"role": "assistant", "content": "pc reply", "ts": t3.isoformat()},
     )
     wait_k1 = next_proactive_chat_wait_seconds(
