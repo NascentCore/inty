@@ -159,3 +159,16 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no o
 - [x] **HYGIENE-2026-48** #3413: `test_read_web_page_tool.py` — `MEMORY_MD_REL` for read assertion. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
 - [x] **HYGIENE-2026-49** #3413: `test_tool_background_langsmith_channel.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
 - [x] **HYGIENE-2026-50** #3413: `test_langsmith_turn_parent.py` — seed store paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4be2` / pull/3749.
+
+## 2026-07-03 scan
+
+Source: open PR overlap check (#3748 Telegram Business promotion — no harness overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests still seed/read MemDoc paths as string literals.
+
+Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no overlap with tasks below.
+
+### Open tasks
+
+- [ ] **HYGIENE-2026-51** #3413: `test_turn_async_dual_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
+- [ ] **HYGIENE-2026-52** #3413: `test_companion_user_feedback_tool.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
+- [ ] **HYGIENE-2026-53** #3413: `test_agentic_loop_output_queue.py` + `context_builder_test_support.py` — `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
+- [ ] **HYGIENE-2026-54** #3413: `test_proactive_chat.py` — `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-0420`.
