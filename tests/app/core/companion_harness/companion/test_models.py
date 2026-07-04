@@ -5,6 +5,9 @@ from pathlib import Path
 
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -138,7 +141,7 @@ def test_load_transcript_empty_store(tmp_path: Path) -> None:
         scope=CompanionScope("models", "a", tmp_path.name),
         repository=None,
     )
-    assert load_transcript_from_store(store, "transcript.jsonl") == []
+    assert load_transcript_from_store(store, TRANSCRIPT_JSONL_REL) == []
 
 
 def test_load_transcript_text() -> None:
@@ -156,8 +159,8 @@ def test_load_transcript_from_store_roundtrip(tmp_path: Path) -> None:
         repository=None,
     )
     row = {"role": "user", "content": "x", "ts": "2026-01-01T00:00:00Z"}
-    store.write_document("transcript.jsonl", json.dumps(row) + "\n")
-    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    store.write_document(TRANSCRIPT_JSONL_REL, json.dumps(row) + "\n")
+    msgs = load_transcript_from_store(store, TRANSCRIPT_JSONL_REL)
     assert len(msgs) == 1
     assert msgs[0].content == "x"
 
@@ -199,9 +202,9 @@ def test_load_transcript_valid_jsonl(tmp_path: Path) -> None:
         },
     ]
     store.write_document(
-        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+        TRANSCRIPT_JSONL_REL, "\n".join(json.dumps(r) for r in rows) + "\n"
     )
-    msgs = load_transcript_from_store(store, "transcript.jsonl")
+    msgs = load_transcript_from_store(store, TRANSCRIPT_JSONL_REL)
     assert len(msgs) == 2
     assert msgs[0].role == "user" and msgs[0].content == "a"
     assert msgs[1].role == "assistant" and msgs[1].content == "b"
@@ -253,10 +256,10 @@ def test_load_user_visible_transcript_projection_from_store(
         },
     ]
     store.write_document(
-        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+        TRANSCRIPT_JSONL_REL, "\n".join(json.dumps(r) for r in rows) + "\n"
     )
     visible = load_transcript_projection_from_store(
-        store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
+        store, TRANSCRIPT_JSONL_REL, TranscriptProjection.USER_VISIBLE
     )
     assert transcript_rows_user_visible(visible) == visible
     assert len(visible) == 1
@@ -278,13 +281,13 @@ def test_load_transcript_projection_from_store(tmp_path: Path) -> None:
         },
     ]
     store.write_document(
-        "transcript.jsonl", "\n".join(json.dumps(r) for r in rows) + "\n"
+        TRANSCRIPT_JSONL_REL, "\n".join(json.dumps(r) for r in rows) + "\n"
     )
     full = load_transcript_projection_from_store(
-        store, "transcript.jsonl", TranscriptProjection.FULL
+        store, TRANSCRIPT_JSONL_REL, TranscriptProjection.FULL
     )
     visible = load_transcript_projection_from_store(
-        store, "transcript.jsonl", TranscriptProjection.USER_VISIBLE
+        store, TRANSCRIPT_JSONL_REL, TranscriptProjection.USER_VISIBLE
     )
     assert len(full) == 2
     assert len(visible) == 1

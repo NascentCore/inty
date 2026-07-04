@@ -25,6 +25,12 @@ from app.core.companion_harness.companion.manager import (
 )
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TOOL_BACKGROUND_JSONL_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.external_services.fakes.openai import (
@@ -106,7 +112,7 @@ def build_scripted_monolog_inner_tick_script(
 def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
     """Seed MemoryStore for settled inner-tick turns (bootstrap done, min transcript)."""
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "public",
@@ -122,7 +128,7 @@ def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
     for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md", "STYLE.md"):
         store.write_document(rel, f"# {rel}\n")
     store.write_document(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         "\n".join(
             [
                 json.dumps(
@@ -321,7 +327,7 @@ def memory_store_for_injected_runtime(
 
 
 def scripted_transcript_roles(store: MemoryStore) -> list[str]:
-    raw = store.read_document("transcript.jsonl")
+    raw = store.read_document(TRANSCRIPT_JSONL_REL)
     rows = [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -329,7 +335,7 @@ def scripted_transcript_roles(store: MemoryStore) -> list[str]:
 
 
 def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
-    raw = store.read_document("transcript.jsonl")
+    raw = store.read_document(TRANSCRIPT_JSONL_REL)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -338,7 +344,7 @@ def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
 def scripted_inner_tick_transcript_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document("transcript_inner_tick.jsonl")
+    raw = store.read_document(TRANSCRIPT_INNER_TICK_JSONL_REL)
     if not raw.strip():
         return []
     return [
@@ -349,7 +355,7 @@ def scripted_inner_tick_transcript_rows(
 def scripted_tool_background_done_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document("tool_background.jsonl")
+    raw = store.read_document(TOOL_BACKGROUND_JSONL_REL)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]

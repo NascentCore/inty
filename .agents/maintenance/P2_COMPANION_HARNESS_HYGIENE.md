@@ -172,3 +172,16 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`) — no o
 - [x] **HYGIENE-2026-52** #3413: `test_companion_user_feedback_tool.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
 - [x] **HYGIENE-2026-53** #3413: `test_agentic_loop_output_queue.py` + `context_builder_test_support.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
 - [x] **HYGIENE-2026-54** #3413: `test_proactive_chat.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-0420` / pull/3750.
+
+## 2026-07-04 scan
+
+Source: open PR overlap check (#3748 Telegram Business promotion, #3751 dead `select_tail_splice_thoughts` — no harness overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests and test support still seed/read MemDoc paths as string literals.
+
+Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`), #3751 (`cursor/stale-companion-harness-code-24ac`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-55** #3413: `companion_scripted_llm.py` — `CONTEXT_JSON_REL`, `TRANSCRIPT_JSONL_REL`, `TRANSCRIPT_INNER_TICK_JSONL_REL`, `TOOL_BACKGROUND_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-56** #3413: `test_prompt_builder.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-57** #3413: `companion/test_bootstrap.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-58** #3413: `companion/test_models.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
