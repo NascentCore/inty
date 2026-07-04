@@ -181,7 +181,7 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`), #3751 (
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-55** #3413: `companion_scripted_llm.py` — `CONTEXT_JSON_REL`, `TRANSCRIPT_JSONL_REL`, `TRANSCRIPT_INNER_TICK_JSONL_REL`, `TOOL_BACKGROUND_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-8160`.
-- [ ] **HYGIENE-2026-56** #3413: `test_prompt_builder.py` — `CONTEXT_JSON_REL`. claimed `cursor/agent-maintenance-tasks-8160`.
-- [ ] **HYGIENE-2026-57** #3413: `companion/test_bootstrap.py` — `CONTEXT_JSON_REL`. claimed `cursor/agent-maintenance-tasks-8160`.
-- [ ] **HYGIENE-2026-58** #3413: `companion/test_models.py` — `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-8160`.
+- [x] **HYGIENE-2026-55** #3413: `companion_scripted_llm.py` — `CONTEXT_JSON_REL`, `TRANSCRIPT_JSONL_REL`, `TRANSCRIPT_INNER_TICK_JSONL_REL`, `TOOL_BACKGROUND_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-56** #3413: `test_prompt_builder.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-57** #3413: `companion/test_bootstrap.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
+- [x] **HYGIENE-2026-58** #3413: `companion/test_models.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-8160` / pull/3752.
