@@ -85,16 +85,6 @@ def _tail_splice_thoughts_at_anchor(
     ]
 
 
-def select_tail_splice_thoughts(
-    store: MemoryStore,
-    loaded_transcript: list[ChatMessage],
-) -> list[AiPrivateThought]:
-    """Unsurfaced monolog after the last real user anchor in ``loaded_transcript``."""
-    return _tail_splice_thoughts_at_anchor(
-        store, last_real_user_transcript_anchor(loaded_transcript)
-    )
-
-
 def build_ai_private_splice_plan(
     store: MemoryStore, loaded_transcript: list[ChatMessage]
 ) -> AiPrivateSplicePlan:

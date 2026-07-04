@@ -15,9 +15,9 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.transcript_ai_private import (
     AiPrivateSplicePersistInput,
     AiPrivateSplicePlan,
+    build_ai_private_splice_plan,
     expand_manifest_rows,
     persist_ai_private_splice_if_applicable,
-    select_tail_splice_thoughts,
     should_persist_ai_private_splice,
     transcript_window_to_llm_dialogue,
 )
@@ -63,14 +63,14 @@ def test_tail_splice_skips_surfaced_thoughts(tmp_path: Path) -> None:
             uuid="user-1",
         ),
     ]
-    selected = select_tail_splice_thoughts(store, transcript)
+    selected = build_ai_private_splice_plan(store, transcript).thoughts
     assert [t.uuid for t in selected] == [thought.uuid]
     from app.core.companion_harness.companion.ai_private_prompt import (
         mark_ai_private_surfaced,
     )
 
     mark_ai_private_surfaced(store, [thought.uuid])
-    assert select_tail_splice_thoughts(store, transcript) == []
+    assert build_ai_private_splice_plan(store, transcript).thoughts == ()
 
 
 def test_transcript_window_to_llm_dialogue_appends_tail_splice(
@@ -91,7 +91,7 @@ def test_transcript_window_to_llm_dialogue_appends_tail_splice(
             uuid="user-1",
         ),
     ]
-    thoughts = select_tail_splice_thoughts(store, transcript)
+    thoughts = list(build_ai_private_splice_plan(store, transcript).thoughts)
     dialogue = transcript_window_to_llm_dialogue(
         store, transcript, tail_splice_thoughts=thoughts
     )
@@ -128,7 +128,7 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
     assert rows[0].source == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
     assert rows[0].ai_private_thought_uuids == [thought.uuid]
     assert (
-        select_tail_splice_thoughts(
+        build_ai_private_splice_plan(
             store,
             [
                 ChatMessage(
@@ -138,8 +138,8 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
                     uuid="user-1",
                 ),
             ],
-        )
-        == []
+        ).thoughts
+        == ()
     )
 
 
@@ -166,7 +166,7 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
     assert not should_persist_ai_private_splice(persist_input)
     persist_ai_private_splice_if_applicable(persist_input)
     assert load_transcript_from_store(store, "transcript.jsonl") == []
-    assert select_tail_splice_thoughts(
+    assert build_ai_private_splice_plan(
         store,
         [
             ChatMessage(
@@ -176,4 +176,4 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
                 uuid="user-1",
             ),
         ],
-    ) == [thought]
+    ).thoughts == (thought,)
