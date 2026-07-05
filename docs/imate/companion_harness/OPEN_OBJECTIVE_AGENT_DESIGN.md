@@ -36,11 +36,11 @@ Inty companion 的核心使命不是完成一项任务，而是长期维系一�
 |            v                                                |
 |   setpoint generator ---emits---> self-authored setpoints   |
 |            ^                          (regime / beat)       |
-|            |                               |               |
-|            |                               v               |
-|   regulated variables <---driven--- endogenous action      |
+|            |                               |                |
+|            |                               v                |
+|   regulated variables <---driven--- endogenous action       |
 |   (kept in healthy band)            (incl. idle explore)    |
-|            |                               |               |
+|            |                               |                |
 |            +------------ feedback ----------+               |
 |              (perceive -> consolidate -> reactivate)        |
 |                                                             |
