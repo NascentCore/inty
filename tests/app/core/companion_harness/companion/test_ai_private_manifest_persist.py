@@ -28,6 +28,10 @@ from app.core.companion_harness.llm.chat_completions import (
 )
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -88,9 +92,9 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         "CHANNELS.md",
     ):
         store.write_document(rel, f"{rel}\n")
-    store.write_document("context.json", '{"context_mode":"intimate"}\n')
+    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
     store.append_jsonl_record(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         {
             "role": "user",
             "content": "earlier",
@@ -129,7 +133,7 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
     result = await run_companion_user_chat_turn("hello again", deps=deps)
     assert result.assistant_text == "visible reply"
     assert load_ai_private_thoughts(store) == []
-    body = store.read_document("transcript.jsonl")
+    body = store.read_document(TRANSCRIPT_JSONL_REL)
     lines = [json.loads(line) for line in body.strip().splitlines()]
     manifest_rows = [
         row

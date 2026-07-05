@@ -17,6 +17,10 @@ from app.core.companion_harness.companion.turn import (
     run_companion_user_chat_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
     fake_step_text,
@@ -35,7 +39,7 @@ _NEVER = 86400.0 * 365.0
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -50,7 +54,7 @@ def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     )
     for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
         store.write_document(rel, f"{rel}\n")
-    store.write_document("transcript.jsonl", "")
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
 
 
 def _bootstrap_deps(
@@ -65,7 +69,7 @@ def _bootstrap_deps(
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
-    body = store.read_document("transcript.jsonl")
+    body = store.read_document(TRANSCRIPT_JSONL_REL)
     assert body is not None
     return [json.loads(line) for line in body.splitlines() if line.strip()]
 

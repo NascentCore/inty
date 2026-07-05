@@ -194,9 +194,9 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`), #3751 (
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-59** #3413: `test_ai_private_prompt.py` — `AI_PRIVATE_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
-- [ ] **HYGIENE-2026-60** #3413: `test_bootstrap_transcript_order.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
-- [ ] **HYGIENE-2026-61** #3413: `test_bootstrap_complete_not_blocked_without_profile.py` — `CONTEXT_JSON_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
-- [ ] **HYGIENE-2026-62** #3413: `test_ai_private_manifest_persist.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
-- [ ] **HYGIENE-2026-63** #3413: `test_dreaming.py` — `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
-- [ ] **HYGIENE-2026-64** #3413: `test_inner_tick_schedule.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-17c9`.
+- [x] **HYGIENE-2026-59** #3413: `test_ai_private_prompt.py` — `AI_PRIVATE_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+- [x] **HYGIENE-2026-60** #3413: `test_bootstrap_transcript_order.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+- [x] **HYGIENE-2026-61** #3413: `test_bootstrap_complete_not_blocked_without_profile.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+- [x] **HYGIENE-2026-62** #3413: `test_ai_private_manifest_persist.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+- [x] **HYGIENE-2026-63** #3413: `test_dreaming.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+- [x] **HYGIENE-2026-64** #3413: `test_inner_tick_schedule.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.

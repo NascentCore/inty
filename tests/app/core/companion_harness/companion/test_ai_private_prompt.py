@@ -10,6 +10,9 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     mark_ai_private_surfaced,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    AI_PRIVATE_JSONL_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 
 
@@ -17,7 +20,7 @@ def test_get_ai_private_jsonl_extracts_text_field(tmp_path: Path) -> None:
     sc = CompanionScope("ap", "a", f"jl-{tmp_path.name}")
     store = MemoryStore(scope=sc, repository=None)
     store.write_document(
-        "ai_private.jsonl",
+        AI_PRIVATE_JSONL_REL,
         '{"text": "first note"}\n{"content": "second"}\n',
     )
     out = get_ai_private_jsonl_text_for_prompt(store)
@@ -33,6 +36,6 @@ def test_structured_thought_and_surfaced_marker(tmp_path: Path) -> None:
     assert load_ai_private_thoughts(store) == [thought]
     mark_ai_private_surfaced(store, [thought.uuid])
     assert load_ai_private_thoughts(store) == []
-    raw = store.read_document("ai_private.jsonl")
+    raw = store.read_document(AI_PRIVATE_JSONL_REL)
     assert AI_PRIVATE_SURFACED_KIND in raw
     assert get_ai_private_jsonl_text_for_prompt(store) == ""
