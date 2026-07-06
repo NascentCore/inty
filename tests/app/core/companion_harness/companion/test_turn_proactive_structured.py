@@ -86,7 +86,6 @@ def _default_deps(
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,
-        memory_bootstrap_type="NONE",
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,

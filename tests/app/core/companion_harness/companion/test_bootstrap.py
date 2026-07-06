@@ -45,19 +45,11 @@ def _store(root: Path):
     )
 
 
-def test_interactive_bootstrap_active_requires_flag_and_incomplete_meta() -> (
-    None
-):
+def test_interactive_bootstrap_active_requires_incomplete_meta() -> None:
     assert not interactive_bootstrap_active(
-        feature_enabled=False,
-        meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
-    )
-    assert not interactive_bootstrap_active(
-        feature_enabled=True,
         meta=ContextMeta(workspace_bootstrap_user_interactive_completed=True),
     )
     assert interactive_bootstrap_active(
-        feature_enabled=True,
         meta=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
     )
 
@@ -139,7 +131,8 @@ def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
     assert r.startswith("ERROR:")
     assert "note" in r
     assert (
-        json.loads(st.read_document(CONTEXT_JSON_REL))["context_mode"] == "public"
+        json.loads(st.read_document(CONTEXT_JSON_REL))["context_mode"]
+        == "public"
     )
 
 

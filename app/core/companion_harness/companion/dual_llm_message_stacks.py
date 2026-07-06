@@ -22,7 +22,9 @@ from .prompt_stack import append_runtime_output_format_system_message
 from .prompts.system_messages import (
     build_system_messages_for_tool_track,
 )
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 
 
 def replace_leading_system_messages_multi(
@@ -43,7 +45,6 @@ def dual_llm_system_message_variants(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
     runtime_context: TurnRuntimeContext,

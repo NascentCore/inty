@@ -175,7 +175,6 @@ def companion_system_messages_for_track(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     route_mode: TurnRouteMode,
     runtime_context: TurnRuntimeContext,
@@ -186,7 +185,6 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_implicit_sign_on_greeting(
                 bundle,
                 context,
-                memory_bootstrap_type,
                 runtime_context.channel,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
@@ -250,7 +248,6 @@ def companion_turn_tools_and_system_messages(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -285,7 +282,6 @@ def companion_turn_tools_and_system_messages(
         store=store,
         bundle=bundle,
         context=context,
-        memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         route_mode=route_mode,
         runtime_context=runtime_context,
@@ -296,7 +292,6 @@ def companion_turn_tools_and_system_messages(
 def refresh_companion_turn_prompt_stack(
     *,
     store: MemoryStore,
-    memory_bootstrap_type: str,
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],

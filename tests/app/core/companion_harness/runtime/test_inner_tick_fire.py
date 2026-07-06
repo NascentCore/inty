@@ -7,11 +7,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
+from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
     InnerTickThrottleKind,
-)
-from app.core.companion_harness.companion.models import (
     MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
 from app.core.companion_harness.runtime.inner_tick_fire import (
@@ -115,6 +114,11 @@ async def test_kernel_fire_throttled_monolog_result_shape(
         runtime_context=MagicMock(),
         preset_user_msg_uuid="preset-1",
         background_output_sink=None,
+        agentic_output_queue=MagicMock(),
+        user_message_batch=UserMessageBatch(
+            batch_id="agent-initiated:inner_tick:preset-1",
+            message_ids=("preset-1",),
+        ),
     )
     monkeypatch.setattr(
         "app.core.companion_harness.runtime.inner_tick_fire.monolog_transcript_line_count",
@@ -158,6 +162,11 @@ async def test_kernel_fire_throttled_autonomy_result_shape(
         runtime_context=MagicMock(),
         preset_user_msg_uuid="preset-2",
         background_output_sink=None,
+        agentic_output_queue=MagicMock(),
+        user_message_batch=UserMessageBatch(
+            batch_id="agent-initiated:inner_tick:preset-2",
+            message_ids=("preset-2",),
+        ),
     )
     monkeypatch.setattr(
         "app.core.companion_harness.runtime.inner_tick_fire.monolog_transcript_line_count",

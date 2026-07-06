@@ -12,15 +12,14 @@ from __future__ import annotations
 
 import json
 import threading
+from typing import TYPE_CHECKING
 
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
-    normalize_experience_profile_id,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 from app.living_sphere.seeding import ensure_living_sphere_seeded
 from app.techno_core.seeding import ensure_techno_core_seeded
 
@@ -40,7 +39,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
 )
 from .models import CompanionTurnResult
-from app.core.companion_harness.companion.runtime_channel import ChannelKind, TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
 from .scope import CompanionScope
 from .scope_turn_lock import (
     ScopeTurnLock,
@@ -62,6 +64,14 @@ from app.core.companion_harness.memory.memory_store_scope import (
     is_scope_initialized_in_store,
 )
 
+if TYPE_CHECKING:
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        OutputQueue,
+    )
+    from app.core.companion_harness.agentic_companion.types import (
+        UserMessageBatch,
+    )
+
 
 class CompanionConfig(BaseModel):
     """集中管理 companion 所有可调参数。"""
@@ -75,12 +85,6 @@ class CompanionConfig(BaseModel):
     # Transcript/context/ai_private 等与约定 md 一律仅走 MemoryStore（见 companion_tool_runtime）
     repository_only_store_text: bool = True
 
-    # Bootstrap: agent.companion_harness.memory_bootstrap_type (NONE | USER_INTERACTIVE).
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value
-
-    # Context: default experience profile id written to new sessions (context.json context_mode).
-    default_context_mode: str = "intimate"
-
     # Optional: fold older transcript dialogue into a structured system snapshot when
     # the OpenAI message list exceeds a character budget (see transcript_compaction).
     transcript_compaction: CompactionConfig | None = None
@@ -92,12 +96,6 @@ class CompanionConfig(BaseModel):
     # (``companion_turn_langsmith_parent_enabled_from_app_config``). True/False: force on or off
     # for all ``CompanionManager.run_turn`` calls using this config.
     langsmith_companion_parent_run_enabled: bool | None = None
-
-    @field_validator("default_context_mode")
-    @classmethod
-    def _validate_default_context_mode(cls, v: str) -> str:
-        n = normalize_experience_profile_id(v)
-        return n
 
 
 class CompanionSession:
@@ -175,10 +173,6 @@ class CompanionManager:
                 raise ValueError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
             store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
 
-            user_interactive = (
-                self._config.memory_bootstrap_type
-                == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-            )
             existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
             parsed_ctx: dict[str, object] | None = None
             write_full_context = False
@@ -201,7 +195,6 @@ class CompanionManager:
                         if (
                             isinstance(parsed_ctx, dict)
                             and len(parsed_ctx) == 0
-                            and user_interactive
                         ):
                             write_full_context = True
             if write_full_context:
@@ -209,19 +202,10 @@ class CompanionManager:
                     "user_id": user_id,
                     "companion_id": companion_id,
                     "chat_id": chat_id,
+                    "context_mode": ExperienceContextMode.UNSPECIFIC.value,
+                    "workspace_bootstrap_user_interactive_completed": False,
+                    "companion_ws_session_system_written": False,
                 }
-                if user_interactive:
-                    context_data["context_mode"] = (
-                        ExperienceContextMode.UNSPECIFIC.value
-                    )
-                    context_data[
-                        "workspace_bootstrap_user_interactive_completed"
-                    ] = False
-                    context_data["companion_ws_session_system_written"] = False
-                else:
-                    context_data["context_mode"] = (
-                        self._config.default_context_mode
-                    )
                 context_json = (
                     json.dumps(context_data, indent=2, ensure_ascii=False)
                     + "\n"
@@ -264,8 +248,8 @@ class CompanionManager:
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
-        agentic_output_queue=None,
-        user_message_batch=None,
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
         input_batch=None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
@@ -274,7 +258,6 @@ class CompanionManager:
             transcript_compaction=session.config.transcript_compaction,
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
             repository_only_store_text=session.config.repository_only_store_text,
-            memory_bootstrap_type=session.config.memory_bootstrap_type,
             background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=runtime_context,
@@ -303,8 +286,8 @@ class CompanionManager:
             implicit_signal_bundle=None,
         ),
         bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
-        agentic_output_queue=None,
-        user_message_batch=None,
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
         input_batch=None,
     ) -> CompanionTurnResult:
         return await run_companion_user_chat_turn(
@@ -332,6 +315,8 @@ class CompanionManager:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
@@ -341,6 +326,8 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )
 
@@ -354,6 +341,8 @@ class CompanionManager:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_proactive_chat_turn(
             deps=self._build_turn_deps(
@@ -362,6 +351,8 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )
 
@@ -376,6 +367,8 @@ class CompanionManager:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_scheduled_turn(
             scheduled_user_text,
@@ -385,6 +378,8 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )
 
@@ -398,6 +393,8 @@ class CompanionManager:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
         return await run_companion_inner_tick_monolog_turn(
             deps=self._build_turn_deps(
@@ -406,6 +403,8 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )
 
@@ -419,6 +418,8 @@ class CompanionManager:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
+        agentic_output_queue: OutputQueue | None = None,
+        user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
         return await run_inner_tick_autonomy(
             deps=self._build_turn_deps(
@@ -427,5 +428,7 @@ class CompanionManager:
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
                 bootstrap_interim_output_sink=None,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
             ),
         )

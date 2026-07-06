@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from app.core.companion_harness.agentic_companion.output_queue import (
+    get_output_queue_for_scope,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    synthetic_user_message_batch,
+)
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
@@ -10,6 +16,7 @@ from app.core.companion_harness.runtime.inner_tick_fire import (
     InnerTickKernelInput,
     InnerTickThrottleSnapshot,
 )
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.services import companion_chat_service
 from app.utils.models_catalog import GenAIModel
 
@@ -49,5 +56,12 @@ async def build_inner_tick_kernel_context(
         runtime_context=runtime_context,
         preset_user_msg_uuid=preset_uid,
         background_output_sink=background_output_sink,
+        agentic_output_queue=get_output_queue_for_scope(
+            AgentScope(user_id=user_id, agent_id=agent_id)
+        ),
+        user_message_batch=synthetic_user_message_batch(
+            user_msg_uuid=preset_uid,
+            track_label="inner_tick",
+        ),
     )
     return kernel_input, session

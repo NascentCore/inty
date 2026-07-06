@@ -258,7 +258,6 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
             store=None,  # type: ignore[arg-type]
             bundle=bundle,
             context=context,
-            memory_bootstrap_type="none",
             track=CompanionTurnTrack.USER_CHAT,
             route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
             runtime_context=TurnRuntimeContext(
@@ -353,7 +352,6 @@ def test_implicit_sign_on_system_messages_include_fixed_reply_language_from_conf
                 context=ContextMeta(
                     workspace_bootstrap_user_interactive_completed=False,
                 ),
-                memory_bootstrap_type="user_interactive",
                 track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
                 route_mode=TurnRouteMode.CHAT_ONLY_SYNC,
                 runtime_context=TurnRuntimeContext(
@@ -389,7 +387,6 @@ def test_implicit_sign_on_system_messages_omit_reply_language_when_config_unset(
                 store=None,  # type: ignore[arg-type]
                 bundle=bundle,
                 context=ContextMeta(),
-                memory_bootstrap_type="none",
                 track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
                 route_mode=TurnRouteMode.CHAT_ONLY_SYNC,
                 runtime_context=TurnRuntimeContext(

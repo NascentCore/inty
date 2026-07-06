@@ -31,7 +31,6 @@ from typing import Any, Protocol
 from loguru import logger
 from openai import BadRequestError
 
-from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel
 
 from app.core.companion_harness.llm.chat_completions import (
@@ -563,7 +562,6 @@ async def run_tool_background_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_store_text: bool = False,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
@@ -752,7 +750,6 @@ async def run_tool_background_loop(
             appended_capture_from_len = len(messages_with_tool_results)
             tools = refresh_companion_turn_prompt_stack(
                 store=memory_store,
-                memory_bootstrap_type=memory_bootstrap_type,
                 inner_tick_turn=inner_tick_turn,
                 inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
@@ -1012,7 +1009,6 @@ def start_tool_background_job(
     repository_only_store_text: bool = False,
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -1063,7 +1059,6 @@ def start_tool_background_job(
                     trace_hooks=trace_hooks,
                     write_allowlist=write_allowlist,
                     repository_only_store_text=repository_only_store_text,
-                    memory_bootstrap_type=memory_bootstrap_type,
                     inner_tick_turn=inner_tick_turn,
                     inner_tick_activity=inner_tick_activity,
                     runtime_context=runtime_context,

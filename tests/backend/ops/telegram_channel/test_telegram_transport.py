@@ -34,7 +34,11 @@ from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
 )
 from app.services.agentic_channel.endpoints import resolve_scope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueueAppendInput,
+)
 from app.core.companion_harness.companion.models import CompanionTurnResult
+from app.services.agentic_companion.downlink import DownlinkKind
 from app.services.agentic_channel.presence import (
     clear_presences_for_tests,
     get_presence,
@@ -510,6 +514,32 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
     transport = TelegramTransport(api=api)
     fake_model = MagicMock()
 
+    class _FakeOutputRecord:
+        message_id = "msg-onboard-greet"
+        text = "Hello from Inty."
+        sequence = 1
+
+    async def _fake_greeting_turn(**kwargs):
+        output_queue = kwargs.get("agentic_output_queue")
+        assert output_queue is not None
+        preset_uid = kwargs.get("preset_user_msg_uuid")
+        assert preset_uid is not None
+        await output_queue.append_visible_message(
+            OutputQueueAppendInput(
+                kind=DownlinkKind.USER_REPLY,
+                batch_id=(
+                    f"agent-initiated:implicit_sign_on_greeting:{preset_uid}"
+                ),
+                text="Hello from Inty.",
+                message_ids=(preset_uid,),
+                trace_id="trace-onboard-greet",
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
+            )
+        )
+        return CompanionTurnResult(assistant_text="Hello from Inty.")
+
     with patch(
         "app.services.agentic_channel.presence.resolve_chat_model_for_scope",
         new_callable=AsyncMock,
@@ -518,16 +548,31 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
         with patch(
             "app.services.agentic_channel.presence.run_companion_implicit_sign_on_greeting_turn_for_api",
             new_callable=AsyncMock,
-            return_value=CompanionTurnResult(assistant_text="Hello from Inty."),
+            side_effect=_fake_greeting_turn,
         ):
-            inbound = TelegramIncomingMessage(
-                update_id=52,
-                chat_id=telegram_chat_id,
-                channel_user_id=channel_user_id,
-                text="/start onboard",
-                local_received_at=time.time(),
-            )
-            await transport._handle_onboard(inbound=inbound)
+            with patch(
+                "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+            ) as session_cls:
+                session = AsyncMock()
+                session.__aenter__.return_value = session
+                session.__aexit__.return_value = None
+                session_cls.return_value = session
+                repo = AsyncMock()
+                repo.append_agent_output = AsyncMock(
+                    return_value=_FakeOutputRecord()
+                )
+                with patch(
+                    "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+                    return_value=repo,
+                ):
+                    inbound = TelegramIncomingMessage(
+                        update_id=52,
+                        chat_id=telegram_chat_id,
+                        channel_user_id=channel_user_id,
+                        text="/start onboard",
+                        local_received_at=time.time(),
+                    )
+                    await transport._handle_onboard(inbound=inbound)
 
     scope = await resolve_scope(
         channel=ChannelKind.TELEGRAM,

@@ -134,14 +134,13 @@ def profile_collection_active(*, context: ContextMeta) -> bool:
 
 def interactive_bootstrap_active(
     *,
-    feature_enabled: bool,
     meta: ContextMeta,
 ) -> bool:
-    """Whether a user chat turn should run on ``USER_CHAT_BOOTSTRAP``.
+    """True when this scope should still run ``USER_CHAT_BOOTSTRAP`` / bootstrap Persona slices.
 
-    The decision is intentionally just feature flag plus completion state.  The
-    current experience profile may already be ``bootstrap`` or a non-bootstrap
-    mode because completion can preserve an externally chosen relationship mode.
+    Driven only by per-session ``context.json`` completion flag — not deploy config.
+    The current experience profile may already be non-bootstrap because completion
+    can preserve an externally chosen relationship mode.
 
     TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall — #3463
     clock) before forcing best-effort MemoryDoc writes + complete — prompt-only
@@ -150,10 +149,7 @@ def interactive_bootstrap_active(
     So leave this TODO open for debate and evaluation.
     """
 
-    return (
-        bool(feature_enabled)
-        and not meta.workspace_bootstrap_user_interactive_completed
-    )
+    return not meta.workspace_bootstrap_user_interactive_completed
 
 
 def build_interactive_bootstrap_template_reference_parts(

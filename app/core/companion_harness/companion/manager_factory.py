@@ -59,7 +59,6 @@ def companion_runtime_config_fingerprint() -> str:
         str(harness.default_context_mode),
         raw_json,
         str(harness.transcript.llm_window_max_messages or ""),
-        str(harness.memory_bootstrap_type),
         str(harness.ws.session_system_text or ""),
         "companion_repo_only_store_v2",
         "companion_db_memory_documents_v4_orm",
@@ -111,11 +110,9 @@ def companion_config_for_resolved_model(
     return CompanionConfig(
         memory_pg_dsn=db_url,
         llm=llm,
-        default_context_mode=harness.default_context_mode,
         transcript_compaction=transcript_compaction,
         transcript_llm_window_max_messages=harness.transcript.llm_window_max_messages,
         repository_only_store_text=True,
-        memory_bootstrap_type=harness.memory_bootstrap_type,
     )
 
 

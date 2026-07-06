@@ -12,7 +12,6 @@ from app.utils.config import (
     AgentConfig,
     APIEndpointsConfig,
     AppConfig,
-    CompanionMemoryBootstrapType,
     FeaturesConfig,
     CloudflareConfig,
     Config,
@@ -350,17 +349,6 @@ def test_companion_harness_config_transcript_compaction_null_disables() -> None:
         companion_harness={"transcript": {"compaction": None}},
     )
     assert agent.companion_harness.transcript.compaction is None
-
-
-def test_companion_harness_memory_bootstrap_type_normalizes_case() -> None:
-    agent = AgentConfig(
-        api_key="test",
-        langchain_api_key="test",
-        companion_harness={"memory_bootstrap_type": "user_interactive"},
-    )
-    assert agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    )
 
 
 def test_companion_harness_proactive_chat_base_idle_out_of_range_raises() -> (
@@ -889,22 +877,6 @@ def test_app_config_model_validate_ignores_unknown_keys():
     assert not hasattr(app_config, "unknown_key")
 
 
-def test_companion_harness_memory_bootstrap_type_default() -> None:
-    agent = AgentConfig(api_key="test", langchain_api_key="test")
-    assert agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    )
-
-
-def test_companion_harness_memory_bootstrap_type_invalid_raises() -> None:
-    with pytest.raises(ValueError, match="memory_bootstrap_type"):
-        AgentConfig(
-            api_key="test",
-            langchain_api_key="test",
-            companion_harness={"memory_bootstrap_type": "BOGUS"},
-        )
-
-
 def test_companion_harness_default_user_time_zone_normalizes() -> None:
     agent = AgentConfig(
         api_key="test",
@@ -1040,19 +1012,6 @@ firebase:
 elevenlabs:
   api_key: "test-eleven"
 """
-
-
-def test_load_config_companion_harness_memory_bootstrap_type():
-    yaml_text = _minimal_yaml_for_load_config_harness(
-        "    memory_bootstrap_type: USER_INTERACTIVE\n",
-    )
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "config.yaml"
-        path.write_text(yaml_text, encoding="utf-8")
-        cfg = load_config(str(path))
-    assert cfg.agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
-    )
 
 
 def test_load_config_companion_harness_language() -> None:

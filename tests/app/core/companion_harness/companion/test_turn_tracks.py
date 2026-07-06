@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.utils.config import CompanionMemoryBootstrapType
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -39,7 +38,6 @@ def _minimal_turn_deps(**overrides: object) -> CompanionTurnDeps:
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=True,
-        memory_bootstrap_type="NONE",
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
@@ -82,7 +80,6 @@ async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
     )
     deps = _minimal_turn_deps(
         store=st,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
     )
     with patch(
         "app.core.companion_harness.companion.turn._run_companion_turn_core",
@@ -126,7 +123,6 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
     )
     deps = _minimal_turn_deps(
         store=st,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
     )
     with patch(
         "app.core.companion_harness.companion.turn._run_companion_turn_core",
@@ -300,9 +296,7 @@ async def test_monolog_inner_tick_track() -> None:
         new_callable=AsyncMock,
         return_value=stub,
     ) as run_turn_mock:
-        await run_companion_inner_tick_monolog_turn(
-            deps=_minimal_turn_deps()
-        )
+        await run_companion_inner_tick_monolog_turn(deps=_minimal_turn_deps())
     assert run_turn_mock.await_args is not None
     assert (
         run_turn_mock.await_args.kwargs["track"]

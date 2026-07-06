@@ -28,6 +28,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    get_output_queue_for_scope,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    synthetic_user_message_batch,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
@@ -108,6 +114,7 @@ from app.services.agentic_companion.presence_registry import (
     companion_presence_registry,
 )
 from app.services.agentic_companion.ws_outbound_materialize import (
+    materialize_implicit_greeting_ws_payload,
     materialize_tool_background_ws_payload,
 )
 from app.services.agentic_companion.ws_channel_guard import (
@@ -132,7 +139,6 @@ from app.schemas.user import User as UserSchema
 
 from app.services.chat_completion_wire import (
     build_companion_ws_completion_data,
-    _normalize_chat_response_content,
 )
 from app.services.agent_status_line import (
     agent_status_line_for_chat_header as _agent_status_line_for_chat_header,
@@ -140,7 +146,6 @@ from app.services.agent_status_line import (
 from app.api.v1.endpoints.chat_ws_companion_support import (
     CompanionInferenceUpstreamHTTPException,
     CompanionLLMInferenceBackendError,
-    _companion_ai_meta_from_turn_result,
     _companion_rejects_multimodal_user_turn,
     _persist_companion_user_message_for_bg,
     _require_websocket_companion_message_id_uuid,
@@ -1161,6 +1166,19 @@ async def _agent_chat_ws_completions_impl(
                             server_received_at_utc=datetime.now(timezone.utc),
                         )
                         if implicit_greeting_ws:
+                            assert ws_outbound_queue is not None
+                            assert companion_preset_uid is not None
+                            greeting_scope = AgentScope(
+                                user_id=str(current_user.id),
+                                agent_id=agent_id,
+                            )
+                            greeting_output_queue = get_output_queue_for_scope(
+                                greeting_scope
+                            )
+                            greeting_batch = synthetic_user_message_batch(
+                                user_msg_uuid=companion_preset_uid,
+                                track_label="implicit_sign_on_greeting",
+                            )
                             companion_turn = await companion_chat_service.run_companion_implicit_sign_on_greeting_turn_for_api(
                                 user_id=current_user.id,
                                 agent_id=agent_id,
@@ -1171,6 +1189,8 @@ async def _agent_chat_ws_completions_impl(
                                 session_id=session_id,
                                 background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
+                                agentic_output_queue=greeting_output_queue,
+                                user_message_batch=greeting_batch,
                             )
                             if (
                                 companion_preset_uid is not None
@@ -1294,12 +1314,6 @@ async def _agent_chat_ws_completions_impl(
                         if companion_ws is not None:
                             companion_ws.clear_bootstrap_interim_deliver_ctx()
                     if implicit_greeting_ws:
-                        companion_reply = companion_turn.assistant_text
-                        companion_ai_meta = _companion_ai_meta_from_turn_result(
-                            companion_turn,
-                            companion_scheduled_reminder=None,
-                            scheduled_task_id=None,
-                        )
                         companion_user_row_id = (
                             await _persist_companion_user_message_for_bg(
                                 session_id=session_id,
@@ -1319,17 +1333,14 @@ async def _agent_chat_ws_completions_impl(
                             ][
                                 "foreground_user_message_id"
                             ] = companion_user_row_id
-                        ai_message_id = await chat_history_service.add_ai_message_sync_async(
-                            session_id,
-                            companion_reply,
-                            agent_id=chat.agent_id,
-                            meta_data=companion_ai_meta,
-                        )
-                        response_content = companion_reply
-                        if (
-                            response_content is None
-                            or not str(response_content).strip()
-                        ):
+                        # Deliver from the turn result, not by pulling the scope
+                        # OutputQueue: the presence output pump races this handler
+                        # and consumes (skips) agent-initiated rows on App-WS.
+                        # TODO(#3576): route App-WS greeting via pump-owned delivery.
+                        greeting_text = str(
+                            companion_turn.assistant_text or ""
+                        ).strip()
+                        if not greeting_text:
                             logger.error(
                                 f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                             )
@@ -1337,10 +1348,18 @@ async def _agent_chat_ws_completions_impl(
                                 status_code=500,
                                 detail="Chat returned no content",
                             )
-                        (
-                            response_text_content,
-                            response_content_parts,
-                        ) = _normalize_chat_response_content(response_content)
+                        assert ws_outbound_queue is not None
+                        payload = await materialize_implicit_greeting_ws_payload(
+                            db=db,
+                            scope=greeting_scope,
+                            session_id=session_id,
+                            text=greeting_text,
+                            companion_turn=companion_turn,
+                            request=request,
+                            effective_local_id=effective_local_id,
+                            foreground_user_message_id=companion_user_row_id,
+                        )
+                        await ws_outbound_queue.put(payload)
                         if companion_ws_inner_tick_ctx is not None:
                             apply_companion_ws_inner_tick_coords(
                                 companion_ws_inner_tick_ctx,
@@ -1348,6 +1367,7 @@ async def _agent_chat_ws_completions_impl(
                                 agent_id=agent_id,
                                 chat_id=agent_scope_inner_tick_chat_id,
                             )
+                        return None
 
             response_preview = (
                 response_text_content[:100]

@@ -57,7 +57,6 @@ def test_telegram_system_messages_exclude_weixin_alias() -> None:
         store=None,  # type: ignore[arg-type]
         bundle=bundle,
         context=ContextMeta(),
-        memory_bootstrap_type="none",
         track=CompanionTurnTrack.USER_CHAT,
         route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
         runtime_context=TurnRuntimeContext(

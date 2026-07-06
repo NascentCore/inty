@@ -43,7 +43,6 @@ from app.core.companion_harness.companion.turn import (
     run_inner_tick_autonomy,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -58,7 +57,6 @@ def _default_turn_deps(
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
@@ -333,9 +331,7 @@ async def test_async_dual_inner_tick_autonomy_uses_autonomy_system_messages(
     autonomy_blocks = [
         c for c in bg_system if c.startswith("本轮（AUTONOMY 自主活动）")
     ]
-    monolog_blocks = [
-        c for c in bg_system if c.startswith("本轮（内在节拍）")
-    ]
+    monolog_blocks = [c for c in bg_system if c.startswith("本轮（内在节拍）")]
     ai_private_blocks = [
         c for c in bg_system if c.startswith("内在活动（ai_private）")
     ]

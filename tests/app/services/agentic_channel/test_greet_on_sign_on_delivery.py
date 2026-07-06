@@ -13,8 +13,10 @@ import pytest
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
+    OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
+    get_output_queue_for_scope,
     ready_output_is_agent_initiated_visible,
 )
 from app.core.companion_harness.companion.models import (
@@ -221,6 +223,23 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
         text = "Hello from Inty."
         sequence = 1
 
+    async def _fake_greeting_turn(**kwargs):
+        output_queue = kwargs.get("agentic_output_queue")
+        assert output_queue is not None
+        await output_queue.append_visible_message(
+            OutputQueueAppendInput(
+                kind=DownlinkKind.USER_REPLY,
+                batch_id="agent-initiated:implicit_sign_on_greeting:msg-greet-e2e",
+                text="Hello from Inty.",
+                message_ids=("msg-greet-e2e",),
+                trace_id="trace-greet-e2e",
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
+            )
+        )
+        return CompanionTurnResult(assistant_text="Hello from Inty.")
+
     with patch(
         "app.services.agentic_channel.presence.resolve_chat_model_for_scope",
         new_callable=AsyncMock,
@@ -229,7 +248,7 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
         with patch(
             "app.services.agentic_channel.presence.run_companion_implicit_sign_on_greeting_turn_for_api",
             new_callable=AsyncMock,
-            return_value=CompanionTurnResult(assistant_text="Hello from Inty."),
+            side_effect=_fake_greeting_turn,
         ):
             with patch(
                 "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
@@ -263,8 +282,11 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
     )
     presence = AgentChannelPresence(scope)
     fake_model = MagicMock()
-    fake_queue = MagicMock()
-    fake_queue.append_visible_message = AsyncMock()
+    output_queue = get_output_queue_for_scope(scope)
+
+    async def _silent_greeting_turn(**kwargs):
+        assert kwargs.get("agentic_output_queue") is output_queue
+        return CompanionTurnResult(assistant_text="")
 
     with patch(
         "app.services.agentic_channel.presence.resolve_chat_model_for_scope",
@@ -274,16 +296,23 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
         with patch(
             "app.services.agentic_channel.presence.run_companion_implicit_sign_on_greeting_turn_for_api",
             new_callable=AsyncMock,
-            return_value=CompanionTurnResult(
-                assistant_text="",
-            ),
+            side_effect=_silent_greeting_turn,
         ):
             with patch(
-                "app.services.agentic_channel.presence.get_output_queue_for_scope",
-                return_value=fake_queue,
-            ):
-                await presence.greet_on_sign_on(
-                    runtime_channel=ChannelKind.TELEGRAM,
-                )
+                "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+            ) as session_cls:
+                session = AsyncMock()
+                session.__aenter__.return_value = session
+                session.__aexit__.return_value = None
+                session_cls.return_value = session
+                repo = AsyncMock()
+                repo.append_agent_output = AsyncMock()
+                with patch(
+                    "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+                    return_value=repo,
+                ):
+                    await presence.greet_on_sign_on(
+                        runtime_channel=ChannelKind.TELEGRAM,
+                    )
 
-    fake_queue.append_visible_message.assert_not_awaited()
+    assert await output_queue.pull_ready_batch() == ()

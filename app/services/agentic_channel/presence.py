@@ -6,6 +6,7 @@ TODO(!3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink``
 from __future__ import annotations
 
 import asyncio
+import uuid
 from datetime import datetime, timezone
 
 from loguru import logger
@@ -30,7 +31,6 @@ from app.services.agentic_channel.scope_queue_serving import (
 )
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
-    OutputQueueAppendInput,
     ReadyOutputMessage,
     get_output_queue_for_scope,
     ready_output_is_agent_initiated_visible,
@@ -38,12 +38,11 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
 )
-from app.core.companion_harness.companion.models import (
-    user_visible_assistant_text,
+from app.core.companion_harness.agentic_companion.types import (
+    synthetic_user_message_batch,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.downlink import (
-    DownlinkKind,
     agent_initiated_visible_downlink,
     queue_user_reply_downlink,
     tool_background_downlink,
@@ -63,9 +62,7 @@ from app.services.chat_service import generate_session_id
 _SIGN_ON_GREETING_USER_TEXT_TELEGRAM = (
     "The user opened the Telegram chat through onboarding."
 )
-_SIGN_ON_GREETING_USER_TEXT_SMS = (
-    "The user texted START to connect on SMS."
-)
+_SIGN_ON_GREETING_USER_TEXT_SMS = "The user texted START to connect on SMS."
 
 _IM_USER_NOT_FOUND = "Could not find your Inty user. Please send /start again."
 _IM_AGENT_NOT_FOUND = "Could not find this companion. Please check the agent."
@@ -242,7 +239,7 @@ class AgentChannelPresence:
         await downlink.deliver(event)
 
     async def greet_on_sign_on(self, *, runtime_channel: ChannelKind) -> None:
-        """Run implicit sign-on greeting and append visible text to OutputQueue."""
+        """Run implicit sign-on greeting; visible text appends via AgenticLoop OutputQueue."""
         assert runtime_channel is not None
         model = await resolve_chat_model_for_scope(self._scope)
         bundle = ImplicitSignalBundle(
@@ -250,7 +247,13 @@ class AgentChannelPresence:
             user_signed_on=True,
             server_received_at_utc=datetime.now(timezone.utc),
         )
-        turn = await run_companion_implicit_sign_on_greeting_turn_for_api(
+        output_queue = get_output_queue_for_scope(self._scope)
+        preset_uid = str(uuid.uuid4())
+        greeting_batch = synthetic_user_message_batch(
+            user_msg_uuid=preset_uid,
+            track_label="implicit_sign_on_greeting",
+        )
+        await run_companion_implicit_sign_on_greeting_turn_for_api(
             user_id=self._scope.user_id,
             agent_id=self._scope.agent_id,
             chat_id=self._scope.memory_store_chat_id(),
@@ -258,22 +261,9 @@ class AgentChannelPresence:
             resolved_chat_model=model,
             implicit_signal_bundle=bundle,
             runtime_channel=runtime_channel,
-        )
-        visible = user_visible_assistant_text(turn.assistant_text)
-        if visible is None:
-            return
-        output_queue = get_output_queue_for_scope(self._scope)
-        await output_queue.append_visible_message(
-            OutputQueueAppendInput(
-                kind=DownlinkKind.USER_REPLY,
-                batch_id="",
-                text=visible,
-                message_ids=(),
-                trace_id=None,
-                langsmith_trace_id=None,
-                langsmith_run_id=None,
-                turn_recall=None,
-            )
+            preset_user_msg_uuid=preset_uid,
+            agentic_output_queue=output_queue,
+            user_message_batch=greeting_batch,
         )
 
     async def enqueue_app_ws_user_turn(

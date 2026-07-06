@@ -60,6 +60,24 @@ class UserMessageBatch:
         assert self.message_ids
 
 
+def synthetic_user_message_batch(
+    *,
+    user_msg_uuid: str,
+    track_label: str,
+) -> UserMessageBatch:
+    """Build inbound correlation for agent-initiated turns (greeting, inner-tick).
+
+    The ``agent-initiated:`` batch-id prefix marks the output rows as
+    agent-initiated for channel routing (see ``output_queue``).
+    """
+    assert user_msg_uuid != ""
+    assert track_label != ""
+    return UserMessageBatch(
+        batch_id=f"agent-initiated:{track_label}:{user_msg_uuid}",
+        message_ids=(user_msg_uuid,),
+    )
+
+
 class UserInputMessage(BaseModel):
     """One inbound user message appended to InputQueue."""
 

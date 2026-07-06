@@ -186,9 +186,9 @@ def test_build_inner_tick_wire_meta_monolog_matches_literal() -> None:
         inner_tick=True,
         companion_monolog_inner_tick=True,
     )
-    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
-        literal
-    )
+    assert dump_chat_ws_companion_wire_meta(
+        built
+    ) == dump_chat_ws_companion_wire_meta(literal)
 
 
 def test_build_inner_tick_wire_meta_proactive_matches_literal() -> None:
@@ -198,9 +198,9 @@ def test_build_inner_tick_wire_meta_proactive_matches_literal() -> None:
         proactive_chat=True,
         companion_proactive_chat=True,
     )
-    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
-        literal
-    )
+    assert dump_chat_ws_companion_wire_meta(
+        built
+    ) == dump_chat_ws_companion_wire_meta(literal)
 
 
 def test_build_inner_tick_wire_meta_scheduled_matches_literal() -> None:
@@ -213,11 +213,32 @@ def test_build_inner_tick_wire_meta_scheduled_matches_literal() -> None:
         companion_scheduled_reminder=True,
         scheduled_task_id="task-42",
     )
-    assert dump_chat_ws_companion_wire_meta(built) == dump_chat_ws_companion_wire_meta(
-        literal
-    )
+    assert dump_chat_ws_companion_wire_meta(
+        built
+    ) == dump_chat_ws_companion_wire_meta(literal)
 
 
 def test_build_inner_tick_wire_meta_autonomy_raises() -> None:
     with pytest.raises(ValueError, match="autonomy inner tick"):
         build_inner_tick_wire_meta(InnerTickKind.AUTONOMY)
+
+
+def test_build_chat_ws_queued_success_frame_round_trip() -> None:
+    from app.services.chat_completion_wire import (
+        build_chat_ws_queued_success_frame,
+    )
+
+    completion = ChatWsCompletionData.model_validate(
+        _base_completion_data(FOREGROUND_CHAT_META)
+    )
+    frame = build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id="agent-uuid",
+        status_line="Online",
+    )
+    round_trip = ChatWebSocketQueuedSuccessFrame.model_validate(
+        frame.model_dump(exclude_none=True)
+    )
+    assert round_trip.agent_id == "agent-uuid"
+    assert round_trip.status_line == "Online"
+    assert round_trip.data.id == completion.id

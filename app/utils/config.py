@@ -167,13 +167,6 @@ class APIEndpointsConfig(BaseModel):
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
-class CompanionMemoryBootstrapType(StrEnum):
-    """WS companion MemoryStore bootstrap mode (agent.companion_harness.memory_bootstrap_type)."""
-
-    NONE = "NONE"
-    USER_INTERACTIVE = "USER_INTERACTIVE"
-
-
 class DreamingCuratorMode(StrEnum):
     """DreamingBatch MemoryDoc curation strategy (agent.companion_harness.dreaming_curator_mode).
 
@@ -184,20 +177,6 @@ class DreamingCuratorMode(StrEnum):
 
     SEQUENTIAL = "sequential"
     ONE_SHOT = "one_shot"
-
-
-def _normalize_companion_memory_bootstrap_type(
-    raw: str,
-    *,
-    config_path: str,
-) -> str:
-    normalized = (raw or "").strip().upper()
-    allowed = {member.value for member in CompanionMemoryBootstrapType}
-    if normalized not in allowed:
-        raise ValueError(
-            f"{config_path} must be one of {sorted(allowed)}, got {raw!r}"
-        )
-    return normalized
 
 
 def _validate_companion_transcript_llm_window_max_messages(
@@ -550,14 +529,8 @@ class AgentConfig(BaseModel):
         default_context_mode: str = Field(
             default="intimate",
             description=(
-                "Default experience profile id (context.json field context_mode)."
-            ),
-        )
-        memory_bootstrap_type: str = Field(
-            default=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
-            description=(
-                "NONE = seed minimal docs only, always run_turn; "
-                "USER_INTERACTIVE = run_turn with slice tools until bootstrap complete."
+                "Default experience profile id (context.json field context_mode) "
+                "for legacy sessions; new sessions start unspecific until bootstrap."
             ),
         )
         default_user_time_zone: str | None = Field(
@@ -780,12 +753,6 @@ class AgentConfig(BaseModel):
         def normalize_companion_fields(
             self,
         ) -> "AgentConfig.CompanionHarnessConfig":
-            self.memory_bootstrap_type = (
-                _normalize_companion_memory_bootstrap_type(
-                    self.memory_bootstrap_type,
-                    config_path="agent.companion_harness.memory_bootstrap_type",
-                )
-            )
             self.default_context_mode = normalize_experience_profile_id(
                 self.default_context_mode
             )

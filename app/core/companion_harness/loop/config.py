@@ -12,6 +12,24 @@ class UserTurnLlmLoopMode(StrEnum):
     DUAL_LLM = "dual_llm"
 
 
+class AgenticLoopMechanism(StrEnum):
+    """Loop execution mechanism; orthogonal to ``CompanionTurnTrack`` turn shape (#3401)."""
+
+    SINGLE_LLM = "single_llm"
+    DUAL_LLM = "dual_llm"
+
+
+def agentic_loop_mechanism_from_user_turn_mode(
+    mode: UserTurnLlmLoopMode,
+) -> AgenticLoopMechanism:
+    """Map config ``llm_loop_mode`` to ``AgenticLoopMechanism``."""
+    match mode:
+        case UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM:
+            return AgenticLoopMechanism.SINGLE_LLM
+        case UserTurnLlmLoopMode.DUAL_LLM:
+            return AgenticLoopMechanism.DUAL_LLM
+
+
 class BatchUserMessagesLlmCallMode(StrEnum):
     """How one claimed InputQueue batch is represented in a user-turn LLM call."""
 
