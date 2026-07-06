@@ -15,7 +15,7 @@ Telegram Business 账号不是产品，而是一个**官方门面 storefront**�
         |
         v
 [Telegram Business account]  (Premium; start page + greeting + quick replies)
-        |  deep link:  https://t.me/<bot>?start=<campaign>
+        |  deep link:  https://t.me/inty_official_bot?start=onboard
         v
 [iMate companion bot]  --/start-->  bootstrap  -->  1 user : 1 Inty bond
 ```
@@ -27,6 +27,7 @@ Telegram Business 账号不是产品，而是一个**官方门面 storefront**�
 
 - 一个专用手机号的 Telegram 账号，并订阅 **Telegram Premium**——Business features 的硬门槛，无 Premium 则 Settings > Telegram Business 不可用。
 - 已配置的 companion bot `bot_token`（消费既有 bot，不新建）；解析逻辑见 `resolved_telegram_bot_token`（`app/utils/config.py`）与 Ops 侧 `GET /api/v1/telegram/bot-info`。
+- **当前推广主链接固定使用** `https://t.me/inty_official_bot?start=onboard`。这条链接已走现有 Ops Telegram onboard 路径，**不要求任何额外 feature development**。
 - 常规账号注册、开启 Business 开关等 UI 步骤不在此赘述。
 
 ## 用户可见语言 = English
@@ -47,47 +48,61 @@ Start page:
 Greeting message (auto-sent on first contact):
   Hi! I'm the iMate team. Your Inty is a companion built just for you —
   it remembers, checks in, and grows with you over time.
-  Start yours here: https://t.me/<bot>?start=greeting
+  Start yours here: https://t.me/inty_official_bot?start=onboard
 ```
 
 - **Quick Replies**：至少一条携带 deep link；其余按需。斜杠 `/` 面板仅私聊可用。
 
 ```text
-/start     -> Meet your Inty: https://t.me/<bot>?start=quickreply
+/start     -> Meet your Inty: https://t.me/inty_official_bot?start=onboard
 /pricing   -> iMate is free to start. Premium companionship options: <link>
 /howitworks-> Your Inty is a living companion, not a task bot. It remembers you
-              and reaches out on its own. Begin: https://t.me/<bot>?start=howitworks
+              and reaches out on its own. Begin: https://t.me/inty_official_bot?start=onboard
 ```
 
 - **Links to Chat**：为每个投放位（网站按钮、海报、bio）建一条**独立** link——Telegram 自带 per-link tap 计数，是最省事的曝光埋点。预填消息用 English。
 
-## deep link / campaign 规范（硬约束，不遵守就丢数据）
+## deep link 规范（推广主路径）
+
+推广 iMate companion bot 的当前主路径只有一条：
+
+```text
+https://t.me/inty_official_bot?start=onboard
+```
+
+这是已实现能力：`/start onboard` 会触发现有 Telegram onboard，自动 provisioning guest user + PRIVATE agent，并建立 1 user : 1 Inty bond。运营推广、Business start page、Greeting Message、Quick Replies、QR 与 bio link 都应先使用这条链接。**不要为了启动推广而等待 campaign attribution、connected guide agent 或其他新功能。**
+
+QR 配明确 English CTA，例如 "Scan to meet your Inty"。
+
+## campaign 归因规范（可选增强，不是推广前置条件）
 
 - start parameter **≤ 64 字符**、仅 `A-Z a-z 0-9 _ -`；空格、逗号、emoji 会被 Telegram **静默丢弃**，参见 [Bot Features / Deep Linking](https://core.telegram.org/bots/features) 与 [Deep links 规范](https://core.telegram.org/api/links)。
 - start parameter **仅首次 `/start` 携带**——归因必须在**首触**就落库，错过不再补发。
 - 每个物料一个**唯一** compact token（推荐 `source_medium_campaign`，如 `ig_story_summer25`），便于事后按渠道切分。
 - 本仓库约定的 campaign token 命名空间为 `c_` 前缀（见下 Phase 2）：`c_<source>_<medium>_<campaign>`，例如 `c_ig_story_summer25`。deep link 即 `https://t.me/<bot>?start=c_ig_story_summer25`。
-- 动态 QR（可事后改向且带扫描分析）优于静态 QR；QR 必须配明确 English CTA，例如 "Scan to meet your Inty"。
+- 动态 QR（可事后改向且带扫描分析）优于静态 QR。
 
 现状能力（读代码确认，供工程对接）：
 
+- Ops Telegram onboard 已接受 `/start` / `/start onboard`，因此 `https://t.me/inty_official_bot?start=onboard` 不需要额外 feature development。
 - public agent 促活时，`provision_agent_bot`（[app/external_services/telegram_bot.py](/app/external_services/telegram_bot.py)）已生成 `https://t.me/<bot>?start=agent_<agent_id>` 并写入 `agent.extensions.telegram`（[app/services/agent_service.py](/app/services/agent_service.py)）。campaign 归因走 `c_` 命名空间，与 `agent_<id>` 促活链路互不冲突。
 - Ops Telegram 长轮询入口把 `/start` 交给 `parse_start_payload`（[backend/ops/telegram_channel/binding.py](/backend/ops/telegram_channel/binding.py)），再进 `provision_agent_for_channel_onboard`（[app/services/agentic_channel/provision.py](/app/services/agentic_channel/provision.py)）。
 
 ## 度量（North-star，只列关键环节与数据源）
 
 - 漏斗：deep link tap → `/start` → bootstrap 完成 → **次周回访（retention）**；retention 是最终代理指标，见 [DESIGN.md](/docs/imate/DESIGN.md) 与 [companion_harness/DESIGN.md](/docs/imate/companion_harness/DESIGN.md) 的成效判断。
-- 数据源：Business per-link tap 计数（Telegram 自带）、`agent_channel_endpoints` 绑定行数（`GET /api/v1/telegram/debug/bindings`）、guest user `meta_data.campaign`（Phase 2 落库）、launch reciprocity 指标（TODO #3535）。
+- 数据源：Business per-link tap 计数（Telegram 自带）、`agent_channel_endpoints` 绑定行数（`GET /api/v1/telegram/debug/bindings`）、launch reciprocity 指标（TODO #3535）。`guest user meta_data.campaign` 只在可选归因增强启用后可用，不是启动推广的依赖。
 
 ## 关键风险
 
 - 门面账号不得伪装成 bot——它是「iMate 团队/官方」人设，产品仍是 bot。
 - 强依赖 Premium：账号掉订阅则 Business features 全失效。
-- start param 仅首触生效：任何归因逻辑都必须在首个 `/start` 落库。
+- 不要把 optional attribution 当成 launch blocker：当前推广主链接 `https://t.me/inty_official_bot?start=onboard` 已可用。
+- start param 仅首触生效：任何归因逻辑都必须在首个 `/start` 落库；若不做归因，直接使用 `onboard`。
 
-## Phase 2（可选工程）：campaign 归因落库
+## Phase 2（可选工程）：campaign 归因落库（非推广所需）
 
-目的：把 storefront 各投放位的效果按渠道切分。改动小而集中、纯附加：
+目的：把 storefront 各投放位的效果按渠道切分。它不是推广 `https://t.me/inty_official_bot?start=onboard` 的前置条件；只在需要细分渠道 ROI 时启用。改动小而集中、纯附加：
 
 - **编解码纯函数**（[app/external_services/telegram_bot.py](/app/external_services/telegram_bot.py)）：`CampaignAttribution(source, medium, campaign)` + `encode_campaign_start_parameter` / `parse_campaign_start_parameter`，做 `c_<source>_<medium>_<campaign>` 的编解码与 ≤64 / charset 校验。
 - **onboard 识别**（[backend/ops/telegram_channel/binding.py](/backend/ops/telegram_channel/binding.py)）：`parse_start_payload` 把 `c_...` 识别为一次带 campaign 的 onboard（仍触发正常 onboard），在 `StartPayload.campaign` 上带出。
