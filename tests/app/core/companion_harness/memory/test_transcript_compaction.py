@@ -63,6 +63,12 @@ def test_strip_leading_transcript_timestamp_prefixes() -> None:
         )
         == "hello"
     )
+    assert (
+        strip_leading_transcript_timestamp_prefixes(
+            "[2026-07-06 06:33:05 UTC]\n\nThat feeling"
+        )
+        == "That feeling"
+    )
     assert strip_leading_transcript_timestamp_prefixes("hello") == "hello"
 
 

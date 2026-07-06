@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 _LLM_TS_SUFFIX_UTC = " UTC"
 _TRANSCRIPT_TIMESTAMP_PREFIX_RE = re.compile(
-    r"^(?:\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\] )+"
+    r"^(?:\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC\]\s*)+"
 )
 
 
