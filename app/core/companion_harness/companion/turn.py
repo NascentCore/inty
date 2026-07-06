@@ -67,7 +67,6 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.config import user_interactive_memory_bootstrap_enabled
 from app.core.companion_harness.memory.client_time_from_memory_store import (
     resolve_client_time,
 )
@@ -317,7 +316,6 @@ async def _run_companion_turn_core(
     transcript_compaction = deps.transcript_compaction
     transcript_llm_window_max_messages = deps.transcript_llm_window_max_messages
     repository_only_store_text = deps.repository_only_store_text
-    memory_bootstrap_type = deps.memory_bootstrap_type
     runtime_context = deps.runtime_context
     incoming_bundle = runtime_context.implicit_signal_bundle
     resolved_time = resolve_client_time(
@@ -440,7 +438,6 @@ async def _run_companion_turn_core(
         store=store,
         loaded_state=loaded_state,
         tail_user_messages=tail_user_messages,
-        memory_bootstrap_type=memory_bootstrap_type,
         track=track,
         tick_proactive=tick_proactive,
         implicit_sign_on_turn=implicit_sign_on_turn,
@@ -602,7 +599,6 @@ async def _run_companion_turn_core(
                             transcript_rel=rel_tr_agentic_loop,
                             langsmith_slice=langsmith_slice,
                             runtime_context=runtime_context,
-                            memory_bootstrap_type=memory_bootstrap_type,
                             stack_depth=sum(
                                 1
                                 for message in bootstrap_prompt_plan.messages
@@ -651,7 +647,6 @@ async def _run_companion_turn_core(
                             transcript_rel=rel_tr_agentic_loop,
                             langsmith_slice=langsmith_slice,
                             runtime_context=runtime_context,
-                            memory_bootstrap_type=memory_bootstrap_type,
                             stack_depth=sum(
                                 1
                                 for message in single_llm_prompt_plan.messages
@@ -674,7 +669,6 @@ async def _run_companion_turn_core(
                             store=store,
                             bundle=bundle,
                             context=context,
-                            memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=False,
                             route_inner_activity=route_inner_activity,
                             runtime_context=runtime_context,
@@ -709,7 +703,6 @@ async def _run_companion_turn_core(
                             transcript_rel=rel_tr_agentic_loop,
                             langsmith_slice=langsmith_slice,
                             runtime_context=runtime_context,
-                            memory_bootstrap_type=memory_bootstrap_type,
                             stack_depth=_stack_depth,
                             langsmith_trace_id=langsmith_trace_acc,
                             langsmith_run_id=langsmith_llm_run_acc,
@@ -772,7 +765,6 @@ async def _run_companion_turn_core(
                         transcript_rel=rel_tr_greeting,
                         langsmith_slice=langsmith_slice,
                         runtime_context=runtime_context,
-                        memory_bootstrap_type=memory_bootstrap_type,
                         stack_depth=sum(
                             1
                             for message in messages
@@ -843,7 +835,6 @@ async def _run_companion_turn_core(
                         transcript_rel=rel_tr_inner,
                         langsmith_slice=langsmith_slice,
                         runtime_context=runtime_context,
-                        memory_bootstrap_type=memory_bootstrap_type,
                         stack_depth=sum(
                             1
                             for message in messages
@@ -922,7 +913,6 @@ async def _run_companion_turn_core(
                         transcript_rel=rel_tr_throttle,
                         langsmith_slice=langsmith_slice,
                         runtime_context=runtime_context,
-                        memory_bootstrap_type=memory_bootstrap_type,
                         stack_depth=sum(
                             1
                             for message in messages
@@ -972,7 +962,6 @@ async def _run_companion_turn_core(
                             store=store,
                             bundle=bundle,
                             context=context,
-                            memory_bootstrap_type=memory_bootstrap_type,
                             inner_tick_turn=inner_tick_turn,
                             route_inner_activity=route_inner_activity,
                             runtime_context=runtime_context,
@@ -1074,7 +1063,6 @@ async def _run_companion_turn_core(
                         repository_only_store_text=repository_only_store_text,
                         main_event_loop=asyncio.get_running_loop(),
                         langsmith_parent_run=langsmith_parent_run,
-                        memory_bootstrap_type=memory_bootstrap_type,
                         inner_tick_turn=inner_tick_turn,
                         inner_tick_activity=route_inner_activity,
                         runtime_context=runtime_context,
@@ -1398,12 +1386,7 @@ async def run_companion_user_chat_turn(
     context = load_context_meta(store=deps.store)
     track = (
         CompanionTurnTrack.USER_CHAT_BOOTSTRAP
-        if interactive_bootstrap_active(
-            feature_enabled=user_interactive_memory_bootstrap_enabled(
-                deps.memory_bootstrap_type
-            ),
-            meta=context,
-        )
+        if interactive_bootstrap_active(meta=context)
         else CompanionTurnTrack.USER_CHAT
     )
     return await _run_companion_turn_core(user_text, track=track, deps=deps)

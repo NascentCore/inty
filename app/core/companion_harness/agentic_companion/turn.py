@@ -60,7 +60,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.llms.client import LlmClient
-from app.utils.config import user_interactive_memory_bootstrap_enabled
 from app.utils.models_catalog import GenAIModel
 
 
@@ -78,14 +77,8 @@ class InjectedCompanionRuntime:
 def _assert_session_initialized(session: CompanionSession) -> None:
     if session.is_initialized:
         return
-    if user_interactive_memory_bootstrap_enabled(
-        session.config.memory_bootstrap_type
-    ):
-        raise RuntimeError(
-            "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
-        )
     raise RuntimeError(
-        "Companion MemoryStore not initialized (expected minimal seed at session create)"
+        "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
     )
 
 
@@ -128,10 +121,6 @@ async def _maybe_append_agent_channel_session_system(
     *,
     session: CompanionSession,
 ) -> None:
-    if not user_interactive_memory_bootstrap_enabled(
-        session.config.memory_bootstrap_type
-    ):
-        return
     meta = load_context_meta(store=session.store)
     if meta.workspace_bootstrap_user_interactive_completed:
         return

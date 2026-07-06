@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 from typing import Any
@@ -21,7 +22,9 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.utils.config import CompanionMemoryBootstrapType
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 
 
 class InMemoryTestOutputQueue(OutputQueue):
@@ -52,6 +55,17 @@ class InMemoryTestOutputQueue(OutputQueue):
             )
             self._ready.append(ready)
         return ready
+
+
+def mark_interactive_bootstrap_completed(store: MemoryStore) -> None:
+    """Mark ``context.json`` bootstrap complete so settled ``USER_CHAT`` track applies."""
+    raw = store.read_document_if_exists(CONTEXT_JSON_REL)
+    data = json.loads(raw) if raw and str(raw).strip() else {}
+    assert isinstance(data, dict)
+    data["workspace_bootstrap_user_interactive_completed"] = True
+    store.write_document(
+        CONTEXT_JSON_REL, json.dumps(data, ensure_ascii=False) + "\n"
+    )
 
 
 def bootstrap_queue_for_companion_scope(
@@ -96,7 +110,6 @@ def bootstrap_queue_turn_deps(
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,

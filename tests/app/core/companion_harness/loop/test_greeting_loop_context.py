@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.core.companion_harness.companion.models import CompanionTurnTrack
-from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -89,6 +88,5 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
     assert (
         ctx.companion_turn_track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     )
-    assert ctx.memory_bootstrap_type == CompanionMemoryBootstrapType.NONE
     assert ctx.max_tool_rounds == 0
     assert ctx.openai_tools == ()

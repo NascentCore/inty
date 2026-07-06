@@ -66,7 +66,6 @@ You should only changes and use code in the following dirs:
 
 ### Explicit boundary
 
-
 - Always start with stating your assumptions, adopted external designs/systems, etc.,
 and then proceed. This allows the human partners to understand
 your whole thought process.

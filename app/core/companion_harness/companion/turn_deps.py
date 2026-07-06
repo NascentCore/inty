@@ -9,8 +9,7 @@ Field provenance:
 
 - **Session-scoped** (from ``CompanionSession`` / ``CompanionConfig``): ``store``,
   ``llm_client``, ``transcript_compaction``, ``transcript_llm_window_max_messages``,
-  ``repository_only_store_text``, ``memory_bootstrap_type``,
-  ``langsmith_parent_run_enabled``, ``tool_bg_idle_event``.
+  ``repository_only_store_text``, ``langsmith_parent_run_enabled``, ``tool_bg_idle_event``.
 - **Per-turn** (from the wire / API layer each invocation): ``runtime_context``,
   ``background_output_sink``, ``preset_user_msg_uuid``,
   ``bootstrap_interim_output_sink``.
@@ -28,7 +27,6 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 
 from app.core.llms.client import LlmClient
-from app.utils.config import CompanionMemoryBootstrapType
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
@@ -84,13 +82,6 @@ class CompanionTurnDeps:
         only (no repository side paths for transcript/context markdown). Wired from
         ``CompanionConfig.repository_only_store_text`` and passed into tool
         execution (``execute_tool_call``, ``tool_background``).
-
-    memory_bootstrap_type
-        ``CompanionMemoryBootstrapType`` value (``NONE`` | ``USER_INTERACTIVE``).
-        Controls whether interactive bootstrap is active and which system-message
-        stack ``USER_CHAT`` vs ``USER_CHAT_BOOTSTRAP`` selects. Does not by itself
-        pick the track—that is decided in ``run_companion_user_chat_turn`` from
-        ``context.json`` completion flags.
 
     runtime_context
         Per-turn facts separate from MemoryDoc content: human-facing
@@ -148,7 +139,6 @@ class CompanionTurnDeps:
     transcript_compaction: TranscriptCompactionConfig | None
     transcript_llm_window_max_messages: int | None
     repository_only_store_text: bool
-    memory_bootstrap_type: CompanionMemoryBootstrapType
     runtime_context: TurnRuntimeContext
     background_output_sink: BackgroundToolEventSink | None
     preset_user_msg_uuid: str | None

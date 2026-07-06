@@ -29,7 +29,6 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
     bootstrap_queue_turn_deps,
@@ -103,7 +102,6 @@ def test_run_turn_inner_tick_scheduled_semantics(
                 transcript_compaction=None,
                 transcript_llm_window_max_messages=None,
                 repository_only_store_text=False,
-                memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
                 runtime_context=TurnRuntimeContext(
                     channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
@@ -174,7 +172,6 @@ async def test_bootstrap_without_queue_raises_runtime_error(
                 transcript_compaction=None,
                 transcript_llm_window_max_messages=None,
                 repository_only_store_text=False,
-                memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
                 runtime_context=TurnRuntimeContext(
                     channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,

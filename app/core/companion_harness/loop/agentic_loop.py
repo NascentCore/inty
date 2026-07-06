@@ -765,7 +765,6 @@ class AgenticLoop:
             chat_completion_sync=llm_client.chat_completions_sync,
             write_allowlist=context.write_allowlist,
             repository_only_store_text=context.repository_only_store_text,
-            memory_bootstrap_type=context.memory_bootstrap_type,
             inner_tick_turn=context.inner_tick_turn,
             inner_tick_activity=context.inner_tick_activity,
             runtime_context=context.runtime_context,

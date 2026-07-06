@@ -52,8 +52,10 @@ from app.models.agentic_companion_queue import (
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import DEEPSEEK_V3_2
+from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+    mark_interactive_bootstrap_completed,
+)
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
     build_scripted_injected_runtime,
@@ -74,6 +76,16 @@ def _implicit_bundle() -> ImplicitSignalBundle:
         client_time=None,
         user_signed_on=False,
         server_received_at_utc=datetime.now(UTC),
+    )
+
+
+def _seed_settled_store_for_drain(
+    scope: AgentScope,
+    injected: object,
+) -> None:
+    """Mark bootstrap complete so drain exercises settled ``USER_CHAT`` track."""
+    mark_interactive_bootstrap_completed(
+        memory_store_for_injected_runtime(scope, injected)  # type: ignore[arg-type]
     )
 
 
@@ -129,6 +141,7 @@ async def test_drain_user_chat_no_tools_delivers_foreground(
         meta_data={"test": "scripted_drain"},
     )
     try:
+        _seed_settled_store_for_drain(scope, injected)
         with with_scripted_user_turn_llm_loop_mode(llm_loop_mode):
             now = datetime.now(UTC)
             async with AsyncSessionLocal() as db:
@@ -230,6 +243,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
         meta_data={"test": "scripted_drain_tool_bg"},
     )
     try:
+        _seed_settled_store_for_drain(scope, injected)
         now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
@@ -294,6 +308,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
         meta_data={"test": "scripted_drain_skip_output"},
     )
     try:
+        _seed_settled_store_for_drain(scope, injected)
         now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
@@ -415,6 +430,7 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
         BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE.value
     )
     try:
+        _seed_settled_store_for_drain(scope, injected)
         now = datetime.now(UTC)
         async with AsyncSessionLocal() as db:
             input_repo = PostgresInputQueueRepository(db)
@@ -495,7 +511,6 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
     script = (fake_step_text("Welcome! What kind of companion do you want?"),)
     injected, fake = build_scripted_injected_runtime(
         script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
     )
     scope = await create_guest_scope_for_test(
         channel=ChannelKind.APP_WS,

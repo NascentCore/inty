@@ -31,7 +31,6 @@ from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
@@ -85,7 +84,6 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
         store=store,
         loaded_state=loaded_state,
         tail_user_messages=_tail_user(),
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
         track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         tick_proactive=False,
         implicit_sign_on_turn=False,

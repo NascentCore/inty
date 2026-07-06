@@ -54,10 +54,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
-from app.utils.config import (
-    CompanionMemoryBootstrapType,
-    resolved_companion_memory_bootstrap_type,
-)
 
 AfterToolMessagesHook = Callable[
     [list[dict[str, Any]]],
@@ -114,9 +110,6 @@ class AgenticLoopContext:
     prompt_plan: PromptPlan | None = None
     # TODO(!3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
     # TODO(!3629): Drop openai_messages once PromptPlan is the sole prompt carrier.
-    memory_bootstrap_type: CompanionMemoryBootstrapType = (
-        CompanionMemoryBootstrapType.NONE
-    )
     stack_depth: int = 0
     companion_turn_track: CompanionTurnTrack | None = None
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None
@@ -172,7 +165,6 @@ def build_implicit_sign_on_greeting_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -211,9 +203,6 @@ def build_implicit_sign_on_greeting_loop_context(
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
         companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
     )
 
@@ -230,7 +219,6 @@ def build_inner_tick_chat_only_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -274,9 +262,6 @@ def build_inner_tick_chat_only_loop_context(
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
         companion_turn_track=track,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
     )
 
@@ -295,7 +280,6 @@ def build_inner_tick_tool_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -340,9 +324,6 @@ def build_inner_tick_tool_loop_context(
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
         companion_turn_track=track,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
         skip_foreground_envelope=True,
     )
@@ -360,7 +341,6 @@ def build_settled_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -401,9 +381,6 @@ def build_settled_user_chat_loop_context(
         user_message_batch=user_message_batch,
         context_meta=None,
         prompt_plan=prompt_plan,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
     )
@@ -421,7 +398,6 @@ def build_settled_dual_llm_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -465,9 +441,6 @@ def build_settled_dual_llm_user_chat_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         context_meta=context_meta,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
@@ -489,7 +462,6 @@ def build_bootstrap_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
@@ -530,8 +502,5 @@ def build_bootstrap_user_chat_loop_context(
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
         companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
-            memory_bootstrap_type
-        ),
         stack_depth=stack_depth,
     )

@@ -22,7 +22,6 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.companion.schedule_queue import (
     scheduled_task_synthetic_user_text,
 )
@@ -87,7 +86,6 @@ def _default_deps(
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,

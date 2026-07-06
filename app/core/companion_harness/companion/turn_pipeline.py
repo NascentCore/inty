@@ -75,7 +75,6 @@ from .transcript_ai_private import (
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 
 
 @dataclass(frozen=True)
@@ -224,7 +223,6 @@ def build_companion_turn_prompt_plan(
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     track: CompanionTurnTrack,
     tick_proactive: bool,
     implicit_sign_on_turn: bool,
@@ -261,7 +259,6 @@ def build_companion_turn_prompt_plan(
                     store=store,
                     bundle=loaded_state.bundle,
                     context=loaded_state.context,
-                    memory_bootstrap_type=memory_bootstrap_type,
                     track=track,
                     implicit_user_signed_on_turn=implicit_sign_on_turn,
                     runtime_context=runtime_context,

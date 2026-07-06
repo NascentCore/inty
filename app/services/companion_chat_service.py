@@ -56,10 +56,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import (
-    DreamingCuratorMode,
-    user_interactive_memory_bootstrap_enabled,
-)
+from app.utils.config import DreamingCuratorMode
 from app.utils.models_catalog import GenAIModel
 
 
@@ -182,10 +179,6 @@ async def _maybe_append_companion_ws_session_system(
 ) -> None:
     if not session_id or not str(session_id).strip():
         return
-    if not user_interactive_memory_bootstrap_enabled(
-        session.config.memory_bootstrap_type
-    ):
-        return
     from app.core.companion_harness.companion.models import load_context_meta
     from app.core.companion_harness.companion.utc import utc_iso_ts
     from app.core.companion_harness.memory.memory_store_scope import (
@@ -253,14 +246,8 @@ async def _companion_session_for_api_turn(
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
     if not session.is_initialized:
-        if user_interactive_memory_bootstrap_enabled(
-            session.config.memory_bootstrap_type
-        ):
-            raise RuntimeError(
-                "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
-            )
         raise RuntimeError(
-            "Companion MemoryStore not initialized (expected minimal seed at session create)"
+            "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
         )
     t_ws0 = time.perf_counter()
     await _maybe_append_companion_ws_session_system(

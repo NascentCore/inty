@@ -167,13 +167,6 @@ class APIEndpointsConfig(BaseModel):
     use_dummy_api_v1_character_themes_id_get: bool = False
 
 
-class CompanionMemoryBootstrapType(StrEnum):
-    """WS companion MemoryStore bootstrap mode (agent.companion_harness.memory_bootstrap_type)."""
-
-    NONE = "NONE"
-    USER_INTERACTIVE = "USER_INTERACTIVE"
-
-
 class DreamingCuratorMode(StrEnum):
     """DreamingBatch MemoryDoc curation strategy (agent.companion_harness.dreaming_curator_mode).
 
@@ -184,41 +177,6 @@ class DreamingCuratorMode(StrEnum):
 
     SEQUENTIAL = "sequential"
     ONE_SHOT = "one_shot"
-
-
-def _normalize_companion_memory_bootstrap_type(
-    raw: str | CompanionMemoryBootstrapType,
-    *,
-    config_path: str,
-) -> CompanionMemoryBootstrapType:
-    if isinstance(raw, CompanionMemoryBootstrapType):
-        return raw
-    normalized = (raw or "").strip().upper()
-    allowed = {member.value for member in CompanionMemoryBootstrapType}
-    if normalized not in allowed:
-        raise ValueError(
-            f"{config_path} must be one of {sorted(allowed)}, got {raw!r}"
-        )
-    return CompanionMemoryBootstrapType(normalized)
-
-
-def resolved_companion_memory_bootstrap_type(
-    value: CompanionMemoryBootstrapType | None,
-) -> CompanionMemoryBootstrapType:
-    """Coerce optional bootstrap mode; None means no interactive bootstrap (NONE)."""
-    if value is None:
-        return CompanionMemoryBootstrapType.NONE
-    return value
-
-
-def user_interactive_memory_bootstrap_enabled(
-    memory_bootstrap_type: CompanionMemoryBootstrapType | None,
-) -> bool:
-    """True when harness config selects interactive MemoryStore bootstrap."""
-    return (
-        resolved_companion_memory_bootstrap_type(memory_bootstrap_type)
-        == CompanionMemoryBootstrapType.USER_INTERACTIVE
-    )
 
 
 def _validate_companion_transcript_llm_window_max_messages(
@@ -571,14 +529,8 @@ class AgentConfig(BaseModel):
         default_context_mode: str = Field(
             default="intimate",
             description=(
-                "Default experience profile id (context.json field context_mode)."
-            ),
-        )
-        memory_bootstrap_type: CompanionMemoryBootstrapType = Field(
-            default=CompanionMemoryBootstrapType.USER_INTERACTIVE,
-            description=(
-                "NONE = seed minimal docs only, always run_turn; "
-                "USER_INTERACTIVE = run_turn with slice tools until bootstrap complete."
+                "Default experience profile id (context.json field context_mode) "
+                "for legacy sessions; new sessions start unspecific until bootstrap."
             ),
         )
         default_user_time_zone: str | None = Field(
@@ -796,23 +748,6 @@ class AgentConfig(BaseModel):
                 return value
 
         user_turn: UserTurnConfig = Field(default_factory=UserTurnConfig)
-
-        @field_validator("memory_bootstrap_type", mode="before")
-        @classmethod
-        def _coerce_memory_bootstrap_type(
-            cls, value: object
-        ) -> CompanionMemoryBootstrapType:
-            if isinstance(value, CompanionMemoryBootstrapType):
-                return value
-            if isinstance(value, str):
-                return _normalize_companion_memory_bootstrap_type(
-                    value,
-                    config_path="agent.companion_harness.memory_bootstrap_type",
-                )
-            raise TypeError(
-                "agent.companion_harness.memory_bootstrap_type must be str or "
-                f"CompanionMemoryBootstrapType, got {type(value).__name__}"
-            )
 
         @model_validator(mode="after")
         def normalize_companion_fields(

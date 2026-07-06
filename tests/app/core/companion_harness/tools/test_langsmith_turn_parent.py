@@ -49,7 +49,6 @@ from app.core.companion_harness.companion.turn import (
     run_companion_user_chat_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 _APP_SLICE = CompanionTurnLangsmithSlice.app_default()
@@ -570,7 +569,6 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
             transcript_compaction=None,
             transcript_llm_window_max_messages=None,
             repository_only_store_text=False,
-            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
             runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.TELEGRAM,
                 implicit_signal_bundle=None,

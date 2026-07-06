@@ -66,8 +66,6 @@ agent:
   # intellimate-dev project, inty-testing api key, personal access token
   langchain_api_key: "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"
   companion_harness:
-    # WS companion bootstrap: NONE | USER_INTERACTIVE
-    memory_bootstrap_type: USER_INTERACTIVE
     # Local Telegram idle-pause smoke only (production default 960 min).
     agent_scope_idle_timeout_minutes: 5
     # Fast proactive + dreaming rhythm for REPL regression gate (defaults: idle 30s / 7200s).

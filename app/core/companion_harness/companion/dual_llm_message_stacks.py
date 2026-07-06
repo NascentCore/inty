@@ -25,7 +25,6 @@ from .prompts.system_messages import (
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
-from app.utils.config import CompanionMemoryBootstrapType
 
 
 def replace_leading_system_messages_multi(
@@ -46,9 +45,6 @@ def dual_llm_system_message_variants(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: (
-        CompanionMemoryBootstrapType | None
-    ) = None,  # TODO(#3463): unused; drop when dual-LLM stacks unify
     inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
     runtime_context: TurnRuntimeContext,
