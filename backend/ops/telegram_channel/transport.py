@@ -51,10 +51,8 @@ from app.services.agentic_channel.companion_bonds import (
 from app.services.agentic_channel.provision import (
     ChannelProvisionResult,
     provision_agent_for_channel_onboard,
-    record_guest_campaign_attribution,
 )
 from backend.ops.telegram_channel.binding import (
-    StartPayload,
     StartPayloadKind,
     parse_start_payload,
 )
@@ -183,7 +181,7 @@ class TelegramTransport:
     async def _handle_inbound(self, inbound: TelegramIncomingMessage) -> None:
         start = parse_start_payload(inbound.text)
         if start.kind == StartPayloadKind.ONBOARD:
-            await self._handle_onboard(inbound=inbound, start=start)
+            await self._handle_onboard(inbound=inbound)
             return
         scope = await resolve_scope(
             channel=ChannelKind.TELEGRAM,
@@ -232,7 +230,7 @@ class TelegramTransport:
             )
 
     async def _handle_onboard(
-        self, *, inbound: TelegramIncomingMessage, start: StartPayload
+        self, *, inbound: TelegramIncomingMessage
     ) -> None:
         existing = await resolve_scope(
             channel=ChannelKind.TELEGRAM,
@@ -342,11 +340,6 @@ class TelegramTransport:
             provision.scope.user_id,
             provision.scope.agent_id,
         )
-        if start.campaign is not None:
-            await record_guest_campaign_attribution(
-                user_id=provision.scope.user_id,
-                campaign=start.campaign,
-            )
         await self._activate_provision(
             inbound=inbound,
             provision=provision,

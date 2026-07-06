@@ -53,7 +53,6 @@ from app.services.agentic_channel.provision import (
     provision_agent_for_channel_onboard,
 )
 from backend.ops.telegram_channel import session_store
-from backend.ops.telegram_channel.binding import parse_start_payload
 from backend.ops.telegram_channel.transport import (
     TelegramTransport,
     _BOND_UNAVAILABLE,
@@ -223,9 +222,7 @@ async def _run_onboard_start(
             text="/start onboard",
             local_received_at=time.time(),
         )
-        await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
+        await transport._handle_onboard(inbound=inbound)
     return sent, mock_presence
 
 
@@ -345,12 +342,8 @@ async def test_concurrent_onboard_both_welcome_without_assert() -> None:
             local_received_at=time.time(),
         )
         await asyncio.gather(
-            transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        ),
-            transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        ),
+            transport._handle_onboard(inbound=inbound),
+            transport._handle_onboard(inbound=inbound),
         )
     assert mock_presence.greet_on_sign_on.await_count >= 1
     scope = await resolve_scope(
@@ -485,9 +478,7 @@ async def test_onboard_new_user_triggers_greeting() -> None:
             text="/start onboard",
             local_received_at=time.time(),
         )
-        await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
+        await transport._handle_onboard(inbound=inbound)
 
     assert sent == [_ONBOARD_NOTICE_NEW]
     mock_presence.greet_on_sign_on.assert_awaited_once()
@@ -496,55 +487,6 @@ async def test_onboard_new_user_triggers_greeting() -> None:
         channel_address=telegram_chat_id,
     )
     assert scope is not None
-    await _cleanup_scope(scope)
-
-
-@pytest.mark.asyncio
-async def test_onboard_campaign_start_persists_attribution() -> None:
-    tag = uuid.uuid4().hex[:10]
-    telegram_chat_id = f"tg-camp-{tag}"
-    channel_user_id = f"tg-user-{tag}"
-    sent: list[str] = []
-    api = TelegramBotApi(bot_token="camp-test-token", urlopen=_fake_urlopen)
-    transport = TelegramTransport(api=api)
-
-    async def capture(*, chat_id: str, text: str) -> None:
-        sent.append(text)
-
-    transport._send_channel_text = capture  # type: ignore[method-assign]
-    mock_presence = MagicMock()
-    mock_presence.greet_on_sign_on = AsyncMock()
-
-    with patch(
-        "backend.ops.telegram_channel.transport.get_presence",
-        return_value=mock_presence,
-    ):
-        inbound = TelegramIncomingMessage(
-            update_id=53,
-            chat_id=telegram_chat_id,
-            channel_user_id=channel_user_id,
-            text="/start c_ig_story_summer25",
-            local_received_at=time.time(),
-        )
-        await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
-
-    scope = await resolve_scope(
-        channel=ChannelKind.TELEGRAM,
-        channel_address=telegram_chat_id,
-    )
-    assert scope is not None
-    async with AsyncSessionLocal() as db:
-        user_row = await db.execute(
-            select(User).where(User.id == scope.user_id)
-        )
-        user = user_row.scalar_one()
-        assert user.meta_data["campaign"] == {
-            "source": "ig",
-            "medium": "story",
-            "campaign": "summer25",
-        }
     await _cleanup_scope(scope)
 
 
@@ -585,9 +527,7 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
                 text="/start onboard",
                 local_received_at=time.time(),
             )
-            await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
+            await transport._handle_onboard(inbound=inbound)
 
     scope = await resolve_scope(
         channel=ChannelKind.TELEGRAM,
@@ -785,9 +725,7 @@ async def test_onboard_returning_welcomes_paused_bond() -> None:
         text="/start onboard",
         local_received_at=time.time(),
     )
-    await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
+    await transport._handle_onboard(inbound=inbound)
 
     assert sent == [_ONBOARD_NOTICE_RETURNING]
     assert get_presence(provision.scope) is not None
@@ -879,9 +817,7 @@ async def test_onboard_greeting_failure_falls_back() -> None:
             text="/start onboard",
             local_received_at=time.time(),
         )
-        await transport._handle_onboard(
-            inbound=inbound, start=parse_start_payload(inbound.text)
-        )
+        await transport._handle_onboard(inbound=inbound)
 
     assert sent == [_ONBOARD_NOTICE_NEW]
     scope = await resolve_scope(
