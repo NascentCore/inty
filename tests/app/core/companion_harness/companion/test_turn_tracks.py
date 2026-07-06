@@ -14,6 +14,9 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnResult,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
@@ -58,7 +61,7 @@ async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
     scope = CompanionScope("turn-tracks-daily", "agent", tmp_path.name)
     st = MemoryStore(scope=scope, repository=None)
     st.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "public",
@@ -101,7 +104,7 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
     scope = CompanionScope("turn-tracks", "agent", tmp_path.name)
     st = MemoryStore(scope=scope, repository=None)
     st.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -144,7 +147,7 @@ async def test_user_chat_turn_plumbs_agentic_output_queue_for_bootstrap(
     scope = CompanionScope("turn-tracks-queue", "agent", tmp_path.name)
     st = MemoryStore(scope=scope, repository=None)
     st.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "unspecific",
