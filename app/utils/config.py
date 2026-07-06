@@ -174,6 +174,18 @@ class CompanionMemoryBootstrapType(StrEnum):
     USER_INTERACTIVE = "USER_INTERACTIVE"
 
 
+class DreamingCuratorMode(StrEnum):
+    """DreamingBatch MemoryDoc curation strategy (agent.companion_harness.dreaming_curator_mode).
+
+    ``one_shot``: one LLM request with parallel tool calls for all target docs.
+    ``sequential``: legacy per-document curator chain (rollback if one_shot quality regresses).
+    See ``app.core.companion_harness.memory.dreaming_consolidation``.
+    """
+
+    SEQUENTIAL = "sequential"
+    ONE_SHOT = "one_shot"
+
+
 def _normalize_companion_memory_bootstrap_type(
     raw: str,
     *,
@@ -517,6 +529,14 @@ class AgentConfig(BaseModel):
                 "Min seconds since the latest real user message before "
                 "``dreaming_due`` may run. Independent of the once-per-UTC-day cap "
                 "(see ``companion.dreaming`` module doc)."
+            ),
+        )
+        dreaming_curator_mode: DreamingCuratorMode = Field(
+            default=DreamingCuratorMode.ONE_SHOT,
+            description=(
+                "DreamingBatch MemoryDoc curation: ``one_shot`` (single LLM with "
+                "parallel tool calls) or ``sequential`` (legacy per-doc chain). "
+                "Set ``sequential`` to roll back if one_shot quality regresses."
             ),
         )
         agent_scope_idle_timeout_minutes: int = Field(

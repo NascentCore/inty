@@ -292,6 +292,33 @@ def test_agent_config_companion_harness_settings() -> None:
     assert agent.companion_harness.user_feedback_github.token == "gh_test"
 
 
+def test_companion_harness_dreaming_curator_mode_defaults_to_one_shot() -> None:
+    from app.utils.config import DreamingCuratorMode
+
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+    )
+    assert (
+        agent.companion_harness.dreaming_curator_mode
+        == DreamingCuratorMode.ONE_SHOT
+    )
+
+
+def test_companion_harness_dreaming_curator_mode_sequential_override() -> None:
+    from app.utils.config import DreamingCuratorMode
+
+    agent = AgentConfig(
+        api_key="test",
+        langchain_api_key="test",
+        companion_harness={"dreaming_curator_mode": "sequential"},
+    )
+    assert (
+        agent.companion_harness.dreaming_curator_mode
+        == DreamingCuratorMode.SEQUENTIAL
+    )
+
+
 def test_companion_harness_inner_tick_monolog_accepts_legacy_maintenance_key() -> (
     None
 ):

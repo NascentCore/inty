@@ -64,6 +64,13 @@ You should only changes and use code in the following dirs:
 
 ## General instructions
 
+### Explicit boundary
+
+
+- Always start with stating your assumptions, adopted external designs/systems, etc.,
+and then proceed. This allows the human partners to understand
+your whole thought process.
+
 ### Output
 
 - Answer in Mandarin（使用简体中文回答）

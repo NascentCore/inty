@@ -19,6 +19,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 from app.living_sphere.models import LivingSphereUpdate
 from app.living_sphere.seeding import seed_living_sphere_markdown
+from app.utils.config import DreamingCuratorMode
+from tests.app.core.companion_harness.companion.companion_scripted_llm import (
+    UnusedLlmClient,
+)
 
 
 def _idle_tool_bg() -> threading.Event:
@@ -37,9 +41,7 @@ def _seed_store(store: MemoryStore) -> None:
         ("COMPANIONSHIP.md", "companionship\n"),
     ):
         store.write_document(name, body)
-    store.write_document(
-        LIVING_SPHERE_MD_REL, seed_living_sphere_markdown()
-    )
+    store.write_document(LIVING_SPHERE_MD_REL, seed_living_sphere_markdown())
 
 
 def _valid_md() -> str:
@@ -90,7 +92,10 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
         consolidate_memory_during_dreaming(
             store,
             _dream_rows(),
+            DreamingCuratorMode.SEQUENTIAL,
             fake_complete,
+            UnusedLlmClient(),
+            langsmith_extra={},
             tool_bg_idle_event=_idle_tool_bg(),
         )
         is True
@@ -121,7 +126,10 @@ def test_dreaming_consolidation_skips_living_sphere_curator_without_pending(
     consolidate_memory_during_dreaming(
         store,
         _dream_rows(),
+        DreamingCuratorMode.SEQUENTIAL,
         fake_complete,
+        UnusedLlmClient(),
+        langsmith_extra={},
         tool_bg_idle_event=_idle_tool_bg(),
     )
     assert store.read_document(LIVING_SPHERE_MD_REL) == original
@@ -164,7 +172,10 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
     consolidate_memory_during_dreaming(
         store,
         _dream_rows(),
+        DreamingCuratorMode.SEQUENTIAL,
         fake_complete,
+        UnusedLlmClient(),
+        langsmith_extra={},
         tool_bg_idle_event=ev,
     )
     state = json.loads(

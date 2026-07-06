@@ -30,17 +30,20 @@ from app.core.companion_harness.companion.dreaming_observability import (
 )
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.memory.dreaming_consolidation import (
+    DREAMING_ONE_SHOT_LLM_ROLE,
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.runtime.dreaming_scope_lock import (
     try_dreaming_scope_advisory_lock,
 )
+from app.utils.config import DreamingCuratorMode
 
 
 def run_dreaming_batch_if_due(
     session: CompanionSession,
     *,
     idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
 ) -> DreamingBatchOutcome:
     """Run one sleeping-state dreaming batch when due.
 
@@ -91,6 +94,7 @@ def run_dreaming_batch_if_due(
                 session=session,
                 candidate=candidate,
                 idle_seconds=idle_seconds,
+                curator_mode=curator_mode,
                 inty_trace_id=inty_trace_id,
             )
 
@@ -98,6 +102,7 @@ def run_dreaming_batch_if_due(
         session=session,
         candidate=candidate,
         idle_seconds=idle_seconds,
+        curator_mode=curator_mode,
         inty_trace_id=inty_trace_id,
     )
 
@@ -107,6 +112,7 @@ def _run_dreaming_batch_locked(
     session: CompanionSession,
     candidate: DreamingCandidate,
     idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
     inty_trace_id: str,
 ) -> DreamingBatchOutcome:
     _ = idle_seconds
@@ -131,7 +137,12 @@ def _run_dreaming_batch_locked(
             consolidate_memory_during_dreaming(
                 session.store,
                 candidate.rows,
+                curator_mode,
                 _complete_fn,
+                session.llm_client,
+                langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
+                    model_role=DREAMING_ONE_SHOT_LLM_ROLE
+                ),
                 tool_bg_idle_event=session.tool_bg_idle,
             )
             assert_dreaming_transcript_boundary_unchanged(

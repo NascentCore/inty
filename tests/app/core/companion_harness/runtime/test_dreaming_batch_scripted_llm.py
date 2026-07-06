@@ -26,11 +26,17 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
-from app.external_services.fakes.openai import fake_step_text
+from app.external_services.fakes.openai import (
+    fake_step_text,
+    fake_step_tool_calls,
+)
+from app.utils.config import DreamingCuratorMode
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     companion_llm_client_with_scripted_transport,
     scripted_harness_llm_config,
 )
+
+_DREAMING_UPDATE_TOOL = "update_dreaming_document"
 
 
 def _memory_store(tmp_path: Path) -> MemoryStore:
@@ -149,9 +155,139 @@ def test_run_dreaming_batch_if_due_skips_without_llm_when_no_user_messages_since
     outcome = run_dreaming_batch_if_due(
         session,
         idle_seconds=1,
+        curator_mode=DreamingCuratorMode.SEQUENTIAL,
     )
 
     assert outcome == DreamingBatchOutcome.NOT_DUE
     assert fake.script_index == 0
     assert store.read_document("MEMORY.md") == memory_before
     assert load_dreaming_state(store) == checkpoint
+
+
+def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
+    """Bootstrap-complete scope with one idle user turn and no checkpoint."""
+    now = datetime.now(UTC)
+    user_ts = now - timedelta(hours=3)
+    assistant_ts = user_ts + timedelta(minutes=1)
+    day_iso = user_ts.date().isoformat()
+    daily_path = f"memory/daily/{day_iso}.md"
+
+    store.write_document(
+        "context.json",
+        json.dumps(
+            {
+                "context_mode": "public",
+                "user_id": store.scope.user_id,
+                "companion_id": store.scope.companion_id,
+                "chat_id": store.scope.chat_id,
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    for rel in (
+        "IDENTITY.md",
+        "SOUL.md",
+        "USER.md",
+        "MEMORY.md",
+        "STYLE.md",
+        "COMPANIONSHIP.md",
+    ):
+        store.write_document(rel, f"# {rel}\n")
+
+    store.write_document(
+        "transcript.jsonl",
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "role": "user",
+                        "content": "dreaming slice user",
+                        "ts": user_ts.isoformat(),
+                        "uuid": "user-dream-due",
+                    },
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    {
+                        "role": "assistant",
+                        "content": "dreaming slice assistant",
+                        "ts": assistant_ts.isoformat(),
+                        "uuid": "asst-dream-due",
+                        "reply_to": "user-dream-due",
+                    },
+                    ensure_ascii=False,
+                ),
+            ]
+        )
+        + "\n",
+    )
+    return daily_path
+
+
+def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
+    paths = (
+        daily_path,
+        "MEMORY.md",
+        "USER.md",
+        "STYLE.md",
+        "SOUL.md",
+        "COMPANIONSHIP.md",
+    )
+    calls: list[tuple[str, str, str]] = []
+    for rel in paths:
+        if rel.startswith("memory/daily/"):
+            kind = "daily_gist"
+        elif rel == "MEMORY.md":
+            kind = "memory"
+        elif rel == "USER.md":
+            kind = "user"
+        elif rel == "STYLE.md":
+            kind = "style"
+        elif rel == "SOUL.md":
+            kind = "soul"
+        else:
+            kind = "companionship"
+        payload = json.dumps(
+            {
+                "document_kind": kind,
+                "relative_path": rel,
+                "content_changed": True,
+                "body": f"{rel} scripted",
+                "changed_reason": "scripted test",
+            },
+            ensure_ascii=False,
+        )
+        calls.append((_DREAMING_UPDATE_TOOL, payload, f"tc-{rel}"))
+    return (fake_step_tool_calls(*calls),)
+
+
+def test_run_dreaming_batch_if_due_one_shot_uses_single_llm_and_saves_checkpoint(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-one-shot", "agent", tmp_path.name),
+        repository=None,
+    )
+    daily_path = _seed_scope_due_for_one_shot_dreaming(store)
+    assert load_dreaming_state(store) is None
+
+    llm_config = scripted_harness_llm_config()
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config,
+        _one_shot_dreaming_script_step(daily_path),
+    )
+    session = _companion_session(store, client)
+
+    outcome = run_dreaming_batch_if_due(
+        session,
+        idle_seconds=1,
+        curator_mode=DreamingCuratorMode.ONE_SHOT,
+    )
+
+    assert outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
+    assert fake.script_index == 1
+    assert store.read_document(daily_path) == f"{daily_path} scripted\n"
+    assert store.read_document("MEMORY.md") == "MEMORY.md scripted\n"
+    assert load_dreaming_state(store) is not None
