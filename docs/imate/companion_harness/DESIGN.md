@@ -265,6 +265,7 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 ## 文档地图 / See also
 
 - [ARCH.md](./ARCH.md) — `app/core/companion_harness/` code layout.
+- [OPEN_OBJECTIVE_AGENT_DESIGN.md](./OPEN_OBJECTIVE_AGENT_DESIGN.md) — open-objective agent 抽象架构；Inty companion 是首个 instantiation，CRS / inner-tick / memory loop 是 companion-specific 落地。
 - [EVALUATION.md](./EVALUATION.md) — 如何评测 companion：分层框架（L0–L3）、regression vs eval 分层、与三轴映射。
 - [GLOSSARY.md](./GLOSSARY.md) — 术语与方向（上行/下行、前台/后台、节拍/模式）。
 - [MEMORY_STORE.md](./MEMORY_STORE.md) — MemoryStore 工作区状态层：MemDoc 与 prompt slice、[Memory projection](./MEMORY_STORE.md#memory-projection) 读侧 summary。
