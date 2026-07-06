@@ -476,6 +476,182 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
     assert gate_skip.github_disclosure_ok is True
 
 
+def test_query_input_batch_id_for_client_message_id() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    config_path = repo_root / "devops" / "config.yaml.regression_tests"
+    captured: list[str] = []
+
+    def fake_psql(_repo_root, _config_path, query: str) -> str:
+        captured.append(query)
+        return " batch-abc \n"
+
+    original = mod._psql
+    mod._psql = fake_psql
+    try:
+        batch_id = mod._query_input_batch_id_for_client_message_id(
+            repo_root,
+            config_path,
+            agent_id="agent-1",
+            client_message_id="client-msg-1",
+        )
+    finally:
+        mod._psql = original
+
+    assert batch_id == "batch-abc"
+    assert len(captured) == 1
+    assert "COALESCE(batch_id" in captured[0]
+    assert "client_message_id = 'client-msg-1'" in captured[0]
+
+
+def test_append_github_issue_disclosure_output_persists_correlated_row() -> None:
+    mod = _load_regression_module()
+    repo_root = Path(__file__).parents[4]
+    mod._ensure_import_path(repo_root)
+    from unittest.mock import AsyncMock, patch
+
+    from app.services.agentic_companion.downlink import DownlinkKind
+
+    class _FakeRecord:
+        def __init__(self, message_id: str, text: str, sequence: int) -> None:
+            self.message_id = message_id
+            self.text = text
+            self.sequence = sequence
+
+    issue_url = "https://github.com/NascentCore/inty/issues/3652"
+
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.append_agent_output = AsyncMock(
+            return_value=_FakeRecord("msg-disclosure", issue_url, 3)
+        )
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            mod._append_github_issue_disclosure_output(
+                repo_root,
+                user_id="user-testing",
+                agent_id="agent-1",
+                batch_id="batch-1",
+                user_msg_uuid="client-msg-1",
+                issue_url=issue_url,
+            )
+
+    persisted = repo.append_agent_output.await_args.args[0]
+    assert persisted.batch_id == "batch-1"
+    assert persisted.message_ids == ("client-msg-1",)
+    assert persisted.kind == DownlinkKind.TOOL_BACKGROUND
+    assert issue_url in persisted.text
+
+
+def _github_summary_fixture_kwargs(
+    mod: object, *, github_result: object, app_debug: bool
+) -> dict[str, object]:
+    return {
+        "bootstrap_done": "true",
+        "context_mode": "roleplay",
+        "greeting_result": mod.ImplicitSignOnGreetingResult(
+            present=True,
+            source_greeting=True,
+            text_preview="hi",
+            langsmith_trace_id="t",
+        ),
+        "memdoc_result": mod.BootstrapMemDocResult(
+            user_customized=True,
+            identity_customized=True,
+            style_customized=True,
+            soul_unchanged=True,
+            memory_unchanged=True,
+            user_sequence_id=2,
+            identity_sequence_id=2,
+            style_sequence_id=2,
+            memory_sequence_id=1,
+            errors=(),
+            warnings=(),
+        ),
+        "experience_profile_ok": True,
+        "dreaming_result": mod.DreamingConsolidationResult(
+            checkpoint_present=True,
+            memory_updated=True,
+            memory_sequence_before=1,
+            memory_sequence_after=2,
+            error=None,
+        ),
+        "github_result": github_result,
+        "app_debug": app_debug,
+        "settled_ok": True,
+        "report_errors": [],
+        "proactive_summary": {
+            "total": 1,
+            "visible": 1,
+            "silent": 0,
+            "silent_token_leaks": 0,
+        },
+        "proactive_target_met": False,
+        "proactive_present": True,
+        "proactive_silent_ok": True,
+        "in_q": "delivered|1",
+        "out_q": "delivered|1",
+        "in_all_delivered": True,
+        "out_all_delivered": True,
+        "companion_bond_state": "ACTIVE",
+        "skip_db_checks": False,
+        "scope": mod.RegressionScope.FULL,
+        "proactive_min_rounds": 1,
+    }
+
+
+def test_build_regression_summary_debug_disclosure_fails_without_chat_url() -> None:
+    mod = _load_regression_module()
+    github = mod.GithubIssueE2eResult(
+        "u1",
+        "https://github.com/o/r/issues/1",
+        1,
+        True,
+        True,
+        False,
+        True,
+        None,
+    )
+    summary, gate = mod._build_regression_summary(
+        **_github_summary_fixture_kwargs(
+            mod, github_result=github, app_debug=True
+        )
+    )
+    assert summary["github_issue_disclosed_in_chat"] == "fail"
+    assert gate.github_disclosure_ok is False
+    assert gate.passed() is False
+
+
+def test_build_regression_summary_debug_disclosure_passes_when_disclosed() -> None:
+    mod = _load_regression_module()
+    github = mod.GithubIssueE2eResult(
+        "u1",
+        "https://github.com/o/r/issues/1",
+        1,
+        True,
+        True,
+        True,
+        True,
+        None,
+    )
+    summary, gate = mod._build_regression_summary(
+        **_github_summary_fixture_kwargs(
+            mod, github_result=github, app_debug=True
+        )
+    )
+    assert summary["github_issue_disclosed_in_chat"] == "pass"
+    assert gate.github_disclosure_ok is True
+    assert gate.passed() is True
+
+
 def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
     mod = _load_regression_module()
     repo_root = Path(__file__).parents[4]
