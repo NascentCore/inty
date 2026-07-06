@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from app.utils.config import CompanionMemoryBootstrapType
+
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
@@ -69,7 +71,7 @@ def base_user_chat_loop_builder_kwargs() -> dict:
         "transcript_rel": TRANSCRIPT_JSONL_REL,
         "langsmith_slice": langsmith_slice_for_builder_tests(),
         "runtime_context": runtime_context_for_builder_tests(),
-        "memory_bootstrap_type": "user_interactive",
+        "memory_bootstrap_type": CompanionMemoryBootstrapType.USER_INTERACTIVE,
         "stack_depth": 1,
         "langsmith_trace_id": "ls-1",
         "langsmith_run_id": "run-1",

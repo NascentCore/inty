@@ -495,7 +495,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
     script = (fake_step_text("Welcome! What kind of companion do you want?"),)
     injected, fake = build_scripted_injected_runtime(
         script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
     )
     scope = await create_guest_scope_for_test(
         channel=ChannelKind.APP_WS,

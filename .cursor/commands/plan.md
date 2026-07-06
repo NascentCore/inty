@@ -26,6 +26,7 @@ When working on [companion harness](/app/core/companion_harness/)
 
 - Class & domain name: camel case like OutputQueue
 - mechanism process: snake case like drain_output_queue
+- Types/kinds and any enum-like semantic should use enum type, not str/integer or other primitive types
 
 ## Use alembic cli to generate database version files
 

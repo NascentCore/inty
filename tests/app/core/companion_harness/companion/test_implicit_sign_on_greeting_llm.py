@@ -28,6 +28,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.schemas.implicit_signals import ImplicitSignalBundle
+from app.utils.config import CompanionMemoryBootstrapType
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -150,7 +151,7 @@ def _implicit_greeting_deps(
         transcript_compaction=None,
         transcript_llm_window_max_messages=None,
         repository_only_store_text=False,
-        memory_bootstrap_type="NONE",
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
         background_output_sink=None,
         preset_user_msg_uuid=None,
         langsmith_parent_run_enabled=False,

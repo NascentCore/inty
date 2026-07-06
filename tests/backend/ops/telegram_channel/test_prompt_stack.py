@@ -15,6 +15,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
+from app.utils.config import CompanionMemoryBootstrapType
 from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -57,7 +58,7 @@ def test_telegram_system_messages_exclude_weixin_alias() -> None:
         store=None,  # type: ignore[arg-type]
         bundle=bundle,
         context=ContextMeta(),
-        memory_bootstrap_type="none",
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
         track=CompanionTurnTrack.USER_CHAT,
         route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
         runtime_context=TurnRuntimeContext(

@@ -74,7 +74,10 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
     UPDATE_USER_MD,
 )
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import (
+    CompanionMemoryBootstrapType,
+    user_interactive_memory_bootstrap_enabled,
+)
 
 from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
@@ -1071,12 +1074,11 @@ def build_system_messages_for_inner_tick_scheduled(
 def _greeting_omit_capability_system_slices(
     *,
     context: ContextMeta,
-    memory_bootstrap_type: str,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
 ) -> bool:
     return interactive_bootstrap_active(
-        feature_enabled=(
+        feature_enabled=user_interactive_memory_bootstrap_enabled(
             memory_bootstrap_type
-            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ),
         meta=context,
     )
@@ -1085,8 +1087,8 @@ def _greeting_omit_capability_system_slices(
 def build_system_messages_for_implicit_sign_on_greeting(
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
     runtime_channel: ChannelKind,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
 ) -> list[dict[str, Any]]:
     """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
     bootstrap_active = _greeting_omit_capability_system_slices(

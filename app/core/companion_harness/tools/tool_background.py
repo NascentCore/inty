@@ -563,7 +563,7 @@ async def run_tool_background_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_store_text: bool = False,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
@@ -1012,7 +1012,7 @@ def start_tool_background_job(
     repository_only_store_text: bool = False,
     main_event_loop: asyncio.AbstractEventLoop | None = None,
     langsmith_parent_run: Any | None = None,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     inner_tick_turn: bool = False,
     inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(

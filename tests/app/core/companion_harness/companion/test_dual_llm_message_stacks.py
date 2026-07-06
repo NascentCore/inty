@@ -77,7 +77,7 @@ def test_dual_llm_system_message_variants_monolog_tool_differs_from_chat(
         store=store,
         bundle=_bundle(),
         context=ContextMeta(),
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
         inner_tick_turn=True,
         route_inner_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
@@ -109,7 +109,7 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
-    memory_bootstrap_type = CompanionMemoryBootstrapType.NONE.value
+    memory_bootstrap_type = CompanionMemoryBootstrapType.NONE
     tool_msgs, chat_msgs = dual_llm_system_message_variants(
         store=store,
         bundle=bundle,
@@ -164,7 +164,7 @@ def test_dual_llm_system_message_variants_appends_fixed_reply_language(
         store=store,
         bundle=bundle,
         context=context,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
         inner_tick_turn=False,
         route_inner_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,

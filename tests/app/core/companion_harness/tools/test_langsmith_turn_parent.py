@@ -570,7 +570,7 @@ async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
             transcript_compaction=None,
             transcript_llm_window_max_messages=None,
             repository_only_store_text=False,
-            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
             runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.TELEGRAM,
                 implicit_signal_bundle=None,

@@ -13,6 +13,8 @@ from app.utils.config import (
     APIEndpointsConfig,
     AppConfig,
     CompanionMemoryBootstrapType,
+    resolved_companion_memory_bootstrap_type,
+    user_interactive_memory_bootstrap_enabled,
     FeaturesConfig,
     CloudflareConfig,
     Config,
@@ -358,8 +360,29 @@ def test_companion_harness_memory_bootstrap_type_normalizes_case() -> None:
         langchain_api_key="test",
         companion_harness={"memory_bootstrap_type": "user_interactive"},
     )
-    assert agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    assert (
+        agent.companion_harness.memory_bootstrap_type
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
+    )
+
+
+def test_resolved_companion_memory_bootstrap_type_none_maps_to_none() -> None:
+    assert (
+        resolved_companion_memory_bootstrap_type(None)
+        == CompanionMemoryBootstrapType.NONE
+    )
+    assert (
+        resolved_companion_memory_bootstrap_type(
+            CompanionMemoryBootstrapType.USER_INTERACTIVE
+        )
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
+    )
+    assert user_interactive_memory_bootstrap_enabled(None) is False
+    assert (
+        user_interactive_memory_bootstrap_enabled(
+            CompanionMemoryBootstrapType.USER_INTERACTIVE
+        )
+        is True
     )
 
 
@@ -891,8 +914,9 @@ def test_app_config_model_validate_ignores_unknown_keys():
 
 def test_companion_harness_memory_bootstrap_type_default() -> None:
     agent = AgentConfig(api_key="test", langchain_api_key="test")
-    assert agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    assert (
+        agent.companion_harness.memory_bootstrap_type
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
     )
 
 
@@ -1050,8 +1074,9 @@ def test_load_config_companion_harness_memory_bootstrap_type():
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
-    assert cfg.agent.companion_harness.memory_bootstrap_type == (
-        CompanionMemoryBootstrapType.USER_INTERACTIVE.value
+    assert (
+        cfg.agent.companion_harness.memory_bootstrap_type
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
     )
 
 

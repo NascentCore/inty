@@ -61,7 +61,10 @@ from app.external_services.fakes.openai import (
     fake_step_text,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import (
+    CompanionMemoryBootstrapType,
+    resolved_companion_memory_bootstrap_type,
+)
 from tests.app.core.companion_harness.companion_memory_registry_dsn import (
     companion_memory_registry_dsn,
 )
@@ -87,7 +90,7 @@ from tests.app.core.companion_harness.companion.companion_scripted_llm import (
 async def _build_scripted_manager(
     *,
     script: tuple[FakeCompletionStep, ...],
-    memory_bootstrap_type: str,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
 ) -> tuple[CompanionManager, CompanionSession, FakeOpenAI, AgentScope]:
     scope = await create_guest_scope_for_test(
         channel=ChannelKind.APP_WS,
@@ -101,7 +104,9 @@ async def _build_scripted_manager(
     config = CompanionConfig(
         llm=llm_config,
         memory_pg_dsn=companion_memory_registry_dsn(),
-        memory_bootstrap_type=memory_bootstrap_type,
+        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
+            memory_bootstrap_type
+        ),
         langsmith_companion_parent_run_enabled=False,
     )
     manager = CompanionManager(config, llm_client=client)
@@ -159,7 +164,7 @@ async def test_user_chat_no_tools_delivers_foreground_to_output_queue(
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=built.steps,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         with with_scripted_user_turn_llm_loop_mode(llm_loop_mode):
@@ -206,7 +211,7 @@ async def test_user_chat_default_multi_batch_persists_each_user_row() -> None:
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         output_queue = get_output_queue_for_scope(scope)
@@ -276,7 +281,7 @@ async def test_user_chat_join_mode_batch_persists_one_user_row() -> None:
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     cfg = (
         global_config_loaded_from_config_yaml.agent.companion_harness.user_turn
@@ -348,7 +353,7 @@ async def test_user_chat_background_tool_round_persists_side_effects() -> None:
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=built.steps,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         output_queue = get_output_queue_for_scope(scope)
@@ -393,7 +398,7 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
     script = (fake_step_text("Welcome! What kind of companion do you want?"),)
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
     )
     try:
         output_queue = get_output_queue_for_scope(scope)
@@ -446,7 +451,7 @@ async def test_proactive_chat_silent_envelope_skips_assistant_transcript() -> (
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         result = await manager.run_inner_tick_proactive_chat_turn(
@@ -483,7 +488,7 @@ async def test_proactive_chat_visible_then_silent_two_rounds(
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         first = await manager.run_inner_tick_proactive_chat_turn(
@@ -536,7 +541,7 @@ async def test_proactive_chat_returns_assistant_text_and_transcript() -> None:
     )
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         result = await manager.run_inner_tick_proactive_chat_turn(
@@ -565,7 +570,7 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
     script = build_scripted_monolog_inner_tick_script(monolog_text=monolog_text)
     manager, session, fake, scope = await _build_scripted_manager(
         script=script,
-        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
     )
     try:
         seed_settled_scope_for_inner_tick(session.store)

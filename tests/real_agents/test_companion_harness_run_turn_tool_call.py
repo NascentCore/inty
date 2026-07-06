@@ -119,7 +119,7 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
             transcript_compaction=None,
             transcript_llm_window_max_messages=None,
             repository_only_store_text=False,
-            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE.value,
+            memory_bootstrap_type=CompanionMemoryBootstrapType.NONE,
             runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,

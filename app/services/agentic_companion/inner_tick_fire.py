@@ -400,6 +400,8 @@ async def try_fire_autonomy_inner_tick(
         runtime_context=autonomy_runtime,
         preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
         background_output_sink=kernel_input.background_output_sink,
+        agentic_output_queue=kernel_input.agentic_output_queue,
+        user_message_batch=kernel_input.user_message_batch,
     )
 
     async with inner_tick_turn_scope(session=scope_session):

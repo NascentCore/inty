@@ -17,6 +17,7 @@ from app.schemas.chat_websocket import (
     ChatWsCompletionData,
     ChatWsCompletionUsage,
     ChatWsCompanionWireMessageMetaData,
+    ChatWebSocketQueuedSuccessFrame,
 )
 
 _content_part_adapter = TypeAdapter(ChatMessageContentPart)
@@ -199,3 +200,18 @@ def _build_chat_response(
         client_local_id=client_local_id,
     )
     return completion.model_dump(exclude_none=True)
+
+
+def build_chat_ws_queued_success_frame(
+    *,
+    completion: ChatWsCompletionData,
+    agent_id: str,
+    status_line: str | None,
+) -> ChatWebSocketQueuedSuccessFrame:
+    """Single construction point for every queued success frame on the app WS wire."""
+    assert agent_id != ""
+    return ChatWebSocketQueuedSuccessFrame(
+        data=completion,
+        agent_id=agent_id,
+        status_line=status_line,
+    )

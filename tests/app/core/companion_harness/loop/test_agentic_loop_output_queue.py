@@ -39,6 +39,7 @@ from app.core.companion_harness.loop.agentic_loop import (
     AgenticLoop,
     user_visible_assistant_text,
 )
+from app.core.companion_harness.loop.config import AgenticLoopMechanism
 from app.core.companion_harness.loop.context import (
     AgenticLoopContext,
     AgenticLoopLangsmithContext,
@@ -243,7 +244,10 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
             store=store,
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_single_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+            context=context,
+        )
 
     assert result.output_message_ids == ("msg-a", "msg-b")
     append_inputs = [
@@ -295,7 +299,10 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_single_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+            context=context,
+        )
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -338,7 +345,10 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_single_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+            context=context,
+        )
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -394,7 +404,10 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_single_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+            context=context,
+        )
 
     prompt_plan_mock.assert_awaited_once()
     assert result.assistant_text == "done"
@@ -735,7 +748,10 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_dual_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.DUAL_LLM,
+            context=context,
+        )
 
     fg_input = foreground_mock.await_args.args[0]
     assert fg_input.chat_msgs[0]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
@@ -848,7 +864,10 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
             store=store,
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_dual_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.DUAL_LLM,
+            context=context,
+        )
 
     assert result.output_message_ids == ("msg-fg", "msg-tool")
     assert result.tool_background_started is False
@@ -947,7 +966,10 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_dual_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.DUAL_LLM,
+            context=context,
+        )
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -1024,7 +1046,10 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_dual_llm_user_turn(context=context)
+        ).run_track_turn(
+            mechanism=AgenticLoopMechanism.DUAL_LLM,
+            context=context,
+        )
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()

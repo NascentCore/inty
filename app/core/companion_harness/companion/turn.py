@@ -31,10 +31,9 @@ foreground parse. ``start_tool_background_job`` then runs the tool-model loop in
 ``companion/AGENTS.md`` (Async tool_background) for the product-facing summary.
 
 **Bootstrap (``USER_CHAT_BOOTSTRAP``)**: Queue-serving turns (``agentic_output_queue`` +
-``user_message_batch``) use ``AgenticLoop.run_single_llm_user_turn``; each non-empty
+``user_message_batch``) use ``AgenticLoop.run_track_turn`` with ``SINGLE_LLM``; each non-empty
 assistant ``content`` appends to domain ``OutputQueue``. Settled ``USER_CHAT`` queue
-turns dispatch via ``user_turn.llm_loop_mode`` to ``run_single_llm_user_turn`` or
-``run_dual_llm_user_turn``.
+turns dispatch via ``user_turn.llm_loop_mode`` to ``SINGLE_LLM`` or ``DUAL_LLM`` mechanism.
 
 TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink``; retire non-queue ``bootstrap_interim_output_sink``.
 TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
@@ -68,7 +67,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import user_interactive_memory_bootstrap_enabled
 from app.core.companion_harness.memory.client_time_from_memory_store import (
     resolve_client_time,
 )
@@ -114,14 +113,22 @@ from app.core.companion_harness.prompt_builder import (
 )
 from app.core.companion_harness.loop.agentic_loop import AgenticLoop
 from app.core.companion_harness.loop.config import (
+    AgenticLoopMechanism,
     UserTurnLlmLoopMode,
     resolved_user_turn_batch_messages_llm_call_mode,
     resolved_user_turn_llm_loop_mode,
 )
+from app.core.companion_harness.agentic_companion.types import (
+    synthetic_user_message_batch,
+)
 from app.core.companion_harness.loop.context import (
     build_bootstrap_user_chat_loop_context,
+    build_implicit_sign_on_greeting_loop_context,
+    build_inner_tick_chat_only_loop_context,
+    build_inner_tick_tool_loop_context,
     build_settled_dual_llm_user_chat_loop_context,
     build_settled_user_chat_loop_context,
+    prompt_plan_from_openai_messages,
 )
 from .dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
@@ -609,8 +616,9 @@ async def _run_companion_turn_core(
                             tail_user_messages=tail_user_messages,
                             prompt_plan=bootstrap_prompt_plan,
                         )
-                        loop_out = await agentic_loop.run_single_llm_user_turn(
-                            context=loop_context
+                        loop_out = await agentic_loop.run_track_turn(
+                            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                            context=loop_context,
                         )
                     elif (
                         llm_loop_mode == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
@@ -657,8 +665,9 @@ async def _run_companion_turn_core(
                             tail_user_messages=tail_user_messages,
                             prompt_plan=single_llm_prompt_plan,
                         )
-                        loop_out = await agentic_loop.run_single_llm_user_turn(
-                            context=loop_context
+                        loop_out = await agentic_loop.run_track_turn(
+                            mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                            context=loop_context,
                         )
                     else:
                         _, chat_system_msgs = dual_llm_system_message_variants(
@@ -712,8 +721,9 @@ async def _run_companion_turn_core(
                             prompt_bundle=bundle,
                             context_meta=context,
                         )
-                        loop_out = await agentic_loop.run_dual_llm_user_turn(
-                            context=loop_context
+                        loop_out = await agentic_loop.run_track_turn(
+                            mechanism=AgenticLoopMechanism.DUAL_LLM,
+                            context=loop_context,
                         )
                     last_text = loop_out.assistant_text
                     significance_meta = loop_out.significance_meta
@@ -729,6 +739,216 @@ async def _run_companion_turn_core(
                     output_message_ids = loop_out.output_message_ids
                     logger.info(
                         "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
+                        track.value,
+                        (time.perf_counter() - t_loop) * 1000.0,
+                    )
+                elif (
+                    track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+                    and agentic_output_queue is not None
+                ):
+                    greeting_batch = user_message_batch
+                    if greeting_batch is None:
+                        greeting_batch = synthetic_user_message_batch(
+                            user_msg_uuid=user_msg_uuid,
+                            track_label=track.value,
+                        )
+                    rel_tr_greeting = paths.transcript
+                    greeting_prompt_plan = prompt_plan_from_openai_messages(
+                        messages,
+                        tools=(),
+                    )
+                    agentic_loop = AgenticLoop(
+                        store=store,
+                        llm_client=llm_client.async_llm_client,
+                        legacy_llm_client=llm_client,
+                    )
+                    loop_context = build_implicit_sign_on_greeting_loop_context(
+                        messages=messages,
+                        repository_only_store_text=repository_only_store_text,
+                        trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
+                        user_msg_uuid=user_msg_uuid,
+                        transcript_rel=rel_tr_greeting,
+                        langsmith_slice=langsmith_slice,
+                        runtime_context=runtime_context,
+                        memory_bootstrap_type=memory_bootstrap_type,
+                        stack_depth=sum(
+                            1
+                            for message in messages
+                            if message.get("role") == "system"
+                        ),
+                        langsmith_trace_id=langsmith_trace_acc,
+                        langsmith_run_id=langsmith_llm_run_acc,
+                        output_queue=agentic_output_queue,
+                        user_message_batch=greeting_batch,
+                        tail_user_messages=tail_user_messages,
+                        prompt_plan=greeting_prompt_plan,
+                    )
+                    loop_out = await agentic_loop.run_track_turn(
+                        mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                        context=loop_context,
+                    )
+                    last_text = loop_out.assistant_text
+                    significance_meta = loop_out.significance_meta
+                    turn_recall = loop_out.turn_recall
+                    langsmith_trace_acc = loop_out.langsmith_trace_id
+                    langsmith_llm_run_acc = loop_out.langsmith_run_id
+                    bootstrap_skip_final_transcript_assistant_row = (
+                        loop_out.skip_final_transcript_assistant_row
+                    )
+                    output_message_ids = loop_out.output_message_ids
+                    logger.info(
+                        "run_turn loop_done agentic_loop greeting loop_total_ms={:.0f}",
+                        (time.perf_counter() - t_loop) * 1000.0,
+                    )
+                elif (
+                    track
+                    in (
+                        CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+                        CompanionTurnTrack.INNER_TICK_SCHEDULED,
+                    )
+                    and agentic_output_queue is not None
+                ):
+                    in_turn_sync_persisted_transcript = True
+                    inner_batch = user_message_batch
+                    if inner_batch is None:
+                        inner_batch = synthetic_user_message_batch(
+                            user_msg_uuid=user_msg_uuid,
+                            track_label=track.value,
+                        )
+                    rel_tr_inner = (
+                        transcript_relative_path_for_turn_persistence(
+                            inner_tick_turn=True,
+                            inner_tick_activity=route_inner_activity,
+                        )
+                    )
+                    inner_prompt_plan = prompt_plan_from_openai_messages(
+                        messages,
+                        tools=(),
+                    )
+                    agentic_loop = AgenticLoop(
+                        store=store,
+                        llm_client=llm_client.async_llm_client,
+                        legacy_llm_client=llm_client,
+                    )
+                    loop_context = build_inner_tick_chat_only_loop_context(
+                        track=track,
+                        messages=messages,
+                        repository_only_store_text=repository_only_store_text,
+                        trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
+                        user_msg_uuid=user_msg_uuid,
+                        transcript_rel=rel_tr_inner,
+                        langsmith_slice=langsmith_slice,
+                        runtime_context=runtime_context,
+                        memory_bootstrap_type=memory_bootstrap_type,
+                        stack_depth=sum(
+                            1
+                            for message in messages
+                            if message.get("role") == "system"
+                        ),
+                        langsmith_trace_id=langsmith_trace_acc,
+                        langsmith_run_id=langsmith_llm_run_acc,
+                        output_queue=agentic_output_queue,
+                        user_message_batch=inner_batch,
+                        tail_user_messages=tail_user_messages,
+                        prompt_plan=inner_prompt_plan,
+                        route_inner_activity=route_inner_activity,
+                    )
+                    loop_out = await agentic_loop.run_track_turn(
+                        mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                        context=loop_context,
+                    )
+                    last_text = loop_out.assistant_text
+                    langsmith_trace_acc = loop_out.langsmith_trace_id
+                    langsmith_llm_run_acc = loop_out.langsmith_run_id
+                    bootstrap_skip_final_transcript_assistant_row = (
+                        loop_out.skip_final_transcript_assistant_row
+                    )
+                    # Proactive envelope may silence the turn (output_to_user=false)
+                    # on both PROACTIVE_CHAT and SCHEDULED; no empty assistant row.
+                    if not last_text.strip():
+                        skip_proactive_assistant_transcript_row = True
+                    output_message_ids = loop_out.output_message_ids
+                    logger.info(
+                        "run_turn loop_done agentic_loop inner_tick_chat track={} loop_total_ms={:.0f}",
+                        track.value,
+                        (time.perf_counter() - t_loop) * 1000.0,
+                    )
+                elif (
+                    track
+                    in (
+                        CompanionTurnTrack.INNER_TICK_MONOLOG,
+                        CompanionTurnTrack.INNER_TICK_AUTONOMY,
+                    )
+                    and agentic_output_queue is not None
+                ):
+                    in_turn_sync_persisted_transcript = True
+                    throttle_batch = user_message_batch
+                    if throttle_batch is None:
+                        throttle_batch = synthetic_user_message_batch(
+                            user_msg_uuid=user_msg_uuid,
+                            track_label=track.value,
+                        )
+                    rel_tr_throttle = (
+                        transcript_relative_path_for_turn_persistence(
+                            inner_tick_turn=True,
+                            inner_tick_activity=route_inner_activity,
+                        )
+                    )
+                    throttle_prompt_plan = prompt_plan_from_openai_messages(
+                        messages,
+                        tools=tuple(tools_for_turn),
+                    )
+                    agentic_loop = AgenticLoop(
+                        store=store,
+                        llm_client=llm_client.async_llm_client,
+                        legacy_llm_client=llm_client,
+                    )
+                    loop_context = build_inner_tick_tool_loop_context(
+                        track=track,
+                        messages=messages,
+                        tools_for_turn=tools_for_turn,
+                        write_allowlist=_memory_store_write_allowlist_for_track(
+                            track
+                        ),
+                        repository_only_store_text=repository_only_store_text,
+                        trace_id=trace_id,
+                        user_text=user_text,
+                        ts_user=ts_user,
+                        user_msg_uuid=user_msg_uuid,
+                        transcript_rel=rel_tr_throttle,
+                        langsmith_slice=langsmith_slice,
+                        runtime_context=runtime_context,
+                        memory_bootstrap_type=memory_bootstrap_type,
+                        stack_depth=sum(
+                            1
+                            for message in messages
+                            if message.get("role") == "system"
+                        ),
+                        langsmith_trace_id=langsmith_trace_acc,
+                        langsmith_run_id=langsmith_llm_run_acc,
+                        output_queue=agentic_output_queue,
+                        user_message_batch=throttle_batch,
+                        tail_user_messages=tail_user_messages,
+                        prompt_plan=throttle_prompt_plan,
+                        route_inner_activity=route_inner_activity,
+                    )
+                    loop_out = await agentic_loop.run_track_turn(
+                        mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                        context=loop_context,
+                    )
+                    last_text = loop_out.assistant_text
+                    langsmith_trace_acc = loop_out.langsmith_trace_id
+                    langsmith_llm_run_acc = loop_out.langsmith_run_id
+                    bootstrap_skip_final_transcript_assistant_row = (
+                        loop_out.skip_final_transcript_assistant_row
+                    )
+                    output_message_ids = loop_out.output_message_ids
+                    logger.info(
+                        "run_turn loop_done agentic_loop inner_tick_tool track={} loop_total_ms={:.0f}",
                         track.value,
                         (time.perf_counter() - t_loop) * 1000.0,
                     )
@@ -1179,9 +1399,8 @@ async def run_companion_user_chat_turn(
     track = (
         CompanionTurnTrack.USER_CHAT_BOOTSTRAP
         if interactive_bootstrap_active(
-            feature_enabled=(
+            feature_enabled=user_interactive_memory_bootstrap_enabled(
                 deps.memory_bootstrap_type
-                == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
             ),
             meta=context,
         )

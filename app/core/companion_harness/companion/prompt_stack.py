@@ -60,6 +60,7 @@ from .prompts.system_messages import (
 from app.core.companion_harness.loop.runtime_system_clauses import (
     append_configured_fixed_reply_language_system_messages,
 )
+from app.utils.config import CompanionMemoryBootstrapType
 from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
 
@@ -175,7 +176,7 @@ def companion_system_messages_for_track(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     track: CompanionTurnTrack,
     route_mode: TurnRouteMode,
     runtime_context: TurnRuntimeContext,
@@ -186,8 +187,8 @@ def companion_system_messages_for_track(
             out = build_system_messages_for_implicit_sign_on_greeting(
                 bundle,
                 context,
-                memory_bootstrap_type,
                 runtime_context.channel,
+                memory_bootstrap_type,
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             # TODO(!3463): Compose proactive as overlay on base track prefix — during
@@ -250,7 +251,7 @@ def companion_turn_tools_and_system_messages(
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
-    memory_bootstrap_type: str,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     track: CompanionTurnTrack,
     implicit_user_signed_on_turn: bool = False,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -296,7 +297,7 @@ def companion_turn_tools_and_system_messages(
 def refresh_companion_turn_prompt_stack(
     *,
     store: MemoryStore,
-    memory_bootstrap_type: str,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],

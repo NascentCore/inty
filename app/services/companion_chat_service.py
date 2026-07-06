@@ -14,6 +14,10 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.companion.manager import (
+    CompanionManager,
+    CompanionSession,
+)
 from app.core.companion_harness.companion.manager_factory import (
     DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT,
     clear_companion_manager_cache,
@@ -34,10 +38,10 @@ from app.core.companion_harness.companion.turn_routes import (
     BackgroundToolEventSink,
     BootstrapInterimOutputSink,
 )
-from app.core.companion_harness.companion.manager import (
-    CompanionManager,
-    CompanionSession,
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueue,
 )
+from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
@@ -52,7 +56,10 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType, DreamingCuratorMode
+from app.utils.config import (
+    DreamingCuratorMode,
+    user_interactive_memory_bootstrap_enabled,
+)
 from app.utils.models_catalog import GenAIModel
 
 
@@ -175,9 +182,8 @@ async def _maybe_append_companion_ws_session_system(
 ) -> None:
     if not session_id or not str(session_id).strip():
         return
-    if (
+    if not user_interactive_memory_bootstrap_enabled(
         session.config.memory_bootstrap_type
-        != CompanionMemoryBootstrapType.USER_INTERACTIVE.value
     ):
         return
     from app.core.companion_harness.companion.models import load_context_meta
@@ -247,9 +253,8 @@ async def _companion_session_for_api_turn(
     session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
     manager_session_ms = (time.perf_counter() - t_mgr0) * 1000.0
     if not session.is_initialized:
-        if (
+        if user_interactive_memory_bootstrap_enabled(
             session.config.memory_bootstrap_type
-            == CompanionMemoryBootstrapType.USER_INTERACTIVE.value
         ):
             raise RuntimeError(
                 "Companion MemoryStore not seeded (interactive bootstrap requires minimal documents in store)"
@@ -515,6 +520,8 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
+    agentic_output_queue: OutputQueue | None = None,
+    user_message_batch: UserMessageBatch | None = None,
 ) -> CompanionTurnResult:
     return await _run_companion_api_track_turn(
         track_path="implicit_sign_on_greeting",
@@ -533,6 +540,8 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
                 channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
+            agentic_output_queue=agentic_output_queue,
+            user_message_batch=user_message_batch,
         ),
     )
 

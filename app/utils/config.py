@@ -187,17 +187,38 @@ class DreamingCuratorMode(StrEnum):
 
 
 def _normalize_companion_memory_bootstrap_type(
-    raw: str,
+    raw: str | CompanionMemoryBootstrapType,
     *,
     config_path: str,
-) -> str:
+) -> CompanionMemoryBootstrapType:
+    if isinstance(raw, CompanionMemoryBootstrapType):
+        return raw
     normalized = (raw or "").strip().upper()
     allowed = {member.value for member in CompanionMemoryBootstrapType}
     if normalized not in allowed:
         raise ValueError(
             f"{config_path} must be one of {sorted(allowed)}, got {raw!r}"
         )
-    return normalized
+    return CompanionMemoryBootstrapType(normalized)
+
+
+def resolved_companion_memory_bootstrap_type(
+    value: CompanionMemoryBootstrapType | None,
+) -> CompanionMemoryBootstrapType:
+    """Coerce optional bootstrap mode; None means no interactive bootstrap (NONE)."""
+    if value is None:
+        return CompanionMemoryBootstrapType.NONE
+    return value
+
+
+def user_interactive_memory_bootstrap_enabled(
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None,
+) -> bool:
+    """True when harness config selects interactive MemoryStore bootstrap."""
+    return (
+        resolved_companion_memory_bootstrap_type(memory_bootstrap_type)
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
+    )
 
 
 def _validate_companion_transcript_llm_window_max_messages(
@@ -553,8 +574,8 @@ class AgentConfig(BaseModel):
                 "Default experience profile id (context.json field context_mode)."
             ),
         )
-        memory_bootstrap_type: str = Field(
-            default=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+        memory_bootstrap_type: CompanionMemoryBootstrapType = Field(
+            default=CompanionMemoryBootstrapType.USER_INTERACTIVE,
             description=(
                 "NONE = seed minimal docs only, always run_turn; "
                 "USER_INTERACTIVE = run_turn with slice tools until bootstrap complete."
@@ -776,16 +797,27 @@ class AgentConfig(BaseModel):
 
         user_turn: UserTurnConfig = Field(default_factory=UserTurnConfig)
 
+        @field_validator("memory_bootstrap_type", mode="before")
+        @classmethod
+        def _coerce_memory_bootstrap_type(
+            cls, value: object
+        ) -> CompanionMemoryBootstrapType:
+            if isinstance(value, CompanionMemoryBootstrapType):
+                return value
+            if isinstance(value, str):
+                return _normalize_companion_memory_bootstrap_type(
+                    value,
+                    config_path="agent.companion_harness.memory_bootstrap_type",
+                )
+            raise TypeError(
+                "agent.companion_harness.memory_bootstrap_type must be str or "
+                f"CompanionMemoryBootstrapType, got {type(value).__name__}"
+            )
+
         @model_validator(mode="after")
         def normalize_companion_fields(
             self,
         ) -> "AgentConfig.CompanionHarnessConfig":
-            self.memory_bootstrap_type = (
-                _normalize_companion_memory_bootstrap_type(
-                    self.memory_bootstrap_type,
-                    config_path="agent.companion_harness.memory_bootstrap_type",
-                )
-            )
             self.default_context_mode = normalize_experience_profile_id(
                 self.default_context_mode
             )

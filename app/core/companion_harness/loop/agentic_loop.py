@@ -17,6 +17,8 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.config import global_config_loaded_from_config_yaml
+
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
@@ -49,8 +51,21 @@ from app.core.llms.client import (
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
 )
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    split_dual_llm_chat_branch_message,
+)
+from app.core.companion_harness.companion.inner_tick_kind import (
+    inner_tick_kind_for_track,
+    inner_tick_spec,
+)
+from app.core.companion_harness.companion.proactive_chat_envelope import (
+    PROACTIVE_CHAT_RESPONSE_FORMAT,
+    split_proactive_chat_message,
+)
 from app.core.companion_harness.companion.models import (
     InnerTickActivity,
+    CompanionTurnTrack,
     user_visible_assistant_text,
 )
 from app.core.companion_harness.companion.turn_routes import (
@@ -78,6 +93,7 @@ from app.core.companion_harness.tools.image_gate import (
     list_image_asset_records,
 )
 
+from .config import AgenticLoopMechanism
 from .context import AgenticLoopContext, AgenticLoopOutput
 from .runtime_system_clauses import apply_agentic_loop_runtime_system_clauses
 
@@ -99,6 +115,18 @@ def _generated_image_refs_since(
     return tuple(refs)
 
 
+def _track_suppresses_user_delivery(
+    track: CompanionTurnTrack | None,
+) -> bool:
+    """True for silent tracks (e.g. AUTONOMY) whose text must never reach OutputQueue."""
+    if track is None:
+        return False
+    kind = inner_tick_kind_for_track(track)
+    if kind is None:
+        return False
+    return inner_tick_spec(kind).suppresses_user_delivery
+
+
 def _append_user_transcript_row(
     *,
     store: MemoryStore,
@@ -108,7 +136,15 @@ def _append_user_transcript_row(
 
     Pairs with ``in_turn_sync_persisted_transcript`` in ``turn.py``: turn end must
     not append the user row again when AgenticLoop owns persistence.
+
+    Implicit sign-on greeting keeps the dedicated ``implicit_user_signed_on`` row
+    in ``turn.py``; skip generic tail persistence here.
     """
+    if (
+        context.companion_turn_track
+        == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+    ):
+        return
     append_tail_user_transcript_rows(
         store,
         context.transcript_rel,
@@ -399,6 +435,151 @@ async def _run_prompt_plan_tool_loop(
     )
 
 
+async def _run_chat_only_prompt_plan(
+    context: AgenticLoopContext,
+    *,
+    llm_client: AsyncLlmClient,
+    appender: _UserVisibleOutputAppender,
+) -> InTurnSyncToolLoopResult:
+    """Single chat completion (no tools) for greeting and inner-tick chat-only tracks.
+
+    Mirrors the legacy single-shot contract per track: greeting completes under the
+    dual-LLM structured envelope (significance + turn_recall), proactive and
+    scheduled complete under the proactive envelope (``output_to_user`` may silence
+    the turn), matching each track's structured-output prompt contract.
+    """
+    assert context.prompt_plan is not None
+    track = context.companion_turn_track
+    assert track is not None
+    request_messages = prompt_messages_to_openai_dicts(
+        context.prompt_plan.messages
+    )
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=context.user_text,
+    )
+    chat_model = llm_client.resolve_model("chat")
+    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
+        source=context.langsmith.foreground_source,
+        extra_metadata=None,
+    )
+    # Legacy parity: only PROACTIVE_CHAT keeps the chat scene among inner ticks;
+    # SCHEDULED stays on the inner-tick scene despite sharing the PROACTIVE_CHAT activity.
+    llm_scene = (
+        LLM_SCENE_INNER_TICK
+        if context.inner_tick_turn
+        and track != CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+        else LLM_SCENE_CHAT
+    )
+    match track:
+        case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
+            downlink_kind = DownlinkKind.PROACTIVE
+            response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
+        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            downlink_kind = DownlinkKind.SCHEDULED
+            response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            downlink_kind = DownlinkKind.USER_REPLY
+            response_format = DUAL_LLM_CHAT_RESPONSE_FORMAT
+        case _:
+            downlink_kind = DownlinkKind.USER_REPLY
+            response_format = None
+
+    t_api = time.perf_counter()
+    match track:
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            greet_cfg = (
+                global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting
+            )
+            resp = await llm_client.chat_completion_with_retrial(
+                messages=request_messages,
+                model=chat_model,
+                tools=None,
+                tool_choice=None,
+                response_format=response_format,
+                scene=llm_scene,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=context.high_reasoning,
+                max_attempts=int(greet_cfg.llm_max_attempts),
+                per_attempt_timeout_sec=float(greet_cfg.llm_timeout_sec),
+                trace_id=context.trace_id,
+                attempt_log_label="implicit_sign_on_greeting",
+            )
+        case _:
+            resp = await llm_client.chat_completion(
+                messages=request_messages,
+                model=chat_model,
+                tools=None,
+                response_format=response_format,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=context.high_reasoning,
+                scene=llm_scene,
+            )
+    langsmith_trace_acc = langsmith_trace_id_from_completion(resp) or ""
+    langsmith_llm_run_acc = langsmith_llm_run_id_from_completion(resp) or ""
+    msg = resp.choices[0].message
+    skip_final_transcript_assistant_row = False
+    significance_meta: dict[str, Any] | None = None
+    turn_recall: str | None = None
+    match track:
+        case (
+            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            proactive_split = split_proactive_chat_message(msg)
+            if proactive_split.output_to_user:
+                last_text = proactive_split.visible_text
+            else:
+                last_text = ""
+                skip_final_transcript_assistant_row = True
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            dual_split = split_dual_llm_chat_branch_message(msg)
+            last_text = dual_split.visible_text
+            significance_meta = dual_split.significance_meta
+            turn_recall = dual_split.turn_recall
+            # Envelope contract: chat branch must set output_to_user true; false is
+            # for tool_background finish envelopes only. Non-fatal model drift.
+            if dual_split.output_to_user is False:
+                logger.warning(
+                    "chat_only_prompt_plan dual_llm envelope output_to_user=false "
+                    "trace_id={} (expected true for greeting)",
+                    context.trace_id,
+                )
+        case _:
+            last_text = (msg.content or "").strip()
+    approx_ctx_chars = sum(
+        len(str(m.get("content") or "")) for m in request_messages
+    )
+    logger.info(
+        "chat_only_prompt_plan llm_done model={} chat_completions_ms={:.0f} "
+        "approx_ctx_chars={} trace_id={} track={}",
+        chat_model,
+        (time.perf_counter() - t_api) * 1000.0,
+        approx_ctx_chars,
+        context.trace_id,
+        track.value,
+    )
+    if last_text:
+        await appender.append_visible_message(
+            kind=downlink_kind,
+            text=last_text,
+            trace_id=context.trace_id,
+            langsmith_trace_id=langsmith_trace_acc,
+            langsmith_run_id=langsmith_llm_run_acc,
+            turn_recall=turn_recall,
+        )
+    return InTurnSyncToolLoopResult(
+        assistant_text=last_text,
+        langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
+        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+        last_interim_assistant_msg_uuid=None,
+        loop_persisted_user_transcript=False,
+        significance_meta=significance_meta,
+        turn_recall=turn_recall,
+    )
+
+
 class AgenticLoop:
     """Executes one queue-served user turn for bootstrap or settled chat.
 
@@ -433,10 +614,23 @@ class AgenticLoop:
         self.llm_client = llm_client
         self.legacy_llm_client = legacy_llm_client
 
-    async def run_single_llm_user_turn(
+    async def run_track_turn(
+        self,
+        *,
+        mechanism: AgenticLoopMechanism,
+        context: AgenticLoopContext,
+    ) -> AgenticLoopOutput:
+        """Execute one turn through the unified loop; visible output goes to OutputQueue only."""
+        match mechanism:
+            case AgenticLoopMechanism.SINGLE_LLM:
+                return await self._run_single_llm_turn(context=context)
+            case AgenticLoopMechanism.DUAL_LLM:
+                return await self._run_dual_llm_turn(context=context)
+
+    async def _run_single_llm_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
-        """Execute one single-LLM user turn; each non-empty assistant ``content`` → ``OutputQueue``."""
+        """Execute one single-LLM turn; each non-empty assistant ``content`` → ``OutputQueue``."""
         _append_user_transcript_row(store=self.store, context=context)
         appender = _UserVisibleOutputAppender(
             output_queue=context.output_queue,
@@ -456,19 +650,32 @@ class AgenticLoop:
 
         if context.prompt_plan is None:
             raise RuntimeError(
-                "run_single_llm_user_turn requires prompt_plan; "
+                "_run_single_llm_turn requires prompt_plan; "
                 "build context via PromptBuilder before invoking AgenticLoop"
             )
-        sync_result = await _run_prompt_plan_tool_loop(
-            context,
-            store=self.store,
-            llm_client=self.llm_client,
-            interim_output_sink=_emit_user_reply,
-        )
+        if context.max_tool_rounds == 0:
+            sync_result = await _run_chat_only_prompt_plan(
+                context,
+                llm_client=self.llm_client,
+                appender=appender,
+            )
+        else:
+            sync_result = await _run_prompt_plan_tool_loop(
+                context,
+                store=self.store,
+                llm_client=self.llm_client,
+                interim_output_sink=(
+                    None
+                    if _track_suppresses_user_delivery(
+                        context.companion_turn_track
+                    )
+                    else _emit_user_reply
+                ),
+            )
         return AgenticLoopOutput(
             assistant_text=sync_result.assistant_text,
-            significance_meta=None,
-            turn_recall=None,
+            significance_meta=sync_result.significance_meta,
+            turn_recall=sync_result.turn_recall,
             langsmith_trace_id=sync_result.langsmith_trace_id,
             langsmith_run_id=sync_result.langsmith_run_id,
             skip_final_transcript_assistant_row=(
@@ -479,10 +686,10 @@ class AgenticLoop:
             output_message_ids=tuple(appender.persisted_ids),
         )
 
-    async def run_dual_llm_user_turn(
+    async def _run_dual_llm_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
-        """Execute one dual-LLM user turn; foreground and tool-leg user-visible text → ``OutputQueue``."""
+        """Execute one dual-LLM turn; foreground and tool-leg user-visible text → ``OutputQueue``."""
         assert (
             context.dual_llm_chat_msgs is not None
             and context.dual_llm_tool_msgs is not None

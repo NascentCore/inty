@@ -8,6 +8,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
@@ -24,14 +25,15 @@ from app.schemas.chat_websocket import (
     ChatWsGeneratedImageMeta,
     dump_chat_ws_companion_wire_meta,
 )
-from app.schemas.response import APIResponse
 from app.services import chat_history_service
 from app.services.agent_status_line import agent_status_line_for_chat_header
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
+    companion_ai_meta_from_turn_result,
 )
 from app.services.chat_completion_wire import (
+    build_chat_ws_queued_success_frame,
     build_companion_ws_completion_data,
     _normalize_chat_response_content,
 )
@@ -122,14 +124,92 @@ async def materialize_queue_user_reply_from_durable(
         local_id=primary_input.local_id,
         source_imate_id=scope.agent_id,
     )
-    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = scope.agent_id
-    out["status_line"] = await agent_status_line_for_chat_header(
-        db,
-        scope.agent_id,
+    payload = build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id=scope.agent_id,
+        status_line=await agent_status_line_for_chat_header(
+            db,
+            scope.agent_id,
+        ),
     )
-    return out
+    return payload.model_dump(exclude_none=True)
+
+
+async def materialize_implicit_greeting_ws_payload(
+    *,
+    db: AsyncSession,
+    scope: AgentScope,
+    session_id: str,
+    text: str,
+    companion_turn: CompanionTurnResult,
+    request: ChatCompletionRequest,
+    effective_local_id: str | None,
+    foreground_user_message_id: int | None,
+) -> WsOutboundPayload:
+    """Build one implicit sign-on greeting completion frame from turn result text + meta.
+
+    App-WS delivers the greeting directly from the turn result: the scope
+    OutputQueue rows appended by AgenticLoop are unroutable on App-WS and get
+    skipped by the presence pump (TODO(#3576): pump-owned App-WS delivery).
+    """
+    assert text.strip() != ""
+    companion_ai_meta = companion_ai_meta_from_turn_result(
+        companion_turn,
+        companion_scheduled_reminder=None,
+        scheduled_task_id=None,
+    )
+    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+        session_id,
+        text,
+        agent_id=scope.agent_id,
+        meta_data=companion_ai_meta,
+    )
+    latest_message_info = None
+    try:
+        if ai_message_id is not None:
+            latest_message_info = (
+                await chat_history_service.get_ai_message_info_by_id(
+                    db, ai_message_id
+                )
+            )
+    except Exception:
+        latest_message_info = None
+    response_text_content, response_content_parts = (
+        _normalize_chat_response_content(text)
+    )
+    model = await resolve_chat_model_for_scope(scope)
+    assistant = build_companion_ws_completion_data(
+        response_text_content=response_text_content,
+        response_content_parts=response_content_parts,
+        last_user_text="",
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=request,
+        source_imate_id=scope.agent_id,
+        user_message_id=foreground_user_message_id,
+        subscription_actions=None,
+        client_local_id=effective_local_id,
+    )
+    completion = ChatWsCompletionData(
+        id=assistant.id,
+        created=assistant.created,
+        model=model.id_on_provider,
+        user_message_id=foreground_user_message_id,
+        business_actions=assistant.business_actions,
+        choices=assistant.choices,
+        usage=None,
+        local_id=effective_local_id,
+        source_imate_id=scope.agent_id,
+    )
+    payload = build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id=scope.agent_id,
+        status_line=await agent_status_line_for_chat_header(
+            db,
+            scope.agent_id,
+        ),
+    )
+    return payload.model_dump(exclude_none=True)
 
 
 async def materialize_tool_background_ws_payload(
@@ -195,7 +275,7 @@ async def materialize_tool_background_ws_payload(
     subscription_actions = [
         BizAction(action_type=ActionType.NONE, message=""),
     ]
-    completion = build_companion_ws_completion_data(
+    assistant = build_companion_ws_completion_data(
         response_text_content=ev.text,
         response_content_parts=None,
         last_user_text="",
@@ -207,8 +287,20 @@ async def materialize_tool_background_ws_payload(
         subscription_actions=subscription_actions,
         client_local_id=effective_local_id,
     )
-    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = agent_id
-    out["status_line"] = await agent_status_line_for_chat_header(db, agent_id)
-    return out
+    completion = ChatWsCompletionData(
+        id=assistant.id,
+        created=assistant.created,
+        model=assistant.model,
+        user_message_id=user_message_id,
+        business_actions=assistant.business_actions,
+        choices=assistant.choices,
+        usage=assistant.usage,
+        local_id=assistant.local_id,
+        source_imate_id=assistant.source_imate_id,
+    )
+    payload = build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id=agent_id,
+        status_line=await agent_status_line_for_chat_header(db, agent_id),
+    )
+    return payload.model_dump(exclude_none=True)

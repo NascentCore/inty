@@ -40,7 +40,10 @@ from app.external_services.fakes.openai import (
     fake_step_text,
     fake_step_tool_call,
 )
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import (
+    CompanionMemoryBootstrapType,
+    resolved_companion_memory_bootstrap_type,
+)
 from app.utils.models_catalog import DEEPSEEK_V3_2
 from tests.app.core.companion_harness.companion_memory_registry_dsn import (
     companion_memory_registry_dsn,
@@ -300,7 +303,7 @@ def companion_llm_client_with_scripted_transport(
 def build_scripted_injected_runtime(
     script: tuple[FakeCompletionStep, ...],
     *,
-    memory_bootstrap_type: str = CompanionMemoryBootstrapType.NONE.value,
+    memory_bootstrap_type: CompanionMemoryBootstrapType | None = None,
 ) -> tuple[InjectedCompanionRuntime, FakeOpenAI]:
     """Build test ``InjectedCompanionRuntime`` with scripted transport and bootstrap mode."""
     llm_config = scripted_harness_llm_config()
@@ -310,7 +313,9 @@ def build_scripted_injected_runtime(
     companion_config = CompanionConfig(
         llm=llm_config,
         memory_pg_dsn=companion_memory_registry_dsn(),
-        memory_bootstrap_type=memory_bootstrap_type,
+        memory_bootstrap_type=resolved_companion_memory_bootstrap_type(
+            memory_bootstrap_type
+        ),
         langsmith_companion_parent_run_enabled=False,
     )
     injected = InjectedCompanionRuntime(

@@ -11,6 +11,9 @@ from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    is_im_runtime_channel,
+)
 from app.db.session import AsyncSessionLocal
 from app.schemas.biz_action import ActionType, BizAction
 from app.schemas.chat import ChatCompletionRequest
@@ -91,6 +94,24 @@ async def deliver_visible_inner_tick_turn(
         agent_id=deliver_input.chat_row_agent_id,
         meta_data=companion_ai_meta,
     )
+
+    # AgenticLoop already appended this turn's visible rows to the scope
+    # OutputQueue; on IM channels the presence output pump owns delivery of
+    # agent-initiated rows, so a direct channel send here would duplicate the
+    # message. Keep chat_history persistence above, skip the channel push.
+    # TODO(#3543): converge App-WS onto the same pump-owned delivery, then
+    # dissolve this direct-send path entirely.
+    if (
+        deliver_input.companion_turn.output_message_ids
+        and is_im_runtime_channel(deliver_input.delivery.runtime_channel)
+    ):
+        logger.info(
+            "{} channel send delegated to scope output pump "
+            "(output_message_ids={})",
+            deliver_input.log_label,
+            deliver_input.companion_turn.output_message_ids,
+        )
+        return True
 
     async with AsyncSessionLocal() as post_db:
         (

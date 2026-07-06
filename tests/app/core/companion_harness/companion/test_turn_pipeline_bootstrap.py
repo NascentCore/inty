@@ -85,7 +85,7 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
         store=store,
         loaded_state=loaded_state,
         tail_user_messages=_tail_user(),
-        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE.value,
+        memory_bootstrap_type=CompanionMemoryBootstrapType.USER_INTERACTIVE,
         track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         tick_proactive=False,
         implicit_sign_on_turn=False,
@@ -100,4 +100,6 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
     ).bootstrap_turn_system_dicts()
     assert plan.system_messages == expected_system
     assert plan.tools_for_turn == build_openai_bootstrap_track_tools()
-    assert plan.route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+    assert (
+        plan.route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
+    )

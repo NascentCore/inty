@@ -28,8 +28,11 @@ from app.core.companion_harness.memory.transcript_compaction import (
 )
 
 from app.core.llms.client import LlmClient
+from app.utils.config import CompanionMemoryBootstrapType
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from app.core.companion_harness.companion.runtime_channel import TurnRuntimeContext
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
 if TYPE_CHECKING:
@@ -145,7 +148,7 @@ class CompanionTurnDeps:
     transcript_compaction: TranscriptCompactionConfig | None
     transcript_llm_window_max_messages: int | None
     repository_only_store_text: bool
-    memory_bootstrap_type: str
+    memory_bootstrap_type: CompanionMemoryBootstrapType
     runtime_context: TurnRuntimeContext
     background_output_sink: BackgroundToolEventSink | None
     preset_user_msg_uuid: str | None
@@ -159,4 +162,6 @@ class CompanionTurnDeps:
     @property
     def langsmith_slice(self) -> CompanionTurnLangsmithSlice:
         """Turn-bound LangSmith channel tags shared by foreground and tool_background."""
-        return CompanionTurnLangsmithSlice.from_runtime_context(self.runtime_context)
+        return CompanionTurnLangsmithSlice.from_runtime_context(
+            self.runtime_context
+        )

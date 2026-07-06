@@ -54,6 +54,9 @@ def test_load_config_telegram_harness_memory_bootstrap_type() -> None:
         path = Path(tmp) / "config.yaml"
         path.write_text(yaml_text, encoding="utf-8")
         cfg = load_config(str(path))
+    from app.utils.config import CompanionMemoryBootstrapType
+
     assert (
-        cfg.agent.companion_harness.memory_bootstrap_type == "USER_INTERACTIVE"
+        cfg.agent.companion_harness.memory_bootstrap_type
+        == CompanionMemoryBootstrapType.USER_INTERACTIVE
     )

@@ -12,11 +12,15 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_channel.presence import AgentChannelPresence
-from app.services.agentic_companion.downlink import DownlinkKind
 
 
 @pytest.mark.asyncio
-async def test_greet_on_sign_on_appends_user_reply_output() -> None:
+async def test_greet_on_sign_on_hands_output_queue_to_turn() -> None:
+    """Presence passes the scope OutputQueue and a synthetic batch into the turn.
+
+    Visible text is appended by AgenticLoop inside the turn (see
+    ``test_greet_on_sign_on_delivery``), not by presence after it.
+    """
     scope = AgentScope(user_id="user-greet", agent_id="agent-greet")
     presence = AgentChannelPresence(scope)
     fake_model = MagicMock()
@@ -53,8 +57,11 @@ async def test_greet_on_sign_on_appends_user_reply_output() -> None:
     assert kwargs["runtime_channel"] == ChannelKind.TELEGRAM
     assert kwargs["implicit_signal_bundle"].user_signed_on is True
     assert kwargs["implicit_signal_bundle"].server_received_at_utc is not None
-    fake_queue.append_visible_message.assert_awaited_once()
-    append_input = fake_queue.append_visible_message.await_args.args[0]
-    assert append_input.kind == DownlinkKind.USER_REPLY
-    assert append_input.text == "Hello from Inty."
-    assert append_input.message_ids == ()
+    assert kwargs["agentic_output_queue"] is fake_queue
+    batch = kwargs["user_message_batch"]
+    assert batch.batch_id.startswith(
+        "agent-initiated:implicit_sign_on_greeting:"
+    )
+    assert batch.message_ids == (kwargs["preset_user_msg_uuid"],)
+    # Presence must not append visible text itself; AgenticLoop owns the append.
+    fake_queue.append_visible_message.assert_not_awaited()
