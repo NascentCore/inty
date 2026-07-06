@@ -1014,6 +1014,30 @@ def test_evaluate_dreaming_one_shot_tool_calls_duplicate_path_fails() -> None:
     assert result.ok is False
     assert result.error is not None
     assert "duplicate" in result.error
+    assert result.tool_call_count == 6
+    assert result.tool_call_count == len(result.paths)
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_duplicate_path_ignores_unparsed_raw_calls() -> (
+    None
+):
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    tool_calls.append(
+        _dreaming_one_shot_tool_call("MEMORY.md", content_changed=False)
+    )
+    tool_calls.append({"function": {"name": "other_tool", "arguments": "{}"}})
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.tool_call_count == 6
+    assert result.tool_call_count != len(tool_calls)
 
 
 def test_evaluate_dreaming_one_shot_tool_calls_missing_content_changed_key() -> (
@@ -1035,6 +1059,8 @@ def test_evaluate_dreaming_one_shot_tool_calls_missing_content_changed_key() -> 
     assert result.ok is False
     assert result.error is not None
     assert "missing content_changed" in result.error
+    assert result.tool_call_count == 5
+    assert result.tool_call_count == len(result.paths)
 
 
 def test_main_requires_target() -> None:
