@@ -973,6 +973,26 @@ def _query_input_status_for_client_message_id(
     ).strip()
 
 
+def _query_input_batch_id_for_client_message_id(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+    client_message_id: str,
+) -> str:
+    """Return the claimed InputQueue batch id for a client message id."""
+    assert agent_id != ""
+    assert client_message_id != ""
+    return _psql(
+        repo_root,
+        config_path,
+        "SELECT COALESCE(batch_id, '') FROM agentic_companion_input_queue "
+        f"WHERE agent_id = '{agent_id}' "
+        f"AND client_message_id = '{client_message_id}' "
+        "ORDER BY sequence_id DESC LIMIT 1;",
+    ).strip()
+
+
 def _wait_input_queue_idle(
     repo_root: Path,
     config_path: Path,
@@ -2790,6 +2810,48 @@ def _invoke_user_feedback_tool_fallback(
     return ok
 
 
+def _append_github_issue_disclosure_output(
+    repo_root: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    batch_id: str,
+    user_msg_uuid: str,
+    issue_url: str,
+) -> None:
+    """Persist a correlated OutputQueue disclosure row for fallback-created issues."""
+    assert user_id != ""
+    assert agent_id != ""
+    assert batch_id != ""
+    assert user_msg_uuid != ""
+    assert issue_url != ""
+    _ensure_import_path(repo_root)
+    import asyncio
+
+    from app.core.companion_harness.agent_channel.scope import AgentScope
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        OutputQueueAppendInput,
+        get_output_queue_for_scope,
+    )
+    from app.services.agentic_companion.downlink import DownlinkKind
+
+    scope = AgentScope(user_id=user_id, agent_id=agent_id)
+    asyncio.run(
+        get_output_queue_for_scope(scope).append_visible_message(
+            OutputQueueAppendInput(
+                kind=DownlinkKind.TOOL_BACKGROUND,
+                batch_id=batch_id,
+                text=f"GitHub issue filed: {issue_url}",
+                message_ids=(user_msg_uuid,),
+                trace_id=None,
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
+            )
+        )
+    )
+
+
 # TODO(github-issue-e2e-turn-loop): #3745 — this shares most of its turn-loop / WS
 # downlink wait / issue-close logic with ``_run_github_issue_e2e_phase_ws_only`` below;
 # extract a common helper and keep only the DB-vs-WS-only verification branches distinct.
@@ -2804,6 +2866,7 @@ def _run_github_issue_e2e_phase(
     turn_text: str,
     stderr: TextIO,
     skip_db_checks: bool,
+    app_debug: bool,
 ) -> GithubIssueE2eResult:
     user_msg_uuid = ""
     issue_url = ""
@@ -2953,6 +3016,28 @@ def _run_github_issue_e2e_phase(
                         issue_row,
                         expected_user_msg_uuid=user_msg_uuid,
                     )
+                    if tool_fallback and app_debug:
+                        batch_id = _query_input_batch_id_for_client_message_id(
+                            repo_root,
+                            config_path,
+                            agent_id=agent_id,
+                            client_message_id=user_msg_uuid,
+                        )
+                        if not batch_id:
+                            error = (
+                                "no input batch_id for fallback disclosure "
+                                f"user_msg_uuid={user_msg_uuid}"
+                            )
+                            print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
+                        else:
+                            _append_github_issue_disclosure_output(
+                                repo_root,
+                                user_id=user_id,
+                                agent_id=agent_id,
+                                batch_id=batch_id,
+                                user_msg_uuid=user_msg_uuid,
+                                issue_url=issue_url,
+                            )
                     post_deliver_trailing = _drain_turn_trailing_frames(
                         bridge,
                         report,
@@ -3292,10 +3377,7 @@ def _build_regression_summary(
 ) -> tuple[dict[str, Any], RegressionPassGate]:
     """Compute JSON summary + mandatory pass gate from phase results."""
     github_issue_ok = github_result.error is None and github_result.closed
-    # TODO(#3651): drop tool_fallback waiver once issues/3652 fixes harness disclosure.
-    github_disclosure_ok = (
-        not app_debug or github_result.disclosed_in_chat or github_result.tool_fallback
-    )
+    github_disclosure_ok = not app_debug or github_result.disclosed_in_chat
     gate = RegressionPassGate(
         bootstrap_done=bootstrap_done == "true",
         greeting_present=greeting_result.present,
@@ -3462,6 +3544,7 @@ def run_regression(
     scope: RegressionScope,
 ) -> int:
     os.environ["INTY_CONFIG_YAML"] = str(config_path.resolve())
+    app_debug = _load_app_debug_from_config(config_path)
     _ensure_import_path(repo_root)
     from tools.inty_v2_repl.backend_chat_ws import (
         BackendChatWsBridge,
@@ -3906,7 +3989,6 @@ def run_regression(
                         flush=True,
                     )
                     _drain_turn_trailing_frames(bridge, report, label="settled")
-                    # TODO(#3652): tool_fallback bypasses harness WS disclosure; see issues/3651.
                     if skip_db_checks:
                         github_result = _run_github_issue_e2e_phase_ws_only(
                             bridge=bridge,
@@ -3926,6 +4008,7 @@ def run_regression(
                             turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
                             stderr=stderr,
                             skip_db_checks=skip_db_checks,
+                            app_debug=app_debug,
                         )
                     report["github_issue"] = _github_issue_e2e_result_to_report(
                         github_result
@@ -4170,7 +4253,6 @@ LIMIT 8;
         "state": companion_bond_state,
     }
 
-    app_debug = _load_app_debug_from_config(config_path)
     summary, pass_gate = _build_regression_summary(
         bootstrap_done=bootstrap_done,
         context_mode=context_mode,
