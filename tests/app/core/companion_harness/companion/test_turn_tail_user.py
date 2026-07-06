@@ -34,6 +34,9 @@ from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 
 
 def _record(
@@ -219,7 +222,7 @@ def test_append_tail_user_transcript_rows_persists_each_user_message() -> None:
 
     append_tail_user_transcript_rows(
         store,
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         tail_user_messages=(
             TurnTailUserMessage("m1", "first", ts1),
             TurnTailUserMessage("m2", "second", ts2),
@@ -227,7 +230,7 @@ def test_append_tail_user_transcript_rows_persists_each_user_message() -> None:
         trace_id="trace-1",
     )
 
-    raw = store.read_document_if_exists("transcript.jsonl")
+    raw = store.read_document_if_exists(TRANSCRIPT_JSONL_REL)
     assert raw is not None
     rows = [json.loads(line) for line in raw.splitlines()]
     assert [(row["uuid"], row["content"], row["ts"]) for row in rows] == [

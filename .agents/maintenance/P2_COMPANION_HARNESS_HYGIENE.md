@@ -200,3 +200,17 @@ Open PRs checked: #3748 (`cursor/telegram-business-promotion-doc-e953`), #3751 (
 - [x] **HYGIENE-2026-62** #3413: `test_ai_private_manifest_persist.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
 - [x] **HYGIENE-2026-63** #3413: `test_dreaming.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
 - [x] **HYGIENE-2026-64** #3413: `test_inner_tick_schedule.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-17c9` / pull/3754.
+
+## 2026-07-06 scan
+
+Source: open PR overlap check (none open); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests still seed/read MemDoc paths as string literals.
+
+Open PRs checked: none — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-65** #3413: `test_turn_tracks.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-66** #3413: `test_turn_tail_user.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-67** #3413: `test_turn_pipeline_bootstrap.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-68** #3413: `test_turn_pipeline_dreaming.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-69** #3413: `test_transcript_assistant_row.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
