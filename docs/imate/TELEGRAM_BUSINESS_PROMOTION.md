@@ -6,7 +6,6 @@
 
 ## Overall setup
 
-iMate 的 Telegram 推广不需要 Business storefront、connected chatbot、guide agent 或 attribution feature development。
 当前只需要在 Telegram promotion program / Telegram ads 里直接推广 companion bot onboard URL：
 
 ```text
@@ -30,11 +29,7 @@ https://t.me/inty_official_bot?start=onboard
 
 - 投放 URL 固定使用 `https://t.me/inty_official_bot?start=onboard`。
 - 这条链接对应现有 Ops Telegram onboard：`/start onboard` 会自动 provisioning guest user + PRIVATE agent，并进入 bootstrap。
-- 不要为了当前投放等待这些东西：
-  - Business storefront / Start Page / Greeting Message / Quick Replies。
-  - connected guide agent / `business_connection`。
-  - campaign attribution 落库。
-  - 新的 bot token 或新 bot。
+- 当前投放不需要新的 bot、landing page、attribution 参数或 Telegram channel code。
 
 ## Ad copy（user-facing language = English）
 
@@ -66,13 +61,6 @@ it remembers, checks in, and grows with you over time.
 - Telegram promotion program 自带：impression、click、spend。
 - Inty 侧：`agent_channel_endpoints` 新增绑定数；debug 查看 `GET /api/v1/telegram/debug/bindings`。
 - 产品北极星：点击 → `/start onboard` → bootstrap 完成 → 次周回访（retention），见 [docs/imate/DESIGN.md](/docs/imate/DESIGN.md) 与 [companion_harness/DESIGN.md](/docs/imate/companion_harness/DESIGN.md)。
-
-## Non-goals for this launch
-
-- 不做 Business storefront。
-- 不做 connected guide agent。
-- 不做 campaign start-parameter attribution。
-- 不改 Telegram channel code。
 
 ## See also
 
