@@ -360,6 +360,50 @@ def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
     assert store.read_document("MEMORY.md") == "MEMORY.md seed\n"
 
 
+def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-all-noop", "agent", tmp_path.name),
+        repository=None,
+    )
+    _seed_memory_docs(store)
+    rows = [
+        ChatMessage(
+            role="user",
+            content="hello",
+            ts="2026-01-02T09:00:00+00:00",
+            uuid="u",
+        ),
+    ]
+    required_paths = (
+        "memory/daily/2026-01-02.md",
+        "MEMORY.md",
+        "USER.md",
+        "STYLE.md",
+        "SOUL.md",
+        "COMPANIONSHIP.md",
+    )
+    response = _one_shot_response_for_paths(
+        required_paths,
+        content_changed=False,
+    )
+
+    tool_bg_idle = Event()
+    tool_bg_idle.set()
+    with pytest.raises(
+        ValueError, match="no content_changed=true dreaming document updates"
+    ):
+        consolidate_memory_during_dreaming(
+            store,
+            rows,
+            DreamingCuratorMode.ONE_SHOT,
+            _never_run_complete_fn,
+            _one_shot_llm_client(response),
+            langsmith_extra={},
+            tool_bg_idle_event=tool_bg_idle,
+        )
+    assert store.read_document("MEMORY.md") == "MEMORY.md seed\n"
+
+
 def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
     tmp_path: Path,
 ) -> None:

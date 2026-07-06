@@ -642,6 +642,11 @@ def _apply_dreaming_document_updates(
             f"unexpected dreaming document update paths: {extra!r}"
         )
 
+    if not any(
+        by_path[rel].content_changed for rel in curator_input.required_paths
+    ):
+        raise ValueError("no content_changed=true dreaming document updates")
+
     any_written = False
     for rel in curator_input.required_paths:
         update = by_path[rel]
@@ -677,10 +682,7 @@ def _consolidate_memory_sequential(
     assert rows
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
-    rows_by_day: dict[str, list[ChatMessage]] = {}
-    for row in rows:
-        day = parse_transcript_datetime(row.ts).date().isoformat()
-        rows_by_day.setdefault(day, []).append(row)
+    rows_by_day = _rows_by_day(rows)
     day_blocks = [
         _dreaming_transcript_block(store, day_rows, day_iso=day)
         for day, day_rows in sorted(rows_by_day.items())
