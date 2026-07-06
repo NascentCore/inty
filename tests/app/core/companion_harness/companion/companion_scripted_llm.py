@@ -77,6 +77,16 @@ class ScriptedSettledUserChatScript:
     expected_foreground_reply: str | None
 
 
+class UnusedLlmClient:
+    """LlmClient stand-in for sequential-mode dreaming tests: any call fails."""
+
+    def chat_completion_unified(self, **_kwargs: object) -> object:
+        raise AssertionError("llm_client must not be called in sequential mode")
+
+    def resolve_model(self, _role: str) -> object:
+        raise AssertionError("llm_client must not be called in sequential mode")
+
+
 def scripted_harness_llm_config() -> CompanionLLMConfig:
     return CompanionLLMConfig(
         api_key="test-key",

@@ -29,6 +29,10 @@ from app.living_sphere.models import (
     LivingSphereUpdate,
 )
 from app.living_sphere.seeding import ensure_living_sphere_seeded
+from app.utils.config import DreamingCuratorMode
+from tests.app.core.companion_harness.companion.companion_scripted_llm import (
+    UnusedLlmClient,
+)
 
 
 def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
@@ -131,7 +135,10 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
     consolidate_memory_during_dreaming(
         store,
         rows,
+        DreamingCuratorMode.SEQUENTIAL,
         fake_complete,
+        UnusedLlmClient(),
+        langsmith_extra={},
         tool_bg_idle_event=idle,
     )
     context = load_context_meta(store=store)

@@ -24,7 +24,7 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 - settled `USER_CHAT`
 - user complaint → `companion_record_user_feedback` → real GitHub issue (then auto-closed)
 - proactive inner tick
-- scope-worker dreaming consolidation → `MEMORY.md` update (fast `dreaming_idle_seconds: 10` in local config)
+- scope-worker dreaming consolidation → `MEMORY.md` update (fast `dreaming_idle_seconds: 10` in local config); default **one-shot curator** (`agent.companion_harness.dreaming_curator_mode: one_shot`) — single LLM request with parallel `update_dreaming_document` tool calls and explicit `content_changed=false` no-op for unchanged docs; rollback with `sequential`
 - durable InputQueue / OutputQueue delivery
 - LangSmith prompt inputs
 
@@ -92,7 +92,7 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 - A **silent first proactive** (`output_to_user=false`) leaves the transcript without an assistant reply, so the scheduler will **not** fire a second round until a visible proactive happens — waiting longer cannot fix that.
 - JSON report: `tmp/repl-regression-<AGENT_ID>.json` unless `--report` is set (`report.github_issue` has issue number/URL and `closed: true`).
 - Skips `meta_data.source=greeting` downlinks when waiting for proactive (post-restart sign-on is not inner-tick proactive).
-- Unit tests for DB/JSONL parsers: `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
+- Unit tests for DB/JSONL parsers and one-shot dreaming verification helpers (`_required_paths_from_dreaming_llm_inputs`, `_evaluate_dreaming_one_shot_tool_calls`): `tests/cursor/skills/scripts/test_run_inty_repl_regression.py` (skill script is not an `app/` module).
 
 ### Manual REPL (bootstrap quality judgment)
 
@@ -203,6 +203,7 @@ For proactive:
 - **GitHub disclosure (debug only):** when `app.debug: true`, tool-leg WS reply includes issue URL from tool result (`summary.github_issue_disclosed_in_chat: pass`; `skipped` when debug is off).
 - Proactive LLM input includes the synthetic proactive user marker; **≥1 proactive round** (`proactive_inner_tick: present`); no `[SILENT]` token (`proactive_no_silent_token: pass`). Optional stretch: `proactive_target_rounds: met` when the model speaks on round 1.
 - **Dreaming consolidation:** `.companion_dreaming_state.json` checkpoint + `MEMORY.md` sequence/content update (`summary.dreaming_consolidation: pass`).
+- **Dreaming one-shot:** LangSmith `*dreaming_one_shot` llm run emits one `update_dreaming_document` call per required MemoryDoc path (each with `content_changed`), at least one `content_changed=true`, no missing/extra paths (`summary.dreaming_one_shot: pass`; `skipped` when config rolls back to `sequential` or DB checks are skipped).
 - LangSmith run ids in REPL metadata match delivered OutputQueue rows where applicable.
 
 ## Known Non-Blocking Findings
@@ -229,6 +230,7 @@ Reply with:
 - github_issue_e2e: pass / fail (issue # if created)
 - proactive prompt marker: present / missing
 - dreaming_consolidation: pass / fail
+- dreaming_one_shot: pass / fail (tool_calls / changed / no_op / trace_id)
 - InputQueue / OutputQueue status counts
 - key LangSmith trace/run ids
 - blockers vs known non-blocking findings

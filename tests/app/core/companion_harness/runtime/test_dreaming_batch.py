@@ -20,6 +20,7 @@ from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
+from app.utils.config import DreamingCuratorMode
 
 
 def _dreaming_candidate() -> DreamingCandidate:
@@ -73,6 +74,7 @@ def test_run_dreaming_batch_if_due_skips_when_not_due() -> None:
         result = run_dreaming_batch_if_due(
             session,
             idle_seconds=120,
+            curator_mode=DreamingCuratorMode.SEQUENTIAL,
         )
 
     assert result == DreamingBatchOutcome.NOT_DUE
@@ -90,6 +92,7 @@ def test_run_dreaming_batch_if_due_skips_when_session_not_initialized() -> None:
         result = run_dreaming_batch_if_due(
             session,
             idle_seconds=120,
+            curator_mode=DreamingCuratorMode.SEQUENTIAL,
         )
 
     assert result == DreamingBatchOutcome.NOT_DUE
@@ -126,6 +129,7 @@ def test_run_dreaming_batch_if_due_raises_on_boundary_mismatch() -> None:
             run_dreaming_batch_if_due(
                 session,
                 idle_seconds=120,
+                curator_mode=DreamingCuratorMode.SEQUENTIAL,
             )
 
     memory_update.assert_called_once()
@@ -166,6 +170,7 @@ def test_run_dreaming_batch_if_due_saves_checkpoint_after_update() -> None:
         result = run_dreaming_batch_if_due(
             session,
             idle_seconds=120,
+            curator_mode=DreamingCuratorMode.SEQUENTIAL,
         )
 
     assert result == DreamingBatchOutcome.CHECKPOINT_SAVED
@@ -202,6 +207,7 @@ def test_run_dreaming_batch_if_due_skips_when_advisory_lock_busy() -> None:
         result = run_dreaming_batch_if_due(
             session,
             idle_seconds=120,
+            curator_mode=DreamingCuratorMode.SEQUENTIAL,
         )
 
     assert result == DreamingBatchOutcome.ADVISORY_LOCK_BUSY

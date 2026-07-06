@@ -65,6 +65,20 @@ def fake_step_tool_call(
     )
 
 
+def fake_step_tool_calls(
+    *calls: tuple[str, str, str],
+) -> FakeCompletionStep:
+    """Build a scripted step with multiple function tool_calls.
+
+    Each call is ``(name, arguments, tool_call_id)``.
+    """
+    tool_calls = tuple(
+        FakeToolCall(id=tool_call_id, name=name, arguments=arguments)
+        for name, arguments, tool_call_id in calls
+    )
+    return FakeCompletionStep(tool_calls=tool_calls)
+
+
 def fake_step_proactive_chat_envelope(
     *,
     output_to_user: bool,

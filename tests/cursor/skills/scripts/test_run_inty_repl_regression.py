@@ -2,8 +2,8 @@
 
 The skill script lives under ``.cursor/skills/scripts/`` and is loaded by file path
 (see ``_load_regression_module``) because it is a CLI utility, not an ``app/`` module.
-Only the JSON-line parser is covered here; the full driver is exercised manually via
-the ``inty-repl-regression`` skill.
+Parsers and one-shot dreaming verification helpers are covered here; the full driver
+is exercised manually via the ``inty-repl-regression`` skill.
 """
 
 from __future__ import annotations
@@ -807,6 +807,260 @@ def test_load_dreaming_curation_timings_falls_back_to_inty_log_file(
     assert timing is not None
     assert timing.timing_source == "alt-inty.log"
     assert timing.total_curation_ms == 243780.0
+
+
+_DREAMING_REQUIRED_PATHS = (
+    "memory/daily/2026-07-06.md",
+    "MEMORY.md",
+    "USER.md",
+    "STYLE.md",
+    "SOUL.md",
+    "COMPANIONSHIP.md",
+)
+_DREAMING_ONE_SHOT_TRACE_ID = "019f354e-736f-7502-9ec6-ac9431b2f893"
+
+
+def _dreaming_one_shot_tool_call(
+    relative_path: str,
+    *,
+    content_changed: bool | None,
+    body: str = "updated",
+) -> dict:
+    payload: dict[str, object] = {
+        "document_kind": "memory",
+        "relative_path": relative_path,
+        "body": body,
+        "changed_reason": "test",
+    }
+    if content_changed is not None:
+        payload["content_changed"] = content_changed
+    return {
+        "function": {
+            "name": "update_dreaming_document",
+            "arguments": json.dumps(payload),
+        }
+    }
+
+
+def test_dreaming_curator_mode_from_config_yaml_defaults_to_one_shot(
+    tmp_path: Path,
+) -> None:
+    mod = _load_regression_module()
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("app:\n  name: inty-backend\n", encoding="utf-8")
+    assert (
+        mod._dreaming_curator_mode_from_config_yaml(config_path) == "one_shot"
+    )
+
+
+def test_dreaming_curator_mode_from_config_yaml_reads_sequential_rollback(
+    tmp_path: Path,
+) -> None:
+    mod = _load_regression_module()
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "agent:\n  companion_harness:\n    dreaming_curator_mode: sequential\n",
+        encoding="utf-8",
+    )
+    assert (
+        mod._dreaming_curator_mode_from_config_yaml(config_path) == "sequential"
+    )
+
+
+def test_required_paths_from_dreaming_llm_inputs_extracts_headers() -> None:
+    mod = _load_regression_module()
+    content = "\n".join(
+        f"### Current `{path}`" for path in _DREAMING_REQUIRED_PATHS
+    )
+    inputs = {
+        "messages": [
+            {"role": "system", "content": "ignore"},
+            {"role": "user", "content": content},
+        ]
+    }
+    assert (
+        mod._required_paths_from_dreaming_llm_inputs(inputs)
+        == _DREAMING_REQUIRED_PATHS
+    )
+
+
+def test_required_paths_from_dreaming_llm_inputs_returns_empty_without_user_content() -> (
+    None
+):
+    mod = _load_regression_module()
+    assert mod._required_paths_from_dreaming_llm_inputs({}) == ()
+    assert (
+        mod._required_paths_from_dreaming_llm_inputs(
+            {"messages": [{"role": "assistant", "content": "no headers"}]}
+        )
+        == ()
+    )
+    assert (
+        mod._required_paths_from_dreaming_llm_inputs(
+            {"messages": [{"role": "user", "content": 42}]}
+        )
+        == ()
+    )
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_all_changed() -> None:
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is True
+    assert result.error is None
+    assert result.changed_count == 6
+    assert result.no_op_count == 0
+    assert result.tool_call_count == 6
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_mixed_changed_and_no_op() -> (
+    None
+):
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(
+            "memory/daily/2026-07-06.md", content_changed=True
+        ),
+        _dreaming_one_shot_tool_call("MEMORY.md", content_changed=True),
+        _dreaming_one_shot_tool_call("USER.md", content_changed=False),
+        _dreaming_one_shot_tool_call("STYLE.md", content_changed=False),
+        _dreaming_one_shot_tool_call("SOUL.md", content_changed=False),
+        _dreaming_one_shot_tool_call("COMPANIONSHIP.md", content_changed=False),
+    ]
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is True
+    assert result.changed_count == 2
+    assert result.no_op_count == 4
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_missing_required_path() -> None:
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS[:-1]
+    ]
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.error is not None
+    assert "missing dreaming tool calls" in result.error
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_extra_unexpected_path() -> None:
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    tool_calls.append(
+        _dreaming_one_shot_tool_call("IDENTITY.md", content_changed=False)
+    )
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.error is not None
+    assert "unexpected" in result.error
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_all_no_op_fails() -> None:
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=False)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.error == "no content_changed=true tool calls"
+    assert result.changed_count == 0
+    assert result.no_op_count == 6
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_duplicate_path_fails() -> None:
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    tool_calls.append(
+        _dreaming_one_shot_tool_call("MEMORY.md", content_changed=False)
+    )
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.error is not None
+    assert "duplicate" in result.error
+    assert result.tool_call_count == 6
+    assert result.tool_call_count == len(result.paths)
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_duplicate_path_ignores_unparsed_raw_calls() -> (
+    None
+):
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS
+    ]
+    tool_calls.append(
+        _dreaming_one_shot_tool_call("MEMORY.md", content_changed=False)
+    )
+    tool_calls.append({"function": {"name": "other_tool", "arguments": "{}"}})
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.tool_call_count == 6
+    assert result.tool_call_count != len(tool_calls)
+
+
+def test_evaluate_dreaming_one_shot_tool_calls_missing_content_changed_key() -> (
+    None
+):
+    mod = _load_regression_module()
+    tool_calls = [
+        _dreaming_one_shot_tool_call(path, content_changed=True)
+        for path in _DREAMING_REQUIRED_PATHS[:-1]
+    ]
+    tool_calls.append(
+        _dreaming_one_shot_tool_call("COMPANIONSHIP.md", content_changed=None)
+    )
+    result = mod._evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        _DREAMING_REQUIRED_PATHS,
+        trace_id=_DREAMING_ONE_SHOT_TRACE_ID,
+    )
+    assert result.ok is False
+    assert result.error is not None
+    assert "missing content_changed" in result.error
+    assert result.tool_call_count == 5
+    assert result.tool_call_count == len(result.paths)
 
 
 def test_main_requires_target() -> None:

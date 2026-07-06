@@ -2,7 +2,12 @@
 
 Must be in plan mode, if not, switch to plan mode first.
 
-Draft a solid implementation plan for a sound and clear design.
+Draft a solid implementation plan to be handed off to a less intelligent
+subagent.
+
+The major work is to fill in details given a sound and clear design.
+So that the less intelligent subagent can focus on implementation,
+not to lost objective and create unmaintainable code.
 
 ## Scoping
 

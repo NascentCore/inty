@@ -26,6 +26,9 @@ Layout:
   proactive WS frame arrives, it queries ``chat_history`` for silent inner ticks.
   ``_parse_proactive_chat_history_rows`` and feedback JSONL parsers are unit-tested in
   ``tests/cursor/skills/scripts/test_run_inty_repl_regression.py``.
+  One-shot dreaming verification helpers
+  (``_required_paths_from_dreaming_llm_inputs``, ``_evaluate_dreaming_one_shot_tool_calls``)
+  are unit-tested there too.
 
 Run with shell cwd = repository root (or any path under the repo).
 
@@ -55,6 +58,8 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, TextIO
+
+import yaml
 
 _TAG = "[inty-repl-regression]"
 _DEFAULT_API_BASE = "http://127.0.0.1:8001"
@@ -410,6 +415,20 @@ class DreamingLogTiming:
 
 
 @dataclass(frozen=True)
+class DreamingOneShotVerifyResult:
+    """LangSmith verification for one-shot dreaming tool calls."""
+
+    ok: bool
+    error: str | None
+    trace_id: str
+    tool_call_count: int
+    required_path_count: int
+    changed_count: int
+    no_op_count: int
+    paths: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class DreamingConsolidationResult:
     """Dreaming batch checkpoint + MEMORY.md update checks."""
 
@@ -419,6 +438,7 @@ class DreamingConsolidationResult:
     memory_sequence_after: int
     error: str | None
     log_timing: DreamingLogTiming | None = None
+    one_shot: DreamingOneShotVerifyResult | None = None
 
 
 @dataclass(frozen=True)
@@ -1535,6 +1555,15 @@ def _dreaming_checkpoint_present(
 _DREAMING_START_LINE_RE = re.compile(
     r"dreaming_consolidation start ws=(?P<ws>\S+) rows=(?P<rows>\d+) chars=(?P<chars>\d+)"
 )
+_DREAMING_ONE_SHOT_START_LINE_RE = re.compile(
+    r"dreaming_consolidation one_shot start ws=(?P<ws>\S+) rows=(?P<rows>\d+) "
+    r"paths=(?P<paths>\d+) chars=(?P<chars>\d+)"
+)
+_DREAMING_CHECKPOINT_TRACE_RE = re.compile(
+    r"batch_observed user=\S+ agent=(?P<agent>\S+) .*?outcome=checkpoint_saved "
+    r".*?langsmith_trace_id=(?P<trace>\S+)"
+)
+_DREAMING_REQUIRED_PATH_RE = re.compile(r"### Current `([^`]+)`")
 _DREAMING_CURATED_LINE_RE = re.compile(
     r"dreaming_consolidation curated step=(?P<step>\S+) ms=(?P<ms>\d+(?:\.\d+)?)\s+ws=(?P<ws>\S+)"
 )
@@ -1574,12 +1603,15 @@ def _parse_dreaming_curation_timings_from_log_text(
     latest_partial: _DreamingLogBatch | None = None
     for line in log_text.splitlines():
         start_match = _DREAMING_START_LINE_RE.search(line)
-        if start_match is not None:
-            ws = start_match.group("ws")
+        one_shot_start_match = _DREAMING_ONE_SHOT_START_LINE_RE.search(line)
+        if start_match is not None or one_shot_start_match is not None:
+            match = one_shot_start_match or start_match
+            assert match is not None
+            ws = match.group("ws")
             if ws == target_ws:
                 current = _DreamingLogBatch(
-                    rows=int(start_match.group("rows")),
-                    chars=int(start_match.group("chars")),
+                    rows=int(match.group("rows")),
+                    chars=int(match.group("chars")),
                     step_timings=[],
                 )
             continue
@@ -1695,13 +1727,337 @@ def _dreaming_result_with_log_timings(
         memory_sequence_after=result.memory_sequence_after,
         error=result.error,
         log_timing=timing,
+        one_shot=result.one_shot,
+    )
+
+
+def _langsmith_project_from_config_yaml(config_path: Path) -> str:
+    """Mirror ``download_run.py`` project naming for LangSmith list_runs."""
+    import getpass
+
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    app_data = data.get("app") if isinstance(data.get("app"), dict) else {}
+    name = str(app_data.get("name") or "inty-backend").strip() or "inty-backend"
+    raw_env = app_data.get("environment", "dev")
+    env_val = str(raw_env).strip().lower() if raw_env is not None else "dev"
+    project = f"{name}-{env_val}"
+    if env_val == "local":
+        user = (os.getenv("USER") or os.getenv("USERNAME") or "").strip()
+        if not user:
+            try:
+                user = getpass.getuser()
+            except Exception:
+                user = ""
+        safe = "".join(
+            c if c.isalnum() or c in "-_" else "-" for c in (user or "unknown")
+        )
+        parts = [p for p in safe.split("-") if p]
+        slug = "-".join(parts) or "unknown"
+        project = f"{project}-{slug}"
+    return project
+
+
+_DREAMING_CURATOR_MODE_ONE_SHOT = "one_shot"
+
+
+def _dreaming_curator_mode_from_config_yaml(config_path: Path) -> str:
+    """``agent.companion_harness.dreaming_curator_mode`` with the app default one_shot."""
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    agent = data.get("agent")
+    harness = agent.get("companion_harness") if isinstance(agent, dict) else None
+    if isinstance(harness, dict):
+        raw = harness.get("dreaming_curator_mode")
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+    return _DREAMING_CURATOR_MODE_ONE_SHOT
+
+
+def _langchain_api_key_from_config_yaml(config_path: Path) -> str:
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    agent = data.get("agent")
+    if isinstance(agent, dict):
+        raw = agent.get("langchain_api_key")
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+    for env_name in ("LANGCHAIN_API_KEY", "LANGSMITH_API_KEY"):
+        v = (os.environ.get(env_name) or "").strip()
+        if v:
+            return v
+    raise RuntimeError("LangSmith API key missing for dreaming one-shot verify")
+
+
+def _dreaming_checkpoint_langsmith_trace_id_from_logs(
+    repo_root: Path,
+    *,
+    agent_id: str,
+) -> str | None:
+    """Latest ``checkpoint_saved`` LangSmith trace id for ``agent_id`` in backend logs."""
+    assert agent_id
+    for log_path in _resolve_dreaming_timing_log_paths(repo_root):
+        if not log_path.is_file():
+            continue
+        trace_id: str | None = None
+        for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = _DREAMING_CHECKPOINT_TRACE_RE.search(line)
+            if match is None:
+                continue
+            if match.group("agent") != agent_id:
+                continue
+            trace_id = match.group("trace")
+        if trace_id:
+            return trace_id
+    return None
+
+
+def _required_paths_from_dreaming_llm_inputs(inputs: dict[str, object]) -> tuple[str, ...]:
+    messages = inputs.get("messages")
+    if not isinstance(messages, list):
+        return ()
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if not isinstance(content, str):
+            continue
+        paths = tuple(_DREAMING_REQUIRED_PATH_RE.findall(content))
+        if paths:
+            return paths
+    return ()
+
+
+_DREAMING_ONE_SHOT_UPDATE_TOOL_NAME = "update_dreaming_document"
+
+
+def _evaluate_dreaming_one_shot_tool_calls(
+    tool_calls: list[Any],
+    required_paths: tuple[str, ...],
+    *,
+    trace_id: str,
+) -> DreamingOneShotVerifyResult:
+    """Validate one-shot dreaming tool calls against required MemoryDoc paths."""
+    assert trace_id
+    by_path: dict[str, dict[str, object]] = {}
+    changed_count = 0
+    no_op_count = 0
+    for tc in tool_calls:
+        if not isinstance(tc, dict):
+            continue
+        fn = tc.get("function")
+        if not isinstance(fn, dict):
+            continue
+        if fn.get("name") != _DREAMING_ONE_SHOT_UPDATE_TOOL_NAME:
+            continue
+        args_raw = fn.get("arguments")
+        if not isinstance(args_raw, str):
+            continue
+        payload = json.loads(args_raw)
+        if not isinstance(payload, dict):
+            continue
+        rel = payload.get("relative_path")
+        if not isinstance(rel, str):
+            continue
+        if rel in by_path:
+            return DreamingOneShotVerifyResult(
+                ok=False,
+                error=f"duplicate dreaming tool call for path {rel!r}",
+                trace_id=trace_id,
+                tool_call_count=len(by_path),
+                required_path_count=len(required_paths),
+                changed_count=changed_count,
+                no_op_count=no_op_count,
+                paths=tuple(sorted(by_path.keys())),
+            )
+        if "content_changed" not in payload:
+            return DreamingOneShotVerifyResult(
+                ok=False,
+                error=f"tool call for {rel!r} missing content_changed",
+                trace_id=trace_id,
+                tool_call_count=len(by_path),
+                required_path_count=len(required_paths),
+                changed_count=changed_count,
+                no_op_count=no_op_count,
+                paths=tuple(sorted(by_path.keys())),
+            )
+        by_path[rel] = payload
+        if bool(payload.get("content_changed")):
+            changed_count += 1
+        else:
+            no_op_count += 1
+    missing = sorted(set(required_paths) - set(by_path.keys()))
+    if missing:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error=f"missing dreaming tool calls for paths: {missing!r}",
+            trace_id=trace_id,
+            tool_call_count=len(by_path),
+            required_path_count=len(required_paths),
+            changed_count=changed_count,
+            no_op_count=no_op_count,
+            paths=tuple(sorted(by_path.keys())),
+        )
+    extra = sorted(set(by_path.keys()) - set(required_paths))
+    if extra:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error=f"unexpected dreaming tool call paths: {extra!r}",
+            trace_id=trace_id,
+            tool_call_count=len(by_path),
+            required_path_count=len(required_paths),
+            changed_count=changed_count,
+            no_op_count=no_op_count,
+            paths=tuple(sorted(by_path.keys())),
+        )
+    if changed_count == 0:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error="no content_changed=true tool calls",
+            trace_id=trace_id,
+            tool_call_count=len(by_path),
+            required_path_count=len(required_paths),
+            changed_count=0,
+            no_op_count=no_op_count,
+            paths=tuple(sorted(by_path.keys())),
+        )
+    return DreamingOneShotVerifyResult(
+        ok=True,
+        error=None,
+        trace_id=trace_id,
+        tool_call_count=len(by_path),
+        required_path_count=len(required_paths),
+        changed_count=changed_count,
+        no_op_count=no_op_count,
+        paths=tuple(sorted(by_path.keys())),
+    )
+
+
+def _verify_dreaming_one_shot_langsmith(
+    config_path: Path,
+    *,
+    trace_id: str,
+) -> DreamingOneShotVerifyResult:
+    """Verify one-shot dreaming LLM span covers all MemoryDocs with explicit no-op support."""
+    assert trace_id
+    from langsmith import Client
+
+    os.environ["LANGCHAIN_API_KEY"] = _langchain_api_key_from_config_yaml(config_path)
+    project = _langsmith_project_from_config_yaml(config_path)
+    client = Client(auto_batch_tracing=False)
+    llm_run = None
+    for run in client.list_runs(trace_id=trace_id, project_name=project, limit=50):
+        if run.run_type != "llm":
+            continue
+        if (run.name or "").endswith("dreaming_one_shot"):
+            llm_run = run
+            break
+    if llm_run is None:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error="missing LangSmith llm run dreaming_one_shot",
+            trace_id=trace_id,
+            tool_call_count=0,
+            required_path_count=0,
+            changed_count=0,
+            no_op_count=0,
+            paths=(),
+        )
+    inputs = llm_run.inputs if isinstance(llm_run.inputs, dict) else {}
+    required_paths = _required_paths_from_dreaming_llm_inputs(inputs)
+    outputs = llm_run.outputs if isinstance(llm_run.outputs, dict) else {}
+    choices = outputs.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error="dreaming_one_shot llm run has no choices output",
+            trace_id=trace_id,
+            tool_call_count=0,
+            required_path_count=len(required_paths),
+            changed_count=0,
+            no_op_count=0,
+            paths=(),
+        )
+    message = choices[0].get("message") if isinstance(choices[0], dict) else None
+    tool_calls = (
+        message.get("tool_calls")
+        if isinstance(message, dict) and isinstance(message.get("tool_calls"), list)
+        else []
+    )
+    return _evaluate_dreaming_one_shot_tool_calls(
+        tool_calls,
+        required_paths,
+        trace_id=trace_id,
+    )
+
+
+def _verify_dreaming_one_shot_for_agent(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+) -> DreamingOneShotVerifyResult:
+    """Resolve checkpoint trace from logs and verify one-shot tool-call coverage."""
+    trace_id = _dreaming_checkpoint_langsmith_trace_id_from_logs(
+        repo_root,
+        agent_id=agent_id,
+    )
+    if not trace_id:
+        return DreamingOneShotVerifyResult(
+            ok=False,
+            error="checkpoint_saved langsmith_trace_id not found in backend logs",
+            trace_id="",
+            tool_call_count=0,
+            required_path_count=0,
+            changed_count=0,
+            no_op_count=0,
+            paths=(),
+        )
+    return _verify_dreaming_one_shot_langsmith(config_path, trace_id=trace_id)
+
+
+def _attach_dreaming_one_shot_verify(
+    result: DreamingConsolidationResult,
+    *,
+    repo_root: Path,
+    config_path: Path,
+    agent_id: str,
+) -> DreamingConsolidationResult:
+    """LangSmith-verify one-shot tool calls when checkpoint dreaming succeeded.
+
+    Skipped (``one_shot`` stays ``None``) when the config rolls back to the
+    ``sequential`` curator mode — there is no ``dreaming_one_shot`` llm run then.
+    """
+    if result.error is not None or not result.checkpoint_present:
+        return result
+    if (
+        _dreaming_curator_mode_from_config_yaml(config_path)
+        != _DREAMING_CURATOR_MODE_ONE_SHOT
+    ):
+        return result
+    one_shot = _verify_dreaming_one_shot_for_agent(
+        repo_root,
+        config_path,
+        agent_id=agent_id,
+    )
+    error = result.error if one_shot.ok else one_shot.error
+    return DreamingConsolidationResult(
+        checkpoint_present=result.checkpoint_present,
+        memory_updated=result.memory_updated,
+        memory_sequence_before=result.memory_sequence_before,
+        memory_sequence_after=result.memory_sequence_after,
+        error=error,
+        log_timing=result.log_timing,
+        one_shot=one_shot,
     )
 
 
 def _dreaming_report_fields(result: DreamingConsolidationResult) -> dict[str, Any]:
     """JSON-report dreaming block including optional log-derived step timings."""
     timing = result.log_timing
-    return {
+    fields: dict[str, Any] = {
         "checkpoint_present": result.checkpoint_present,
         "memory_updated": result.memory_updated,
         "memory_sequence_before": result.memory_sequence_before,
@@ -1716,6 +2072,19 @@ def _dreaming_report_fields(result: DreamingConsolidationResult) -> dict[str, An
         "chars": timing.chars if timing is not None else None,
         "timing_source": timing.timing_source if timing is not None else None,
     }
+    one_shot = result.one_shot
+    if one_shot is not None:
+        fields["one_shot"] = {
+            "ok": one_shot.ok,
+            "error": one_shot.error,
+            "trace_id": one_shot.trace_id,
+            "tool_call_count": one_shot.tool_call_count,
+            "required_path_count": one_shot.required_path_count,
+            "changed_count": one_shot.changed_count,
+            "no_op_count": one_shot.no_op_count,
+            "paths": list(one_shot.paths),
+        }
+    return fields
 
 
 def _summarize_dreaming_step_timings(
@@ -1728,6 +2097,7 @@ def _summarize_dreaming_step_timings(
 def _finalize_dreaming_poll_result(
     *,
     repo_root: Path,
+    config_path: Path,
     user_id: str,
     agent_id: str,
     checkpoint_present: bool,
@@ -1736,8 +2106,8 @@ def _finalize_dreaming_poll_result(
     memory_sequence_after: int,
     error: str | None,
 ) -> DreamingConsolidationResult:
-    """Build dreaming poll result and attach scoped log timings when available."""
-    return _dreaming_result_with_log_timings(
+    """Build dreaming poll result, log timings, and LangSmith one-shot verify."""
+    with_timings = _dreaming_result_with_log_timings(
         DreamingConsolidationResult(
             checkpoint_present=checkpoint_present,
             memory_updated=memory_updated,
@@ -1747,6 +2117,12 @@ def _finalize_dreaming_poll_result(
         ),
         repo_root=repo_root,
         user_id=user_id,
+        agent_id=agent_id,
+    )
+    return _attach_dreaming_one_shot_verify(
+        with_timings,
+        repo_root=repo_root,
+        config_path=config_path,
         agent_id=agent_id,
     )
 
@@ -1771,6 +2147,7 @@ def _wait_dreaming_consolidation(
         print(f"{_TAG} skip dreaming consolidation poll (no db)", flush=True)
         return _finalize_dreaming_poll_result(
             repo_root=repo_root,
+            config_path=config_path,
             user_id=user_id,
             agent_id=agent_id,
             checkpoint_present=False,
@@ -1812,6 +2189,7 @@ def _wait_dreaming_consolidation(
             )
             return _finalize_dreaming_poll_result(
                 repo_root=repo_root,
+                config_path=config_path,
                 user_id=user_id,
                 agent_id=agent_id,
                 checkpoint_present=True,
@@ -1827,6 +2205,7 @@ def _wait_dreaming_consolidation(
     memory_updated = last_memory_seq > memory_sequence_before
     return _finalize_dreaming_poll_result(
         repo_root=repo_root,
+        config_path=config_path,
         user_id=user_id,
         agent_id=agent_id,
         checkpoint_present=checkpoint_present,
@@ -2996,6 +3375,15 @@ def _build_regression_summary(
             )
         ),
         "dreaming_consolidation": dreaming_status,
+        "dreaming_one_shot": (
+            RegressionCheckStatus.SKIPPED.value
+            if skip_db_checks or dreaming_result.one_shot is None
+            else (
+                RegressionCheckStatus.PASS.value
+                if dreaming_result.one_shot.ok
+                else RegressionCheckStatus.FAIL.value
+            )
+        ),
         "settled_queue_turn": (
             RegressionCheckStatus.PASS.value
             if settled_ok and not report_errors
@@ -3649,6 +4037,15 @@ def run_regression(
                         skip_db_checks=skip_db_checks,
                     )
                     report["dreaming"] = _dreaming_report_fields(dreaming_result)
+                    if dreaming_result.one_shot is not None and dreaming_result.one_shot.ok:
+                        os_ = dreaming_result.one_shot
+                        print(
+                            f"{_TAG} dreaming one_shot verified "
+                            f"tool_calls={os_.tool_call_count} "
+                            f"changed={os_.changed_count} no_op={os_.no_op_count} "
+                            f"trace_id={os_.trace_id}",
+                            flush=True,
+                        )
                     if dreaming_result.error:
                         report["errors"].append(
                             {"turn": "dreaming", "error": (408, dreaming_result.error)}

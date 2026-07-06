@@ -633,6 +633,9 @@ async def try_fire_dreaming_inner_tick(
     idle_seconds = (
         global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_idle_seconds
     )
+    curator_mode = (
+        global_config_loaded_from_config_yaml.agent.companion_harness.dreaming_curator_mode
+    )
 
     scope_session = (
         await companion_chat_service.resolve_companion_session_for_api_turn(
@@ -651,6 +654,7 @@ async def try_fire_dreaming_inner_tick(
             chat_id=coords.chat_row_id,
             resolved_chat_model=coords.model_override,
             dreaming_idle_seconds=idle_seconds,
+            curator_mode=curator_mode,
         )
         if outcome == DreamingBatchOutcome.CHECKPOINT_SAVED:
             logger.info(

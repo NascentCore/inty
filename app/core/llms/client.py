@@ -305,6 +305,7 @@ class LlmClient:
         tools: list[Any] | None = None,
         tool_choice: str | None = None,
         high_reasoning: bool = False,
+        langsmith_extra: dict[str, Any] | None = None,
     ) -> Any:
         """Single client path (no dual routing), for bootstrap or tests."""
         m = model or self.resolve_model("tool" if tools else "chat")
@@ -316,6 +317,7 @@ class LlmClient:
             tools=list(tools or []),
             tool_choice=tool_choice,
             high_reasoning=high_reasoning,
+            langsmith_extra=langsmith_extra,
         )
 
     def complete_text(

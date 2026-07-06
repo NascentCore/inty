@@ -52,7 +52,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.utils.config import CompanionMemoryBootstrapType
+from app.utils.config import CompanionMemoryBootstrapType, DreamingCuratorMode
 from app.utils.models_catalog import GenAIModel
 
 
@@ -113,6 +113,7 @@ def run_dreaming_batch_for_api(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     dreaming_idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
 ) -> DreamingBatchOutcome:
     """Resolve ``CompanionSession`` and run ``run_dreaming_batch_if_due``."""
     chat_api_id = resolved_chat_model.id_on_provider
@@ -126,6 +127,7 @@ def run_dreaming_batch_for_api(
     return run_dreaming_batch_if_due(
         session,
         idle_seconds=dreaming_idle_seconds,
+        curator_mode=curator_mode,
     )
 
 

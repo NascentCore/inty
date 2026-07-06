@@ -15,6 +15,17 @@ verbatim turns at tail (#3522). **Today**: day→daily gist→MEMORY rollup only
 Memory-phase invariant **DreamingBatch**: see ``companion.turn_invariants`` — batch
 curation entry is ``consolidate_memory_during_dreaming`` only.
 
+**Curator modes** (``agent.companion_harness.dreaming_curator_mode``):
+``one_shot`` (default) — one LLM request with parallel ``update_dreaming_document``
+tool calls; ``sequential`` — legacy per-document chain. One-shot cannot see sibling
+tool outputs mid-flight (no fresh MEMORY.md between USER/STYLE/SOUL steps); the prompt
+instructs in-context chaining instead. Unchanged docs use explicit no-op calls
+(``content_changed=false``); only changed docs are written. Set ``sequential`` in
+config to roll back.
+
+TODO(dreaming-one-shot-retire-sequential): Delete the sequential per-doc chain and the — #3757
+curator-mode knob once one-shot curation quality is validated (#3757).
+
 TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming batch. — #3522
 
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
@@ -25,12 +36,16 @@ into companion ``MEMORY.md``; generalize bounded-coherent curation (epic #3700).
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
 from threading import Event
 from typing import Any
 
 from loguru import logger
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.companion_harness.companion.dreaming import (
     parse_transcript_datetime,
@@ -40,6 +55,12 @@ from app.core.companion_harness.companion.transcript_ai_private import (
     dreaming_transcript_block,
 )
 from app.core.companion_harness.companion.utc import local_date_str
+from app.core.companion_harness.tools.openai_tools_prepare import (
+    openai_function_tool,
+    prepare_openai_tools_for_chat_completions,
+)
+from app.core.llms.client import LlmClient
+from app.utils.config import DreamingCuratorMode
 
 from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
@@ -59,6 +80,81 @@ _MEMORY_DAILY_GIST_CTX_MAX = 12_000
 _SOUL_MEMORY_CTX_MAX = 12_000
 
 _SOUL_FROZEN_APPEARANCE_MARKER = "<<<SOUL_CURATOR_FROZEN_APPEARANCE>>>"
+
+_DREAMING_DOCUMENT_UPDATE_TOOL_NAME = "update_dreaming_document"
+
+# LangSmith model-role label for the single one-shot curator LLM request; the
+# REPL regression skill matches run names ending with this value.
+DREAMING_ONE_SHOT_LLM_ROLE = "dreaming_one_shot"
+
+_ONE_SHOT_CURATOR_PREAMBLE = """You are a dreaming memory curator. During sleeping-state dreaming you update multiple long-term MemoryDocs in one pass.
+
+Before emitting any tool calls, reason briefly (in your head, not in tool output) about what the updated daily gist(s) and MEMORY.md should become, then derive USER.md, STYLE.md, SOUL.md, and COMPANIONSHIP.md from that draft so documents stay mutually consistent.
+
+Emit exactly one ``update_dreaming_document`` tool call per required document path listed below.
+Set ``content_changed`` to true and include the full updated markdown body when that document should change.
+Set ``content_changed`` to false for an explicit no-op when the transcript has no relevant signal for that document (``body`` may be empty; explain in ``changed_reason``).
+"""
+
+
+class DreamingDocumentKind(StrEnum):
+    """Semantic target for a one-shot dreaming document update tool call."""
+
+    DAILY_GIST = "daily_gist"
+    MEMORY = "memory"
+    USER = "user"
+    STYLE = "style"
+    SOUL = "soul"
+    COMPANIONSHIP = "companionship"
+
+
+class DreamingDocumentUpdate(BaseModel):
+    """Validated arguments for one ``update_dreaming_document`` tool call."""
+
+    document_kind: DreamingDocumentKind = Field(
+        description="Which MemoryDoc role this update applies to."
+    )
+    relative_path: str = Field(
+        description="Repo-relative MemoryStore path being updated."
+    )
+    content_changed: bool = Field(
+        description=(
+            "True when this document should be rewritten; false for explicit no-op "
+            "(store keeps the current body)."
+        )
+    )
+    body: str = Field(
+        description=(
+            "Full updated markdown body when content_changed is true; "
+            "empty when content_changed is false."
+        )
+    )
+    changed_reason: str = Field(
+        description="Short note on why this document changed or stayed unchanged."
+    )
+
+    @model_validator(mode="after")
+    def _body_required_when_changed(self) -> DreamingDocumentUpdate:
+        if self.content_changed and not self.body.strip():
+            raise ValueError(
+                "dreaming document update body required when content_changed is true"
+            )
+        return self
+
+
+@dataclass(frozen=True)
+class DreamingCuratorInput:
+    """Snapshot of current MemoryDocs and transcript slice for one-shot curation.
+
+    ``current_bodies`` maps every required MemoryStore path to the curator-visible
+    body (SOUL.md holds the frozen-appearance marker instead of the 形象 section).
+    """
+
+    required_paths: tuple[str, ...]
+    current_bodies: dict[str, str]
+    soul_frozen_appearance: str | None
+    transcript_block: str
+
 
 _MEMORY_CURATOR_SYSTEM = """You are a memory curator for semantic long-term memory (MEMORY.md). Given the current MEMORY.md, optional current-day gist summary (memory/daily/<date>.md), and the latest user/assistant turn, output ONLY the full updated MEMORY.md body (markdown).
 
@@ -270,11 +366,7 @@ def _rewrite_user_md(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
     user_body = store.read_document(USER_MD_REL)
-    memory_body = store.read_document(MEMORY_MD_REL)
-    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
-        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
-    else:
-        memory_ctx = memory_body
+    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
     user_block = (
         f"Current USER.md:\n\n{user_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -296,11 +388,7 @@ def _rewrite_style_md(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
     style_body = store.read_document(STYLE_MD_REL)
-    memory_body = store.read_document(MEMORY_MD_REL)
-    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
-        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
-    else:
-        memory_ctx = memory_body
+    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
     user_block = (
         f"Current STYLE.md:\n\n{style_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -323,11 +411,7 @@ def _rewrite_soul_md(
 ) -> None:
     soul_body = store.read_document(SOUL_MD_REL)
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
-    memory_body = store.read_document(MEMORY_MD_REL)
-    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
-        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
-    else:
-        memory_ctx = memory_body
+    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
     user_block = (
         f"Current SOUL.md:\n\n{curator_doc}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -355,11 +439,7 @@ def _rewrite_companionship_md(
     companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
     if companionship_body is None:
         companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
-    memory_body = store.read_document(MEMORY_MD_REL)
-    if len(memory_body) > _SOUL_MEMORY_CTX_MAX:
-        memory_ctx = memory_body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
-    else:
-        memory_ctx = memory_body
+    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
     user_block = (
         f"Current COMPANIONSHIP.md:\n\n{companionship_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -373,7 +453,219 @@ def _rewrite_companionship_md(
     store.write_document(COMPANIONSHIP_MD_REL, new_body.strip() + "\n")
 
 
-def consolidate_memory_during_dreaming(
+def _truncate_memory_ctx(body: str) -> str:
+    if len(body) > _SOUL_MEMORY_CTX_MAX:
+        return body[: _SOUL_MEMORY_CTX_MAX - 1] + "…"
+    return body
+
+
+def _rows_by_day(rows: list[ChatMessage]) -> dict[str, list[ChatMessage]]:
+    grouped: dict[str, list[ChatMessage]] = {}
+    for row in rows:
+        day = parse_transcript_datetime(row.ts).date().isoformat()
+        grouped.setdefault(day, []).append(row)
+    return grouped
+
+
+def _build_dreaming_curator_input(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+) -> DreamingCuratorInput:
+    """Package current MemoryDoc bodies and transcript for one-shot curation."""
+    by_day = _rows_by_day(rows)
+    daily_paths = tuple(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day)
+        for day in sorted(by_day.keys())
+    )
+    soul_body = store.read_document(SOUL_MD_REL)
+    soul_curator_doc, soul_frozen = _split_soul_appearance_section(soul_body)
+    companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
+    if companionship_body is None:
+        companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
+    day_blocks = [
+        _dreaming_transcript_block(store, day_rows, day_iso=day)
+        for day, day_rows in sorted(by_day.items())
+    ]
+    required_paths = daily_paths + (
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
+    )
+    current_bodies = {
+        rel: store.read_document_if_exists(rel) or "" for rel in daily_paths
+    }
+    current_bodies[MEMORY_MD_REL] = store.read_document(MEMORY_MD_REL)
+    current_bodies[USER_MD_REL] = store.read_document(USER_MD_REL)
+    current_bodies[STYLE_MD_REL] = store.read_document(STYLE_MD_REL)
+    current_bodies[SOUL_MD_REL] = soul_curator_doc
+    current_bodies[COMPANIONSHIP_MD_REL] = companionship_body
+    return DreamingCuratorInput(
+        required_paths=required_paths,
+        current_bodies=current_bodies,
+        soul_frozen_appearance=soul_frozen,
+        transcript_block="\n\n".join(day_blocks),
+    )
+
+
+def _one_shot_system_message() -> str:
+    sections = [
+        _ONE_SHOT_CURATOR_PREAMBLE,
+        f"## Rules for daily gist (memory/daily/<date>.md)\n\n{_DAY_SUMMARY_SYSTEM}",
+        f"## Rules for {MEMORY_MD_REL}\n\n{_MEMORY_CURATOR_SYSTEM}",
+        f"## Rules for {USER_MD_REL}\n\n{_USER_CURATOR_SYSTEM}",
+        f"## Rules for {STYLE_MD_REL}\n\n{_STYLE_CURATOR_SYSTEM}",
+        f"## Rules for {SOUL_MD_REL}\n\n{_SOUL_CURATOR_SYSTEM}",
+        f"## Rules for {COMPANIONSHIP_MD_REL}\n\n{_COMPANIONSHIP_CURATOR_SYSTEM}",
+    ]
+    return "\n\n".join(sections)
+
+
+def _build_one_shot_dreaming_messages(
+    curator_input: DreamingCuratorInput,
+) -> list[dict[str, Any]]:
+    """Build one prompt with all current docs and the dreaming transcript slice.
+
+    Every doc body (MEMORY.md included) already appears once as a
+    ``### Current `<path>``` block, so no extra consistency copy is appended.
+    """
+    doc_blocks = [
+        f"### Current `{rel}`\n\n{curator_input.current_bodies[rel]}"
+        for rel in curator_input.required_paths
+    ]
+    user_block = (
+        "\n\n".join(doc_blocks) + "\n\n---\n\n"
+        f"Dreaming transcript slice:\n{curator_input.transcript_block}\n"
+    )
+    return [
+        {"role": "system", "content": _one_shot_system_message()},
+        {"role": "user", "content": user_block},
+    ]
+
+
+def _dreaming_document_update_tool_schema(
+    required_paths: tuple[str, ...],
+) -> dict[str, Any]:
+    """OpenAI tool schema for parallel ``update_dreaming_document`` calls."""
+    kind_values = [member.value for member in DreamingDocumentKind]
+    tool = openai_function_tool(
+        _DREAMING_DOCUMENT_UPDATE_TOOL_NAME,
+        "Update one dreaming MemoryDoc, or declare an explicit no-op for that path.",
+        {
+            "type": "object",
+            "properties": {
+                "document_kind": {
+                    "type": "string",
+                    "enum": kind_values,
+                    "description": "Semantic document role being updated.",
+                },
+                "relative_path": {
+                    "type": "string",
+                    "enum": list(required_paths),
+                    "description": "Exact MemoryStore relative path to write.",
+                },
+                "content_changed": {
+                    "type": "boolean",
+                    "description": (
+                        "True to write body; false for explicit no-op (keep current doc)."
+                    ),
+                },
+                "body": {
+                    "type": "string",
+                    "description": (
+                        "Full updated markdown body when content_changed is true; "
+                        "empty for no-op."
+                    ),
+                },
+                "changed_reason": {
+                    "type": "string",
+                    "description": "Brief reason for the change or no-op.",
+                },
+            },
+            "required": [
+                "document_kind",
+                "relative_path",
+                "content_changed",
+                "body",
+                "changed_reason",
+            ],
+            "additionalProperties": False,
+        },
+    )
+    return prepare_openai_tools_for_chat_completions([tool])[0]
+
+
+def _parse_dreaming_tool_calls(response: Any) -> list[DreamingDocumentUpdate]:
+    """Extract and validate one-shot dreaming document update tool calls."""
+    message = response.choices[0].message
+    raw_tool_calls = getattr(message, "tool_calls", None) or []
+    updates: list[DreamingDocumentUpdate] = []
+    for tc in raw_tool_calls:
+        fn = tc.function
+        if fn.name != _DREAMING_DOCUMENT_UPDATE_TOOL_NAME:
+            raise ValueError(
+                f"unexpected dreaming tool name {fn.name!r}; "
+                f"expected {_DREAMING_DOCUMENT_UPDATE_TOOL_NAME!r}"
+            )
+        args_raw = fn.arguments if fn.arguments is not None else ""
+        payload = json.loads(args_raw)
+        updates.append(DreamingDocumentUpdate.model_validate(payload))
+    return updates
+
+
+def _apply_dreaming_document_updates(
+    store: MemoryStore,
+    curator_input: DreamingCuratorInput,
+    updates: list[DreamingDocumentUpdate],
+) -> bool:
+    """Apply one-shot updates; skip explicit no-ops; fail before partial writes."""
+    by_path: dict[str, DreamingDocumentUpdate] = {}
+    for update in updates:
+        if update.relative_path in by_path:
+            raise ValueError(
+                f"duplicate dreaming document update for {update.relative_path!r}"
+            )
+        by_path[update.relative_path] = update
+
+    missing = [
+        path for path in curator_input.required_paths if path not in by_path
+    ]
+    if missing:
+        raise ValueError(
+            f"missing required dreaming document updates: {sorted(missing)!r}"
+        )
+
+    extra = sorted(set(by_path.keys()) - set(curator_input.required_paths))
+    if extra:
+        raise ValueError(
+            f"unexpected dreaming document update paths: {extra!r}"
+        )
+
+    if not any(
+        by_path[rel].content_changed for rel in curator_input.required_paths
+    ):
+        raise ValueError("no content_changed=true dreaming document updates")
+
+    any_written = False
+    for rel in curator_input.required_paths:
+        update = by_path[rel]
+        if not update.content_changed:
+            continue
+        body = update.body.strip()
+        if (
+            rel == SOUL_MD_REL
+            and curator_input.soul_frozen_appearance is not None
+        ):
+            body = _merge_soul_frozen_appearance(
+                body, curator_input.soul_frozen_appearance
+            )
+        store.write_document(rel, body.strip() + "\n")
+        any_written = True
+    return any_written
+
+
+def _consolidate_memory_sequential(
     store: MemoryStore,
     rows: list[ChatMessage],
     complete_fn: Callable[[list[dict[str, Any]], str], str],
@@ -390,10 +682,7 @@ def consolidate_memory_during_dreaming(
     assert rows
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
-    rows_by_day: dict[str, list[ChatMessage]] = {}
-    for row in rows:
-        day = parse_transcript_datetime(row.ts).date().isoformat()
-        rows_by_day.setdefault(day, []).append(row)
+    rows_by_day = _rows_by_day(rows)
     day_blocks = [
         _dreaming_transcript_block(store, day_rows, day_iso=day)
         for day, day_rows in sorted(rows_by_day.items())
@@ -465,3 +754,100 @@ def consolidate_memory_during_dreaming(
         any_curation,
     )
     return any_curation
+
+
+def _consolidate_memory_one_shot(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+    llm_client: LlmClient,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    *,
+    langsmith_extra: dict[str, Any],
+    tool_bg_idle_event: Event,
+) -> bool:
+    """One-shot MemoryDoc curation via parallel tool calls in a single LLM request."""
+    assert rows
+    t_all = time.perf_counter()
+    ws = store.scope.registry_key()
+    curator_input = _build_dreaming_curator_input(store, rows)
+    logger.info(
+        "dreaming_consolidation one_shot start ws={} rows={} paths={} chars={}",
+        ws,
+        len(rows),
+        len(curator_input.required_paths),
+        len(curator_input.transcript_block),
+    )
+
+    messages = _build_one_shot_dreaming_messages(curator_input)
+    tools = [
+        _dreaming_document_update_tool_schema(curator_input.required_paths)
+    ]
+    t = time.perf_counter()
+    response = llm_client.chat_completion_unified(
+        messages=messages,
+        model=llm_client.resolve_model("memory"),
+        tools=tools,
+        tool_choice="required",
+        langsmith_extra=langsmith_extra,
+    )
+    updates = _parse_dreaming_tool_calls(response)
+    any_curation = _apply_dreaming_document_updates(
+        store, curator_input, updates
+    )
+    _log_dreaming_consolidation_curated(
+        step=DREAMING_ONE_SHOT_LLM_ROLE,
+        ws=ws,
+        ms=(time.perf_counter() - t) * 1000.0,
+    )
+
+    t = time.perf_counter()
+    if compact_living_sphere_if_pending(
+        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    ):
+        any_curation = True
+        _log_dreaming_consolidation_curated(
+            step="dreaming_living_sphere_md",
+            ws=ws,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+
+    logger.info(
+        "dreaming_consolidation done total_ms={:.0f} ws={} curated={}",
+        (time.perf_counter() - t_all) * 1000.0,
+        ws,
+        any_curation,
+    )
+    return any_curation
+
+
+def consolidate_memory_during_dreaming(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+    curator_mode: DreamingCuratorMode,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    llm_client: LlmClient,
+    *,
+    langsmith_extra: dict[str, Any],
+    tool_bg_idle_event: Event,
+) -> bool:
+    """Batch-curate MemoryDocs; dispatches to sequential or one-shot curator mode."""
+    # TODO(!3634): group (complete_fn, llm_client, langsmith_extra, tool_bg_idle_event)
+    # into one curator-runtime dataclass when the persona AgenticLoop entry replaces
+    # the headless curator chain.
+    match curator_mode:
+        case DreamingCuratorMode.SEQUENTIAL:
+            return _consolidate_memory_sequential(
+                store,
+                rows,
+                complete_fn,
+                tool_bg_idle_event=tool_bg_idle_event,
+            )
+        case DreamingCuratorMode.ONE_SHOT:
+            return _consolidate_memory_one_shot(
+                store,
+                rows,
+                llm_client,
+                complete_fn,
+                langsmith_extra=langsmith_extra,
+                tool_bg_idle_event=tool_bg_idle_event,
+            )
