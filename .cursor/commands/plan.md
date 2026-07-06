@@ -2,8 +2,9 @@
 
 Must be in plan mode, if not, switch to plan mode first.
 
-Draft a solid implementation plan to be handed off to a less intelligent
-subagent.
+Add implementation details to a high-level design provided in the plan file.
+
+The implementation details are handed off to a less intelligent subagent.
 
 The major work is to fill in details given a sound and clear design.
 So that the less intelligent subagent can focus on implementation,
@@ -11,7 +12,8 @@ not to lost objective and create unmaintainable code.
 
 ## Scoping
 
-- Start with core & minimal, and create github issues and add TODOs in code places, whenever run into situations where the available information is not sufficient for a clear & concrete design.
+- Start with core & minimal plans
+- Create github issues and add TODOs in code places, when the available information is not sufficient for a clear & concrete design.
 
 ## For [companion harness](/app/core/companion_harness/)
 

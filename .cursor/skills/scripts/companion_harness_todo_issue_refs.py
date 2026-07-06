@@ -42,7 +42,6 @@ TAG_TO_ISSUE: dict[str, int] = {
     "bootstrap-prompt-single-source": 3463,
     "rename-channel-to-gateway": 3548,
     "consolidate-memory-doc-definitions": 3549,
-    "offline-batch": 3547,
     "dreaming-cluster-lock": 3550,
     "dreaming-batch-langsmith-finally": 3551,
     "companion-user-feedback": 3552,

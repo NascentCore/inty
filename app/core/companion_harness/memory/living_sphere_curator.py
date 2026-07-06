@@ -25,11 +25,6 @@ from app.living_sphere.seeding import (
     ensure_living_sphere_seeded,
 )
 
-# TODO(offline-batch): Large-scale LivingSphere compact (cross-scope backfill / backlog) must be a — #3547
-# separate deployable + managed cloud offline executor (cf. backend/push_worker)—NOT a longer cron
-# on awake turns. Reuse compact_* merge semantics only; batching, sharding, and cursor locking
-# are offline concerns. Do not treat offline as a simple extension of per-turn online compact.
-
 _PIPELINE_CURSOR_KEY = "living_sphere_curated_through_update_id"
 _PENDING_UPDATES_BATCH_CAP = 20
 _MAX_COMPACT_BATCHES_PER_TURN = 50
@@ -124,9 +119,7 @@ def _curator_curated_through_update_id(state: dict[str, object]) -> str:
 
 
 def _read_all_updates(store: MemoryStore) -> list[LivingSphereUpdate]:
-    raw = store.read_document_if_exists(
-        LIVING_SPHERE_UPDATES_JSONL_REL
-    )
+    raw = store.read_document_if_exists(LIVING_SPHERE_UPDATES_JSONL_REL)
     if raw is None or not raw.strip():
         return []
     out: list[LivingSphereUpdate] = []

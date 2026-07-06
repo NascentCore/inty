@@ -23,9 +23,6 @@ instructs in-context chaining instead. Unchanged docs use explicit no-op calls
 (``content_changed=false``); only changed docs are written. Set ``sequential`` in
 config to roll back.
 
-TODO(dreaming-one-shot-retire-sequential): Delete the sequential per-doc chain and the — #3757
-curator-mode knob once one-shot curation quality is validated (#3757).
-
 TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming batch. — #3522
 
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.

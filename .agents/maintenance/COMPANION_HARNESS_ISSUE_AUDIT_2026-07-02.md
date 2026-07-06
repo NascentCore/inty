@@ -139,7 +139,6 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 | 3535 | [Ops Telegram] Launch 指标：proactive reciprocity 可衡量（API 或 SQL/脚本） | healthy | other | review | yes |
 | 3542 | Weixin: converge inner-tick + tool-bg onto OutputQueue + continuous pump (!3493) | healthy | other | review | no |
 | 3543 | WS: converge inner-tick + tool-bg onto OutputQueue; remove Downlink module (#3210/#3398) | healthy | other | review | no |
-| 3547 | [Agentic companion] LivingSphere offline batch compact (cross-scope backfill) | healthy | other | review | yes |
 | 3548 | [Agentic companion] Rename Channel → Gateway in companion_harness | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3549 | [Agentic companion] Consolidate MemDoc type definitions (name, attributes, path) | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3550 | [Agentic companion] Dreaming batch: Postgres advisory lock per scope | healthy | other | review | no |

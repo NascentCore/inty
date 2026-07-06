@@ -24,7 +24,7 @@ class LivingSphereUpdate(BaseModel):
     change_request: str
     source: str = Field(
         default="chat_tool",
-        description="Origin surface, e.g. chat_tool vs future offline_batch.",
+        description="Origin surface, e.g. chat_tool.",
     )
     user_msg_uuid: str | None = None
     trace_id: str | None = None
