@@ -209,8 +209,8 @@ Open PRs checked: none — no overlap with tasks below.
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-65** #3413: `test_turn_tracks.py` — `CONTEXT_JSON_REL`. claimed `cursor/agent-maintenance-tasks-e621`.
-- [ ] **HYGIENE-2026-66** #3413: `test_turn_tail_user.py` — `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-e621`.
-- [ ] **HYGIENE-2026-67** #3413: `test_turn_pipeline_bootstrap.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-e621`.
-- [ ] **HYGIENE-2026-68** #3413: `test_turn_pipeline_dreaming.py` — `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-e621`.
-- [ ] **HYGIENE-2026-69** #3413: `test_transcript_assistant_row.py` — `TRANSCRIPT_JSONL_REL`. claimed `cursor/agent-maintenance-tasks-e621`.
+- [x] **HYGIENE-2026-65** #3413: `test_turn_tracks.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-66** #3413: `test_turn_tail_user.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-67** #3413: `test_turn_pipeline_bootstrap.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-68** #3413: `test_turn_pipeline_dreaming.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+- [x] **HYGIENE-2026-69** #3413: `test_transcript_assistant_row.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
