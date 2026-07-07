@@ -21,7 +21,6 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
 from app.services.agentic_channel.channel_runtime import (
     ChannelRuntimeState,
@@ -32,11 +31,7 @@ from app.services.agentic_channel.presence import (
     AgentChannelPresence,
     clear_presences_for_tests,
 )
-from app.services.agentic_companion.downlink import (
-    Downlink,
-    DownlinkKind,
-    queue_user_reply_downlink,
-)
+from app.services.agentic_companion.downlink import DownlinkKind
 
 
 @pytest.fixture(autouse=True)
@@ -115,13 +110,7 @@ async def test_app_ws_user_reply_materializes_from_durable_rows() -> None:
             return_value=expected_payload,
         ) as materialize,
     ):
-        await adapter.as_downlink().deliver(
-            queue_user_reply_downlink(
-                assistant_text=ready.text,
-                message_ids=ready.message_ids,
-                output_message=ready,
-            )
-        )
+        await adapter.as_downlink().deliver(ready)
 
     materialize.assert_awaited_once()
     call = materialize.await_args.kwargs
@@ -156,13 +145,7 @@ async def test_app_ws_user_reply_missing_input_is_unroutable() -> None:
         ),
         pytest.raises(OutputDeliveryUnroutableError),
     ):
-        await adapter.as_downlink().deliver(
-            queue_user_reply_downlink(
-                assistant_text=ready.text,
-                message_ids=ready.message_ids,
-                output_message=ready,
-            )
-        )
+        await adapter.as_downlink().deliver(ready)
 
 
 @pytest.mark.asyncio
@@ -181,24 +164,13 @@ async def test_app_ws_tool_background_uses_input_row_user_message_id() -> None:
     repo = SimpleNamespace(
         get_records_by_ids=AsyncMock(return_value=input_records)
     )
-    ev = ToolOutputEvent(
-        scope_registry_key=scope.registry_key(),
-        memory_store=SimpleNamespace(),
-        user_msg_uuid="user-msg-uuid",
-        assistant_msg_uuid="assist-uuid",
+    ready = ReadyOutputMessage(
+        message_id="out-tb",
+        batch_id="batch-tb",
+        kind=DownlinkKind.TOOL_BACKGROUND,
         text="tool bg line",
-        ts="2025-01-01T00:00:00Z",
-        elapsed_ms=1,
-        trace_id="trace-1",
-        langsmith_trace_id="ls-trace",
-        langsmith_run_id="ls-run",
-        output_to_user=True,
-        generation_deliver=False,
-        image_asset_baseline=0,
-        local_image_paths=(),
-        significance_perception={},
-        turn_recall=None,
-        inner_tick_activity=None,
+        sequence=1,
+        message_ids=("user-msg-uuid",),
     )
     expected_payload = {"code": 200, "agent_id": scope.agent_id}
 
@@ -212,26 +184,17 @@ async def test_app_ws_tool_background_uses_input_row_user_message_id() -> None:
             return_value=repo,
         ),
         patch(
-            "app.services.agentic_channel.adapters.app_ws.materialize_tool_background_ws_payload",
+            "app.services.agentic_channel.adapters.app_ws."
+            "materialize_tool_background_from_durable",
             new_callable=AsyncMock,
             return_value=expected_payload,
         ) as materialize,
     ):
-        await adapter.as_downlink().deliver(
-            Downlink(
-                kind=DownlinkKind.TOOL_BACKGROUND,
-                assistant_text="tool bg line",
-                turn=None,
-                tool_output=ev,
-                bootstrap_interim=None,
-                scheduled_task_id=None,
-                transcript_user_text=None,
-            )
-        )
+        await adapter.as_downlink().deliver(ready)
 
     call = materialize.await_args.kwargs
-    assert call["effective_local_id"] == "local-tb"
-    assert call["foreground_user_message_id"] == 55
+    assert call["message"] == ready
+    assert call["input_records"] == input_records
     assert await outbound_queue.get() == expected_payload
 
 
@@ -265,4 +228,4 @@ async def test_presence_deliver_ready_passes_ready_message_to_app_adapter() -> (
         await presence._deliver_ready_via_active_channel(ready)
 
     delivered = deliver.await_args.args[0]
-    assert delivered.output_message == ready
+    assert delivered == ready

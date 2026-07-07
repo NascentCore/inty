@@ -5,8 +5,14 @@ agentic_companion 里的 presence 指：用户与 companion 处于同一段「�
 WebSocket and Weixin adapters translate :class:`Downlink` into
 ``ChatWebSocketResponse`` / Hermes ``send_text`` without re-entering ``/api/v1/chat/ws``.
 
-TODO(channel-outbound-affordances): Extend ``Downlink`` (or adapter port) with reply threading
-  and emoji reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
+TODO(retire-downlink-event): The ``Downlink`` dataclass, its ``*_downlink`` factories, and
+  ``downlink_delivers_user_visible_text`` are superseded by ``ReadyOutputMessage`` /
+  ``ready_output_delivers_user_visible_text``; adapters now consume durable OutputQueue rows
+  via ``ChannelDownlink.deliver(message)``. They have no production caller. Delete them in
+  #3398 P3 and rename ``DownlinkKind`` → ``OutputMessageKind`` (keep only ``DownlinkKind`` and
+  the ``ChannelDownlink`` protocol until then).
+TODO(channel-outbound-affordances): Extend the adapter port with reply threading and emoji
+  reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
 TODO(!3451, !3452): Carry user-visible image assets explicitly for native channel image bubbles.
 """
 
@@ -14,8 +20,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
+if TYPE_CHECKING:
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        ReadyOutputMessage,
+    )
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
@@ -59,10 +69,10 @@ class Downlink:
 
 
 class ChannelDownlink(Protocol):
-    """Transport adapter: materialize and send one :class:`Downlink`."""
+    """Transport adapter: materialize and send one durable OutputQueue row."""
 
-    async def deliver(self, event: Downlink) -> None:
-        """Deliver ``event`` on this channel (WS queue pump, Weixin peer text, etc.)."""
+    async def deliver(self, message: "ReadyOutputMessage") -> None:
+        """Deliver ``message`` on this channel (WS queue pump, Weixin peer text, etc.)."""
 
 
 def user_reply_downlink(*, turn: CompanionTurnResult) -> Downlink:
@@ -83,13 +93,14 @@ def user_reply_downlink(*, turn: CompanionTurnResult) -> Downlink:
 
 def agent_initiated_visible_downlink(
     *,
+    kind: DownlinkKind,
     assistant_text: str,
     output_message: Any | None = None,
 ) -> Downlink:
     """OutputQueue agent-initiated visible line with no inbound correlation."""
     assert assistant_text.strip() != ""
     return Downlink(
-        kind=DownlinkKind.USER_REPLY,
+        kind=kind,
         assistant_text=assistant_text,
         turn=None,
         tool_output=None,

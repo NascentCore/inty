@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData
 from app.services.agentic_companion.inner_tick_deliver import (
     InnerTickVisibleDeliverInput,
@@ -29,18 +28,12 @@ def _deliver_input(
     return InnerTickVisibleDeliverInput(
         delivery=delivery,
         session_id="session-1",
-        agent_id="agent-1",
         chat_row_agent_id="agent-1",
-        ws_conn_id="conn-1",
         preset_uid="uid-1",
         transcript_user_text="[proactive]",
         companion_turn=CompanionTurnResult(
             assistant_text="proactive hello",
             output_message_ids=output_message_ids,
-        ),
-        stub_request=ChatCompletionRequest(
-            messages=[ChatMessage(role="user", content="[proactive]")],
-            message_id="uid-1",
         ),
         user_wire_meta=ChatWsCompanionWireMessageMetaData(source="inner_tick"),
         companion_scheduled_reminder=None,
@@ -98,18 +91,12 @@ async def test_delivery_none_persists_history_without_channel_send() -> None:
             InnerTickVisibleDeliverInput(
                 delivery=None,
                 session_id="session-1",
-                agent_id="agent-1",
                 chat_row_agent_id="agent-1",
-                ws_conn_id="scope_inner_tick_worker",
                 preset_uid="uid-1",
                 transcript_user_text="[scheduled reminder]",
                 companion_turn=CompanionTurnResult(
                     assistant_text="reminder text",
                     output_message_ids=("out-1",),
-                ),
-                stub_request=ChatCompletionRequest(
-                    messages=[ChatMessage(role="user", content="[scheduled]")],
-                    message_id="uid-1",
                 ),
                 user_wire_meta=ChatWsCompanionWireMessageMetaData(
                     source="inner_tick"

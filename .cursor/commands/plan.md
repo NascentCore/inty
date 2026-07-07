@@ -39,16 +39,8 @@ not to lost objective and create unmaintainable code.
 - User-facing changes should have regression tests added to repl regression tests,
   as repl regression tests are the only client we can reliably test.
   Weixin/WeChat Telegram are difficult to test in code.
-
-## Refactoring
-
-When refactoring, follow the procedures below:
-
-1. implement the new design in code with minimal changes to the existing code
-2. test the new code
-3. integrate the new code into the existing code
-4. test the integrated code
-5. (optional) delete the old code
+- Tests should not use mocks
+- Tests should use fakes
 
 ## Limited layering
 

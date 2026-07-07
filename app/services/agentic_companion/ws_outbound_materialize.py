@@ -135,49 +135,45 @@ async def materialize_queue_user_reply_from_durable(
     return payload
 
 
-async def materialize_implicit_greeting_ws_payload(
+async def materialize_agent_initiated_ws_payload(
     *,
     db: AsyncSession,
     scope: AgentScope,
-    session_id: str,
-    text: str,
-    companion_turn: CompanionTurnResult,
-    request: ChatCompletionRequest,
-    effective_local_id: str | None,
-    foreground_user_message_id: int | None,
+    message: ReadyOutputMessage,
 ) -> WsOutboundPayload:
-    """Build one implicit sign-on greeting completion frame from turn result text + meta.
+    """Build one App-WS completion frame for an agent-initiated OutputQueue row.
 
-    App-WS delivers the greeting directly from the turn result: the scope
-    OutputQueue rows appended by AgenticLoop are unroutable on App-WS and get
-    skipped by the presence pump (TODO(#3576): pump-owned App-WS delivery).
+    Covers inner-tick proactive/scheduled/monolog and implicit greeting rows.
+    chat_history rows are already written by the fire/turn glue; this only
+    queries latest ai/user message info to fill frame correlation fields.
     """
+    text = message.text
     assert text.strip() != ""
-    companion_ai_meta = companion_ai_meta_from_turn_result(
-        companion_turn,
-        companion_scheduled_reminder=None,
-        scheduled_task_id=None,
-    )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        session_id,
-        text,
-        agent_id=scope.agent_id,
-        meta_data=companion_ai_meta,
-    )
+    session_id = generate_session_id(scope.memory_store_chat_id())
     latest_message_info = None
     try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(
-                    db, ai_message_id
-                )
+        latest_message_info = (
+            await chat_history_service.get_latest_ai_message_info(
+                db, session_id
             )
+        )
     except Exception:
         latest_message_info = None
+    user_message_id = None
+    try:
+        user_message_id = await chat_history_service.get_latest_user_message_id(
+            db, session_id
+        )
+    except Exception:
+        user_message_id = None
     response_text_content, response_content_parts = (
         _normalize_chat_response_content(text)
     )
     model = await resolve_chat_model_for_scope(scope)
+    request = ChatCompletionRequest(
+        messages=[{"role": "user", "content": text}],
+        model=model.id_on_provider,
+    )
     assistant = build_companion_ws_completion_data(
         response_text_content=response_text_content,
         response_content_parts=response_content_parts,
@@ -186,19 +182,19 @@ async def materialize_implicit_greeting_ws_payload(
         audio_url=None,
         request=request,
         source_imate_id=scope.agent_id,
-        user_message_id=foreground_user_message_id,
+        user_message_id=user_message_id,
         subscription_actions=None,
-        client_local_id=effective_local_id,
+        client_local_id=None,
     )
     completion = ChatWsCompletionData(
         id=assistant.id,
         created=assistant.created,
         model=model.id_on_provider,
-        user_message_id=foreground_user_message_id,
+        user_message_id=user_message_id,
         business_actions=assistant.business_actions,
         choices=assistant.choices,
         usage=None,
-        local_id=effective_local_id,
+        local_id=None,
         source_imate_id=scope.agent_id,
     )
     payload = build_chat_ws_queued_success_frame(
@@ -210,6 +206,106 @@ async def materialize_implicit_greeting_ws_payload(
         ),
     )
     return payload
+
+
+async def persist_implicit_greeting_ai_chat_history(
+    *,
+    session_id: str,
+    agent_id: str,
+    text: str,
+    companion_turn: CompanionTurnResult,
+) -> int | None:
+    """Persist one implicit sign-on greeting assistant row before pump delivery."""
+    assert text.strip() != ""
+    companion_ai_meta = companion_ai_meta_from_turn_result(
+        companion_turn,
+        companion_scheduled_reminder=None,
+        scheduled_task_id=None,
+    )
+    return await chat_history_service.add_ai_message_sync_async(
+        session_id,
+        text,
+        agent_id=agent_id,
+        meta_data=companion_ai_meta,
+    )
+
+
+async def materialize_tool_background_from_durable(
+    *,
+    db: AsyncSession,
+    scope: AgentScope,
+    message: ReadyOutputMessage,
+    input_records: tuple[InputQueueRecord, ...],
+) -> WsOutboundPayload:
+    """Build one TOOL_BACKGROUND completion from durable OutputQueue rows."""
+    assert message.text.strip() != ""
+    primary_input = _primary_input_record(input_records)
+    generated_image = _generated_image_for_wire(message)
+    meta_data = dump_chat_ws_companion_wire_meta(
+        ChatWsCompanionWireMessageMetaData(
+            source="tool_bg",
+            reply_to_user_msg_uuid=primary_input.message_id,
+            tool_bg_output_to_user=True,
+            tool_background_started=(
+                True if message.tool_background_started else None
+            ),
+            generated_image=generated_image,
+        )
+    )
+    session_id = generate_session_id(scope.memory_store_chat_id())
+    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+        session_id,
+        message.text,
+        agent_id=scope.agent_id,
+        meta_data=meta_data,
+    )
+    latest_message_info = None
+    try:
+        if ai_message_id is not None:
+            latest_message_info = (
+                await chat_history_service.get_ai_message_info_by_id(
+                    db, ai_message_id
+                )
+            )
+    except Exception:
+        latest_message_info = None
+    request = ChatCompletionRequest(
+        messages=[{"role": "user", "content": primary_input.text}],
+        message_id=primary_input.message_id,
+    )
+    assistant = build_companion_ws_completion_data(
+        response_text_content=message.text,
+        response_content_parts=None,
+        last_user_text="",
+        latest_message_info=latest_message_info,
+        audio_url=None,
+        request=request,
+        source_imate_id=scope.agent_id,
+        user_message_id=primary_input.chat_history_user_row_id,
+        subscription_actions=[
+            BizAction(action_type=ActionType.NONE, message="")
+        ],
+        client_local_id=primary_input.local_id,
+    )
+    completion = ChatWsCompletionData(
+        id=assistant.id,
+        created=assistant.created,
+        model=assistant.model,
+        user_message_id=primary_input.chat_history_user_row_id,
+        business_actions=assistant.business_actions,
+        choices=assistant.choices,
+        usage=assistant.usage,
+        local_id=assistant.local_id,
+        source_imate_id=assistant.source_imate_id,
+    )
+    return build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id=scope.agent_id,
+        status_line=await agent_status_line_for_chat_header(
+            db,
+            scope.agent_id,
+        ),
+    )
 
 
 async def materialize_tool_background_ws_payload(

@@ -1,35 +1,60 @@
-"""Weixin channel adapter stub (interface only; production bridge unchanged).
-
-TODO(companion-channel-tools): No Weixin rename API — channel tools stay guidance-only
-  (see weixin_clawbot_contact_alias_system_message); do not expose failing meta tools — #3362
-TODO(weixin-reply-reaction): Quote/reply threading + emoji reactions via Hermes when iLink
-  allows; align with ``WeixinDownlink`` — #3442 (epic #3440)
-"""
+"""Weixin channel adapter for agent-channel stack."""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+
 from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+    ready_output_delivers_user_visible_text,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.services.agentic_companion.downlink import ChannelDownlink
-from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
+from app.core.companion_harness.companion.utc import (
+    strip_leading_transcript_timestamp_prefixes,
+)
+from app.services.agentic_companion.downlink import (
+    ChannelDownlink,
+    DownlinkKind,
+)
+from app.services.agentic_companion.inner_tick_delivery import (
+    InnerTickDelivery,
+    inner_tick_delivery_for_weixin,
+)
+
+WeixinAssistantTextSink = Callable[[str], Awaitable[None]]
+
+_WEIXIN_TEXT_KINDS = frozenset(
+    {
+        DownlinkKind.USER_REPLY,
+        DownlinkKind.PROACTIVE,
+        DownlinkKind.SCHEDULED,
+        DownlinkKind.MONOLOG,
+    }
+)
 
 
-class _NoOpDownlink:
-    async def deliver(self, event: object) -> None:
-        return None
+class WeixinChannelAdapter:
+    """Deliver assistant text via one Weixin ``send_text`` sink."""
 
-
-class WeixinChannelAdapterStub:
-    """Stub adapter documenting ``channel_address=peer_id``, ``channel_user_id=wxid``."""
+    def __init__(
+        self,
+        *,
+        send_assistant_text: WeixinAssistantTextSink,
+    ) -> None:
+        assert send_assistant_text is not None
+        self._send_assistant_text = send_assistant_text
 
     @property
     def channel(self) -> ChannelKind:
         return ChannelKind.WECHAT_WEIXIN
 
     def as_downlink(self) -> ChannelDownlink:
-        return _NoOpDownlink()
+        return _WeixinChannelDownlink(
+            send_assistant_text=self._send_assistant_text,
+        )
 
     async def on_turn_up(self, scope: AgentScope) -> None:
         assert scope is not None
@@ -38,6 +63,31 @@ class WeixinChannelAdapterStub:
         assert scope is not None
 
     def inner_tick_delivery(self) -> InnerTickDelivery:
-        raise NotImplementedError(
-            "WeixinChannelAdapterStub has no inner-tick delivery"
-        )
+        return inner_tick_delivery_for_weixin(self._send_assistant_text)
+
+
+class WeixinChannelAdapterStub(WeixinChannelAdapter):
+    """No-op Weixin adapter for registry tests without a live transport."""
+
+    def __init__(self) -> None:
+        async def _noop(_: str) -> None:
+            return None
+
+        super().__init__(send_assistant_text=_noop)
+
+
+class _WeixinChannelDownlink:
+    """Deliver OutputQueue rows as plain Weixin text."""
+
+    def __init__(self, *, send_assistant_text: WeixinAssistantTextSink) -> None:
+        self._send_assistant_text = send_assistant_text
+
+    async def deliver(self, message: ReadyOutputMessage) -> None:
+        if message.kind not in _WEIXIN_TEXT_KINDS:
+            return
+        if not ready_output_delivers_user_visible_text(message):
+            return
+        text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
+        if not text:
+            return
+        await self._send_assistant_text(text)

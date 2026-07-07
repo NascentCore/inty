@@ -23,7 +23,6 @@ def sms_inner_tick_delivery(
     assert assistant_text is not None
     # TODO(rename-plain-text-sink): ``telegram_assistant_text`` is a generic plain-text IM sink.
     return InnerTickDelivery(
-        ws_outbound_queue=None,
         weixin_assistant_text=None,
         telegram_assistant_text=assistant_text,
         runtime_channel=ChannelKind.SMS,

@@ -5,8 +5,11 @@ from __future__ import annotations
 import pytest
 
 from app.external_services.twilio_sms import TwilioSmsSendResult
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
 from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
-from app.services.agentic_companion.downlink import Downlink, DownlinkKind
+from app.services.agentic_companion.downlink import DownlinkKind
 
 
 class _FakeTwilioSmsApi:
@@ -40,14 +43,13 @@ async def test_sms_channel_downlink_delivers_proactive() -> None:
     )
     downlink = adapter.as_downlink()
     await downlink.deliver(
-        Downlink(
+        ReadyOutputMessage(
+            message_id="sms-1",
+            batch_id="batch-sms-1",
             kind=DownlinkKind.PROACTIVE,
-            assistant_text="Hello from Inty",
-            turn=None,
-            tool_output=None,
-            bootstrap_interim=None,
-            scheduled_task_id=None,
-            transcript_user_text=None,
+            text="Hello from Inty",
+            sequence=1,
+            message_ids=(),
         )
     )
     assert api.sent == [

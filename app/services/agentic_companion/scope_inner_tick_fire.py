@@ -34,7 +34,6 @@ from app.core.companion_harness.runtime.inner_tick_fire import (
     kernel_fire_throttled,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.chat_websocket import build_inner_tick_wire_meta
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import companion_chat_service
@@ -133,11 +132,6 @@ async def try_fire_scheduled_for_scope(
         return False
     kernel_input, scope_session = ctx_pair
     session_id = generate_session_id(str(resolved.chat_row_id))
-    user_time_context = (
-        implicit_signal_bundle.client_time
-        if implicit_signal_bundle is not None
-        else None
-    )
 
     async with inner_tick_turn_scope(session=scope_session):
         due_task = due_scheduled_task(kernel_input.mem_store)
@@ -156,27 +150,14 @@ async def try_fire_scheduled_for_scope(
             )
             return True
 
-        stub_request = ChatCompletionRequest(
-            messages=[
-                ChatMessage(
-                    role="user",
-                    content=kernel_result.transcript_user_text,
-                )
-            ],
-            message_id=preset_uid,
-            user_time_context=user_time_context,
-        )
         delivered = await deliver_visible_inner_tick_turn(
             InnerTickVisibleDeliverInput(
                 delivery=None,
                 session_id=session_id,
-                agent_id=resolved.agent_id,
                 chat_row_agent_id=resolved.chat_row_agent_id,
-                ws_conn_id=poll_source,
                 preset_uid=preset_uid,
                 transcript_user_text=kernel_result.transcript_user_text,
                 companion_turn=kernel_result.turn,
-                stub_request=stub_request,
                 user_wire_meta=build_inner_tick_wire_meta(
                     InnerTickKind.SCHEDULED,
                     scheduled_task_id=due_task.id,

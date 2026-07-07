@@ -12,7 +12,6 @@ from sqlalchemy import select
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
-    is_im_runtime_channel,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.db.session import AsyncSessionLocal
@@ -39,10 +38,6 @@ from app.core.companion_harness.agentic_companion.types import (
     synthetic_user_message_batch,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.services.agentic_companion.downlink import (
-    agent_initiated_visible_downlink,
-    queue_user_reply_downlink,
-)
 from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
@@ -52,8 +47,11 @@ from app.services.agentic_channel.serving import enqueue_inbound_wire_message
 from app.services.companion_chat_service import (
     run_companion_implicit_sign_on_greeting_turn_for_api,
 )
-from app.services.agentic_companion.session import Coordinator, Session
+from app.services.agentic_companion.ws_outbound_materialize import (
+    persist_implicit_greeting_ai_chat_history,
+)
 from app.services.chat_service import generate_session_id
+from app.services.agentic_companion.session import Coordinator, Session
 
 _SIGN_ON_GREETING_USER_TEXT_TELEGRAM = (
     "The user opened the Telegram chat through onboarding."
@@ -204,24 +202,7 @@ class AgentChannelPresence:
                 f"no downlink for channel={active.value} "
                 f"scope={self._scope.registry_key()}"
             )
-        if ready_output_is_agent_initiated_visible(message):
-            # TODO(#3576): Deliver agent-initiated sign-on rows on App-WS via OutputQueue.
-            if not is_im_runtime_channel(active):
-                raise OutputDeliveryUnroutableError(
-                    self._scope,
-                    message.message_ids,
-                )
-            event = agent_initiated_visible_downlink(
-                assistant_text=text,
-                output_message=message,
-            )
-        else:
-            event = queue_user_reply_downlink(
-                assistant_text=text,
-                message_ids=message.message_ids,
-                output_message=message,
-            )
-        await downlink.deliver(event)
+        await downlink.deliver(message)
 
     async def greet_on_sign_on(self, *, runtime_channel: ChannelKind) -> None:
         """Run implicit sign-on greeting; visible text appends via AgenticLoop OutputQueue."""
@@ -238,18 +219,30 @@ class AgentChannelPresence:
             user_msg_uuid=preset_uid,
             track_label="implicit_sign_on_greeting",
         )
-        await run_companion_implicit_sign_on_greeting_turn_for_api(
-            user_id=self._scope.user_id,
-            agent_id=self._scope.agent_id,
-            chat_id=self._scope.memory_store_chat_id(),
-            user_text=_implicit_sign_on_user_text(runtime_channel),
-            resolved_chat_model=model,
-            implicit_signal_bundle=bundle,
-            runtime_channel=runtime_channel,
-            preset_user_msg_uuid=preset_uid,
-            agentic_output_queue=output_queue,
-            user_message_batch=greeting_batch,
+        companion_turn = (
+            await run_companion_implicit_sign_on_greeting_turn_for_api(
+                user_id=self._scope.user_id,
+                agent_id=self._scope.agent_id,
+                chat_id=self._scope.memory_store_chat_id(),
+                user_text=_implicit_sign_on_user_text(runtime_channel),
+                resolved_chat_model=model,
+                implicit_signal_bundle=bundle,
+                runtime_channel=runtime_channel,
+                preset_user_msg_uuid=preset_uid,
+                agentic_output_queue=output_queue,
+                user_message_batch=greeting_batch,
+            )
         )
+        greeting_text = str(companion_turn.assistant_text or "").strip()
+        if greeting_text:
+            await persist_implicit_greeting_ai_chat_history(
+                session_id=generate_session_id(
+                    self._scope.memory_store_chat_id()
+                ),
+                agent_id=self._scope.agent_id,
+                text=greeting_text,
+                companion_turn=companion_turn,
+            )
 
     async def enqueue_app_ws_user_turn(
         self,
@@ -384,8 +377,8 @@ class AgentChannelPresence:
 class _NoopSessionDownlink:
     """Session compatibility shim; Telegram agent text is emitted via OutputQueue."""
 
-    async def deliver(self, event) -> None:
-        _ = event
+    async def deliver(self, message: ReadyOutputMessage) -> None:
+        _ = message
 
 
 async def ensure_presence(scope: AgentScope) -> AgentChannelPresence:

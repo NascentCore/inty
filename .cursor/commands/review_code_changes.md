@@ -53,6 +53,10 @@ that means the code lacks hierarchy.
 
 - Consider [style rules](/.agents/guidelines/python_styles.md)
 
+## Rules
+
+- `__init__.py` should only have docstring
+
 ## Checklist
 
 - [ ] Intention is understood

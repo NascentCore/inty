@@ -33,10 +33,12 @@ from app.core.companion_harness.loop.context import (
     build_inner_tick_tool_loop_context,
     build_settled_dual_llm_user_chat_loop_context,
     build_settled_user_chat_loop_context,
-    prompt_plan_from_openai_messages,
 )
 from app.core.companion_harness.loop.track_loop_input import (
     CompanionTurnLoopInput,
+)
+from app.core.companion_harness.prompting.track_composer import (
+    TrackPromptComposer,
 )
 from app.core.companion_harness.loop.track_policy import (
     build_loop_execution_policy,
@@ -48,6 +50,8 @@ from app.core.companion_harness.prompt_builder import (
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
+
+_TRACK_COMPOSER = TrackPromptComposer()
 
 
 class AgenticLoopTurnPlugin(Protocol):
@@ -290,7 +294,7 @@ class ImplicitSignOnGreetingPlugin:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
         execution = _loop_execution_policy(p)
-        greeting_prompt_plan = prompt_plan_from_openai_messages(
+        greeting_prompt_plan = _TRACK_COMPOSER.compose_from_openai_messages(
             p.messages,
             tools=(),
         )
@@ -323,7 +327,7 @@ class InnerTickChatOnlyPlugin:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
         execution = _loop_execution_policy(p)
-        inner_prompt_plan = prompt_plan_from_openai_messages(
+        inner_prompt_plan = _TRACK_COMPOSER.compose_from_openai_messages(
             p.messages,
             tools=(),
         )
@@ -357,7 +361,7 @@ class InnerTickToolLoopPlugin:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
         execution = _loop_execution_policy(p)
-        throttle_prompt_plan = prompt_plan_from_openai_messages(
+        throttle_prompt_plan = _TRACK_COMPOSER.compose_from_openai_messages(
             p.messages,
             tools=tuple(p.tools_for_turn),
         )

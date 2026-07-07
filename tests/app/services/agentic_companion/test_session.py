@@ -7,8 +7,8 @@ import threading
 
 import pytest
 
-from app.services.agentic_companion.downlink import (
-    Downlink,
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
 )
 from app.services.agentic_companion.session import (
     Coordinator,
@@ -18,10 +18,10 @@ from app.services.agentic_companion.session import (
 
 class _RecordingDownlink:
     def __init__(self) -> None:
-        self.events: list[Downlink] = []
+        self.messages: list[ReadyOutputMessage] = []
 
-    async def deliver(self, event: Downlink) -> None:
-        self.events.append(event)
+    async def deliver(self, message: ReadyOutputMessage) -> None:
+        self.messages.append(message)
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,6 @@ async def test_presence_coordinator_inner_tick_refresh_preserves_throttle() -> (
 @pytest.mark.asyncio
 async def test_presence_coordinator_inner_tick_overlap_flags() -> None:
     coordinator = Coordinator.for_current_loop()
-    assert not coordinator.inner_tick_monolog_foreground_pending()
     assert not coordinator.inner_tick_proactive_tool_bg_still_running()
     ev = threading.Event()
     coordinator.bind_inner_tick_proactive_tool_bg_idle(ev)
@@ -52,18 +51,6 @@ async def test_presence_coordinator_inner_tick_overlap_flags() -> None:
     ev.set()
     coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
     assert not coordinator.inner_tick_proactive_tool_bg_still_running()
-    coordinator.set_foreground_pending(
-        "u1", {"ws_inner_tick_monolog": True, "session_id": "s"}
-    )
-    assert coordinator.inner_tick_monolog_foreground_pending()
-    coordinator.pop_foreground_pending("u1")
-    assert not coordinator.inner_tick_monolog_foreground_pending()
-    coordinator.set_foreground_pending(
-        "u2", {"ws_inner_tick_maintenance": True, "session_id": "s2"}
-    )
-    assert coordinator.inner_tick_monolog_foreground_pending()
-    coordinator.pop_foreground_pending("u2")
-    assert not coordinator.inner_tick_monolog_foreground_pending()
 
 
 @pytest.mark.asyncio

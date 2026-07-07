@@ -18,12 +18,14 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+    ready_output_delivers_user_visible_text,
+)
 from app.external_services.telegram_bot_api import TelegramBotApi
 from app.services.agentic_companion.downlink import (
     ChannelDownlink,
-    Downlink,
     DownlinkKind,
-    downlink_delivers_user_visible_text,
 )
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_telegram,
@@ -74,14 +76,13 @@ class TelegramChannelAdapter:
 
         async def send_assistant_text(text: str) -> None:
             await downlink.deliver(
-                Downlink(
+                ReadyOutputMessage(
+                    message_id="inner-tick-direct",
+                    batch_id="inner-tick-direct",
                     kind=DownlinkKind.PROACTIVE,
-                    assistant_text=text,
-                    turn=None,
-                    tool_output=None,
-                    bootstrap_interim=None,
-                    scheduled_task_id=None,
-                    transcript_user_text=None,
+                    text=text,
+                    sequence=0,
+                    message_ids=(),
                 )
             )
 
@@ -100,14 +101,12 @@ class _TelegramChannelDownlink:
         self._api = api
         self._channel_address = channel_address
 
-    async def deliver(self, event: Downlink) -> None:
-        if event.kind not in _TELEGRAM_TEXT_KINDS:
+    async def deliver(self, message: ReadyOutputMessage) -> None:
+        if message.kind not in _TELEGRAM_TEXT_KINDS:
             return
-        if not downlink_delivers_user_visible_text(event):
+        if not ready_output_delivers_user_visible_text(message):
             return
-        text = strip_leading_transcript_timestamp_prefixes(
-            event.assistant_text.strip()
-        )
+        text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
         if not text:
             return
         await asyncio.to_thread(

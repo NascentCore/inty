@@ -273,15 +273,6 @@ class Coordinator:
             transcript_line_count
         )
 
-    def inner_tick_monolog_foreground_pending(self) -> bool:
-        return any(
-            bool(
-                ctx.get("ws_inner_tick_monolog")
-                or ctx.get("ws_inner_tick_maintenance")
-            )
-            for ctx in self.foreground_pending.values()
-        )
-
     def register_implicit_greeting_turn(self, task: asyncio.Task[Any]) -> None:
         """Track the detached ``user_signed_on`` greeting task for user-chat preemption."""
         prior = self._implicit_greeting_turn_task

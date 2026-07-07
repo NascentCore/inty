@@ -42,7 +42,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.loop.track_policy import LoopExecutionPolicy
 from app.core.companion_harness.prompt_builder import (
     PromptPlan,
-    openai_dialogue_dicts_to_prompt_messages,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
@@ -156,14 +155,14 @@ def prompt_plan_from_openai_messages(
     *,
     tools: tuple[dict[str, Any], ...],
 ) -> PromptPlan:
-    """Wrap legacy OpenAI message dicts as ``PromptPlan`` for AgenticLoop.
+    """Deprecated: use ``TrackPromptComposer.compose_from_openai_messages``."""
+    from app.core.companion_harness.prompting.track_composer import (
+        TrackPromptComposer,
+    )
 
-    TODO(#3463-stage3): delete once track composer lands; interim for greeting/inner-tick.
-    """
-    return PromptPlan(
-        messages=openai_dialogue_dicts_to_prompt_messages(messages),
+    return TrackPromptComposer().compose_from_openai_messages(
+        messages,
         tools=tools,
-        tool_choice=None if not tools else "auto",
     )
 
 
