@@ -53,7 +53,6 @@ from app.core.companion_harness.companion.schedule_queue import (
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
 )
-from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.config import global_config_loaded_from_config_yaml
 
@@ -91,7 +90,11 @@ class InnerTickThrottleSnapshot:
 
 @dataclass(frozen=True)
 class InnerTickKernelInput:
-    """Arguments for one in-lock inner-tick kernel fire attempt."""
+    """Arguments for one in-lock inner-tick kernel fire attempt.
+
+    Carries no ``UserMessageBatch``: the manager turn entry synthesizes the
+    batch from ``preset_user_msg_uuid`` with the concrete turn-track label.
+    """
 
     manager: CompanionManager
     session: CompanionSession
@@ -100,7 +103,6 @@ class InnerTickKernelInput:
     runtime_context: TurnRuntimeContext
     preset_user_msg_uuid: str
     agentic_output_queue: OutputQueue
-    user_message_batch: UserMessageBatch
 
 
 @dataclass(frozen=True)
@@ -178,7 +180,6 @@ async def kernel_fire_scheduled(
                 preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                 runtime_context=kernel_input.runtime_context,
                 agentic_output_queue=kernel_input.agentic_output_queue,
-                user_message_batch=kernel_input.user_message_batch,
             )
         )
     except Exception as exc:
@@ -214,7 +215,6 @@ async def kernel_fire_proactive(
             preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
             runtime_context=kernel_input.runtime_context,
             agentic_output_queue=kernel_input.agentic_output_queue,
-            user_message_batch=kernel_input.user_message_batch,
         )
     )
     hb_user_text = (
@@ -253,7 +253,6 @@ async def kernel_fire_throttled(
                     preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                     runtime_context=kernel_input.runtime_context,
                     agentic_output_queue=kernel_input.agentic_output_queue,
-                    user_message_batch=kernel_input.user_message_batch,
                 )
             )
             reply_stripped = str(companion_turn.assistant_text or "").strip()
@@ -269,7 +268,6 @@ async def kernel_fire_throttled(
                     preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                     runtime_context=kernel_input.runtime_context,
                     agentic_output_queue=kernel_input.agentic_output_queue,
-                    user_message_batch=kernel_input.user_message_batch,
                 )
             )
         case InnerTickKind.PROACTIVE_CHAT | InnerTickKind.SCHEDULED:

@@ -58,7 +58,7 @@ async def deliver_inner_tick_assistant(
     visible = user_visible_assistant_text(assistant_text)
     if visible is None:
         return
-    # TODO(companion-ws-inner-tick-downlink): enqueue via WebSocketDownlink.deliver, not raw put. #3210 #3398
+    # TODO(#3543): converge App-WS inner-tick onto scope OutputQueue pump-owned delivery.
     if delivery.ws_outbound_queue is not None:
         assert ws_payload is not None
         await delivery.ws_outbound_queue.put(ws_payload)

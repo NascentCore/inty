@@ -18,9 +18,6 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
     get_scope_turn_lock,
 )
-from app.core.companion_harness.companion.scope_turn_lock import (
-    get_scope_turn_lock,
-)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel
 

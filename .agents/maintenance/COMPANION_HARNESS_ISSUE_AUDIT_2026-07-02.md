@@ -19,15 +19,23 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 - Timezone user-reports (#3381, #3613, #3647, #3649): already linked to canonical #3391 (prior runs).
 - **PR** — companion harness inline TODO anchors updated (9 files).
 
+## 2026-07-07 progress (Stage 1 PR-5 + Stage 2)
+
+Branch convergence: legacy turn orchestration + parallel WS downlink removed; typed `WsOutboundPayload` emit. See `.agents/maintenance/COMPANION_HARNESS_REFACTOR_GATE_BASELINE.md`.
+
+- **#3632** — code done on branch (threaded `start_tool_background_job` removed; queue path only); issue still open until PR merge.
+- **#3401** — slice 1: track-only transcript user JSONL flags in `turn_tail_user.py`; tests in `test_turn_tail_user_track_metadata.py`.
+- **#3490 / #3211 / #3543 / #3207** — partial progress commented on GitHub; audit lane updated below.
+
 | # | title | class | lane | action | TODO |
 |---|-------|-------|------|--------|------|
 | 3025 | [Agentic companion]  Sometime the LLM returns no outputs, see Langsmith run of no output L | healthy | other | review | no |
 | 3113 | chat WS: turn_lock 内 await 伴侣回合阻塞 user_signed_out 等控制帧 | healthy | other | review | no |
 | 3123 | [Agentic companion] 连续快速发消息：用 transcript 轮次状态取代 tool_bg_idle 阻塞/抢占 | healthy | other | review | yes |
 | 3158 | Companion WS: 前台 assistant_text 为空但 tool_background 已启动时仍返回 500 Chat returned no content | healthy | other | review | no |
-| 3207 | Companion WS completion: adopt typed Pydantic wire models (Phase 2+) | healthy | other | review | no |
-| 3209 | [Agentic companion] WebSocket downlink for user-turn UserVisibleChunk (#3402) | healthy | other | review | yes |
-| 3211 | Collapse WS companion outbound into CompanionPresenceSession downlink | healthy | other | review | yes |
+| 3207 | Companion WS completion: adopt typed Pydantic wire models (Phase 2+) | healthy | other | **partial** — queue emit + REPL parse done; HTTP meta + history row open | no |
+| 3209 | [Agentic companion] WebSocket downlink for user-turn UserVisibleChunk (#3402) | healthy | other | **partial** — App-WS `WebSocketDownlink` deleted; chunks via OutputQueue + pump; #3402 harness sink open | yes |
+| 3211 | Collapse WS companion outbound into CompanionPresenceSession downlink | healthy | other | **partial** — bootstrap interim consumer + `WebSocketDownlink` removed | yes |
 | 3252 | [Agentic companion] 强化自主性：trivial 用户消息不应让 agent 弃场（被轻易拉出自己正在进行的 activity） | healthy | other | review | no |
 | 3256 | [Agentic companion] WS disconnect mid-turn: persist-first with delivery state | healthy | other | review | yes |
 | 3271 | [Agentic companion] Dreaming cluster mutex for multi-process backend | healthy | other | review | yes |
@@ -72,8 +80,8 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 | 3395 | [Epic] Telegram channel: Bots API options to hook agents | healthy | refactor | reparent_or_active | no |
 | 3396 | [Ops Telegram] Shared-bot routing (Option A): current path & meta-op constraints | healthy | other | review | no |
 | 3397 | [Companion] Telegram Bots API meta-operations as channel tools | healthy | other | review | yes |
-| 3398 | [Epic] agentic_companion — dual-LLM vs single-LLM user-turn | healthy | refactor | reparent_or_active | yes |
-| 3401 | [Agentic companion] Separate CompanionTurnTrack from AgenticLoopMechanism | healthy | other | review | yes |
+| 3398 | [Epic] agentic_companion — dual-LLM vs single-LLM user-turn | healthy | refactor | **partial** — soft gate met (AgenticLoop-only orchestration); bootstrap compose + #3369 open | yes |
+| 3401 | [Agentic companion] Separate CompanionTurnTrack from AgenticLoopMechanism | healthy | other | **partial** — transcript user JSONL flags track-only (`turn_tail_user.py`); path/tools/route mode open | yes |
 | 3402 | [Agentic companion] UserVisibleChunk harness contract (decoupled channel downlink) | healthy | other | review | yes |
 | 3405 | [Agentic companion] Design conceptual & logical memory hierarchy | healthy | other | review | yes |
 | 3407 | Converge transcript.jsonl assistant rows to shared Pydantic write model | healthy | other | review | no |
@@ -120,7 +128,7 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 | 3485 | [Epic] ScopeQueueServing v1: continuous per-scope USER_CHAT worker (all channels) | healthy | refactor | reparent_or_active | no |
 | 3487 | Channel inbound: enqueue + wake only (Weixin, App-WS remaining) | healthy | other | review | yes |
 | 3488 | AppWsChannelAdapter + one Coordinator per scope on presence | healthy | other | review | no |
-| 3490 | Cleanup: remove queue USER_CHAT foreground_pending + tool-bg consumer | healthy | hygiene_defer | no_ready_for_agent | yes |
+| 3490 | Cleanup: remove queue USER_CHAT foreground_pending + tool-bg consumer | healthy | hygiene_defer | **partial** — WS tool-bg consumer removed; foreground_pending for inner-tick (#3580) | yes |
 | 3491 | [Epic] Cross-channel identity：canonical user 与 companion bond | healthy | refactor | reparent_or_active | no |
 | 3493 | Weixin: migrate WeixinInprocessPresence to ScopeQueueServing enqueue+wake | healthy | other | review | yes |
 | 3500 | [Epic] Hermes channel adapter feature parity | healthy | refactor | reparent_or_active | no |
@@ -138,7 +146,7 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 | 3533 | [Ops Telegram] Onboard ACTIVE bond 门禁：坏状态不启动 presence | healthy | other | review | no |
 | 3535 | [Ops Telegram] Launch 指标：proactive reciprocity 可衡量（API 或 SQL/脚本） | healthy | other | review | yes |
 | 3542 | Weixin: converge inner-tick + tool-bg onto OutputQueue + continuous pump (!3493) | healthy | other | review | no |
-| 3543 | WS: converge inner-tick + tool-bg onto OutputQueue; remove Downlink module (#3210/#3398) | healthy | other | review | no |
+| 3543 | WS: converge inner-tick + tool-bg onto OutputQueue; remove Downlink module (#3210/#3398) | healthy | other | **partial** — tool-bg + user reply via pump; inner-tick WS direct put remains | no |
 | 3548 | [Agentic companion] Rename Channel → Gateway in companion_harness | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3549 | [Agentic companion] Consolidate MemDoc type definitions (name, attributes, path) | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3550 | [Agentic companion] Dreaming batch: Postgres advisory lock per scope | healthy | other | review | no |
@@ -161,7 +169,7 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 | 3629 | [Agentic companion] PromptPlan 端到端 typed prompt，OpenAI wire 仅在 AsyncLlmClient | healthy | other | review | yes |
 | 3630 | [Agentic companion] LangSmith per-call 收敛：LlmInvocationContext + AgenticLoop/LlmClient | healthy | other | review | yes |
 | 3631 | [Agentic companion] tool_background 改用 AsyncLlmClient，去掉 sync/to_thread | healthy | other | review | yes |
-| 3632 | [Agentic companion] 退役 legacy threaded tool_bg，tool leg 内联 AgenticLoop | healthy | hygiene_defer | no_ready_for_agent | yes |
+| 3632 | [Agentic companion] 退役 legacy threaded tool_bg，tool leg 内联 AgenticLoop | healthy | hygiene_defer | **code done** — branch removes threaded job; close after PR merge | yes |
 | 3633 | [Agentic companion] LangSmith parent RunTree：随 legacy 退役收缩 TurnOrchestrator | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3634 | [Agentic companion] Dreaming 人格化 AgenticLoop entry（独立于 user-turn） | healthy | other | review | yes |
 | 3647 | [user-reported] behavior: 用户在美国西海岸时区，但助手的回应未考虑时区，错误地假设了上海时间。 | healthy | other | review | no |

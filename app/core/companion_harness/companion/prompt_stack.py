@@ -132,7 +132,8 @@ def append_runtime_output_format_system_message(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
-    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTureTrack — #3453
+    # TODO(#3401): drop inner_tick_turn / inner_tick_activity; derive tool set from track via inner_tick_kind_for_track.
+    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTurnTrack — #3453
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,

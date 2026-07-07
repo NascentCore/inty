@@ -214,3 +214,15 @@ Open PRs checked: none — no overlap with tasks below.
 - [x] **HYGIENE-2026-67** #3413: `test_turn_pipeline_bootstrap.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
 - [x] **HYGIENE-2026-68** #3413: `test_turn_pipeline_dreaming.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
 - [x] **HYGIENE-2026-69** #3413: `test_transcript_assistant_row.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-e621` / pull/3763.
+
+## 2026-07-07 scan (Stage 1 PR-5 + Stage 2 convergence)
+
+Source: companion harness partial-convergence (`PR-5` legacy turn/downlink delete + Stage 2 typed WS emit); gate baseline green for soft orchestration + typed outbound.
+
+Related issues: #3632 (code done), #3401 (slice 1 partial), #3490/#3211/#3543 (partial), #3207/#3208 (partial).
+
+### Open tasks
+
+- [x] **HYGIENE-2026-70** #3632: remove stale `start_tool_background_job` references in `dual_llm_foreground_chat.py` module doc and `CompanionTurnResult.tool_background_started` Field description. Fixed in Stage 1 PR-5 branch.
+- [x] **HYGIENE-2026-71** #3208: remove completed emit-path TODO from `chat_ws._agent_chat_ws_completions_impl` (typed `ChatWebSocketQueuedSuccessFrame` via `build_chat_ws_queued_success_frame`). Fixed in Stage 2 branch.
+- [x] **HYGIENE-2026-72** #3401: `append_turn_track_tail_user_transcript_rows` track-only (`inner_tick_kind_for_track`); dedup `turn.py` inline block; `test_turn_tail_user_track_metadata.py` (7 cases). Fixed on branch 2026-07-07.

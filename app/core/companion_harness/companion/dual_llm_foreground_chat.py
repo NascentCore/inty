@@ -2,10 +2,9 @@
 
 Extracted from turn.run_turn ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL for reuse by
 the production AgenticLoop. Does not start tool_background; caller passes
-tool_msgs_for_bg into run_tool_background_loop or start_tool_background_job.
+tool_msgs_for_bg into run_tool_background_loop (inline AgenticLoop tool phase).
 
 TODO(!3630): Build langsmith_extra via LlmInvocationContext instead of langsmith_slice helpers here.
-TODO(!3632): Callers should prefer inline run_tool_background_loop via AgenticLoop only.
 """
 
 from __future__ import annotations
