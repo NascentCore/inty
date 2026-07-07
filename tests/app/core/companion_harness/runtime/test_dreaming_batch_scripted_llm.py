@@ -23,6 +23,10 @@ from app.core.companion_harness.companion.manager import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
@@ -56,7 +60,7 @@ def _seed_settled_scope_with_checkpoint(
     checkpoint_at = now - timedelta(days=1)
 
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "public",
@@ -73,7 +77,7 @@ def _seed_settled_scope_with_checkpoint(
         store.write_document(rel, f"# {rel}\n")
 
     store.write_document(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         "\n".join(
             [
                 json.dumps(
@@ -173,7 +177,7 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
     daily_path = f"memory/daily/{day_iso}.md"
 
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "public",
@@ -197,7 +201,7 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
         store.write_document(rel, f"# {rel}\n")
 
     store.write_document(
-        "transcript.jsonl",
+        TRANSCRIPT_JSONL_REL,
         "\n".join(
             [
                 json.dumps(

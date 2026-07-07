@@ -227,3 +227,17 @@ Related issues: #3632 (closed), #3401 (slice 1+2 merged pull/3765–3766), #3490
 - [x] **HYGIENE-2026-71** #3208: remove completed emit-path TODO from `chat_ws._agent_chat_ws_completions_impl` (typed `ChatWebSocketQueuedSuccessFrame` via `build_chat_ws_queued_success_frame`). Fixed in Stage 2 branch.
 - [x] **HYGIENE-2026-72** #3401: `append_turn_track_tail_user_transcript_rows` track-only (`inner_tick_kind_for_track`); dedup `turn.py` inline block; `test_turn_tail_user_track_metadata.py` (7 cases). Merged pull/3765.
 - [x] **HYGIENE-2026-73** #3401 slice 2: `transcript_relative_path_for_turn_persistence`, `companion_turn_transcript_loaded_messages`, `companion_tools_for_turn`, `load_companion_turn_state` track-only; `test_transcript_inner_tick_streams.py` + `test_prompt_stack_tools_for_turn.py`. Merged pull/3766.
+
+## 2026-07-07 scan (hygiene follow-up)
+
+Source: open PR overlap check (#3785 REPL regression speedup — no harness overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests still seed/read MemDoc paths as string literals; UP017 `timezone.utc` in `test_greeting_loop_context.py`; F841 unused `batch` in `test_agentic_loop_output_queue.py`.
+
+Open PRs checked: #3785 (`cursor/repl-regression-speedup-fe95`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-74** ruff UP017 + #3413: `test_greeting_loop_context.py` — `datetime.UTC` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-75** #3413: `test_dreaming_batch_scripted_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-76** #3413: `test_memory_store_scope.py` — canonical path constants for assertions + seed. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-77** #3413: `test_memory_store.py` — `TRANSCRIPT_JSONL_REL` for append/read. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-78** #3413: `test_experience_directives.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
