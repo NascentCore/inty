@@ -14,7 +14,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
 )
@@ -185,7 +185,7 @@ async def test_send_user_reply_without_active_channel_raises_for_output_retry() 
     message = ReadyOutputMessage(
         message_id="out-1",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="hello",
         message_ids=("m1",),
         sequence=1,
@@ -202,7 +202,7 @@ async def test_tool_background_without_input_ids_raises_unroutable() -> None:
     message = ReadyOutputMessage(
         message_id="out-tool",
         batch_id="agent-initiated:tool",
-        kind=DownlinkKind.TOOL_BACKGROUND,
+        kind=OutputMessageKind.TOOL_BACKGROUND,
         text="tool follow-up",
         message_ids=(),
         sequence=1,

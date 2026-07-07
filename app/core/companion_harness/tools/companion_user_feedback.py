@@ -411,7 +411,9 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
         OutputQueueAppendInput,
         get_output_queue_for_scope,
     )
-    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.core.companion_harness.agentic_companion.types import (
+        OutputMessageKind,
+    )
 
     display_text = build_user_feedback_disclosure_display_text(
         issue_url=issue_url,
@@ -420,7 +422,7 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
     scope = AgentScope(user_id=user_id, agent_id=agent_id)
     await get_output_queue_for_scope(scope).append_visible_message(
         OutputQueueAppendInput(
-            kind=DownlinkKind.TOOL_BACKGROUND,
+            kind=OutputMessageKind.TOOL_BACKGROUND,
             batch_id=batch_id,
             text=display_text,
             message_ids=(user_msg_uuid,),

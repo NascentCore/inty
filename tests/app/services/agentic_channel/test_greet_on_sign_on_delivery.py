@@ -12,7 +12,6 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
-    OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
@@ -39,7 +38,7 @@ from app.services.agentic_channel.serving import (
     _deliver_ready_message,
     flush_scope_output_queue_ready,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 class _FakeResponse:
@@ -102,7 +101,7 @@ def _wire_app_ws_active_channel(
 
 
 def _agent_initiated_greeting_message(
-    *, kind: DownlinkKind
+    *, kind: OutputMessageKind
 ) -> ReadyOutputMessage:
     return ReadyOutputMessage(
         message_id="out-greet-1",
@@ -127,12 +126,14 @@ def _clear_channel_state() -> None:
 
 @pytest.mark.asyncio
 async def test_ready_output_is_agent_initiated_visible() -> None:
-    greeting = _agent_initiated_greeting_message(kind=DownlinkKind.USER_REPLY)
+    greeting = _agent_initiated_greeting_message(
+        kind=OutputMessageKind.USER_REPLY
+    )
     assert ready_output_is_agent_initiated_visible(greeting)
     correlated = ReadyOutputMessage(
         message_id="out-2",
         batch_id="batch-user-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="reply",
         sequence=2,
         message_ids=("in-1",),
@@ -148,7 +149,9 @@ async def test_agent_initiated_greeting_delivers_via_im_channel() -> None:
     presence = AgentChannelPresence(scope)
     api, sent = _telegram_api_with_sent_capture()
     _wire_telegram_active_channel(scope, api=api, channel_address="tg-chat-1")
-    message = _agent_initiated_greeting_message(kind=DownlinkKind.USER_REPLY)
+    message = _agent_initiated_greeting_message(
+        kind=OutputMessageKind.USER_REPLY
+    )
 
     await presence._deliver_ready_via_active_channel(message)
 
@@ -162,7 +165,9 @@ async def test_agent_initiated_proactive_kind_delivers_via_im_channel() -> None:
     presence = AgentChannelPresence(scope)
     api, sent = _telegram_api_with_sent_capture()
     _wire_telegram_active_channel(scope, api=api, channel_address="tg-chat-pro")
-    message = _agent_initiated_greeting_message(kind=DownlinkKind.PROACTIVE)
+    message = _agent_initiated_greeting_message(
+        kind=OutputMessageKind.PROACTIVE
+    )
 
     await presence._deliver_ready_via_active_channel(message)
 
@@ -179,7 +184,9 @@ async def test_agent_initiated_greeting_delivers_via_app_ws_pump() -> None:
     presence = AgentChannelPresence(scope)
     outbound = asyncio.Queue()
     _wire_app_ws_active_channel(scope, outbound=outbound)
-    message = _agent_initiated_greeting_message(kind=DownlinkKind.USER_REPLY)
+    message = _agent_initiated_greeting_message(
+        kind=OutputMessageKind.USER_REPLY
+    )
 
     class _SessionContext:
         async def __aenter__(self):
@@ -243,7 +250,9 @@ async def test_deliver_ready_message_acks_agent_initiated_greeting() -> None:
     presence = AgentChannelPresence(scope)
     api, sent = _telegram_api_with_sent_capture()
     _wire_telegram_active_channel(scope, api=api, channel_address="tg-chat-2")
-    message = _agent_initiated_greeting_message(kind=DownlinkKind.USER_REPLY)
+    message = _agent_initiated_greeting_message(
+        kind=OutputMessageKind.USER_REPLY
+    )
     fake_queue = MagicMock()
     fake_queue.ack_delivered = AsyncMock()
     fake_queue.skip_delivery = AsyncMock()
@@ -280,18 +289,6 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
     async def _fake_greeting_turn(**kwargs):
         output_queue = kwargs.get("agentic_output_queue")
         assert output_queue is not None
-        await output_queue.append_visible_message(
-            OutputQueueAppendInput(
-                kind=DownlinkKind.USER_REPLY,
-                batch_id="agent-initiated:implicit_sign_on_greeting:msg-greet-e2e",
-                text="Hello from Inty.",
-                message_ids=("msg-greet-e2e",),
-                trace_id="trace-greet-e2e",
-                langsmith_trace_id=None,
-                langsmith_run_id=None,
-                turn_recall=None,
-            )
-        )
         return CompanionTurnResult(assistant_text="Hello from Inty.")
 
     with patch(

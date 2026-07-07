@@ -9,7 +9,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 class _FakeTwilioSmsApi:
@@ -46,7 +46,7 @@ async def test_sms_channel_downlink_delivers_proactive() -> None:
         ReadyOutputMessage(
             message_id="sms-1",
             batch_id="batch-sms-1",
-            kind=DownlinkKind.PROACTIVE,
+            kind=OutputMessageKind.PROACTIVE,
             text="Hello from Inty",
             sequence=1,
             message_ids=(),

@@ -32,7 +32,7 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 @pytest.fixture(autouse=True)
@@ -43,7 +43,10 @@ def _clear_registry() -> None:
 
 
 def _append_input(
-    *, batch_id: str, text: str, kind: DownlinkKind = DownlinkKind.USER_REPLY
+    *,
+    batch_id: str,
+    text: str,
+    kind: OutputMessageKind = OutputMessageKind.USER_REPLY,
 ) -> OutputQueueAppendInput:
     return OutputQueueAppendInput(
         kind=kind,
@@ -101,7 +104,7 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
         ):
             ready = await queue.append_visible_message(
                 OutputQueueAppendInput(
-                    kind=DownlinkKind.PROACTIVE,
+                    kind=OutputMessageKind.PROACTIVE,
                     batch_id="",
                     text="hello",
                     message_ids=(),
@@ -112,11 +115,11 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
                 )
             )
 
-    assert ready.kind == DownlinkKind.PROACTIVE
+    assert ready.kind == OutputMessageKind.PROACTIVE
     assert ready.message_ids == ()
     assert ready.batch_id.startswith("agent-initiated:")
     persisted = repo.append_agent_output.await_args.args[0]
-    assert persisted.kind == DownlinkKind.PROACTIVE
+    assert persisted.kind == OutputMessageKind.PROACTIVE
 
 
 @pytest.mark.asyncio
@@ -203,7 +206,7 @@ async def test_mark_failed_waits_for_repository_retry() -> None:
     ready = ReadyOutputMessage(
         message_id="msg-retry",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="retry me",
         sequence=1,
         message_ids=("input-1",),
@@ -238,7 +241,7 @@ async def test_skip_delivery_calls_mark_skipped_without_requeue() -> None:
     ready = ReadyOutputMessage(
         message_id="msg-skip",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="skip me",
         sequence=1,
         message_ids=("input-1",),
@@ -282,7 +285,7 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
         sequence=7,
         status=QueueStatus.CLAIMED,
         batch_id="agent-initiated:recover",
-        kind=DownlinkKind.PROACTIVE,
+        kind=OutputMessageKind.PROACTIVE,
         text="recovered line",
         created_at_utc=datetime.now(UTC),
         message_ids=(),
@@ -340,7 +343,7 @@ async def test_append_during_pull_ready_batch_is_not_lost() -> None:
     msg_a = ReadyOutputMessage(
         message_id="msg-a",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="first",
         sequence=1,
         message_ids=("input-1",),
@@ -348,7 +351,7 @@ async def test_append_during_pull_ready_batch_is_not_lost() -> None:
     msg_b = ReadyOutputMessage(
         message_id="msg-b",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="second",
         sequence=2,
         message_ids=("input-1",),

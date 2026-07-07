@@ -10,9 +10,7 @@ from sqlalchemy import delete
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
-from app.services.agentic_companion.inner_tick_delivery import (
-    inner_tick_delivery_for_telegram,
-)
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.services.agentic_companion.inner_tick_scope import (
     InnerTickFireInput,
     InnerTickModelSource,
@@ -46,11 +44,8 @@ async def test_resolve_inner_tick_scope_coords_accepts_agent_scope_chat_id() -> 
     scope = AgentScope(user_id=user.id, agent_id=agent_id)
     coordinator = Coordinator.for_loop(asyncio.get_running_loop())
 
-    async def _noop(_text: str) -> None:
-        return None
-
     fire_input = InnerTickFireInput(
-        delivery=inner_tick_delivery_for_telegram(_noop),
+        runtime_channel=ChannelKind.TELEGRAM,
         coords=InnerTickCoords(
             user_id=user.id,
             agent_id=agent_id,
@@ -77,11 +72,8 @@ async def test_resolve_inner_tick_scope_coords_rejects_mismatched_agent_scope() 
     user = await _create_guest_user()
     coordinator = Coordinator.for_loop(asyncio.get_running_loop())
 
-    async def _noop(_text: str) -> None:
-        return None
-
     fire_input = InnerTickFireInput(
-        delivery=inner_tick_delivery_for_telegram(_noop),
+        runtime_channel=ChannelKind.TELEGRAM,
         coords=InnerTickCoords(
             user_id=user.id,
             agent_id="agent-a",

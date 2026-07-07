@@ -58,7 +58,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.llms.client import LLM_SCENE_CHAT, LLM_SCENE_INNER_TICK
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 def _response(content: str) -> SimpleNamespace:
@@ -187,9 +187,7 @@ async def test_greeting_uses_dual_llm_envelope_with_retrial() -> None:
     assert result.assistant_text == "Welcome back!"
     assert result.significance_meta is not None
     assert result.turn_recall == "greeted after sign-on"
-    append_call = appender.output_queue.append_visible_message.await_args
-    assert append_call.args[0].kind == DownlinkKind.USER_REPLY
-    assert append_call.args[0].text == "Welcome back!"
+    appender.output_queue.append_visible_message.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -226,7 +224,7 @@ async def test_scheduled_uses_proactive_envelope_and_inner_tick_scene() -> None:
     assert call.kwargs["high_reasoning"] is False
     assert result.assistant_text == "Reminder: stretch break."
     append_call = appender.output_queue.append_visible_message.await_args
-    assert append_call.args[0].kind == DownlinkKind.SCHEDULED
+    assert append_call.args[0].kind == OutputMessageKind.SCHEDULED
 
 
 @pytest.mark.asyncio
@@ -294,7 +292,7 @@ async def test_proactive_uses_chat_scene_and_high_reasoning() -> None:
     assert call.kwargs["high_reasoning"] is True
     assert result.assistant_text == "Thinking of you."
     append_call = appender.output_queue.append_visible_message.await_args
-    assert append_call.args[0].kind == DownlinkKind.PROACTIVE
+    assert append_call.args[0].kind == OutputMessageKind.PROACTIVE
 
 
 @pytest.mark.asyncio

@@ -244,7 +244,9 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
     from unittest.mock import AsyncMock, patch
 
     from app.core.companion_harness.tools import companion_user_feedback as mod
-    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.core.companion_harness.agentic_companion.types import (
+        OutputMessageKind,
+    )
 
     class _FakeRecord:
         def __init__(self, message_id: str, text: str, sequence: int) -> None:
@@ -273,20 +275,22 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
             "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
-            appended = await mod.append_user_feedback_issue_disclosure_to_output_queue(
-                user_id="user-testing",
-                agent_id="agent-1",
-                batch_id="batch-1",
-                user_msg_uuid="client-msg-1",
-                issue_url=issue_url,
-                llm_reply="",
+            appended = (
+                await mod.append_user_feedback_issue_disclosure_to_output_queue(
+                    user_id="user-testing",
+                    agent_id="agent-1",
+                    batch_id="batch-1",
+                    user_msg_uuid="client-msg-1",
+                    issue_url=issue_url,
+                    llm_reply="",
+                )
             )
 
     assert appended is True
     persisted = repo.append_agent_output.await_args.args[0]
     assert persisted.batch_id == "batch-1"
     assert persisted.message_ids == ("client-msg-1",)
-    assert persisted.kind == DownlinkKind.TOOL_BACKGROUND
+    assert persisted.kind == OutputMessageKind.TOOL_BACKGROUND
     assert persisted.text == issue_url
 
 
@@ -308,13 +312,15 @@ async def test_append_user_feedback_issue_disclosure_skipped_when_hidden(
     ) as session_cls:
         session = AsyncMock()
         session_cls.return_value = session
-        appended = await mod.append_user_feedback_issue_disclosure_to_output_queue(
-            user_id="user-testing",
-            agent_id="agent-1",
-            batch_id="batch-1",
-            user_msg_uuid="client-msg-1",
-            issue_url="https://github.com/NascentCore/inty/issues/1",
-            llm_reply="",
+        appended = (
+            await mod.append_user_feedback_issue_disclosure_to_output_queue(
+                user_id="user-testing",
+                agent_id="agent-1",
+                batch_id="batch-1",
+                user_msg_uuid="client-msg-1",
+                issue_url="https://github.com/NascentCore/inty/issues/1",
+                llm_reply="",
+            )
         )
     assert appended is False
     session_cls.assert_not_called()

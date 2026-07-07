@@ -212,7 +212,6 @@ async def drain_and_deliver_user_chat_turn(
     deliver_message: DeliverReadyMessageFn,
 ) -> UserChatTurnDeliveryResult:
     """Drain one input batch while pumping OutputQueue ready messages."""
-    # TODO(#3493): Remove when Weixin migrates; ScopeQueueServing owns drain+pump (#3487; App-WS landed in pull/3512).
     # TODO(!3402): Return typed Channel handle result instead of str from presence.
     assert delivery_wire_id != ""
 

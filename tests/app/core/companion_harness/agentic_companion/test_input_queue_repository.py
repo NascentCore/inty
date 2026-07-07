@@ -30,7 +30,7 @@ from app.models.agentic_companion_queue import (
 )
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
 )
@@ -264,7 +264,7 @@ async def test_output_queue_append_claim_and_deliver() -> None:
                     message_id="out-1",
                     scope=scope,
                     batch_id="batch-1",
-                    kind=DownlinkKind.USER_REPLY,
+                    kind=OutputMessageKind.USER_REPLY,
                     text="hello back",
                     created_at_utc=datetime.now(UTC),
                     message_ids=("in-1",),
@@ -313,7 +313,7 @@ async def test_output_queue_mark_skipped_persists_terminal_status() -> None:
                     message_id="out-skip",
                     scope=scope,
                     batch_id="batch-1",
-                    kind=DownlinkKind.USER_REPLY,
+                    kind=OutputMessageKind.USER_REPLY,
                     text="orphan reply",
                     created_at_utc=datetime.now(UTC),
                     message_ids=("in-orphan",),

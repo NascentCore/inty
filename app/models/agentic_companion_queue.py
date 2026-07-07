@@ -166,7 +166,7 @@ class AgenticCompanionOutputQueueRow(Base):
     kind = Column(
         String,
         nullable=False,
-        comment="DownlinkKind value",
+        comment="OutputMessageKind value",
     )
     text = Column(
         Text,

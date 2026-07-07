@@ -15,23 +15,17 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
-from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
-    DownlinkKind,
-)
-from app.services.agentic_companion.inner_tick_delivery import (
-    InnerTickDelivery,
-    inner_tick_delivery_for_weixin,
-)
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.services.agentic_companion.downlink import ChannelDownlink
 
 WeixinAssistantTextSink = Callable[[str], Awaitable[None]]
 
 _WEIXIN_TEXT_KINDS = frozenset(
     {
-        DownlinkKind.USER_REPLY,
-        DownlinkKind.PROACTIVE,
-        DownlinkKind.SCHEDULED,
-        DownlinkKind.MONOLOG,
+        OutputMessageKind.USER_REPLY,
+        OutputMessageKind.PROACTIVE,
+        OutputMessageKind.SCHEDULED,
+        OutputMessageKind.MONOLOG,
     }
 )
 
@@ -61,9 +55,6 @@ class WeixinChannelAdapter:
 
     async def on_turn_down(self, scope: AgentScope) -> None:
         assert scope is not None
-
-    def inner_tick_delivery(self) -> InnerTickDelivery:
-        return inner_tick_delivery_for_weixin(self._send_assistant_text)
 
 
 class WeixinChannelAdapterStub(WeixinChannelAdapter):

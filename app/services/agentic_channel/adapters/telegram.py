@@ -4,7 +4,7 @@ TODO(telegram-meta-ops-tools): Meta-ops dispatch (setMyName, setMyDescription, �
   framework #3362; dedicated-bot #3361; shared-bot must not expose bot-global meta ops #3396.
 TODO(telegram-reply-reaction): ``sendMessage`` reply_parameters + ``setMessageReaction`` on
   downlink; inbound reply_to / message_reaction → harness — #3441 (epic #3440)
-TODO(!3451): Deliver image-bearing ``Downlink`` events through native Telegram image messages.
+TODO(!3451): Deliver image-bearing ``ReadyOutputMessage`` rows through native Telegram image messages.
 """
 
 from __future__ import annotations
@@ -23,20 +23,15 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     ready_output_delivers_user_visible_text,
 )
 from app.external_services.telegram_bot_api import TelegramBotApi
-from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
-    DownlinkKind,
-)
-from app.services.agentic_companion.inner_tick_delivery import (
-    inner_tick_delivery_for_telegram,
-)
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.services.agentic_companion.downlink import ChannelDownlink
 
 _TELEGRAM_TEXT_KINDS = frozenset(
     {
-        DownlinkKind.USER_REPLY,
-        DownlinkKind.PROACTIVE,
-        DownlinkKind.SCHEDULED,
-        DownlinkKind.MONOLOG,
+        OutputMessageKind.USER_REPLY,
+        OutputMessageKind.PROACTIVE,
+        OutputMessageKind.SCHEDULED,
+        OutputMessageKind.MONOLOG,
     }
 )
 
@@ -70,23 +65,6 @@ class TelegramChannelAdapter:
 
     async def on_turn_down(self, scope: AgentScope) -> None:
         assert scope is not None
-
-    def inner_tick_delivery(self):
-        downlink = self.as_downlink()
-
-        async def send_assistant_text(text: str) -> None:
-            await downlink.deliver(
-                ReadyOutputMessage(
-                    message_id="inner-tick-direct",
-                    batch_id="inner-tick-direct",
-                    kind=DownlinkKind.PROACTIVE,
-                    text=text,
-                    sequence=0,
-                    message_ids=(),
-                )
-            )
-
-        return inner_tick_delivery_for_telegram(send_assistant_text)
 
 
 class _TelegramChannelDownlink:

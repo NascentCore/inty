@@ -20,15 +20,15 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.services.agentic_companion import inner_tick_fire
-from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
 from app.services.agentic_companion.inner_tick_scope import InnerTickFireInput
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 
 
 async def run_inner_tick_poll(
     *,
-    delivery: InnerTickDelivery,
+    runtime_channel: ChannelKind,
     coordinator: Coordinator,
     ws_conn_id: str | None,
     tc_box: list[Optional[dict]] | None,
@@ -43,7 +43,7 @@ async def run_inner_tick_poll(
     ws_id = ws_conn_id if ws_conn_id is not None else "weixin_presence"
     tc = tc_box if tc_box is not None else [None]
     fire_input = InnerTickFireInput(
-        delivery=delivery,
+        runtime_channel=runtime_channel,
         coords=poll_coords,
         coordinator=coordinator,
         ws_conn_id=ws_id,

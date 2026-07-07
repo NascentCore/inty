@@ -17,7 +17,7 @@ from app.models.agentic_companion_queue import (
     AgenticCompanionInputQueueRow,
     AgenticCompanionOutputQueueRow,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 from .types import (
     AgentOutputMessage,
@@ -106,7 +106,7 @@ def _output_row_to_record(
         sequence=int(row.sequence_id),
         status=QueueStatus(row.status),
         batch_id=row.batch_id,
-        kind=DownlinkKind(row.kind),
+        kind=OutputMessageKind(row.kind),
         text=row.text,
         created_at_utc=row.created_at,
         message_ids=message_ids,

@@ -10,9 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueue,
+    OutputQueueAppendInput,
     ReadyOutputMessage,
 )
-from app.core.companion_harness.agentic_companion.types import InputQueueRecord
+from app.core.companion_harness.agentic_companion.types import (
+    InputQueueRecord,
+    OutputMessageKind,
+    UserMessageBatch,
+)
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
 )
@@ -227,6 +233,29 @@ async def persist_implicit_greeting_ai_chat_history(
         text,
         agent_id=agent_id,
         meta_data=companion_ai_meta,
+    )
+
+
+async def append_implicit_greeting_output_after_persist(
+    *,
+    output_queue: OutputQueue,
+    user_message_batch: UserMessageBatch,
+    text: str,
+    companion_turn: CompanionTurnResult,
+) -> ReadyOutputMessage:
+    """Append greeting to OutputQueue only after ``chat_history`` persist (App-WS pump path)."""
+    assert text.strip() != ""
+    return await output_queue.append_visible_message(
+        OutputQueueAppendInput(
+            kind=OutputMessageKind.USER_REPLY,
+            batch_id=user_message_batch.batch_id,
+            text=text,
+            message_ids=(),
+            trace_id=companion_turn.trace_id,
+            langsmith_trace_id=companion_turn.langsmith_trace_id,
+            langsmith_run_id=companion_turn.langsmith_run_id,
+            turn_recall=companion_turn.turn_recall,
+        )
     )
 
 

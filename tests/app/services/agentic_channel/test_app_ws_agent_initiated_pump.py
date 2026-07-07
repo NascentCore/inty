@@ -12,18 +12,8 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
-from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
-from app.schemas.chat_websocket import ChatWsCompanionWireMessageMetaData
 from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
-from app.services.agentic_companion.downlink import DownlinkKind
-from app.services.agentic_companion.inner_tick_deliver import (
-    InnerTickVisibleDeliverInput,
-    deliver_visible_inner_tick_turn,
-)
-from app.services.agentic_companion.inner_tick_delivery import (
-    inner_tick_delivery_for_pump_owned,
-)
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 class _SessionContext:
@@ -56,7 +46,7 @@ async def test_proactive_kind_delivers_via_adapter() -> None:
     ready = ReadyOutputMessage(
         message_id="out-pro-1",
         batch_id="agent-initiated:proactive",
-        kind=DownlinkKind.PROACTIVE,
+        kind=OutputMessageKind.PROACTIVE,
         text=assistant_text,
         sequence=1,
         message_ids=(),
@@ -115,7 +105,7 @@ async def test_greeting_agent_initiated_user_reply_kind_via_adapter() -> None:
     ready = ReadyOutputMessage(
         message_id="out-greet-parity",
         batch_id="agent-initiated:greeting",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text=greeting_text,
         sequence=1,
         message_ids=(),
@@ -166,7 +156,7 @@ async def test_agent_initiated_materialize_tolerates_missing_ai_row() -> None:
     ready = ReadyOutputMessage(
         message_id="out-race",
         batch_id="agent-initiated:race",
-        kind=DownlinkKind.PROACTIVE,
+        kind=OutputMessageKind.PROACTIVE,
         text="race-safe proactive",
         sequence=1,
         message_ids=(),
@@ -204,43 +194,3 @@ async def test_agent_initiated_materialize_tolerates_missing_ai_row() -> None:
 
     payload = await outbound_queue.get()
     assert _choices_text(payload) == ready.text
-
-
-@pytest.mark.asyncio
-async def test_app_ws_skips_direct_send_when_output_queue_rows_exist() -> None:
-    pump_owned = inner_tick_delivery_for_pump_owned(ChannelKind.APP_WS)
-    with (
-        patch(
-            "app.services.agentic_companion.inner_tick_deliver."
-            "chat_history_service.add_ai_message_sync_async",
-            new=AsyncMock(return_value=301),
-        ) as add_ai,
-        patch(
-            "app.services.agentic_companion.inner_tick_deliver."
-            "deliver_inner_tick_assistant",
-            new=AsyncMock(),
-        ) as channel_send,
-    ):
-        delivered = await deliver_visible_inner_tick_turn(
-            InnerTickVisibleDeliverInput(
-                delivery=pump_owned,
-                session_id="session-app-ws",
-                chat_row_agent_id="agent-1",
-                preset_uid="uid-1",
-                transcript_user_text="[proactive]",
-                companion_turn=CompanionTurnResult(
-                    assistant_text="hello pump",
-                    output_message_ids=("out-app-ws",),
-                ),
-                user_wire_meta=ChatWsCompanionWireMessageMetaData(
-                    source="proactive"
-                ),
-                companion_scheduled_reminder=None,
-                scheduled_task_id=None,
-                log_label="app_ws_pump_owned",
-                skip_user_history=True,
-            )
-        )
-    assert delivered is True
-    add_ai.assert_awaited_once()
-    channel_send.assert_not_awaited()

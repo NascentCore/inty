@@ -1011,7 +1011,7 @@ def _patch_companion_ws_queue_turn(
     mock_channel_turn_up: bool = True,
 ) -> None:
     from datetime import datetime, timezone
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import AsyncMock
 
     from app.core.companion_harness.agent_channel.scope import AgentScope
     from app.core.companion_harness.companion.runtime_channel import (
@@ -1027,6 +1027,7 @@ def _patch_companion_ws_queue_turn(
     from app.services.agentic_channel.presence import (
         AgentChannelPresence,
         clear_presences_for_tests,
+        stop_presence,
         _presences,
     )
     from app.core.companion_harness.agentic_companion.output_queue import (
@@ -1036,17 +1037,73 @@ def _patch_companion_ws_queue_turn(
         InputQueueRecord,
         QueueStatus,
     )
-    from app.services.agentic_companion.downlink import DownlinkKind
+    from app.core.companion_harness.agentic_companion.types import (
+        OutputMessageKind,
+    )
+    from app.services.agentic_channel.serving import DrainScopeOnceResult
     from app.services.agentic_companion.ws_outbound_materialize import (
-        materialize_agent_initiated_ws_payload,
         materialize_queue_user_reply_from_durable,
     )
 
-    from app.core.config import global_config_loaded_from_config_yaml
-    from app.services.agentic_companion.inner_tick_poll import (
-        run_inner_tick_poll,
+    class _OutputQueueDbSession:
+        async def __aenter__(self):
+            return AsyncMock()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+    class _FakeOutputRecord:
+        def __init__(
+            self, *, message_id: str, text: str, sequence: int
+        ) -> None:
+            self.message_id = message_id
+            self.text = text
+            self.sequence = sequence
+            self.tool_background_started = False
+            self.generated_images = ()
+
+    def _fake_output_repo(_db):
+        repo = AsyncMock()
+
+        async def append_agent_output(output):
+            return _FakeOutputRecord(
+                message_id=output.message_id,
+                text=output.text,
+                sequence=1,
+            )
+
+        repo.append_agent_output = append_agent_output
+        repo.claim_pending_for_delivery = AsyncMock(return_value=())
+        repo.mark_delivered = AsyncMock(return_value=None)
+        repo.mark_failed = AsyncMock(return_value=None)
+        repo.mark_skipped = AsyncMock(return_value=None)
+        return repo
+
+    monkeypatch.setattr(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal",
+        _OutputQueueDbSession,
     )
-    from app.services.agentic_companion.session import Session
+    monkeypatch.setattr(
+        "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+        _fake_output_repo,
+    )
+    monkeypatch.setattr(
+        "app.services.agentic_channel.adapters.app_ws.AsyncSessionLocal",
+        _OutputQueueDbSession,
+    )
+
+    async def fake_drain_scope_once_via_companion(*_args, **_kwargs):
+        return DrainScopeOnceResult(
+            reply_text="",
+            tool_background_started=False,
+            batch_drained=False,
+            input_message_ids=(),
+        )
+
+    monkeypatch.setattr(
+        "app.services.agentic_channel.scope_queue_serving.drain_scope_once_via_companion",
+        fake_drain_scope_once_via_companion,
+    )
 
     clear_presences_for_tests()
     clear_registries_for_tests()
@@ -1072,11 +1129,6 @@ def _patch_companion_ws_queue_turn(
         arm_proactive_coords: bool,
     ):
         key = scope.registry_key()
-        presence = _presences.get(key)
-        if presence is None:
-            presence = AgentChannelPresence(scope)
-            presence._queue_serving = MagicMock()
-            _presences[key] = presence
         adapter = AppWsChannelAdapter(
             scope=scope,
             outbound_queue=outbound_queue,
@@ -1085,11 +1137,12 @@ def _patch_companion_ws_queue_turn(
         registry.states[ChannelKind.APP_WS] = ChannelRuntimeState.ACTIVE
         registry.adapters[ChannelKind.APP_WS] = adapter
         registry.downlinks[ChannelKind.APP_WS] = adapter.as_downlink()
+        presence = _presences.get(key)
+        if presence is None:
+            presence = AgentChannelPresence(scope)
+            _presences[key] = presence
         if presence._session is None:
-            presence._session = Session.from_coordinator(
-                downlink=adapter.as_downlink(),
-                coordinator=presence.coordinator,
-            )
+            await presence.start()
         if arm_proactive_coords:
             inner_tick_chat_id = scope.memory_store_chat_id()
             presence.coordinator.store_inner_tick_coords(
@@ -1097,34 +1150,11 @@ def _patch_companion_ws_queue_turn(
                 agent_id=scope.agent_id,
                 chat_id=inner_tick_chat_id,
             )
-            poll_secs = float(
-                global_config_loaded_from_config_yaml.agent.companion_harness.inner_tick.proactive_chat.poll_seconds
-            )
-
-            async def _run_poll(_ctx: dict) -> None:
-                delivery = adapter.inner_tick_delivery()
-                await run_inner_tick_poll(
-                    delivery=delivery,
-                    coordinator=presence.coordinator,
-                    ws_conn_id=None,
-                    tc_box=None,
-                )
-
-            await presence._session.start_inner_tick_worker(
-                poll_seconds=poll_secs,
-                run_one_poll=_run_poll,
-            )
         return presence
 
     async def fake_turn_down_app_ws_channel(scope, *, reason: str) -> None:
-        key = scope.registry_key()
-        presence = _presences.get(key)
-        if presence is None:
-            return
-        presence.coordinator.sign_out()
-        if presence._session is not None:
-            await presence._session.stop()
-            presence._session = None
+        _ = reason
+        await stop_presence(scope)
 
     async def fake_enqueue_app_ws_user_turn(
         self,
@@ -1175,7 +1205,7 @@ def _patch_companion_ws_queue_turn(
                     ready = ReadyOutputMessage(
                         message_id=f"out-{queue_message_id}",
                         batch_id="batch-fake",
-                        kind=DownlinkKind.USER_REPLY,
+                        kind=OutputMessageKind.USER_REPLY,
                         text=text,
                         sequence=1,
                         message_ids=(queue_message_id,),
@@ -1191,39 +1221,7 @@ def _patch_companion_ws_queue_turn(
         return queue_message_id
 
     async def fake_greeting_turn(**kwargs):
-        # Greeting is agent-initiated: production delivers it via the scope
-        # OutputQueue pump into the per-connection WS queue. Simulate that by
-        # materializing an agent-initiated payload onto the adapter's queue so
-        # chat_ws greeting-wait sees a non-empty outbound queue.
-        turn_result = await run_companion_chat_turn_for_api(**kwargs)
-        if isinstance(turn_result, CompanionTurnResult):
-            text = turn_result.assistant_text.strip()
-            if text:
-                scope = AgentScope(
-                    user_id=str(kwargs["user_id"]),
-                    agent_id=str(kwargs["agent_id"]),
-                )
-                registry = get_scope_channel_registry(scope)
-                adapter = registry.adapters.get(ChannelKind.APP_WS)
-                if adapter is not None:
-                    ready = ReadyOutputMessage(
-                        message_id="out-greet",
-                        batch_id="agent-initiated:greet",
-                        kind=DownlinkKind.USER_REPLY,
-                        text=text,
-                        sequence=1,
-                        message_ids=(),
-                        tool_background_started=(
-                            turn_result.tool_background_started
-                        ),
-                    )
-                    payload = await materialize_agent_initiated_ws_payload(
-                        db=AsyncMock(),
-                        scope=scope,
-                        message=ready,
-                    )
-                    await adapter._outbound_queue.put(payload)
-        return turn_result
+        return await run_companion_chat_turn_for_api(**kwargs)
 
     async def fake_resolve_chat_model_for_scope(_scope):
         return SimpleNamespace(id_on_provider="test/chat-model")

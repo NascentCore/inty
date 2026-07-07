@@ -63,7 +63,7 @@ from app.core.companion_harness.prompt_builder import (
     PromptMessageRole,
     PromptPlan,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 def _bootstrap_interim(*, text: str) -> BootstrapInterimOutput:
@@ -235,7 +235,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
     ready_a = ReadyOutputMessage(
         message_id="msg-a",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="first",
         sequence=1,
         message_ids=("input-1",),
@@ -243,7 +243,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
     ready_b = ReadyOutputMessage(
         message_id="msg-b",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="second",
         sequence=2,
         message_ids=("input-1",),
@@ -306,7 +306,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         isinstance(item, OutputQueueAppendInput) for item in append_inputs
     )
     assert append_inputs[0].message_ids == ("input-1",)
-    assert append_inputs[0].kind == DownlinkKind.USER_REPLY
+    assert append_inputs[0].kind == OutputMessageKind.USER_REPLY
     assert append_inputs[0].batch_id == "batch-1"
     _assert_user_transcript_row(store)
 
@@ -780,7 +780,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     ready_fg = ReadyOutputMessage(
         message_id="msg-fg",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="foreground",
         sequence=1,
         message_ids=("input-1",),
@@ -788,7 +788,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     ready_tool = ReadyOutputMessage(
         message_id="msg-tool",
         batch_id="batch-1",
-        kind=DownlinkKind.TOOL_BACKGROUND,
+        kind=OutputMessageKind.TOOL_BACKGROUND,
         text="tool reply",
         sequence=2,
         message_ids=("input-1",),
@@ -847,8 +847,8 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     append_inputs = [
         call.args[0] for call in domain.append_visible_message.await_args_list
     ]
-    assert append_inputs[0].kind == DownlinkKind.USER_REPLY
-    assert append_inputs[1].kind == DownlinkKind.TOOL_BACKGROUND
+    assert append_inputs[0].kind == OutputMessageKind.USER_REPLY
+    assert append_inputs[1].kind == OutputMessageKind.TOOL_BACKGROUND
     _assert_user_transcript_row(store)
 
 
