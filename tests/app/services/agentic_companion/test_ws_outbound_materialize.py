@@ -21,6 +21,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.services.agentic_companion.downlink import DownlinkKind
+from app.schemas.chat_websocket import ChatWebSocketQueuedSuccessFrame
 from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_queue_user_reply_from_durable,
 )
@@ -108,15 +109,18 @@ async def test_materialize_queue_user_reply_from_durable_wire_fields() -> None:
             input_records=(_input_record(scope),),
         )
 
-    assert payload["code"] == 200
-    assert payload["agent_id"] == scope.agent_id
-    data = payload["data"]
-    assert data["local_id"] == "local-bubble-1"
-    assert data["model"] == "test/chat-model"
-    assert data["source_imate_id"] == scope.agent_id
-    assert data["user_message_id"] == 101
-    assert "usage" not in data
-    meta = data["choices"][0]["message"]["meta_data"]
-    assert meta["user_msg_uuid"] == "client-msg-1"
-    assert meta["tool_background_started"] is True
-    assert meta["generated_image"]["image_url"] == "gs://bucket/image.png"
+    assert isinstance(payload, ChatWebSocketQueuedSuccessFrame)
+    assert payload.code == 200
+    assert payload.agent_id == scope.agent_id
+    data = payload.data
+    assert data.local_id == "local-bubble-1"
+    assert data.model == "test/chat-model"
+    assert data.source_imate_id == scope.agent_id
+    assert data.user_message_id == 101
+    assert data.usage is None
+    meta = data.choices[0].message.meta_data
+    assert meta is not None
+    assert meta.user_msg_uuid == "client-msg-1"
+    assert meta.tool_background_started is True
+    assert meta.generated_image is not None
+    assert meta.generated_image.image_url == "gs://bucket/image.png"
