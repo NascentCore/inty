@@ -69,9 +69,13 @@ class AgenticLoopLangsmithContext:
     and identifiers that tie model calls back to the user message.
     """
 
+    # Channel tags for LangSmith parent runs and LLM child spans.
     turn_slice: CompanionTurnLangsmithSlice
+    # Invocation-extra label (e.g. SOURCE_SINGLE_COMPLETION, SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE).
     foreground_source: str
+    # LangSmith trace id for the foreground LLM span on this turn.
     trace_id: str
+    # LangSmith run id for the foreground LLM span on this turn.
     run_id: str
 
 
@@ -79,62 +83,90 @@ class AgenticLoopLangsmithContext:
 class AgenticLoopContext:
     """Everything needed to run one user-facing turn through the agentic loop.
 
-    Built before execution starts: dialogue and tools, transcript targets,
-    observability, outbound queue correlation, and optional dual-model message
-    stacks or a typed prompt plan. Consumed once per turn by single-LLM or
-    dual-LLM loop entry points.
+    Built before execution starts by ``build_*_loop_context`` or ``track_loop_plugin``;
+    consumed once per turn by ``AgenticLoop.run_track_turn``. Does not decide prompt
+    wording or call the language model.
     """
 
+    # Legacy OpenAI wire message stack from turn prep; single-LLM reads prompt_plan (#3629).
     openai_messages: tuple[dict[str, Any], ...]
+    # Tool schemas in OpenAI wire form; dual-LLM background loop reads this, single-LLM uses prompt_plan.tools.
     openai_tools: tuple[dict[str, Any], ...]
+    # MemoryStore document paths tools may write this turn (per-track allowlist).
     write_allowlist: frozenset[str]
+    # When true, tool store writes persist text only.
     repository_only_store_text: bool
+    # Companion turn correlation id for transcript, OutputQueue, tool events, and logs.
     trace_id: str
+    # Primary user-visible utterance; drives reply-language runtime clauses.
     user_text: str
+    # UTC timestamp of primary user message; legacy scalar companion to tail_user_messages (#3516).
     ts_user: datetime
+    # Primary user message id; assistant transcript reply_to and outbound batch alignment.
     user_msg_uuid: str
-    # TODO(#3516): Drop legacy scalar tail fields once all loop callers use tail_user_messages only.
+    # Tail user rows for prompt assembly and transcript persistence at loop start.
     tail_user_messages: tuple[TurnTailUserMessage, ...]
+    # Target transcript JSONL path (e.g. transcript.jsonl).
     transcript_rel: str
+    # Foreground LangSmith slice, source label, and span ids.
     langsmith: AgenticLoopLangsmithContext
+    # True for idle inner-tick turns (not user-initiated chat).
     inner_tick_turn: bool
+    # Idle poll activity; drives structured output, downlink kind, delivery suppression.
     inner_tick_activity: InnerTickActivity
+    # Per-turn channel kind and implicit signals; passed to tool background loop.
     runtime_context: TurnRuntimeContext
+    # In-turn sync tool rounds; 0 = chat-only, BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS for tool loops.
     max_tool_rounds: int
+    # Hook to refresh system prefix after each tool round; None for greeting/inner tick/dual-LLM.
     after_tool_messages_appended: AfterToolMessagesHook | None
+    # Enable high-reasoning LLM mode (e.g. proactive inner tick).
     high_reasoning: bool
+    # Durable outbound queue; user-visible assistant lines stream here during the turn.
     output_queue: OutputQueue
+    # InputQueue batch claimed for this turn; synthetic for greeting/inner tick without a claim.
     user_message_batch: UserMessageBatch
+    # Experience profile and secondary channel context; dual-LLM settled user chat, consumed upstream.
     context_meta: ContextMeta | None = None
+    # Ordered InputQueue records for multi-message turns; reserved, not yet passed by builders.
     input_batch: AgenticLoopInputBatch | None = None
+    # Primary prompt carrier for single-LLM; required for SINGLE_LLM, absent for dual-LLM user chat.
     prompt_plan: PromptPlan | None = None
-    # TODO(!3460): Migrate 2-LLM message stacks to typed prompt/context; drop legacy dict fields.
-    # TODO(!3629): Drop openai_messages once PromptPlan is the sole prompt carrier.
+    # Leading system message count; used when assembling dual-LLM stacks, not read in loop execution.
     stack_depth: int = 0
+    # Production routing track; selects chat-only vs tool loop and silent-track suppression.
     companion_turn_track: CompanionTurnTrack | None = None
+    # Dual-LLM foreground chat wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None
+    # Dual-LLM background tool wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None = None
+    # Memory-doc bodies for dual-LLM prompt assembly; carried for correlation, consumed upstream.
     prompt_bundle: PromptBundle | None = None
+    # Dual-LLM only; skip structured foreground envelope for silent inner ticks (monolog/autonomy).
     skip_foreground_envelope: bool = False
 
 
 @dataclass(frozen=True)
 class AgenticLoopOutput:
-    """Result summary after one agentic loop turn completes.
+    """Result summary after one agentic loop turn completes."""
 
-    Carries final assistant text, tracing ids, whether a background tool loop
-    started, transcript skip hints, and ids of outbound lines persisted during
-    the turn for delivery correlation.
-    """
-
+    # Final assistant body after tool rounds or single completion.
     assistant_text: str
+    # Dual-LLM / greeting envelope significance payload when present.
     significance_meta: dict[str, Any] | None
+    # Dual-LLM / greeting envelope turn_recall when present.
     turn_recall: str | None
+    # Accumulated LangSmith trace id from foreground LLM calls.
     langsmith_trace_id: str
+    # Accumulated LangSmith run id from foreground LLM calls.
     langsmith_run_id: str
+    # When true, turn end must not append duplicate final assistant row.
     skip_final_transcript_assistant_row: bool
+    # True when dual-LLM background tool loop ran.
     tool_background_started: bool
+    # Last interim assistant row UUID from in-turn tool loop; None for chat-only tracks.
     last_interim_assistant_msg_uuid: str | None
+    # Outbound queue message ids persisted during the turn.
     output_message_ids: tuple[str, ...] = ()
 
 
