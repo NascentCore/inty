@@ -13,6 +13,9 @@ through :class:`~app.core.companion_harness.memory.memory_store.MemoryStore` onl
 ``Path.write_text``). With a repository-backed store this persists like ``transcript.jsonl``;
 without a repository the store keeps an in-memory snapshot per process.
 
+TODO(crs-relationship-signal-log): Relationship-signal events (CRS bond signals) should use a
+dedicated append-only JSONL, not exceptional runtime kinds here — #3773 (epic #3341).
+
 Each successful append emits a short **loguru** line: ``INFO`` for ``llm_inference_failure`` and
 ``tool_background_failure`` kinds, ``DEBUG`` for other kinds (see ``append_runtime_event``).
 """

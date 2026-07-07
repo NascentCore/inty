@@ -495,6 +495,8 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
         f"3. ``{tool_write}`` 本轮**只允许** relative_path=``{life_currents_md}``；"
         f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MONOLOG。\n"
+        # TODO(memdoc-belief-provenance): LIFE_CURRENTS theme must cite structured USER/MEMORY
+        # provenance refs, not prompt-only one-line quotes — #3774 (epic #3341).
         "4. 整文件覆盖写入 ``LIFE_CURRENTS.md`` 时用下列骨架（勿改成「生命流」等心理日记标题）：\n"
         "   ```\n"
         "   # 我最近在做的事\n\n"
