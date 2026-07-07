@@ -14,6 +14,7 @@ from app.core.companion_harness.companion.models import (
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
     ContextMeta,
+    InnerTickKind,
     TranscriptProjection,
     is_transcript_row_user_visible,
     load_prompt_bundle,
@@ -223,14 +224,21 @@ def test_is_transcript_row_user_visible_filters_manifest_and_proactive_user() ->
         role="user",
         content="[SYSTEM PROACTIVE CHAT]",
         ts="2026-01-01T00:01:00Z",
-        proactive_chat=True,
+        inner_tick_kind=InnerTickKind.PROACTIVE_CHAT,
     )
     real_user = ChatMessage(
         role="user", content="hi", ts="2026-01-01T00:02:00Z"
     )
+    scheduled = ChatMessage(
+        role="user",
+        content="reminder",
+        ts="2026-01-01T00:03:00Z",
+        inner_tick_kind=InnerTickKind.SCHEDULED,
+    )
     assert not is_transcript_row_user_visible(manifest)
     assert not is_transcript_row_user_visible(proactive)
     assert is_transcript_row_user_visible(real_user)
+    assert is_transcript_row_user_visible(scheduled)
 
 
 def test_load_user_visible_transcript_projection_from_store(
@@ -252,7 +260,7 @@ def test_load_user_visible_transcript_projection_from_store(
             "role": "user",
             "content": "[SYSTEM PROACTIVE CHAT]",
             "ts": "2026-01-01T00:02:00Z",
-            "proactive_chat": True,
+            "inner_tick_kind": "proactive_chat",
         },
     ]
     store.write_document(

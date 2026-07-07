@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from .models import ChatMessage
+from .models import ChatMessage, InnerTickKind
 from .utc import parse_utc_iso_ts
 
 
@@ -29,7 +29,10 @@ def last_real_user_transcript_anchor(
     msgs: list[ChatMessage],
 ) -> RealUserTranscriptAnchor:
     for row in reversed(msgs):
-        if row.role != "user" or row.proactive_chat is True:
+        if (
+            row.role != "user"
+            or row.inner_tick_kind == InnerTickKind.PROACTIVE_CHAT
+        ):
             continue
         row_uuid = row.uuid
         uuid = (

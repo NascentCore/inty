@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -20,6 +19,7 @@ from .models import (
     CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
+    InnerTickKind,
     InnerTickThrottleKind,
     MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
@@ -33,20 +33,6 @@ from .prompts.system_messages import (
 PromptBuilder = Callable[
     [PromptBundle, ContextMeta, MemoryStore], list[dict[str, Any]]
 ]
-
-
-class InnerTickKind(StrEnum):
-    """Canonical identity of one awake inner-tick turn; value is the wire/log token.
-
-    Binds the otherwise-parallel MONOLOG/AUTONOMY/... members spread across
-    ``CompanionTurnTrack``, ``InnerTickActivity``, ``InnerTickThrottleKind``,
-    and ``DownlinkKind``.
-    """
-
-    MONOLOG = "monolog"
-    AUTONOMY = "autonomy"
-    PROACTIVE_CHAT = "proactive_chat"
-    SCHEDULED = "scheduled"
 
 
 @dataclass(frozen=True)

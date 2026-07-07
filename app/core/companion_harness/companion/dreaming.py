@@ -297,9 +297,7 @@ def is_real_user_message(message: ChatMessage) -> bool:
     return (
         message.role == "user"
         and message.presence is None
-        and message.inner_tick is not True
-        and message.proactive_chat is not True
-        and message.scheduled is not True
+        and message.inner_tick_kind is None
     )
 
 

@@ -9,6 +9,8 @@ from pydantic import BaseModel
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 
+from .models import InnerTickKind
+
 
 @dataclass(frozen=True)
 class TranscriptUserRowBuildInput:
@@ -17,6 +19,7 @@ class TranscriptUserRowBuildInput:
     content: str
     uuid: str
     trace_id: str
+    inner_tick_kind: InnerTickKind | None = None
 
 
 class TranscriptUserRow(BaseModel):
@@ -27,6 +30,7 @@ class TranscriptUserRow(BaseModel):
     ts: str
     uuid: str
     trace_id: str
+    inner_tick_kind: InnerTickKind | None = None
 
 
 def build_transcript_user_row(
@@ -40,8 +44,9 @@ def build_transcript_user_row(
         ts=ts,
         uuid=row_input.uuid,
         trace_id=row_input.trace_id,
+        inner_tick_kind=row_input.inner_tick_kind,
     )
-    return row.model_dump(mode="json")
+    return row.model_dump(mode="json", exclude_none=True)
 
 
 def append_transcript_user_row(

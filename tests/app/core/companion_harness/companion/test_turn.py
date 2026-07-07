@@ -119,9 +119,8 @@ def test_run_turn_inner_tick_scheduled_semantics(
     ]
     assert rows[0]["role"] == "user"
     assert rows[0]["content"] == scheduled_text
-    assert rows[0]["inner_tick"] is True
-    assert rows[0]["scheduled"] is True
-    assert rows[0].get("proactive_chat") is not True
+    assert rows[0]["inner_tick_kind"] == "scheduled"
+    assert "proactive_chat" not in rows[0]
 
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:

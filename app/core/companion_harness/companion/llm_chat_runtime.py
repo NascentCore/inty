@@ -29,7 +29,10 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
-    turn_flags_for_track,
+)
+from app.core.companion_harness.companion.inner_tick_kind import (
+    inner_tick_kind_for_track,
+    inner_tick_spec,
 )
 from app.utils.models_catalog import (
     GenAIModel,
@@ -207,15 +210,14 @@ def create_companion_turn_root_run(
         uid = (user_id or "").strip()
         cid = (companion_id or "").strip()
         if companion_turn_track is not None:
-            inner_tick_turn, route_inner_activity = turn_flags_for_track(
-                companion_turn_track
+            kind = inner_tick_kind_for_track(companion_turn_track)
+            inner_tick_turn = kind is not None
+            inner_tick_activity = (
+                inner_tick_spec(kind).activity if kind is not None else None
             )
             implicit_user_signed_on = (
                 companion_turn_track
                 == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            )
-            inner_tick_activity = (
-                route_inner_activity if inner_tick_turn else None
             )
         run_name, run_tags, turn_lane, lane_inputs = (
             _companion_turn_langsmith_root_descriptor(

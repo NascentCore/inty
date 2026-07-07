@@ -515,7 +515,8 @@ async def test_proactive_chat_visible_then_silent_two_rounds(
         proactive_users = [
             row
             for row in transcript
-            if row.get("role") == "user" and row.get("proactive_chat") is True
+            if row.get("role") == "user"
+            and row.get("inner_tick_kind") == "proactive_chat"
         ]
         assistant_rows = [
             row for row in transcript if row.get("role") == "assistant"
@@ -593,6 +594,6 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
         inner_rows = scripted_inner_tick_transcript_rows(session.store)
         assert len(inner_rows) >= 1
         assert inner_rows[0]["role"] == "user"
-        assert inner_rows[0].get("inner_tick") is True
+        assert inner_rows[0]["inner_tick_kind"] == "monolog"
     finally:
         await delete_guest_scope_for_test(scope)

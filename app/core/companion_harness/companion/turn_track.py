@@ -1,26 +1,44 @@
-"""Turn-track adapters for the companion kernel.
-
-``turn_flags_for_track`` is a LangSmith-only legacy bridge (see ``llm_chat_runtime``).
-``langsmith_inty_turn_lane_for_companion_track`` groups traces by coarse lane.
-
-TODO(#3401): remove ``turn_flags_for_track`` once LangSmith metadata is track-native.
-"""
+"""Turn-track helpers for LangSmith lanes and loop-stage transcript semantics."""
 
 from __future__ import annotations
 
-from .models import CompanionTurnTrack, InnerTickActivity
-from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
+from .models import CompanionTurnTrack
+
+_COMPANION_TURN_TRACKS_WITH_IN_LOOP_TRANSCRIPT_SYNC: frozenset[
+    CompanionTurnTrack
+] = frozenset(
+    {
+        CompanionTurnTrack.USER_CHAT,
+        CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+        CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        CompanionTurnTrack.INNER_TICK_SCHEDULED,
+        CompanionTurnTrack.INNER_TICK_MONOLOG,
+        CompanionTurnTrack.INNER_TICK_AUTONOMY,
+    }
+)
+
+_PROACTIVE_EMPTY_ASSISTANT_SKIP_TRACKS: frozenset[CompanionTurnTrack] = (
+    frozenset(
+        {
+            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+            CompanionTurnTrack.INNER_TICK_SCHEDULED,
+        }
+    )
+)
 
 
-def turn_flags_for_track(
+def companion_turn_track_syncs_transcript_in_agentic_loop(
     track: CompanionTurnTrack,
-) -> tuple[bool, InnerTickActivity]:
-    """Translate a production track into legacy LangSmith routing flags."""
+) -> bool:
+    """True when AgenticLoop persists user/assistant rows before turn.py post-loop."""
+    return track in _COMPANION_TURN_TRACKS_WITH_IN_LOOP_TRANSCRIPT_SYNC
 
-    kind = inner_tick_kind_for_track(track)
-    if kind is not None:
-        return True, inner_tick_spec(kind).activity
-    return False, InnerTickActivity.MONOLOG
+
+def companion_turn_track_skips_empty_proactive_assistant_row(
+    track: CompanionTurnTrack,
+) -> bool:
+    """True when proactive envelope silence must not append an empty assistant row."""
+    return track in _PROACTIVE_EMPTY_ASSISTANT_SKIP_TRACKS
 
 
 def langsmith_inty_turn_lane_for_companion_track(

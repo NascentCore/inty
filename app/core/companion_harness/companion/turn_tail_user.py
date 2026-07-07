@@ -16,7 +16,7 @@ from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .inner_tick_kind import InnerTickKind, inner_tick_kind_for_track
+from .inner_tick_kind import inner_tick_kind_for_track
 from .models import CompanionTurnTrack
 from .implicit_signal_messages import USER_SIGNED_ON_TRIGGER_USER_TEXT
 from .transcript_user_row import (
@@ -164,6 +164,7 @@ def append_tail_user_transcript_rows(
                 content=message.text,
                 uuid=message.message_id,
                 trace_id=trace_id,
+                inner_tick_kind=None,
             ),
             ts=message.received_at_utc.isoformat(),
         )
@@ -177,38 +178,20 @@ def append_turn_track_tail_user_transcript_rows(
     trace_id: str,
     track: CompanionTurnTrack,
 ) -> None:
-    """Persist tail user rows; inner-tick JSONL flags derived from track via InnerTickKind."""
+    """Persist tail user rows; inner-tick kind derived from track via InnerTickKind."""
     assert transcript_relative_path != ""
     assert tail_user_messages
     assert trace_id != ""
     kind = inner_tick_kind_for_track(track)
-    if len(tail_user_messages) > 1 or kind is None:
-        append_tail_user_transcript_rows(
+    for message in tail_user_messages:
+        append_transcript_user_row(
             store,
             transcript_relative_path,
-            tail_user_messages=tail_user_messages,
-            trace_id=trace_id,
+            TranscriptUserRowBuildInput(
+                content=message.text,
+                uuid=message.message_id,
+                trace_id=trace_id,
+                inner_tick_kind=kind if len(tail_user_messages) == 1 else None,
+            ),
+            ts=message.received_at_utc.isoformat(),
         )
-        return
-    message = tail_user_messages[0]
-    user_row: dict[str, Any] = {
-        "role": "user",
-        "content": message.text,
-        "ts": message.received_at_utc.isoformat(),
-        "uuid": message.message_id,
-        "inner_tick": True,
-        "trace_id": trace_id,
-    }
-    match kind:
-        case InnerTickKind.PROACTIVE_CHAT:
-            user_row["proactive_chat"] = True
-        case InnerTickKind.SCHEDULED:
-            user_row["scheduled"] = True
-        case InnerTickKind.MONOLOG | InnerTickKind.AUTONOMY:
-            pass
-        case _ as unexpected:
-            raise AssertionError(
-                f"unexpected InnerTickKind for transcript user row: {unexpected!r}"
-            )
-    # TODO(#3401) slice 3: replace bool JSONL flags with typed transcript user-turn kind.
-    store.append_jsonl_record(transcript_relative_path, user_row)

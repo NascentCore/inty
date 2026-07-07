@@ -9,7 +9,10 @@ from typing import Any
 
 import pytest
 
-from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    InnerTickKind,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
@@ -56,40 +59,30 @@ def _transcript_rows(
 
 
 @pytest.mark.parametrize(
-    "track, expect_inner_tick, expect_proactive, expect_scheduled",
+    "track, expected_kind",
     [
         (
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
-            True,
-            True,
-            False,
+            InnerTickKind.PROACTIVE_CHAT,
         ),
         (
             CompanionTurnTrack.INNER_TICK_SCHEDULED,
-            True,
-            False,
-            True,
+            InnerTickKind.SCHEDULED,
         ),
         (
             CompanionTurnTrack.INNER_TICK_MONOLOG,
-            True,
-            False,
-            False,
+            InnerTickKind.MONOLOG,
         ),
         (
             CompanionTurnTrack.INNER_TICK_AUTONOMY,
-            True,
-            False,
-            False,
+            InnerTickKind.AUTONOMY,
         ),
     ],
 )
-def test_inner_tick_track_writes_expected_jsonl_flags(
+def test_inner_tick_track_writes_inner_tick_kind(
     tmp_path: Path,
     track: CompanionTurnTrack,
-    expect_inner_tick: bool,
-    expect_proactive: bool,
-    expect_scheduled: bool,
+    expected_kind: InnerTickKind,
 ) -> None:
     store = _store(tmp_path)
     append_turn_track_tail_user_transcript_rows(
@@ -105,13 +98,10 @@ def test_inner_tick_track_writes_expected_jsonl_flags(
     assert row["role"] == "user"
     assert row["uuid"] == "user-msg-1"
     assert row["trace_id"] == _TRACE_ID
-    assert row.get("inner_tick") is expect_inner_tick
-    assert ("proactive_chat" in row) is expect_proactive
-    if expect_proactive:
-        assert row["proactive_chat"] is True
-    assert ("scheduled" in row) is expect_scheduled
-    if expect_scheduled:
-        assert row["scheduled"] is True
+    assert row["inner_tick_kind"] == expected_kind.value
+    assert "inner_tick" not in row
+    assert "proactive_chat" not in row
+    assert "scheduled" not in row
 
 
 def test_user_chat_track_writes_plain_row(tmp_path: Path) -> None:
@@ -127,12 +117,13 @@ def test_user_chat_track_writes_plain_row(tmp_path: Path) -> None:
     assert len(rows) == 1
     row = rows[0]
     assert row["role"] == "user"
+    assert "inner_tick_kind" not in row
     assert "inner_tick" not in row
     assert "proactive_chat" not in row
     assert "scheduled" not in row
 
 
-def test_monolog_track_writes_inner_tick_only_to_inner_tick_jsonl(
+def test_monolog_track_writes_inner_tick_kind_to_inner_tick_jsonl(
     tmp_path: Path,
 ) -> None:
     store = _store(tmp_path)
@@ -147,7 +138,7 @@ def test_monolog_track_writes_inner_tick_only_to_inner_tick_jsonl(
         store.read_document(TRANSCRIPT_JSONL_REL)
     rows = _transcript_rows(store, rel=TRANSCRIPT_INNER_TICK_JSONL_REL)
     assert len(rows) == 1
-    assert rows[0].get("inner_tick") is True
+    assert rows[0]["inner_tick_kind"] == InnerTickKind.MONOLOG.value
     assert "proactive_chat" not in rows[0]
     assert "scheduled" not in rows[0]
 
@@ -179,6 +170,7 @@ def test_multi_message_batch_writes_plain_rows_without_metadata(
     assert len(rows) == 2
     for row in rows:
         assert row["role"] == "user"
+        assert "inner_tick_kind" not in row
         assert "inner_tick" not in row
         assert "proactive_chat" not in row
         assert "scheduled" not in row

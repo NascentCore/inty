@@ -129,6 +129,20 @@ class InnerTickThrottleKind(StrEnum):
     AUTONOMY = "autonomy"
 
 
+class InnerTickKind(StrEnum):
+    """Canonical identity of one awake inner-tick turn; value is the wire/log token.
+
+    Binds the otherwise-parallel MONOLOG/AUTONOMY/... members spread across
+    ``CompanionTurnTrack``, ``InnerTickActivity``, ``InnerTickThrottleKind``,
+    and ``DownlinkKind``.
+    """
+
+    MONOLOG = "monolog"
+    AUTONOMY = "autonomy"
+    PROACTIVE_CHAT = "proactive_chat"
+    SCHEDULED = "scheduled"
+
+
 class CompanionTurnTrack(StrEnum):
     """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``).
 
@@ -245,10 +259,8 @@ class ChatMessage(BaseModel):
     uuid: str | None = None
     trace_id: str | None = None
     reply_to: str | None = None
-    proactive_chat: bool | None = None
-    scheduled: bool | None = None
+    inner_tick_kind: InnerTickKind | None = None
     presence: PresenceSignal | None = None
-    inner_tick: bool | None = None
     source: str | None = None
     ai_private_thought_uuids: list[str] | None = Field(
         default=None,
@@ -277,7 +289,10 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
     """Filter manifest and synthetic proactive user rows from chat history / UI paths."""
     if is_ai_private_splice_manifest(row):
         return False
-    if row.role == "user" and row.proactive_chat is True:
+    if (
+        row.role == "user"
+        and row.inner_tick_kind == InnerTickKind.PROACTIVE_CHAT
+    ):
         return False
     return True
 

@@ -7,7 +7,7 @@
 - **Usage**: proactive turns are not gated by daily message count; future limits use token
   consumption (see companion WS proactive path NOTE in ``app.utils.config``).
 - **Copy**: system/user placeholders for ``InnerTickActivity.PROACTIVE_CHAT`` turns.
-- **Transcript**: proactive rounds mark the synthetic user row with ``proactive_chat: true``
+- **Transcript**: proactive rounds mark the synthetic user row with ``inner_tick_kind: proactive_chat``
   (for markers and LLM context; not used as a separate scheduling anchor).
 
 Full WS worker / poll / monolog relationship: ``docs/imate/companion_harness/DESIGN.md``.
@@ -26,6 +26,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 from .models import (
     ChatMessage,
+    InnerTickKind,
     TranscriptProjection,
     load_transcript_projection_from_store,
 )
@@ -84,7 +85,7 @@ def _user_message_gaps_seconds(msgs: list[ChatMessage]) -> list[float]:
     for m in msgs:
         if m.role != "user":
             continue
-        if m.proactive_chat is True:
+        if m.inner_tick_kind == InnerTickKind.PROACTIVE_CHAT:
             continue
         user_ts.append(parse_transcript_row_ts(m.ts))
     if len(user_ts) < 2:
@@ -133,9 +134,15 @@ def _proactive_rounds_since_last_real_user(msgs: list[ChatMessage]) -> int:
     """Count synthetic proactive user rows after the last real user message."""
     count = 0
     for m in reversed(msgs):
-        if m.role == "user" and m.proactive_chat is not True:
+        if (
+            m.role == "user"
+            and m.inner_tick_kind != InnerTickKind.PROACTIVE_CHAT
+        ):
             break
-        if m.role == "user" and m.proactive_chat is True:
+        if (
+            m.role == "user"
+            and m.inner_tick_kind == InnerTickKind.PROACTIVE_CHAT
+        ):
             count += 1
     return count
 

@@ -48,7 +48,7 @@ def test_next_proactive_chat_wait_seconds_anchors_on_last_assistant_only(
             "role": "user",
             "content": "[SYSTEM PROACTIVE CHAT]",
             "ts": t2.isoformat(),
-            "proactive_chat": True,
+            "inner_tick_kind": "proactive_chat",
         },
     )
     store.append_jsonl_record(
@@ -114,7 +114,7 @@ def test_rhythm_ignores_proactive_user_gaps(tmp_path: Path) -> None:
             "role": "user",
             "content": "pc",
             "ts": t6.isoformat(),
-            "proactive_chat": True,
+            "inner_tick_kind": "proactive_chat",
         },
     )
     store.append_jsonl_record(
@@ -190,7 +190,7 @@ def test_proactive_chat_exponential_doubles_with_each_round(
             "role": "user",
             "content": "pc",
             "ts": t2.isoformat(),
-            "proactive_chat": True,
+            "inner_tick_kind": "proactive_chat",
         },
     )
     store.append_jsonl_record(
