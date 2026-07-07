@@ -8,7 +8,21 @@ appropriate to how operators and engineers look for them, without mixing semanti
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any
+
+
+class LangsmithLlmSource(StrEnum):
+    """Canonical LangSmith ``inty_llm_source`` labels for companion LLM calls."""
+
+    FOREGROUND_DUAL_LLM_ENVELOPE = "foreground_dual_llm_envelope"
+    BOOTSTRAP_TRACK = "bootstrap_track"
+    IMPLICIT_SIGN_ON_GREETING = "implicit_sign_on_greeting"
+    SINGLE_COMPLETION = "single_completion"
+    TOOL_BACKGROUND_INITIAL = "tool_background_initial"
+    TOOL_BACKGROUND_CONTINUE = "tool_background_continue"
+    TOOL_BACKGROUND_ROUTING_FALLBACK = "tool_background_routing_fallback"
+
 
 INTY_LLM_SOURCE_METADATA_KEY = "inty_llm_source"
 INTY_RUNTIME_CHANNEL_METADATA_KEY = "inty_runtime_channel"

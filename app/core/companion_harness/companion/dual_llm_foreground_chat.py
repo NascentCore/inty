@@ -32,7 +32,6 @@ from .llm_chat_runtime import (
 )
 from app.core.llms.client import LlmClient
 from .llm_runtime_events import record_llm_inference_failure
-from .models import InnerTickActivity
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
 
@@ -61,7 +60,6 @@ class DualLlmForegroundChatInput:
     high_reasoning: bool
     trace_id: str
     skip_foreground_envelope: bool
-    route_inner_activity: InnerTickActivity
     langsmith_trace_id: str
     langsmith_run_id: str
 
@@ -95,8 +93,9 @@ async def run_dual_llm_foreground_chat(
     if fg_input.skip_foreground_envelope:
         logger.info(
             "run_dual_llm_foreground_chat skip foreground envelope "
-            "inner_tick_activity={} model_chat={}",
-            fg_input.route_inner_activity.value,
+            "trace_id={} foreground_scene={} model_chat={}",
+            fg_input.trace_id,
+            fg_input.foreground_scene,
             fg_input.chat_model,
         )
         return DualLlmForegroundChatResult(

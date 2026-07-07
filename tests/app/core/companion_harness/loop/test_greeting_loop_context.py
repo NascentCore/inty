@@ -19,6 +19,9 @@ from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
     prompt_plan_from_openai_messages,
 )
+from tests.app.core.companion_harness.loop.context_builder_test_support import (
+    loop_execution_for_track,
+)
 from app.core.companion_harness.agentic_companion.types import (
     UserMessageBatch,
     synthetic_user_message_batch,
@@ -84,9 +87,14 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         user_message_batch=batch,
         tail_user_messages=tail,
         prompt_plan=plan,
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+            user_text="",
+            has_openai_tools=False,
+        ),
     )
     assert (
         ctx.companion_turn_track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     )
-    assert ctx.max_tool_rounds == 0
+    assert ctx.execution.max_tool_call_rounds == 0
     assert ctx.openai_tools == ()

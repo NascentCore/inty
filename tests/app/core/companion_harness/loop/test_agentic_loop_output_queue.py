@@ -25,7 +25,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    InnerTickActivity,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -33,13 +32,15 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_SINGLE_COMPLETION,
+    LangsmithLlmSource,
+)
+from tests.app.core.companion_harness.loop.context_builder_test_support import (
+    loop_execution_for_track,
 )
 from app.core.companion_harness.loop.agentic_loop import (
     AgenticLoop,
     user_visible_assistant_text,
 )
-from app.core.companion_harness.loop.config import AgenticLoopMechanism
 from app.core.companion_harness.loop.context import (
     AgenticLoopContext,
     AgenticLoopLangsmithContext,
@@ -47,9 +48,6 @@ from app.core.companion_harness.loop.context import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
-)
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
 )
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
@@ -138,35 +136,88 @@ def _default_prompt_plan() -> PromptPlan:
     )
 
 
-def _loop_context(*, output_queue: OutputQueue) -> AgenticLoopContext:
+def _loop_context(
+    *,
+    output_queue: OutputQueue,
+    with_in_turn_tools: bool = False,
+) -> AgenticLoopContext:
+    openai_tools: tuple[dict[str, Any], ...] = ()
+    if with_in_turn_tools:
+        openai_tools = ({"type": "function", "function": {"name": "noop"}},)
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     return AgenticLoopContext(
         openai_messages=({"role": "user", "content": "hi"},),
-        openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        openai_tools=openai_tools,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.USER_CHAT,
+            user_text="hi",
+            has_openai_tools=with_in_turn_tools,
+        ),
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
+        tail_user_messages=_tail(),
         transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
-            foreground_source=SOURCE_SINGLE_COMPLETION,
             trace_id="",
             run_id="",
         ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=_runtime_context(),
-        tail_user_messages=_tail(),
-        max_tool_rounds=4,
         after_tool_messages_appended=None,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=batch,
         context_meta=None,
         prompt_plan=_default_prompt_plan(),
+    )
+
+
+def _dual_llm_loop_context(
+    *,
+    output_queue: OutputQueue,
+    companion_turn_track: CompanionTurnTrack,
+) -> AgenticLoopContext:
+    from app.core.companion_harness.companion.models import ContextMeta
+    from app.core.companion_harness.prompting.bundle import PromptBundle
+
+    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
+    return AgenticLoopContext(
+        openai_messages=({"role": "user", "content": "hi"},),
+        openai_tools=(),
+        companion_turn_track=companion_turn_track,
+        execution=loop_execution_for_track(
+            track=companion_turn_track,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
+        repository_only_store_text=False,
+        trace_id="trace-1",
+        user_text="hi",
+        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
+        user_msg_uuid="user-msg-1",
+        tail_user_messages=_tail(),
+        transcript_rel=TRANSCRIPT_JSONL_REL,
+        langsmith=AgenticLoopLangsmithContext(
+            turn_slice=_langsmith_slice(),
+            trace_id="",
+            run_id="",
+        ),
+        runtime_context=_runtime_context(),
+        after_tool_messages_appended=None,
+        output_queue=output_queue,
+        user_message_batch=batch,
+        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
+        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
+        prompt_bundle=PromptBundle(
+            identity="",
+            soul="",
+            user_md="",
+            memory_md="",
+        ),
+        context_meta=ContextMeta(),
     )
 
 
@@ -198,7 +249,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         message_ids=("input-1",),
     )
     domain.append_visible_message = AsyncMock(side_effect=[ready_a, ready_b])  # type: ignore[method-assign]
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
         ctx,
@@ -206,6 +257,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         store,
         llm_client,
         interim_output_sink,
+        max_tool_call_rounds,
     ):
         await interim_output_sink(
             _bootstrap_interim(text="first"),
@@ -244,10 +296,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
             store=store,
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=context,
-        )
+        ).run_single_llm_turn(context=context)
 
     assert result.output_message_ids == ("msg-a", "msg-b")
     append_inputs = [
@@ -266,7 +315,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
 async def test_agentic_loop_skips_empty_assistant_output() -> None:
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
         ctx,
@@ -274,6 +323,7 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
         store,
         llm_client,
         interim_output_sink,
+        max_tool_call_rounds,
     ):
         await interim_output_sink(
             _bootstrap_interim(text="   "),
@@ -299,10 +349,7 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=context,
-        )
+        ).run_single_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -312,7 +359,7 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
 async def test_agentic_loop_skips_silent_assistant_output() -> None:
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
 
     async def _fake_prompt_plan_loop(  # type: ignore[no-untyped-def]
         ctx,
@@ -320,6 +367,7 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
         store,
         llm_client,
         interim_output_sink,
+        max_tool_call_rounds,
     ):
         await interim_output_sink(
             _bootstrap_interim(text=""),
@@ -345,10 +393,7 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=context,
-        )
+        ).run_single_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -364,7 +409,7 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
     prompt_plan = PromptPlan(
         messages=(
             PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
@@ -381,6 +426,7 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
         store,
         llm_client,
         interim_output_sink,
+        max_tool_call_rounds,
     ):
         assert ctx.prompt_plan is prompt_plan
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -404,10 +450,7 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=context,
-        )
+        ).run_single_llm_turn(context=context)
 
     prompt_plan_mock.assert_awaited_once()
     assert result.assistant_text == "done"
@@ -436,7 +479,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
         )
 
     domain = MagicMock(spec=OutputQueue)
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
     prompt_plan = PromptPlan(
         messages=(
             PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
@@ -468,7 +511,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     llm_client.chat_completion = AsyncMock(
         side_effect=[_response("initial"), _response("final")]
     )
-    context = replace(context, prompt_plan=prompt_plan, high_reasoning=True)
+    context = replace(context, prompt_plan=prompt_plan)
 
     async def _fake_resolver(  # type: ignore[no-untyped-def]
         *,
@@ -514,6 +557,7 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
             store=store,
             llm_client=llm_client,
             interim_output_sink=None,
+            max_tool_call_rounds=context.execution.max_tool_call_rounds,
         )
 
     assert llm_client.chat_completion.await_count == 2
@@ -525,11 +569,11 @@ async def test_prompt_plan_tool_loop_continuation_uses_async_chat_completion() -
     ]
     assert initial_call.kwargs["tools"] == list(prompt_plan.tools)
     assert initial_call.kwargs["tool_choice"] is None
-    assert initial_call.kwargs["high_reasoning"] is True
+    assert initial_call.kwargs["high_reasoning"] is False
     continuation_call = llm_client.chat_completion.await_args_list[1]
     assert continuation_call.kwargs["tools"] == list(refreshed_tools)
     expected_extra = _langsmith_slice().foreground_invocation_extra(
-        source=SOURCE_SINGLE_COMPLETION,
+        source=LangsmithLlmSource.SINGLE_COMPLETION.value,
         extra_metadata=None,
     )
     assert initial_call.kwargs["langsmith_extra"] == expected_extra
@@ -558,7 +602,7 @@ async def test_prompt_plan_tool_loop_injects_reply_language_clause() -> None:
         )
 
     domain = MagicMock(spec=OutputQueue)
-    context = _loop_context(output_queue=domain)
+    context = _loop_context(output_queue=domain, with_in_turn_tools=True)
     prompt_plan = PromptPlan(
         messages=(
             PromptMessage(role=PromptMessageRole.SYSTEM, content="sys"),
@@ -589,6 +633,7 @@ async def test_prompt_plan_tool_loop_injects_reply_language_clause() -> None:
             store=_loop_store(),
             llm_client=llm_client,
             interim_output_sink=None,
+            max_tool_call_rounds=0,
         )
 
     initial_messages = llm_client.chat_completion.await_args_list[0].kwargs[
@@ -664,6 +709,7 @@ async def test_prompt_plan_tool_loop_skips_runtime_clause_when_fixed_language_co
             store=_loop_store(),
             llm_client=llm_client,
             interim_output_sink=None,
+            max_tool_call_rounds=0,
         )
 
     initial_messages = llm_client.chat_completion.await_args_list[0].kwargs[
@@ -681,47 +727,13 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
     from app.core.companion_harness.companion.dual_llm_foreground_chat import (
         DualLlmForegroundChatResult,
     )
-    from app.core.companion_harness.companion.models import ContextMeta
-    from app.core.companion_harness.prompting.bundle import PromptBundle
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
-    context = AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
-        openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-        repository_only_store_text=False,
-        trace_id="trace-1",
-        user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
-        user_msg_uuid="user-msg-1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=_langsmith_slice(),
-            foreground_source="foreground_dual_llm_envelope",
-            trace_id="",
-            run_id="",
-        ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        runtime_context=_runtime_context(),
-        tail_user_messages=_tail(),
-        max_tool_rounds=4,
-        after_tool_messages_appended=None,
-        high_reasoning=False,
+    context = _dual_llm_loop_context(
         output_queue=domain,
-        user_message_batch=batch,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
-        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
     )
     fg_result = DualLlmForegroundChatResult(
         assistant_text="",
@@ -748,10 +760,7 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.DUAL_LLM,
-            context=context,
-        )
+        ).run_dual_llm_turn(context=context)
 
     fg_input = foreground_mock.await_args.args[0]
     assert fg_input.chat_msgs[0]["content"] == REPLY_IN_USER_LANGUAGE_CLAUSE
@@ -764,8 +773,6 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     from app.core.companion_harness.companion.dual_llm_foreground_chat import (
         DualLlmForegroundChatResult,
     )
-    from app.core.companion_harness.companion.models import ContextMeta
-    from app.core.companion_harness.prompting.bundle import PromptBundle
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
     scope = AgentScope(user_id="u4", agent_id="a4")
@@ -788,41 +795,9 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     )
     domain.append_visible_message = AsyncMock(side_effect=[ready_fg, ready_tool])  # type: ignore[method-assign]
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
-    context = AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
-        openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-        repository_only_store_text=False,
-        trace_id="trace-1",
-        user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
-        user_msg_uuid="user-msg-1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=_langsmith_slice(),
-            foreground_source="foreground_dual_llm_envelope",
-            trace_id="",
-            run_id="",
-        ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        runtime_context=_runtime_context(),
-        tail_user_messages=_tail(),
-        max_tool_rounds=4,
-        after_tool_messages_appended=None,
-        high_reasoning=False,
+    context = _dual_llm_loop_context(
         output_queue=domain,
-        user_message_batch=batch,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
-        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
     )
 
     fg_result = DualLlmForegroundChatResult(
@@ -864,10 +839,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
             store=store,
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.DUAL_LLM,
-            context=context,
-        )
+        ).run_dual_llm_turn(context=context)
 
     assert result.output_message_ids == ("msg-fg", "msg-tool")
     assert result.tool_background_started is False
@@ -885,48 +857,14 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
     from app.core.companion_harness.companion.dual_llm_foreground_chat import (
         DualLlmForegroundChatResult,
     )
-    from app.core.companion_harness.companion.models import ContextMeta
-    from app.core.companion_harness.prompting.bundle import PromptBundle
     from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
-    context = AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
-        openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-        repository_only_store_text=False,
-        trace_id="trace-1",
-        user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
-        user_msg_uuid="user-msg-1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=_langsmith_slice(),
-            foreground_source="foreground_dual_llm_envelope",
-            trace_id="",
-            run_id="",
-        ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        runtime_context=_runtime_context(),
-        tail_user_messages=_tail(),
-        max_tool_rounds=4,
-        after_tool_messages_appended=None,
-        high_reasoning=False,
+    context = _dual_llm_loop_context(
         output_queue=domain,
-        user_message_batch=batch,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
-        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
     )
     fg_result = DualLlmForegroundChatResult(
         assistant_text="",
@@ -966,10 +904,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.DUAL_LLM,
-            context=context,
-        )
+        ).run_dual_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()
@@ -980,47 +915,12 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
     from app.core.companion_harness.companion.dual_llm_foreground_chat import (
         DualLlmForegroundChatResult,
     )
-    from app.core.companion_harness.companion.models import ContextMeta
-    from app.core.companion_harness.prompting.bundle import PromptBundle
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
-    context = AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
-        openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-        repository_only_store_text=False,
-        trace_id="trace-1",
-        user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
-        user_msg_uuid="user-msg-1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=_langsmith_slice(),
-            foreground_source="foreground_dual_llm_envelope",
-            trace_id="",
-            run_id="",
-        ),
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
-        runtime_context=_runtime_context(),
-        tail_user_messages=_tail(),
-        max_tool_rounds=4,
-        after_tool_messages_appended=None,
-        high_reasoning=False,
+    context = _dual_llm_loop_context(
         output_queue=domain,
-        user_message_batch=batch,
-        companion_turn_track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
-        dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
-        dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
     )
     fg_result = DualLlmForegroundChatResult(
         assistant_text="",
@@ -1046,10 +946,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
             store=_loop_store(),
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.DUAL_LLM,
-            context=context,
-        )
+        ).run_dual_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
     assert result.output_message_ids == ()

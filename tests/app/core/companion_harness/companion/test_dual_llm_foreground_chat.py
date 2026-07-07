@@ -21,7 +21,6 @@ from app.core.llms.client import (
     CompanionLLMConfig,
     LLM_SCENE_CHAT,
 )
-from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -77,7 +76,6 @@ def _foreground_input(
         high_reasoning=False,
         trace_id="trace-fg",
         skip_foreground_envelope=skip_foreground_envelope,
-        route_inner_activity=InnerTickActivity.MONOLOG,
         langsmith_trace_id="",
         langsmith_run_id="",
     )

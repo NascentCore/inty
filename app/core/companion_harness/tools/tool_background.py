@@ -50,8 +50,6 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    InnerTickActivity,
-    inner_tick_activity_suppresses_user_delivery,
     transcript_relative_path_for_turn_persistence,
 )
 from app.core.companion_harness.companion.prompt_stack import (
@@ -275,15 +273,12 @@ def _generation_tool_execution_deliver(
 
 def tool_background_should_deliver_to_user(
     *,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
+    suppress_user_delivery: bool,
     generation_deliver: bool,
     output_to_user: bool,
 ) -> bool:
     """Whether ``tool_background`` may emit a client-visible ``ToolOutputEvent``."""
-    if inner_tick_turn and inner_tick_activity_suppresses_user_delivery(
-        inner_tick_activity
-    ):
+    if suppress_user_delivery:
         return False
     return generation_deliver or output_to_user
 
@@ -522,8 +517,9 @@ async def run_tool_background_loop(
     trace_hooks: ToolBackgroundTraceHooks | None = None,
     write_allowlist: frozenset[str] | None = None,
     repository_only_store_text: bool = False,
-    inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
+    suppress_user_delivery: bool = False,
+    skip_finish_envelope_routing: bool = False,
+    activity_label: str | None = None,
     # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
     # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -762,8 +758,7 @@ async def run_tool_background_loop(
             image_paths,
         )
         routing = resolve_tool_background_finish_envelope(
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=inner_tick_activity,
+            skip_finish_envelope_routing=skip_finish_envelope_routing,
             client=resolved_client,
             model=tool_api_id,
             create_completion_sync=chat_completion_sync,
@@ -774,8 +769,7 @@ async def run_tool_background_loop(
         )
         output_to_user_flag = routing.output_to_user
         should_push = tool_background_should_deliver_to_user(
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=inner_tick_activity,
+            suppress_user_delivery=suppress_user_delivery,
             generation_deliver=generation_deliver,
             output_to_user=output_to_user_flag,
         )
@@ -939,9 +933,7 @@ async def run_tool_background_loop(
                 local_image_paths=tuple(image_paths),
                 significance_perception=significance_meta,
                 turn_recall=turn_recall,
-                inner_tick_activity=(
-                    inner_tick_activity.value if inner_tick_turn else None
-                ),
+                inner_tick_activity=activity_label,
             )
         )
     finally:

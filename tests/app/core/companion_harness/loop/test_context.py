@@ -9,8 +9,7 @@ from app.core.companion_harness.companion.models import (
     ContextMeta,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-    SOURCE_SINGLE_COMPLETION,
+    LangsmithLlmSource,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
@@ -22,13 +21,12 @@ from app.core.companion_harness.loop.context import (
     build_settled_dual_llm_user_chat_loop_context,
     build_settled_user_chat_loop_context,
 )
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-)
+from app.core.companion_harness.loop.track_policy import TRACK_POLICY
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     base_user_chat_loop_builder_kwargs,
+    loop_execution_for_track,
 )
 
 
@@ -36,10 +34,19 @@ def test_settled_user_chat_loop_context_uses_single_completion_source() -> None:
     context = build_settled_user_chat_loop_context(
         **base_user_chat_loop_builder_kwargs(),
         after_tool_messages_appended=MagicMock(),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.USER_CHAT,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
 
-    assert context.write_allowlist == MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
-    assert context.langsmith.foreground_source == SOURCE_SINGLE_COMPLETION
+    execution = context.execution
+    assert (
+        execution.write_allowlist
+        == TRACK_POLICY[CompanionTurnTrack.USER_CHAT].write_allowlist
+    )
+    assert execution.foreground_source == LangsmithLlmSource.SINGLE_COMPLETION
     assert context.companion_turn_track == CompanionTurnTrack.USER_CHAT
 
 
@@ -58,15 +65,16 @@ def test_settled_dual_llm_context_packages_prebuilt_stacks() -> None:
             memory_md="",
         ),
         context_meta=ContextMeta(),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.USER_CHAT,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
 
     assert context.companion_turn_track == CompanionTurnTrack.USER_CHAT
     assert context.dual_llm_chat_msgs == chat_msgs
     assert context.dual_llm_tool_msgs == tool_msgs
-    assert (
-        context.langsmith.foreground_source
-        == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
-    )
     assert context.prompt_plan is None
 
 

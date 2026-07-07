@@ -6,10 +6,9 @@ from unittest.mock import MagicMock
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    InnerTickActivity,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_BOOTSTRAP_TRACK,
+    LangsmithLlmSource,
 )
 from app.core.companion_harness.loop.context import (
     build_bootstrap_user_chat_loop_context,
@@ -25,6 +24,7 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     base_user_chat_loop_builder_kwargs,
+    loop_execution_for_track,
 )
 
 
@@ -55,6 +55,11 @@ def test_bootstrap_loop_context_passes_openai_dict_messages() -> None:
         **kwargs,
         after_tool_messages_appended=MagicMock(),
         prompt_plan=prompt_plan,
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            user_text="hello",
+            has_openai_tools=False,
+        ),
     )
 
     assert context.openai_messages == tuple(openai_messages)
@@ -72,14 +77,19 @@ def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
         **kwargs,
         after_tool_messages_appended=MagicMock(),
         prompt_plan=prompt_plan,
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
 
+    execution = context.execution
     assert (
-        context.write_allowlist
+        execution.write_allowlist
         == MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
     )
-    assert context.langsmith.foreground_source == SOURCE_BOOTSTRAP_TRACK
-    assert context.inner_tick_activity == InnerTickActivity.MONOLOG
+    assert execution.foreground_source == LangsmithLlmSource.BOOTSTRAP_TRACK
     assert (
         context.companion_turn_track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP
     )

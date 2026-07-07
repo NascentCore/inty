@@ -28,6 +28,34 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 
 
+from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.turn_pipeline import (
+    resolve_turn_runtime_flags,
+)
+from app.core.companion_harness.loop.track_policy import (
+    LoopExecutionPolicy,
+    build_loop_execution_policy,
+)
+
+
+def loop_execution_for_track(
+    *,
+    track: CompanionTurnTrack,
+    user_text: str,
+    has_openai_tools: bool,
+) -> LoopExecutionPolicy:
+    runtime_flags = resolve_turn_runtime_flags(
+        track=track,
+        user_text=user_text,
+        implicit_signal_bundle=None,
+    )
+    return build_loop_execution_policy(
+        track=track,
+        runtime_flags=runtime_flags,
+        has_openai_tools=has_openai_tools,
+    )
+
+
 def runtime_context_for_builder_tests() -> TurnRuntimeContext:
     return TurnRuntimeContext(
         channel=ChannelKind.APP_WS,

@@ -6,9 +6,10 @@ only appends transcript JSONL on ``MemoryStore``; batch curation belongs in **Dr
 可选 ``tool_bg_idle_event``：在加载 transcript 之前等待上一轮 tool_background 收尾，
 保证主 ``transcript.jsonl``（或维护内在节拍用的 ``transcript_inner_tick.jsonl``）已含工具摘要后再组装本轮 chat/tool messages。
 
-**Queue-serving turns**: Every track dispatches via ``AgenticLoop.run_track_turn`` with a
-scope ``OutputQueue``. Settled ``USER_CHAT`` routes via ``user_turn.llm_loop_mode`` to
-``SINGLE_LLM`` or ``DUAL_LLM`` mechanism; inner ticks and greeting use ``SINGLE_LLM``.
+**Queue-serving turns**: Every track dispatches via ``AgenticLoop.run_single_llm_turn`` or
+``AgenticLoop.run_dual_llm_turn`` with a scope ``OutputQueue``. Settled ``USER_CHAT`` routes
+via ``user_turn.llm_loop_mode`` to single-LLM or dual-LLM plugin branches; inner ticks and
+greeting use ``run_single_llm_turn``.
 
 TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink`` for all queue-serving delivery paths.
 TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.

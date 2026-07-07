@@ -17,10 +17,8 @@ not to lost objective and create unmaintainable code.
 
 ## For [companion harness](/app/core/companion_harness/)
 
-When working on [companion harness](/app/core/companion_harness/)
-
 - Read [companion harness design](/docs/imate/companion_harness/DESIGN.md)
-- Focus on architecture soundness, do not do duct-tape
+- Focus on architecture soundness, do not do duct-tape fixes
 
 ## Conventions
 
@@ -57,3 +55,7 @@ When refactoring, follow the procedures below:
 Limit the number of layers in implementing a complex feature:
 
 - When extending behaviors, prefer rewriting a new function and remove the old one, over extending the existing function and wrap them behind a new function with "more specific interface" or naming. The former sheds the unnecessary complexity, and the latter merely hides and accumulates unnecessary complexity.
+
+## Comments for data types
+
+- Add comments to describe data type and its fields semantic and designated usage scenarios, add member documentation on top of each field, not in data type docstring
