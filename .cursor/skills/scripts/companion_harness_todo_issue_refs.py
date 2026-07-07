@@ -81,6 +81,9 @@ TAG_TO_ISSUE: dict[str, int] = {
     "world-engine-experience-feedback": 3710,
     "world-engine-tracer-bullet": 3711,
     "world-engine-turn-spine": 3702,
+    "crs-relationship-signal-log": 3773,
+    "memdoc-belief-provenance": 3774,
+    "counterfactual-fork-diff": 3775,
 }
 
 ROOTS = (

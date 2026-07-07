@@ -2,6 +2,8 @@
 """
 快速集成测试脚本
 验证评测系统调用现有API的正确性
+
+TODO(counterfactual-fork-diff): Integrate fork/diff regression reports for CRS tuning — #3775 (epic #3341).
 """
 
 import asyncio

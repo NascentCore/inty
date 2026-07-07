@@ -17,6 +17,12 @@ curation entry is ``consolidate_memory_during_dreaming`` only.
 
 TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming batch. — #3522
 
+TODO(crs-relationship-signal-log): Fold relationship-signal events into CRS projection
+during dreaming consolidation (CQRS write side) — #3773 (epic #3341).
+
+TODO(memdoc-belief-provenance): Curator paths write structured claim provenance
+(``derived_from`` / source event id) on USER/MEMORY/COMPANIONSHIP claims — #3774 (epic #3341).
+
 TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
 
 TODO(world-engine-l2-echo): On sub-agent dismiss, merge bounded encounter echo — #3709

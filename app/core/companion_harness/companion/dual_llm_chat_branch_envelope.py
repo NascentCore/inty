@@ -35,6 +35,9 @@ dreaming curator. CRS epic #3341; do not conflate with ``relationship_phase``
 (slow bond in ``COMPANIONSHIP.md``) or ``experience_directives.tone`` (fast stance in
 ``context.json``). **Blocked until #3485 refactor gate; plumbing only — do not expand.**
 
+TODO(crs-relationship-signal-log): Append significance perception as relationship-signal
+events (CQRS fold input), not only transcript meta — #3773 (epic #3341).
+
 Design: ``/docs/imate/DESIGN.md``. LangSmith: ``inty_llm_source=foreground_dual_llm_envelope``
 (``llm/langsmith_invocation_extra.py``).
 

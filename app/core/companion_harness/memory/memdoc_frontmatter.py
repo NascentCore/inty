@@ -9,6 +9,9 @@ Facet multi-membership and tagged-store facets are **out of scope** here — see
 **Today**: no frontmatter parse/write; headings and paths are hardcoded in assembly code.
 
 TODO(memdoc-frontmatter): Parse/strip frontmatter on read and wire ``set_doc_metadata`` tool. — #3713
+
+TODO(memdoc-belief-provenance): Extend schema with structured belief claim provenance
+(``created_by``, ``caused_by_event``, evidence refs) beyond ``source`` hint — #3774 (epic #3341).
 """
 
 from __future__ import annotations
