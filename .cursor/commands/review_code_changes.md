@@ -1,15 +1,13 @@
 # Review code changes
 
-Review the pending changes.
-
-Review architecture of the pending changes' fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
+Review the current pending changes.
 
 ## Instructions
 
 ### Review
 
 - Understand what the code does
-- Critique architecture
+- Critique architecture, its fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
 - Check for bugs
 
 ### Enhance
@@ -45,7 +43,7 @@ that means the code lacks hierarchy.
 - Do not use dict in passing data between components
 - Use `dataclass` for internal data structure (not facing users or external services)
 - Use `Pydantic` models for interfacing with externals (users & external services like 3rd party http, cloud service etc.)
-- Thoroughly document data type and its members
+- Data type and its members are thoroughly documented
 
 ## Function arguments
 
