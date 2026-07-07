@@ -1,4 +1,4 @@
-"""Scope-level inner-tick poll: autonomous tracks without signed-on presence (#3255).
+"""Scope-level inner-tick poll: scheduled (no presence), monolog, autonomy, dreaming.
 
 Orchestration only — Postgres reads go through ``scope_inner_tick_persistence``;
 track execution goes through ``scope_inner_tick_fire``.
@@ -10,7 +10,9 @@ import asyncio
 
 from loguru import logger
 
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.services.agentic_channel.presence import get_presence
 from app.services.agentic_companion.inner_tick_scope import (
     InnerTickChatResolveMode,
 )
@@ -18,6 +20,7 @@ from app.services.agentic_companion.scope_inner_tick_fire import (
     try_fire_autonomy_for_scope,
     try_fire_dreaming_for_scope,
     try_fire_monolog_for_scope,
+    try_fire_scheduled_for_scope,
 )
 from app.services.agentic_companion.scope_inner_tick_persistence import (
     fetch_initialized_companion_scopes,
@@ -33,12 +36,7 @@ async def run_scope_inner_tick_poll_for_scope(
     *,
     scope: CompanionScope,
 ) -> bool:
-    """Run one scope poll wake: monolog → autonomy → dreaming (#3255).
-
-    TODO(scheduled-presence-independent): also fire due ``schedule_queue`` tasks here
-    (or via a sibling scope worker track) so scheduled reminders are not gated on
-    ``run_inner_tick_poll`` / user presence — #3689
-    """
+    """Run one scope poll wake: scheduled → monolog → autonomy → dreaming (#3255, #3689)."""
     coords = InnerTickCoords(
         user_id=scope.user_id,
         agent_id=scope.companion_id,
@@ -50,6 +48,13 @@ async def run_scope_inner_tick_poll_for_scope(
         "chat_resolve_mode": InnerTickChatResolveMode.READ_ONLY,
         "implicit_signal_bundle": None,
     }
+    agent_scope = AgentScope(
+        user_id=scope.user_id,
+        agent_id=scope.companion_id,
+    )
+    if get_presence(agent_scope) is None:
+        if await try_fire_scheduled_for_scope(**common):
+            return True
     if await try_fire_monolog_for_scope(**common):
         return True
     if await try_fire_autonomy_for_scope(**common):

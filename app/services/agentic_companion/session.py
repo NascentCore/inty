@@ -21,11 +21,9 @@ Concurrency vocabulary (human terms — three layers, not interchangeable):
   message, greeting, inner-tick fire (including dreaming), and tool-background downlink per
   ``(user_id, agent_id, chat_id)``.
 
-Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255): monolog, autonomy,
-dreaming without signed-on user. Presence poll: proactive + scheduled delivery only.
-
-TODO(scheduled-presence-independent): scheduled delivery should not require presence;
-move scheduled fire to scope worker (see ``scope_inner_tick_poll``) — #3689
+Scope-level inner-tick worker (``scope_inner_tick_poll`` / #3255, #3689): scheduled
+(when no live presence), monolog, autonomy, dreaming. Presence poll: proactive +
+scheduled delivery when signed on.
 """
 
 from __future__ import annotations

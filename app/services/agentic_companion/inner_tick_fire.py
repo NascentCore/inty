@@ -133,8 +133,6 @@ async def try_fire_scheduled_inner_tick(
     fire_input: InnerTickFireInput,
 ) -> bool:
     # TODO(#3473): gate proactive + scheduled fire on token budget before turn_lock.
-    # TODO(scheduled-presence-independent): sole caller is presence-bound
-    # ``run_inner_tick_poll``; refactor so due tasks fire from scope worker — #3689
     """When ``schedule_queue`` has a due pending task, run one inner-tick reminder turn."""
     coords = await resolve_inner_tick_scope_coords(
         fire_input,
@@ -151,15 +149,15 @@ async def try_fire_scheduled_inner_tick(
         return False
     kernel_input, scope_session = ctx_pair
 
-    due_task = due_scheduled_task(kernel_input.mem_store)
-    if due_task is None:
-        return False
-
     coordinator = fire_input.coordinator
     ws_conn_id = fire_input.ws_conn_id
     session_id = generate_session_id(str(coords.chat_row_id))
 
     async with inner_tick_turn_scope(session=scope_session):
+        due_task = due_scheduled_task(kernel_input.mem_store)
+        if due_task is None:
+            return False
+
         if coordinator.inner_tick_monolog_foreground_pending():
             logger.debug(
                 "companion_ws_scheduled_reminder skipped prev_monolog_pending "
