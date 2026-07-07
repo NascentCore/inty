@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -52,7 +55,7 @@ def test_synthetic_user_message_batch_correlates_agent_initiated_turn() -> None:
 
 
 def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
-    ts = datetime.now(timezone.utc)
+    ts = datetime.now(UTC)
     batch = UserMessageBatch(
         batch_id="agent-initiated:greeting:u1", message_ids=("u1",)
     )
@@ -74,7 +77,7 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         user_text="",
         ts_user=ts,
         user_msg_uuid="u1",
-        transcript_rel="transcript.jsonl",
+        transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,

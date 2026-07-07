@@ -236,8 +236,8 @@ Open PRs checked: #3785 (`cursor/repl-regression-speedup-fe95`) — no overlap w
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-74** ruff UP017 + #3413: `test_greeting_loop_context.py` — `datetime.UTC` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-f2d4`.
-- [ ] **HYGIENE-2026-75** #3413: `test_dreaming_batch_scripted_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. **claimed** `cursor/agent-maintenance-tasks-f2d4`.
-- [ ] **HYGIENE-2026-76** #3413: `test_memory_store_scope.py` — canonical path constants for assertions + seed. **claimed** `cursor/agent-maintenance-tasks-f2d4`.
-- [ ] **HYGIENE-2026-77** #3413: `test_memory_store.py` — `TRANSCRIPT_JSONL_REL` for append/read. **claimed** `cursor/agent-maintenance-tasks-f2d4`.
-- [ ] **HYGIENE-2026-78** #3413: `test_experience_directives.py` — `CONTEXT_JSON_REL`. **claimed** `cursor/agent-maintenance-tasks-f2d4`.
+- [x] **HYGIENE-2026-74** ruff UP017 + #3413: `test_greeting_loop_context.py` — `datetime.UTC` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-75** #3413: `test_dreaming_batch_scripted_llm.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-76** #3413: `test_memory_store_scope.py` — canonical path constants for assertions + seed. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-77** #3413: `test_memory_store.py` — `TRANSCRIPT_JSONL_REL` for append/read. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+- [x] **HYGIENE-2026-78** #3413: `test_experience_directives.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.

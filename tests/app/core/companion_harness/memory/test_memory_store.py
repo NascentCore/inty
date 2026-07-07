@@ -10,6 +10,9 @@ from app.core.companion_harness.memory.memory_store import (
     MemoryStore,
     normalize_memory_store_relative_path,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 
 
@@ -61,12 +64,12 @@ def test_memory_store_read_if_exists_none(tmp_path) -> None:
 def test_memory_store_append_jsonl_record(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
     store.append_jsonl_record(
-        "transcript.jsonl", {"role": "user", "content": "a"}
+        TRANSCRIPT_JSONL_REL, {"role": "user", "content": "a"}
     )
     store.append_jsonl_record(
-        "transcript.jsonl", {"role": "assistant", "content": "b"}
+        TRANSCRIPT_JSONL_REL, {"role": "assistant", "content": "b"}
     )
-    body = store.read_document("transcript.jsonl")
+    body = store.read_document(TRANSCRIPT_JSONL_REL)
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 2
 
@@ -80,7 +83,7 @@ def test_memory_store_append_jsonl_record_concurrent(tmp_path) -> None:
         try:
             barrier.wait(timeout=5.0)
             store.append_jsonl_record(
-                "transcript.jsonl",
+                TRANSCRIPT_JSONL_REL,
                 {"role": "user", "content": f"m{idx}"},
             )
         except BaseException as exc:
@@ -95,7 +98,7 @@ def test_memory_store_append_jsonl_record_concurrent(tmp_path) -> None:
         thread.join(timeout=10.0)
 
     assert not errors
-    body = store.read_document("transcript.jsonl")
+    body = store.read_document(TRANSCRIPT_JSONL_REL)
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 8
 
