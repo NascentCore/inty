@@ -1,8 +1,8 @@
-"""Inner-tick glue: presence coordinator guards, harness runtime, channel delivery.
+"""Inner-tick glue: presence coordinator guards, harness runtime, chat_history persist.
 
 Orchestrates ``companion_harness.runtime.inner_tick_fire`` (kernel due + turn),
-``inner_tick_scope`` (ORM), and ``inner_tick_deliver`` (chat_history + WS/IM).
-WS wire envelopes and Weixin plain text share this path.
+``inner_tick_scope`` (ORM), and ``inner_tick_deliver`` (chat_history only).
+Channel delivery is pump-owned via OutputQueue.
 
 Locking: each ``try_fire_*`` acquires **scope** ``CompanionSession.turn_lock`` (#3272).
 User chat on the same scope also holds that lock — inner ticks (including dreaming) and
@@ -58,8 +58,8 @@ from app.schemas.chat_websocket import (
 from app.services import chat_history_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.inner_tick_deliver import (
-    InnerTickVisibleDeliverInput,
-    deliver_visible_inner_tick_turn,
+    InnerTickVisiblePersistInput,
+    persist_visible_inner_tick_turn,
 )
 from app.services.agentic_companion.inner_tick_kernel_context import (
     build_inner_tick_kernel_context,
@@ -104,7 +104,7 @@ async def _kernel_context(
         model_override=coords.model_override,
         throttle=_throttle_snapshot(fire_input),
         runtime_context=TurnRuntimeContext(
-            channel=fire_input.delivery.runtime_channel,
+            channel=fire_input.runtime_channel,
             implicit_signal_bundle=ws_implicit,
         ),
         preset_uid=preset_uid,
@@ -174,9 +174,8 @@ async def try_fire_scheduled_inner_tick(
         else:
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
-        delivered = await deliver_visible_inner_tick_turn(
-            InnerTickVisibleDeliverInput(
-                delivery=fire_input.delivery,
+        delivered = await persist_visible_inner_tick_turn(
+            InnerTickVisiblePersistInput(
                 session_id=session_id,
                 chat_row_agent_id=coords.chat_row_agent_id,
                 preset_uid=preset_uid,
@@ -266,9 +265,8 @@ async def try_fire_proactive_chat_inner_tick(
         else:
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
-        delivered = await deliver_visible_inner_tick_turn(
-            InnerTickVisibleDeliverInput(
-                delivery=fire_input.delivery,
+        delivered = await persist_visible_inner_tick_turn(
+            InnerTickVisiblePersistInput(
                 session_id=session_id,
                 chat_row_agent_id=coords.chat_row_agent_id,
                 preset_uid=preset_uid,
@@ -465,9 +463,8 @@ async def try_fire_monolog_inner_tick(
         )
 
         if reply_stripped:
-            await deliver_visible_inner_tick_turn(
-                InnerTickVisibleDeliverInput(
-                    delivery=fire_input.delivery,
+            await persist_visible_inner_tick_turn(
+                InnerTickVisiblePersistInput(
                     session_id=session_id,
                     chat_row_agent_id=coords.chat_row_agent_id,
                     preset_uid=preset_uid,

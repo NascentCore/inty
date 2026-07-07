@@ -14,17 +14,17 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
-def _ready_message(*, kind: DownlinkKind, text: str) -> ReadyOutputMessage:
+def _ready_message(*, kind: OutputMessageKind, text: str) -> ReadyOutputMessage:
     return ReadyOutputMessage(
         message_id="msg-1",
         batch_id="batch-1",
         kind=kind,
         text=text,
         sequence=1,
-        message_ids=() if kind != DownlinkKind.USER_REPLY else ("in-1",),
+        message_ids=() if kind != OutputMessageKind.USER_REPLY else ("in-1",),
     )
 
 
@@ -62,7 +62,9 @@ async def test_telegram_adapter_skips_empty_proactive() -> None:
     api = TelegramBotApi(bot_token="test-token", urlopen=_capture_urlopen)
     adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
     downlink = adapter.as_downlink()
-    await downlink.deliver(_ready_message(kind=DownlinkKind.PROACTIVE, text=""))
+    await downlink.deliver(
+        _ready_message(kind=OutputMessageKind.PROACTIVE, text="")
+    )
     assert sent == []
 
 
@@ -80,7 +82,7 @@ async def test_telegram_adapter_deliver_proactive() -> None:
     adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
     downlink = adapter.as_downlink()
     await downlink.deliver(
-        _ready_message(kind=DownlinkKind.PROACTIVE, text="hello")
+        _ready_message(kind=OutputMessageKind.PROACTIVE, text="hello")
     )
     assert "5078060274" in sent[0]
     assert "hello" in sent[0]
@@ -103,7 +105,7 @@ async def test_telegram_adapter_strips_leading_transcript_timestamp_prefixes() -
     downlink = adapter.as_downlink()
     await downlink.deliver(
         _ready_message(
-            kind=DownlinkKind.USER_REPLY,
+            kind=OutputMessageKind.USER_REPLY,
             text="[2026-05-30 13:09:06 UTC] [2026-05-30 13:10:00 UTC] hello",
         )
     )

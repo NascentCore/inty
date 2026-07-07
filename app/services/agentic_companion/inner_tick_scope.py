@@ -18,7 +18,7 @@ from app.core.model_selection import select_chat_model
 from app.db.session import AsyncSessionLocal
 from app.models.user import User
 from app.services import chat_service
-from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.services.agentic_companion.session import Coordinator, InnerTickCoords
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -41,7 +41,9 @@ class InnerTickChatResolveMode(StrEnum):
 class InnerTickFireInput:
     """Bundled arguments for one inner-tick ``try_fire_*`` attempt on a presence wire."""
 
-    delivery: InnerTickDelivery
+    runtime_channel: ChannelKind
+    # Channel for TurnRuntimeContext; outbound delivery is pump-owned.
+
     coords: InnerTickCoords
     coordinator: Coordinator
     ws_conn_id: str

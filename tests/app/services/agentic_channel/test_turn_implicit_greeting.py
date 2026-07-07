@@ -16,11 +16,7 @@ from app.services.agentic_channel.presence import AgentChannelPresence
 
 @pytest.mark.asyncio
 async def test_greet_on_sign_on_hands_output_queue_to_turn() -> None:
-    """Presence passes the scope OutputQueue and a synthetic batch into the turn.
-
-    Visible text is appended by AgenticLoop inside the turn (see
-    ``test_greet_on_sign_on_delivery``), not by presence after it.
-    """
+    """Presence passes OutputQueue + synthetic batch into the turn; append runs after persist."""
     scope = AgentScope(user_id="user-greet", agent_id="agent-greet")
     presence = AgentChannelPresence(scope)
     fake_model = MagicMock()
@@ -41,9 +37,14 @@ async def test_greet_on_sign_on_hands_output_queue_to_turn() -> None:
                 "app.services.agentic_channel.presence.get_output_queue_for_scope",
                 return_value=fake_queue,
             ):
-                await presence.greet_on_sign_on(
-                    runtime_channel=ChannelKind.TELEGRAM,
-                )
+                with patch(
+                    "app.services.agentic_channel.presence.persist_implicit_greeting_ai_chat_history",
+                    new_callable=AsyncMock,
+                    return_value=1,
+                ):
+                    await presence.greet_on_sign_on(
+                        runtime_channel=ChannelKind.TELEGRAM,
+                    )
 
     resolve_mock.assert_awaited_once_with(scope)
     api_mock.assert_awaited_once()
@@ -63,5 +64,8 @@ async def test_greet_on_sign_on_hands_output_queue_to_turn() -> None:
         "agent-initiated:implicit_sign_on_greeting:"
     )
     assert batch.message_ids == (kwargs["preset_user_msg_uuid"],)
-    # Presence must not append visible text itself; AgenticLoop owns the append.
-    fake_queue.append_visible_message.assert_not_awaited()
+    append_call = fake_queue.append_visible_message.await_args
+    assert append_call is not None
+    append_input = append_call.args[0]
+    assert append_input.message_ids == ()
+    assert append_input.text == "Hello from Inty."

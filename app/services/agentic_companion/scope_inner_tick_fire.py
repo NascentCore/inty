@@ -2,7 +2,7 @@
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
-# TODO(dedup-scope-presence-inner-tick): Slice 2 — ``fire_throttled_inner_tick(kind, …, delivery)``
+# TODO(dedup-scope-presence-inner-tick): Slice 2 — ``fire_throttled_inner_tick(kind, …, runtime_channel)``
 # on ``InnerTickKind`` registry; unify presence/scope fire bodies + throttle stores — #3424.
 """
 
@@ -38,8 +38,8 @@ from app.schemas.chat_websocket import build_inner_tick_wire_meta
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import companion_chat_service
 from app.services.agentic_companion.inner_tick_deliver import (
-    InnerTickVisibleDeliverInput,
-    deliver_visible_inner_tick_turn,
+    InnerTickVisiblePersistInput,
+    persist_visible_inner_tick_turn,
 )
 from app.services.agentic_companion.inner_tick_kernel_context import (
     build_inner_tick_kernel_context,
@@ -150,9 +150,8 @@ async def try_fire_scheduled_for_scope(
             )
             return True
 
-        delivered = await deliver_visible_inner_tick_turn(
-            InnerTickVisibleDeliverInput(
-                delivery=None,
+        delivered = await persist_visible_inner_tick_turn(
+            InnerTickVisiblePersistInput(
                 session_id=session_id,
                 chat_row_agent_id=resolved.chat_row_agent_id,
                 preset_uid=preset_uid,

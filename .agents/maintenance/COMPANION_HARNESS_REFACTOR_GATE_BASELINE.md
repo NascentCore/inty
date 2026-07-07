@@ -12,8 +12,8 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 | #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
 | #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
 | #3207 / #3208 | **Partial (Stage 2)** — typed `WsOutboundPayload`, materializers, pump, REPL `model_validate`; HTTP meta + `chat_history_service` typed row still open |
-| #3543 | **Partial** — WS `TOOL_BACKGROUND` / `USER_REPLY` via presence pump; inner-tick App-WS still direct `outbound_queue.put` |
-| #3398 | **Open** — epic; dual vs single-LLM debate unchanged |
+| #3543 | **Closed** — all channels pump-owned; `InnerTickDelivery` direct sink removed; `persist_visible_inner_tick_turn` history-only |
+| #3398 | **Partial** — P3 met (`OutputMessageKind`, delete `Downlink` event族); dual vs single-LLM debate unchanged |
 
 Merged to `main`: pull/3765 (#3401 slice 1), pull/3766 (#3401 slice 2). Gate doc updated 2026-07-07 post-merge.
 
@@ -21,7 +21,7 @@ Merged to `main`: pull/3765 (#3401 slice 1), pull/3766 (#3401 slice 2). Gate doc
 
 | Item | Status |
 |------|--------|
-| Transport all channels enqueue+wake+OutputQueue | Partial — App-WS done (pull/3512); Weixin #3493 open |
+| Transport all channels enqueue+wake+OutputQueue | **Met** — App-WS + Weixin + Telegram + SMS via `ScopeQueueServing` (#3780, #3398 P3) |
 | User chat only AgenticLoop (dual + single) | **Met** — all turn tracks require ``agentic_output_queue``; legacy turn.py orchestration removed |
 | Inner-tick tracks on single-LLM AgenticLoop | Open — #3580, #3459 |
 | Dreaming unchanged (non-turn batch) | OK |
@@ -65,9 +65,8 @@ REPL regression — not run (requires Ops :8001)
 
 ## Next work (refactor lane)
 
-1. #3493 Weixin enqueue+wake
-2. #3542–#3543 inner-tick/output pump (App-WS greeting + inner-tick converge on pump-owned delivery)
-3. #3580 maintenance/autonomy on AgenticLoop
-4. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
+1. #3580 maintenance/autonomy on AgenticLoop
+2. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
+3. #3398 dual vs single-LLM envelope (remaining epic scope)
 
-CRS (#3341) and product (#3323) remain **blocked** on inner-tick AgenticLoop (#3580) and Weixin transport (#3493).
+CRS (#3341) and product (#3323) remain **blocked** on inner-tick AgenticLoop (#3580).

@@ -18,14 +18,8 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
-from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
-    DownlinkKind,
-)
-from app.services.agentic_companion.inner_tick_delivery import (
-    InnerTickDelivery,
-    inner_tick_delivery_for_pump_owned,
-)
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.services.agentic_companion.downlink import ChannelDownlink
 from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_agent_initiated_ws_payload,
     materialize_queue_user_reply_from_durable,
@@ -55,9 +49,6 @@ class AppWsChannelAdapter:
     def as_downlink(self) -> ChannelDownlink:
         return _AppWsChannelDownlink(adapter=self)
 
-    def inner_tick_delivery(self) -> InnerTickDelivery:
-        return inner_tick_delivery_for_pump_owned(ChannelKind.APP_WS)
-
     async def on_turn_up(self, scope: AgentScope) -> None:
         assert scope is not None
 
@@ -75,18 +66,18 @@ class _AppWsChannelDownlink:
         if not ready_output_delivers_user_visible_text(message):
             return
         match message.kind:
-            case DownlinkKind.USER_REPLY:
+            case OutputMessageKind.USER_REPLY:
                 if ready_output_is_agent_initiated_visible(message):
                     await self._deliver_agent_initiated(message)
                 else:
                     await self._deliver_user_reply(message)
             case (
-                DownlinkKind.PROACTIVE
-                | DownlinkKind.SCHEDULED
-                | DownlinkKind.MONOLOG
+                OutputMessageKind.PROACTIVE
+                | OutputMessageKind.SCHEDULED
+                | OutputMessageKind.MONOLOG
             ):
                 await self._deliver_agent_initiated(message)
-            case DownlinkKind.TOOL_BACKGROUND:
+            case OutputMessageKind.TOOL_BACKGROUND:
                 await self._deliver_tool_background(message)
             case _:
                 return

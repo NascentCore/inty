@@ -34,7 +34,7 @@ from app.services.agentic_channel.serving import (
     drain_and_deliver_user_chat_turn,
     flush_scope_output_queue_ready,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +58,7 @@ def _pending_output_claim(
             sequence=1,
             status=QueueStatus.PENDING,
             batch_id="batch-1",
-            kind=DownlinkKind.USER_REPLY,
+            kind=OutputMessageKind.USER_REPLY,
             text=text,
             created_at_utc=datetime.now(timezone.utc),
             message_ids=("input-1",),
@@ -77,7 +77,7 @@ async def test_concurrent_flush_and_pump_deliver_same_row_twice() -> None:
     ready = ReadyOutputMessage(
         message_id=message_id,
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="duplicate me",
         sequence=1,
         message_ids=("input-1",),
@@ -233,7 +233,7 @@ async def test_channel_output_pump_delivers_ready_batch_and_acks() -> None:
     ready = ReadyOutputMessage(
         message_id="msg-1",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="queued reply",
         sequence=1,
         message_ids=("input-1",),
@@ -276,7 +276,7 @@ async def test_channel_output_pump_delivers_tool_background_ready_batch() -> (
     ready = ReadyOutputMessage(
         message_id="msg-tool-1",
         batch_id="batch-tool-1",
-        kind=DownlinkKind.TOOL_BACKGROUND,
+        kind=OutputMessageKind.TOOL_BACKGROUND,
         text="tool follow-up visible to user",
         sequence=1,
         message_ids=("input-tool-1",),
@@ -303,7 +303,7 @@ async def test_channel_output_pump_delivers_tool_background_ready_batch() -> (
 
     assert last == "tool follow-up visible to user"
     assert len(delivered) == 1
-    assert delivered[0].kind == DownlinkKind.TOOL_BACKGROUND
+    assert delivered[0].kind == OutputMessageKind.TOOL_BACKGROUND
     fake_queue.ack_delivered.assert_awaited()
 
 
@@ -313,7 +313,7 @@ async def test_deliver_ready_message_skips_unroutable_output() -> None:
     message = ReadyOutputMessage(
         message_id="msg-skip",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="orphan reply",
         sequence=1,
         message_ids=("queue-msg-1",),
@@ -345,7 +345,7 @@ async def test_deliver_ready_message_retries_transport_failure() -> None:
     message = ReadyOutputMessage(
         message_id="msg-retry",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="retry reply",
         sequence=1,
         message_ids=("queue-msg-1",),

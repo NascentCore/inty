@@ -134,7 +134,7 @@ class InnerTickKind(StrEnum):
 
     Binds the otherwise-parallel MONOLOG/AUTONOMY/... members spread across
     ``CompanionTurnTrack``, ``InnerTickActivity``, ``InnerTickThrottleKind``,
-    and ``DownlinkKind``.
+    and ``OutputMessageKind``.
     """
 
     MONOLOG = "monolog"

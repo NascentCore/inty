@@ -11,14 +11,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.services.agentic_companion import inner_tick_poll
 from app.services.agentic_companion import scope_inner_tick_poll
-from app.services.agentic_companion.inner_tick_delivery import (
-    InnerTickDelivery,
-    inner_tick_delivery_for_pump_owned,
-)
-
-
-def _poll_delivery() -> InnerTickDelivery:
-    return inner_tick_delivery_for_pump_owned(ChannelKind.APP_WS)
 
 
 @pytest.mark.asyncio
@@ -51,7 +43,7 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
         ) as maintenance,
     ):
         await inner_tick_poll.run_inner_tick_poll(
-            delivery=_poll_delivery(),
+            runtime_channel=ChannelKind.APP_WS,
             coordinator=coordinator,
             ws_conn_id="ws",
             tc_box=[None],
@@ -81,7 +73,7 @@ async def test_run_inner_tick_poll_skips_when_coords_disarmed() -> None:
         ) as scheduled,
     ):
         await inner_tick_poll.run_inner_tick_poll(
-            delivery=_poll_delivery(),
+            runtime_channel=ChannelKind.APP_WS,
             coordinator=coordinator,
             ws_conn_id="ws",
             tc_box=[None],
@@ -122,7 +114,7 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
         ) as maintenance,
     ):
         await inner_tick_poll.run_inner_tick_poll(
-            delivery=_poll_delivery(),
+            runtime_channel=ChannelKind.APP_WS,
             coordinator=coordinator,
             ws_conn_id="ws",
             tc_box=[None],

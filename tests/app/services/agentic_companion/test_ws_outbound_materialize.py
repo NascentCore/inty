@@ -20,7 +20,7 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.schemas.chat_websocket import ChatWebSocketQueuedSuccessFrame
 from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_queue_user_reply_from_durable,
@@ -50,7 +50,7 @@ async def test_materialize_queue_user_reply_from_durable_wire_fields() -> None:
     ready = ReadyOutputMessage(
         message_id="out-1",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="hello durable",
         sequence=1,
         message_ids=("client-msg-1",),

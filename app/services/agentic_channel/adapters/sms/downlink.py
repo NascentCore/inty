@@ -15,14 +15,14 @@ from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.adapters.sms.materialize import (
     materialize_sms_body,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 _SMS_TEXT_KINDS = frozenset(
     {
-        DownlinkKind.USER_REPLY,
-        DownlinkKind.PROACTIVE,
-        DownlinkKind.SCHEDULED,
-        DownlinkKind.MONOLOG,
+        OutputMessageKind.USER_REPLY,
+        OutputMessageKind.PROACTIVE,
+        OutputMessageKind.SCHEDULED,
+        OutputMessageKind.MONOLOG,
     }
 )
 

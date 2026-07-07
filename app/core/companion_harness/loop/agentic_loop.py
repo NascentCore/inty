@@ -23,8 +23,11 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
-from app.core.companion_harness.agentic_companion.types import UserMessageBatch
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.companion_harness.agentic_companion.types import (
+    AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
+    UserMessageBatch,
+)
 from app.core.companion_harness.agentic_companion.types import (
     GeneratedImageRef,
 )
@@ -148,10 +151,18 @@ class _UserVisibleOutputAppender:
     image_asset_baseline: int
     persisted_ids: list[str] = field(default_factory=list)
 
+    def _output_correlation_message_ids(self) -> tuple[str, ...]:
+        """Agent-initiated batches correlate in LangSmith only; OutputQueue rows use ``()``."""
+        if self.batch.batch_id.startswith(
+            AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX
+        ):
+            return ()
+        return self.batch.message_ids
+
     async def append_visible_message(
         self,
         *,
-        kind: DownlinkKind,
+        kind: OutputMessageKind,
         text: str,
         trace_id: str,
         langsmith_trace_id: str,
@@ -167,7 +178,7 @@ class _UserVisibleOutputAppender:
                 kind=kind,
                 batch_id=self.batch.batch_id,
                 text=visible,
-                message_ids=self.batch.message_ids,
+                message_ids=self._output_correlation_message_ids(),
                 trace_id=trace_id,
                 langsmith_trace_id=langsmith_trace_id,
                 langsmith_run_id=langsmith_run_id,
@@ -178,7 +189,7 @@ class _UserVisibleOutputAppender:
                         self.store,
                         self.image_asset_baseline,
                     )
-                    if kind == DownlinkKind.USER_REPLY
+                    if kind == OutputMessageKind.USER_REPLY
                     else ()
                 ),
             )
@@ -220,7 +231,7 @@ class _DomainToolBackgroundAppendSink:
             if event is None:
                 return
             await self._appender.append_visible_message(
-                kind=DownlinkKind.TOOL_BACKGROUND,
+                kind=OutputMessageKind.TOOL_BACKGROUND,
                 text=event.text,
                 trace_id=event.trace_id or self._trace_id,
                 langsmith_trace_id=event.langsmith_trace_id,
@@ -448,16 +459,16 @@ async def _run_chat_only_prompt_plan(
     llm_scene = execution.llm_scene.value
     match track:
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            downlink_kind = DownlinkKind.PROACTIVE
+            downlink_kind = OutputMessageKind.PROACTIVE
             response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            downlink_kind = DownlinkKind.SCHEDULED
+            downlink_kind = OutputMessageKind.SCHEDULED
             response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            downlink_kind = DownlinkKind.USER_REPLY
+            downlink_kind = OutputMessageKind.USER_REPLY
             response_format = DUAL_LLM_CHAT_RESPONSE_FORMAT
         case _:
-            downlink_kind = DownlinkKind.USER_REPLY
+            downlink_kind = OutputMessageKind.USER_REPLY
             response_format = None
 
     t_api = time.perf_counter()
@@ -534,7 +545,7 @@ async def _run_chat_only_prompt_plan(
         context.trace_id,
         track.value,
     )
-    if last_text:
+    if last_text and track != CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
         await appender.append_visible_message(
             kind=downlink_kind,
             text=last_text,
@@ -603,7 +614,7 @@ class AgenticLoop:
 
         async def _emit_user_reply(interim: BootstrapInterimOutput) -> None:
             await appender.append_visible_message(
-                kind=DownlinkKind.USER_REPLY,
+                kind=OutputMessageKind.USER_REPLY,
                 text=interim.text,
                 trace_id=interim.trace_id,
                 langsmith_trace_id=interim.langsmith_trace_id,
@@ -692,7 +703,7 @@ class AgenticLoop:
         fg_text = fg_result.assistant_text.strip()
         if fg_text:
             await appender.append_visible_message(
-                kind=DownlinkKind.USER_REPLY,
+                kind=OutputMessageKind.USER_REPLY,
                 text=fg_text,
                 trace_id=context.trace_id,
                 langsmith_trace_id=fg_result.langsmith_trace_id,

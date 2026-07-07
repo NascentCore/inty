@@ -21,7 +21,7 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 from .postgres_queue import PostgresOutputQueueRepository
 from .types import (
@@ -47,7 +47,7 @@ class OutputQueueAppendInput:
     ``message_ids=()`` so the queue assigns a synthetic batch id.
     """
 
-    kind: DownlinkKind
+    kind: OutputMessageKind
     text: str
     batch_id: str
     message_ids: tuple[str, ...]
@@ -69,7 +69,7 @@ class ReadyOutputMessage:
 
     message_id: str
     batch_id: str
-    kind: DownlinkKind
+    kind: OutputMessageKind
     text: str
     sequence: int
     message_ids: tuple[str, ...]
@@ -81,10 +81,10 @@ _SYNTHETIC_AGENT_BATCH_PREFIX = "agent-initiated:"
 
 _AGENT_INITIATED_VISIBLE_KINDS = frozenset(
     {
-        DownlinkKind.USER_REPLY,
-        DownlinkKind.PROACTIVE,
-        DownlinkKind.SCHEDULED,
-        DownlinkKind.MONOLOG,
+        OutputMessageKind.USER_REPLY,
+        OutputMessageKind.PROACTIVE,
+        OutputMessageKind.SCHEDULED,
+        OutputMessageKind.MONOLOG,
     }
 )
 
@@ -111,11 +111,11 @@ def ready_output_delivers_user_visible_text(
     """
     match message.kind:
         case (
-            DownlinkKind.USER_REPLY
-            | DownlinkKind.PROACTIVE
-            | DownlinkKind.SCHEDULED
-            | DownlinkKind.MONOLOG
-            | DownlinkKind.TOOL_BACKGROUND
+            OutputMessageKind.USER_REPLY
+            | OutputMessageKind.PROACTIVE
+            | OutputMessageKind.SCHEDULED
+            | OutputMessageKind.MONOLOG
+            | OutputMessageKind.TOOL_BACKGROUND
         ):
             return bool(message.text.strip())
         case _:

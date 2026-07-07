@@ -48,6 +48,7 @@ from app.services.companion_chat_service import (
     run_companion_implicit_sign_on_greeting_turn_for_api,
 )
 from app.services.agentic_companion.ws_outbound_materialize import (
+    append_implicit_greeting_output_after_persist,
     persist_implicit_greeting_ai_chat_history,
 )
 from app.services.chat_service import generate_session_id
@@ -140,12 +141,8 @@ class AgentChannelPresence:
             active = registry.active_channel()
             if active is None:
                 return
-            adapter = registry.adapters.get(active)
-            if adapter is None:
-                return
-            delivery = adapter.inner_tick_delivery()
             await run_inner_tick_poll(
-                delivery=delivery,
+                runtime_channel=active,
                 coordinator=self._coordinator,
                 ws_conn_id=None,
                 tc_box=None,
@@ -240,6 +237,12 @@ class AgentChannelPresence:
                     self._scope.memory_store_chat_id()
                 ),
                 agent_id=self._scope.agent_id,
+                text=greeting_text,
+                companion_turn=companion_turn,
+            )
+            await append_implicit_greeting_output_after_persist(
+                output_queue=output_queue,
+                user_message_batch=greeting_batch,
                 text=greeting_text,
                 companion_turn=companion_turn,
             )

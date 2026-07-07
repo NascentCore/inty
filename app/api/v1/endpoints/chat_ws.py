@@ -104,6 +104,7 @@ from app.services.agentic_companion.presence_registry import (
     companion_presence_registry,
 )
 from app.services.agentic_companion.ws_outbound_materialize import (
+    append_implicit_greeting_output_after_persist,
     persist_implicit_greeting_ai_chat_history,
 )
 from app.services.agentic_companion.ws_channel_guard import (
@@ -1218,10 +1219,6 @@ async def _agent_chat_ws_completions_impl(
                             ][
                                 "foreground_user_message_id"
                             ] = companion_user_row_id
-                        # Deliver from the turn result, not by pulling the scope
-                        # OutputQueue: the presence output pump races this handler
-                        # and consumes (skips) agent-initiated rows on App-WS.
-                        # TODO(#3576): route App-WS greeting via pump-owned delivery.
                         greeting_text = str(
                             companion_turn.assistant_text or ""
                         ).strip()
@@ -1234,12 +1231,23 @@ async def _agent_chat_ws_completions_impl(
                                 detail="Chat returned no content",
                             )
                         assert ws_outbound_queue is not None
+                        greeting_session_id = generate_session_id(
+                            greeting_scope.memory_store_chat_id()
+                        )
                         await persist_implicit_greeting_ai_chat_history(
-                            session_id=session_id,
+                            session_id=greeting_session_id,
                             agent_id=agent_id,
                             text=greeting_text,
                             companion_turn=companion_turn,
                         )
+                        await append_implicit_greeting_output_after_persist(
+                            output_queue=greeting_output_queue,
+                            user_message_batch=greeting_batch,
+                            text=greeting_text,
+                            companion_turn=companion_turn,
+                        )
+                        # The scope output pump owns App-WS greeting delivery;
+                        # wait until it materializes the queued row for this connection.
                         _greeting_wait_deadline = (
                             asyncio.get_running_loop().time() + 5.0
                         )

@@ -9,8 +9,12 @@ import pytest
 
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.schedule_queue import ScheduleTask
-from app.core.companion_harness.runtime.inner_tick_fire import InnerTickKernelResult
-from app.services.agentic_companion.inner_tick_scope import InnerTickChatResolveMode
+from app.core.companion_harness.runtime.inner_tick_fire import (
+    InnerTickKernelResult,
+)
+from app.services.agentic_companion.inner_tick_scope import (
+    InnerTickChatResolveMode,
+)
 from app.services.agentic_companion.scope_inner_tick_fire import (
     try_fire_scheduled_for_scope,
 )
@@ -65,7 +69,9 @@ async def test_try_fire_scheduled_for_scope_no_due_task_returns_false() -> None:
 
 
 @pytest.mark.asyncio
-async def test_try_fire_scheduled_for_scope_delivers_with_none_delivery() -> None:
+async def test_try_fire_scheduled_for_scope_persists_without_channel_delivery() -> (
+    None
+):
     due = ScheduleTask(
         id="t1",
         exec_time_utc="2020-01-01T00:00:00+00:00",
@@ -109,7 +115,7 @@ async def test_try_fire_scheduled_for_scope_delivers_with_none_delivery() -> Non
         ),
         patch(
             "app.services.agentic_companion.scope_inner_tick_fire."
-            "deliver_visible_inner_tick_turn",
+            "persist_visible_inner_tick_turn",
             deliver_mock,
         ),
     ):
@@ -128,5 +134,5 @@ async def test_try_fire_scheduled_for_scope_delivers_with_none_delivery() -> Non
     assert fired is True
     deliver_mock.assert_awaited_once()
     call_input = deliver_mock.await_args.args[0]
-    assert call_input.delivery is None
     assert call_input.scheduled_task_id == "t1"
+    assert call_input.companion_scheduled_reminder is True

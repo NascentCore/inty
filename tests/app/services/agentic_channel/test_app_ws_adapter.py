@@ -31,7 +31,7 @@ from app.services.agentic_channel.presence import (
     AgentChannelPresence,
     clear_presences_for_tests,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
 @pytest.fixture(autouse=True)
@@ -80,7 +80,7 @@ async def test_app_ws_user_reply_materializes_from_durable_rows() -> None:
     ready = ReadyOutputMessage(
         message_id="out-1",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="hello queue",
         sequence=1,
         message_ids=("client-msg-1",),
@@ -127,7 +127,7 @@ async def test_app_ws_user_reply_missing_input_is_unroutable() -> None:
     ready = ReadyOutputMessage(
         message_id="out-missing",
         batch_id="batch-missing",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="reply",
         sequence=1,
         message_ids=("missing-input",),
@@ -167,7 +167,7 @@ async def test_app_ws_tool_background_uses_input_row_user_message_id() -> None:
     ready = ReadyOutputMessage(
         message_id="out-tb",
         batch_id="batch-tb",
-        kind=DownlinkKind.TOOL_BACKGROUND,
+        kind=OutputMessageKind.TOOL_BACKGROUND,
         text="tool bg line",
         sequence=1,
         message_ids=("user-msg-uuid",),
@@ -214,7 +214,7 @@ async def test_presence_deliver_ready_passes_ready_message_to_app_adapter() -> (
     ready = ReadyOutputMessage(
         message_id="out-redeliver",
         batch_id="batch-redeliver",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="redelivered reply",
         sequence=1,
         message_ids=("client-msg-redelivery",),

@@ -17,7 +17,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.services.agentic_channel.scope_queue_serving import (
     ScopeDrainCompletion,
     ScopeQueueServing,
@@ -40,7 +40,7 @@ async def test_scope_serving_delivers_each_output_row_once() -> None:
     ready = ReadyOutputMessage(
         message_id=message_id,
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="single bubble",
         sequence=1,
         message_ids=("input-1",),
@@ -306,7 +306,7 @@ async def test_output_pump_delivers_via_deliver_message() -> None:
     ready = ReadyOutputMessage(
         message_id="out-1",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="pumped reply",
         sequence=1,
         message_ids=("input-1",),
@@ -347,7 +347,7 @@ async def test_output_pump_marks_delivery_failure_retryable() -> None:
     ready = ReadyOutputMessage(
         message_id="out-2",
         batch_id="batch-1",
-        kind=DownlinkKind.USER_REPLY,
+        kind=OutputMessageKind.USER_REPLY,
         text="will retry",
         sequence=1,
         message_ids=("input-1",),

@@ -297,9 +297,9 @@ async def _run_companion_turn_core(
         # Fallback for direct (non-InputQueue) user chat so the AgenticLoop
         # branch below always has a batch; the App-WS caller delivers from the
         # turn result while the presence pump skips these rows.
-        # TODO(#3543): user chat is user-initiated; replace the ``agent-initiated:``
-        # batch-id prefix with an explicit direct-turn marker once pump-owned
-        # delivery covers App-WS.
+        # TODO(#3460): replace the ``agent-initiated:``
+        # batch-id prefix with an explicit direct-turn marker once legacy
+        # non-InputQueue user-chat callers are retired.
         user_message_batch = synthetic_user_message_batch(
             user_msg_uuid=user_msg_uuid,
             track_label=track.value,

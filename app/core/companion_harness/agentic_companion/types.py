@@ -1,7 +1,4 @@
-"""Serving pipeline data types for Channel, Wire, queues, and AgenticCompanion.
-
-Generated entirely by Cursor agent.
-"""
+"""Serving pipeline data types for Channel, Wire, queues, and AgenticCompanion."""
 
 from __future__ import annotations
 
@@ -15,7 +12,31 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.services.agentic_companion.downlink import DownlinkKind
+
+AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX = "agent-initiated:"
+
+
+class OutputMessageKind(StrEnum):
+    """Semantic category of one durable OutputQueue row (not transport encoding)."""
+
+    USER_REPLY = "user_reply"
+    # Foreground user-chat reply, or implicit sign-on greeting when track is IMPLICIT_SIGN_ON_GREETING.
+
+    PROACTIVE = "proactive"
+    # Inner-tick proactive outreach with synthetic transcript user line.
+
+    MONOLOG = "monolog"
+    # Inner-tick monolog; text may be empty on tool-background-only turns.
+
+    SCHEDULED = "scheduled"
+    # Due schedule_queue reminder inner-tick.
+
+    TOOL_BACKGROUND = "tool_background"
+    # Async tool_background loop produced user-visible assistant text.
+
+    BOOTSTRAP_INTERIM = "bootstrap_interim"
+    # One bootstrap sync tool-loop LLM round before USER_CHAT_BOOTSTRAP ends.
+    # TODO(!3402): Add USER_VISIBLE_CHUNK; retire BOOTSTRAP_INTERIM.
 
 
 class QueueStatus(StrEnum):
@@ -118,7 +139,7 @@ class AgentOutputMessage(BaseModel):
     message_id: str = Field(min_length=1)
     scope: AgentScope
     batch_id: str = Field(min_length=1)
-    kind: DownlinkKind
+    kind: OutputMessageKind
     text: str
     created_at_utc: datetime
     message_ids: tuple[str, ...] = Field(default_factory=tuple)
@@ -161,7 +182,7 @@ class OutputQueueRecord(BaseModel):
     sequence: int = Field(ge=0)
     status: QueueStatus
     batch_id: str = Field(min_length=1)
-    kind: DownlinkKind
+    kind: OutputMessageKind
     text: str
     created_at_utc: datetime
     message_ids: tuple[str, ...] = Field(default_factory=tuple)

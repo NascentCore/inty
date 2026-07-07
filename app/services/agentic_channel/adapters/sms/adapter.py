@@ -6,21 +6,12 @@ Generated entirely by Cursor agent.
 from __future__ import annotations
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
-    ReadyOutputMessage,
-)
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.adapters.sms.downlink import (
     SmsChannelDownlink,
 )
-from app.services.agentic_channel.adapters.sms.inner_tick import (
-    sms_inner_tick_delivery,
-)
-from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
-    DownlinkKind,
-)
+from app.services.agentic_companion.downlink import ChannelDownlink
 
 
 class SmsChannelAdapter:
@@ -56,20 +47,3 @@ class SmsChannelAdapter:
 
     async def on_turn_down(self, scope: AgentScope) -> None:
         assert scope is not None
-
-    def inner_tick_delivery(self):
-        downlink = self.as_downlink()
-
-        async def send_assistant_text(text: str) -> None:
-            await downlink.deliver(
-                ReadyOutputMessage(
-                    message_id="inner-tick-direct",
-                    batch_id="inner-tick-direct",
-                    kind=DownlinkKind.PROACTIVE,
-                    text=text,
-                    sequence=0,
-                    message_ids=(),
-                )
-            )
-
-        return sms_inner_tick_delivery(send_assistant_text)

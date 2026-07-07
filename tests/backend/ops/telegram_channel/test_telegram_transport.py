@@ -38,7 +38,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueueAppendInput,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.services.agentic_companion.downlink import DownlinkKind
+from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.services.agentic_channel.presence import (
     clear_presences_for_tests,
     get_presence,
@@ -526,7 +526,7 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
         assert preset_uid is not None
         await output_queue.append_visible_message(
             OutputQueueAppendInput(
-                kind=DownlinkKind.USER_REPLY,
+                kind=OutputMessageKind.USER_REPLY,
                 batch_id=(
                     f"agent-initiated:implicit_sign_on_greeting:{preset_uid}"
                 ),
