@@ -367,6 +367,79 @@ def extract_github_issue_url_from_tool_turn_messages(
     return found
 
 
+def build_user_feedback_disclosure_display_text(
+    *,
+    issue_url: str,
+    llm_reply: str,
+) -> str:
+    """Build deterministic user-visible text that discloses a filed GitHub issue."""
+    url = issue_url.strip()
+    assert url != ""
+    reply = llm_reply.strip()
+    if url in reply:
+        return reply
+    if reply:
+        return f"{url}\n\n{reply}"
+    return url
+
+
+async def append_user_feedback_issue_disclosure_to_output_queue(
+    *,
+    user_id: str,
+    agent_id: str,
+    batch_id: str,
+    user_msg_uuid: str,
+    issue_url: str,
+    llm_reply: str,
+) -> bool:
+    """Persist correlated OutputQueue disclosure when feedback runs outside AgenticLoop.
+
+    Returns True when a visible disclosure row was appended (``app.debug`` only).
+    """
+    assert user_id != ""
+    assert agent_id != ""
+    assert batch_id != ""
+    assert user_msg_uuid != ""
+    assert issue_url.strip() != ""
+    if (
+        resolve_user_feedback_disclosure_mode()
+        != UserFeedbackDisclosureMode.VISIBLE
+    ):
+        return False
+    from app.core.companion_harness.agent_channel.scope import AgentScope
+    from app.core.companion_harness.agentic_companion.output_queue import (
+        OutputQueueAppendInput,
+        get_output_queue_for_scope,
+    )
+    from app.services.agentic_companion.downlink import DownlinkKind
+
+    display_text = build_user_feedback_disclosure_display_text(
+        issue_url=issue_url,
+        llm_reply=llm_reply,
+    )
+    scope = AgentScope(user_id=user_id, agent_id=agent_id)
+    await get_output_queue_for_scope(scope).append_visible_message(
+        OutputQueueAppendInput(
+            kind=DownlinkKind.TOOL_BACKGROUND,
+            batch_id=batch_id,
+            text=display_text,
+            message_ids=(user_msg_uuid,),
+            trace_id=None,
+            langsmith_trace_id=None,
+            langsmith_run_id=None,
+            turn_recall=None,
+        )
+    )
+    logger.info(
+        "companion_user_feedback disclosure_output_queue batch_id={} "
+        "user_msg_uuid={} url={}",
+        batch_id,
+        user_msg_uuid,
+        issue_url.strip(),
+    )
+    return True
+
+
 def resolve_user_visible_feedback_display_text(
     *,
     llm_reply: str,
@@ -383,13 +456,10 @@ def resolve_user_visible_feedback_display_text(
     )
     if not issue_url:
         return None
-    reply = llm_reply.strip()
-    if issue_url in reply:
-        display_text = reply
-    elif reply:
-        display_text = f"{issue_url}\n\n{reply}"
-    else:
-        display_text = issue_url
+    display_text = build_user_feedback_disclosure_display_text(
+        issue_url=issue_url,
+        llm_reply=llm_reply,
+    )
     return UserFeedbackVisibleDisplay(
         github_issue_url=issue_url,
         display_text=display_text,

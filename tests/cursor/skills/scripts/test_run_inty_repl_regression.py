@@ -504,53 +504,6 @@ def test_query_input_batch_id_for_client_message_id() -> None:
     assert "client_message_id = 'client-msg-1'" in captured[0]
 
 
-def test_append_github_issue_disclosure_output_persists_correlated_row() -> None:
-    mod = _load_regression_module()
-    repo_root = Path(__file__).parents[4]
-    mod._ensure_import_path(repo_root)
-    from unittest.mock import AsyncMock, patch
-
-    from app.services.agentic_companion.downlink import DownlinkKind
-
-    class _FakeRecord:
-        def __init__(self, message_id: str, text: str, sequence: int) -> None:
-            self.message_id = message_id
-            self.text = text
-            self.sequence = sequence
-
-    issue_url = "https://github.com/NascentCore/inty/issues/3652"
-
-    with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
-    ) as session_cls:
-        session = AsyncMock()
-        session.__aenter__.return_value = session
-        session.__aexit__.return_value = None
-        session_cls.return_value = session
-        repo = AsyncMock()
-        repo.append_agent_output = AsyncMock(
-            return_value=_FakeRecord("msg-disclosure", issue_url, 3)
-        )
-        with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
-            return_value=repo,
-        ):
-            mod._append_github_issue_disclosure_output(
-                repo_root,
-                user_id="user-testing",
-                agent_id="agent-1",
-                batch_id="batch-1",
-                user_msg_uuid="client-msg-1",
-                issue_url=issue_url,
-            )
-
-    persisted = repo.append_agent_output.await_args.args[0]
-    assert persisted.batch_id == "batch-1"
-    assert persisted.message_ids == ("client-msg-1",)
-    assert persisted.kind == DownlinkKind.TOOL_BACKGROUND
-    assert issue_url in persisted.text
-
-
 def _github_summary_fixture_kwargs(
     mod: object, *, github_result: object, app_debug: bool
 ) -> dict[str, object]:

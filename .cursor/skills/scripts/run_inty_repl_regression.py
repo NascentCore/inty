@@ -2810,46 +2810,9 @@ def _invoke_user_feedback_tool_fallback(
     return ok
 
 
-def _append_github_issue_disclosure_output(
-    repo_root: Path,
-    *,
-    user_id: str,
-    agent_id: str,
-    batch_id: str,
-    user_msg_uuid: str,
-    issue_url: str,
-) -> None:
-    """Persist a correlated OutputQueue disclosure row for fallback-created issues."""
-    assert user_id != ""
-    assert agent_id != ""
-    assert batch_id != ""
-    assert user_msg_uuid != ""
-    assert issue_url != ""
-    _ensure_import_path(repo_root)
-    import asyncio
-
-    from app.core.companion_harness.agent_channel.scope import AgentScope
-    from app.core.companion_harness.agentic_companion.output_queue import (
-        OutputQueueAppendInput,
-        get_output_queue_for_scope,
-    )
-    from app.services.agentic_companion.downlink import DownlinkKind
-
-    scope = AgentScope(user_id=user_id, agent_id=agent_id)
-    asyncio.run(
-        get_output_queue_for_scope(scope).append_visible_message(
-            OutputQueueAppendInput(
-                kind=DownlinkKind.TOOL_BACKGROUND,
-                batch_id=batch_id,
-                text=f"GitHub issue filed: {issue_url}",
-                message_ids=(user_msg_uuid,),
-                trace_id=None,
-                langsmith_trace_id=None,
-                langsmith_run_id=None,
-                turn_recall=None,
-            )
-        )
-    )
+# TODO(input-queue-lookup): #3745 — merge _query_input_status_for_client_message_id and
+# _query_input_batch_id_for_client_message_id into one psql round-trip when refactoring
+# github_issue E2E helpers.
 
 
 # TODO(github-issue-e2e-turn-loop): #3745 — this shares most of its turn-loop / WS
@@ -2866,7 +2829,6 @@ def _run_github_issue_e2e_phase(
     turn_text: str,
     stderr: TextIO,
     skip_db_checks: bool,
-    app_debug: bool,
 ) -> GithubIssueE2eResult:
     user_msg_uuid = ""
     issue_url = ""
@@ -3016,7 +2978,7 @@ def _run_github_issue_e2e_phase(
                         issue_row,
                         expected_user_msg_uuid=user_msg_uuid,
                     )
-                    if tool_fallback and app_debug:
+                    if tool_fallback:
                         batch_id = _query_input_batch_id_for_client_message_id(
                             repo_root,
                             config_path,
@@ -3030,13 +2992,27 @@ def _run_github_issue_e2e_phase(
                             )
                             print(f"{_TAG} ERROR {error}", file=stderr, flush=True)
                         else:
-                            _append_github_issue_disclosure_output(
-                                repo_root,
-                                user_id=user_id,
-                                agent_id=agent_id,
-                                batch_id=batch_id,
-                                user_msg_uuid=user_msg_uuid,
-                                issue_url=issue_url,
+                            _ensure_import_path(repo_root)
+                            import asyncio
+
+                            from app.core.companion_harness.tools.companion_user_feedback import (
+                                append_user_feedback_issue_disclosure_to_output_queue,
+                            )
+
+                            disclosed = asyncio.run(
+                                append_user_feedback_issue_disclosure_to_output_queue(
+                                    user_id=user_id,
+                                    agent_id=agent_id,
+                                    batch_id=batch_id,
+                                    user_msg_uuid=user_msg_uuid,
+                                    issue_url=issue_url,
+                                    llm_reply=assistant_reply,
+                                )
+                            )
+                            print(
+                                f"{_TAG} github_issue fallback disclosure "
+                                f"appended={disclosed} user_msg_uuid={user_msg_uuid}",
+                                flush=True,
                             )
                     post_deliver_trailing = _drain_turn_trailing_frames(
                         bridge,
@@ -4008,7 +3984,6 @@ def run_regression(
                             turn_text=_DEFAULT_GITHUB_ISSUE_TURN,
                             stderr=stderr,
                             skip_db_checks=skip_db_checks,
-                            app_debug=app_debug,
                         )
                     report["github_issue"] = _github_issue_e2e_result_to_report(
                         github_result
