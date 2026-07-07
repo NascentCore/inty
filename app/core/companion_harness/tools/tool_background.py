@@ -17,7 +17,6 @@ TODO(!3631): Use AsyncLlmClient instead of asyncio.to_thread(chat_completion_syn
 from __future__ import annotations
 
 import asyncio
-import queue
 import re
 import threading
 import time
@@ -87,8 +86,6 @@ from .companion_tool_runtime import (
 from .image_gate import list_image_asset_records
 from .tool_bg_routing import resolve_tool_background_finish_envelope
 
-_OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
-_OUTPUT_QUEUE_LOCK = threading.Lock()
 _ABORT_TOOL_BG_LOCK = threading.Lock()
 _ABORTED_TOOL_BG_USER_MSG_UUIDS: set[str] = set()
 _BG_TOOL_MAX_ROUNDS = 24
@@ -308,18 +305,6 @@ class ToolOutputEvent:
     turn_recall: str | None = None
     # InnerTickActivity.value when this background round is an inner-tick turn; else None.
     inner_tick_activity: str | None = None
-
-
-def output_queue() -> queue.Queue[ToolOutputEvent]:
-    global _OUTPUT_QUEUE
-    with _OUTPUT_QUEUE_LOCK:
-        if _OUTPUT_QUEUE is None:
-            _OUTPUT_QUEUE = queue.Queue()
-        return _OUTPUT_QUEUE
-
-
-def push_output_event(event: ToolOutputEvent) -> None:
-    output_queue().put(event)
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
