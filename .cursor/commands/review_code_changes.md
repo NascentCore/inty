@@ -46,6 +46,10 @@ that means the code lacks hierarchy.
 - Use `dataclass` for internal data structure (not facing users or external services)
 - Use `Pydantic` models for interfacing with externals (users & external services like 3rd party http, cloud service etc.)
 
+## Function arguments
+
+- Identify redundant argument in function arguments
+
 ## References
 
 - Consider [style rules](/.agents/guidelines/python_styles.md)
