@@ -10,20 +10,11 @@ from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    is_im_runtime_channel,
-)
-from app.db.session import AsyncSessionLocal
-from app.schemas.biz_action import ActionType, BizAction
-from app.schemas.chat import ChatCompletionRequest
 from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
 )
 from app.services import chat_history_service
-from app.services.agent_status_line import (
-    agent_status_line_for_chat_header as _agent_status_line_for_chat_header,
-)
 from app.services.agentic_companion.inner_tick_delivery import (
     InnerTickDelivery,
     deliver_inner_tick_assistant,
@@ -31,12 +22,6 @@ from app.services.agentic_companion.inner_tick_delivery import (
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_turn_result,
 )
-from app.services.chat_completion_wire import (
-    _normalize_chat_response_content,
-    build_chat_ws_queued_success_frame,
-    build_companion_ws_completion_data,
-)
-from app.services.ws_session_messages import WsOutboundPayload
 
 
 @dataclass(frozen=True)
@@ -45,13 +30,10 @@ class InnerTickVisibleDeliverInput:
 
     delivery: InnerTickDelivery | None
     session_id: str
-    agent_id: str
     chat_row_agent_id: str
-    ws_conn_id: str
     preset_uid: str
     transcript_user_text: str
     companion_turn: CompanionTurnResult
-    stub_request: ChatCompletionRequest
     user_wire_meta: ChatWsCompanionWireMessageMetaData
     companion_scheduled_reminder: bool | None
     scheduled_task_id: str | None
@@ -88,7 +70,7 @@ async def deliver_visible_inner_tick_turn(
         companion_scheduled_reminder=deliver_input.companion_scheduled_reminder,
         scheduled_task_id=deliver_input.scheduled_task_id,
     )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
+    await chat_history_service.add_ai_message_sync_async(
         deliver_input.session_id,
         companion_reply,
         agent_id=deliver_input.chat_row_agent_id,
@@ -104,10 +86,7 @@ async def deliver_visible_inner_tick_turn(
     # message. Keep chat_history persistence above, skip the channel push.
     # TODO(#3543): converge App-WS onto the same pump-owned delivery, then
     # dissolve this direct-send path entirely.
-    if (
-        deliver_input.companion_turn.output_message_ids
-        and is_im_runtime_channel(deliver_input.delivery.runtime_channel)
-    ):
+    if deliver_input.companion_turn.output_message_ids:
         logger.info(
             "{} channel send delegated to scope output pump "
             "(output_message_ids={})",
@@ -116,74 +95,15 @@ async def deliver_visible_inner_tick_turn(
         )
         return True
 
-    async with AsyncSessionLocal() as post_db:
-        (
-            response_text_content,
-            response_content_parts,
-        ) = _normalize_chat_response_content(companion_reply)
+    has_im_sink = (
+        deliver_input.delivery.weixin_assistant_text is not None
+        or deliver_input.delivery.telegram_assistant_text is not None
+    )
+    if not has_im_sink:
+        return True
 
-        latest_message_info = None
-        try:
-            if ai_message_id is not None:
-                latest_message_info = (
-                    await chat_history_service.get_ai_message_info_by_id(
-                        post_db, ai_message_id
-                    )
-                )
-            if latest_message_info is None:
-                latest_message_info = (
-                    await chat_history_service.get_latest_ai_message_info(
-                        post_db, deliver_input.session_id
-                    )
-                )
-        except Exception as exc:
-            logger.warning(
-                "{} latest_message_info failed ws_conn_id={}: {}",
-                deliver_input.log_label,
-                deliver_input.ws_conn_id,
-                exc,
-            )
-
-        user_message_id = None
-        try:
-            user_message_id = (
-                await chat_history_service.get_latest_user_message_id(
-                    post_db, deliver_input.session_id
-                )
-            )
-        except Exception as exc:
-            logger.warning(
-                "{} get_latest_user_message_id failed ws_conn_id={}: {}",
-                deliver_input.log_label,
-                deliver_input.ws_conn_id,
-                exc,
-            )
-
-        subscription_actions = [
-            BizAction(action_type=ActionType.NONE, message=""),
-        ]
-        completion = build_companion_ws_completion_data(
-            response_text_content=response_text_content,
-            response_content_parts=response_content_parts,
-            last_user_text=deliver_input.transcript_user_text,
-            latest_message_info=latest_message_info,
-            audio_url=None,
-            request=deliver_input.stub_request,
-            source_imate_id=None,
-            user_message_id=user_message_id,
-            subscription_actions=subscription_actions,
-            client_local_id=None,
-        )
-        ws_payload: WsOutboundPayload = build_chat_ws_queued_success_frame(
-            completion=completion,
-            agent_id=deliver_input.agent_id,
-            status_line=await _agent_status_line_for_chat_header(
-                post_db, deliver_input.agent_id
-            ),
-        )
-        await deliver_inner_tick_assistant(
-            deliver_input.delivery,
-            ws_payload=ws_payload,
-            assistant_text=response_text_content,
-        )
+    await deliver_inner_tick_assistant(
+        deliver_input.delivery,
+        assistant_text=str(companion_reply),
+    )
     return True

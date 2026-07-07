@@ -8,10 +8,24 @@ from urllib.error import HTTPError
 
 import pytest
 
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
-from app.services.agentic_companion.downlink import Downlink, DownlinkKind
+from app.services.agentic_companion.downlink import DownlinkKind
+
+
+def _ready_message(*, kind: DownlinkKind, text: str) -> ReadyOutputMessage:
+    return ReadyOutputMessage(
+        message_id="msg-1",
+        batch_id="batch-1",
+        kind=kind,
+        text=text,
+        sequence=1,
+        message_ids=() if kind != DownlinkKind.USER_REPLY else ("in-1",),
+    )
 
 
 class _FakeResponse:
@@ -48,17 +62,7 @@ async def test_telegram_adapter_skips_empty_proactive() -> None:
     api = TelegramBotApi(bot_token="test-token", urlopen=_capture_urlopen)
     adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
     downlink = adapter.as_downlink()
-    await downlink.deliver(
-        Downlink(
-            kind=DownlinkKind.PROACTIVE,
-            assistant_text="",
-            turn=None,
-            tool_output=None,
-            bootstrap_interim=None,
-            scheduled_task_id=None,
-            transcript_user_text=None,
-        )
-    )
+    await downlink.deliver(_ready_message(kind=DownlinkKind.PROACTIVE, text=""))
     assert sent == []
 
 
@@ -76,15 +80,7 @@ async def test_telegram_adapter_deliver_proactive() -> None:
     adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
     downlink = adapter.as_downlink()
     await downlink.deliver(
-        Downlink(
-            kind=DownlinkKind.PROACTIVE,
-            assistant_text="hello",
-            turn=None,
-            tool_output=None,
-            bootstrap_interim=None,
-            scheduled_task_id=None,
-            transcript_user_text=None,
-        )
+        _ready_message(kind=DownlinkKind.PROACTIVE, text="hello")
     )
     assert "5078060274" in sent[0]
     assert "hello" in sent[0]
@@ -106,17 +102,10 @@ async def test_telegram_adapter_strips_leading_transcript_timestamp_prefixes() -
     adapter = TelegramChannelAdapter(api=api, channel_address="5078060274")
     downlink = adapter.as_downlink()
     await downlink.deliver(
-        Downlink(
+        _ready_message(
             kind=DownlinkKind.USER_REPLY,
-            assistant_text=(
-                "[2026-05-30 13:09:06 UTC] [2026-05-30 13:10:00 UTC] hello"
-            ),
-            turn=None,
-            tool_output=None,
-            bootstrap_interim=None,
-            scheduled_task_id=None,
-            transcript_user_text=None,
+            text="[2026-05-30 13:09:06 UTC] [2026-05-30 13:10:00 UTC] hello",
         )
     )
     assert "hello" in sent[0]
-    assert "%5B2026-05-30" not in sent[0]
+    assert "[2026-05-30" not in sent[0]

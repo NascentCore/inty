@@ -11,16 +11,14 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.services.agentic_companion import inner_tick_poll
 from app.services.agentic_companion import scope_inner_tick_poll
-from app.services.agentic_companion.inner_tick_delivery import InnerTickDelivery
+from app.services.agentic_companion.inner_tick_delivery import (
+    InnerTickDelivery,
+    inner_tick_delivery_for_pump_owned,
+)
 
 
 def _poll_delivery() -> InnerTickDelivery:
-    return InnerTickDelivery(
-        ws_outbound_queue=asyncio.Queue(),
-        weixin_assistant_text=None,
-        telegram_assistant_text=None,
-        runtime_channel=ChannelKind.APP_WS,
-    )
+    return inner_tick_delivery_for_pump_owned(ChannelKind.APP_WS)
 
 
 @pytest.mark.asyncio
@@ -183,7 +181,9 @@ async def test_run_scope_inner_tick_poll_order_scheduled_monolog_autonomy_dreami
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_scheduled_first_when_no_presence() -> None:
+async def test_run_scope_inner_tick_poll_scheduled_first_when_no_presence() -> (
+    None
+):
     scope = CompanionScope("u", "a", "c")
     with (
         patch.object(
@@ -224,7 +224,9 @@ async def test_run_scope_inner_tick_poll_scheduled_first_when_no_presence() -> N
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_skips_scheduled_when_presence_live() -> None:
+async def test_run_scope_inner_tick_poll_skips_scheduled_when_presence_live() -> (
+    None
+):
     scope = CompanionScope("u", "a", "c")
     with (
         patch.object(
@@ -256,7 +258,9 @@ async def test_run_scope_inner_tick_poll_skips_scheduled_when_presence_live() ->
             return_value=False,
         ),
     ):
-        await scope_inner_tick_poll.run_scope_inner_tick_poll_for_scope(scope=scope)
+        await scope_inner_tick_poll.run_scope_inner_tick_poll_for_scope(
+            scope=scope
+        )
     scheduled.assert_not_awaited()
     maintenance.assert_awaited_once()
 

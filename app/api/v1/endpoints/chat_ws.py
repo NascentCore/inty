@@ -104,7 +104,7 @@ from app.services.agentic_companion.presence_registry import (
     companion_presence_registry,
 )
 from app.services.agentic_companion.ws_outbound_materialize import (
-    materialize_implicit_greeting_ws_payload,
+    persist_implicit_greeting_ai_chat_history,
 )
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
@@ -1234,17 +1234,31 @@ async def _agent_chat_ws_completions_impl(
                                 detail="Chat returned no content",
                             )
                         assert ws_outbound_queue is not None
-                        payload = await materialize_implicit_greeting_ws_payload(
-                            db=db,
-                            scope=greeting_scope,
+                        await persist_implicit_greeting_ai_chat_history(
                             session_id=session_id,
+                            agent_id=agent_id,
                             text=greeting_text,
                             companion_turn=companion_turn,
-                            request=request,
-                            effective_local_id=effective_local_id,
-                            foreground_user_message_id=companion_user_row_id,
                         )
-                        await ws_outbound_queue.put(payload)
+                        _greeting_wait_deadline = (
+                            asyncio.get_running_loop().time() + 5.0
+                        )
+                        while (
+                            ws_outbound_queue.empty()
+                            and asyncio.get_running_loop().time()
+                            < _greeting_wait_deadline
+                        ):
+                            await asyncio.sleep(0.02)
+                        if ws_outbound_queue.empty():
+                            logger.error(
+                                "greeting pump delivery timed out agent_id={} user_id={}",
+                                agent_id,
+                                current_user.id,
+                            )
+                            raise HTTPException(
+                                status_code=500,
+                                detail="greeting delivery failed",
+                            )
                         if companion_ws_inner_tick_ctx is not None:
                             apply_companion_ws_inner_tick_coords(
                                 companion_ws_inner_tick_ctx,

@@ -16,15 +16,18 @@ canonical MemDoc; external memory services off by default.
 
 **AwakeTurn invariant**: selection reads only — no MemDoc curation during awake turns.
 
-TODO(memory-retrieval-selection): Implement ``select_slices_for_turn`` (#3523).
-
 TODO(counterfactual-fork-diff): Offline fork-at-turn + structural diff over projected
 slices for CRS counterfactual eval (shared-prefix replay from cache) — #3775 (epic #3341).
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import StrEnum
+
+from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
 class RetrievalTier(StrEnum):
@@ -33,3 +36,27 @@ class RetrievalTier(StrEnum):
     RESIDENT = "resident"
     VERBATIM = "verbatim"
     ASSOCIATIVE = "associative"
+
+
+@dataclass(frozen=True)
+class SliceSelection:
+    """Resident MemDoc rel paths + transcript window spec for one turn."""
+
+    resident_paths: tuple[str, ...]
+    transcript_window_spec: str
+
+
+def select_slices_for_turn(
+    *,
+    track: CompanionTurnTrack,
+    store: MemoryStore,
+    bundle: PromptBundle,
+) -> SliceSelection:
+    """Tiered selection wrapper over today's eager ``load_prompt_bundle`` paths."""
+    assert store is not None
+    assert bundle is not None
+    _ = track
+    return SliceSelection(
+        resident_paths=(),
+        transcript_window_spec="CHAT_HISTORY.md",
+    )

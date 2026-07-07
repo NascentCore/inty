@@ -1038,6 +1038,7 @@ def _patch_companion_ws_queue_turn(
     )
     from app.services.agentic_companion.downlink import DownlinkKind
     from app.services.agentic_companion.ws_outbound_materialize import (
+        materialize_agent_initiated_ws_payload,
         materialize_queue_user_reply_from_durable,
     )
 
@@ -1189,21 +1190,57 @@ def _patch_companion_ws_queue_turn(
                     await adapter._outbound_queue.put(payload)
         return queue_message_id
 
+    async def fake_greeting_turn(**kwargs):
+        # Greeting is agent-initiated: production delivers it via the scope
+        # OutputQueue pump into the per-connection WS queue. Simulate that by
+        # materializing an agent-initiated payload onto the adapter's queue so
+        # chat_ws greeting-wait sees a non-empty outbound queue.
+        turn_result = await run_companion_chat_turn_for_api(**kwargs)
+        if isinstance(turn_result, CompanionTurnResult):
+            text = turn_result.assistant_text.strip()
+            if text:
+                scope = AgentScope(
+                    user_id=str(kwargs["user_id"]),
+                    agent_id=str(kwargs["agent_id"]),
+                )
+                registry = get_scope_channel_registry(scope)
+                adapter = registry.adapters.get(ChannelKind.APP_WS)
+                if adapter is not None:
+                    ready = ReadyOutputMessage(
+                        message_id="out-greet",
+                        batch_id="agent-initiated:greet",
+                        kind=DownlinkKind.USER_REPLY,
+                        text=text,
+                        sequence=1,
+                        message_ids=(),
+                        tool_background_started=(
+                            turn_result.tool_background_started
+                        ),
+                    )
+                    payload = await materialize_agent_initiated_ws_payload(
+                        db=AsyncMock(),
+                        scope=scope,
+                        message=ready,
+                    )
+                    await adapter._outbound_queue.put(payload)
+        return turn_result
+
     async def fake_resolve_chat_model_for_scope(_scope):
         return SimpleNamespace(id_on_provider="test/chat-model")
 
     async def fake_agent_status_line_for_materialize(db, agent_id):
         return None
 
-    for attr in (
-        "run_companion_implicit_sign_on_greeting_turn_for_api",
+    monkeypatch.setattr(
+        companion_chat_service,
         "run_companion_chat_turn_for_api",
-    ):
-        monkeypatch.setattr(
-            companion_chat_service,
-            attr,
-            run_companion_chat_turn_for_api,
-        )
+        run_companion_chat_turn_for_api,
+    )
+    monkeypatch.setattr(
+        companion_chat_service,
+        "run_companion_implicit_sign_on_greeting_turn_for_api",
+        fake_greeting_turn,
+    )
 
     monkeypatch.setattr(
         "app.services.agentic_companion.ws_outbound_materialize.agent_status_line_for_chat_header",

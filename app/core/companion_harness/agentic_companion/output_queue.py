@@ -77,8 +77,15 @@ class ReadyOutputMessage:
     generated_images: tuple[GeneratedImageRef, ...] = ()
 
 
+_SYNTHETIC_AGENT_BATCH_PREFIX = "agent-initiated:"
+
 _AGENT_INITIATED_VISIBLE_KINDS = frozenset(
-    {DownlinkKind.USER_REPLY, DownlinkKind.PROACTIVE}
+    {
+        DownlinkKind.USER_REPLY,
+        DownlinkKind.PROACTIVE,
+        DownlinkKind.SCHEDULED,
+        DownlinkKind.MONOLOG,
+    }
 )
 
 
@@ -88,9 +95,31 @@ def ready_output_is_agent_initiated_visible(
     """True for agent-initiated foreground lines (empty inbound correlation)."""
     assert message is not None
     return (
-        message.batch_id.startswith("agent-initiated:")
+        not message.message_ids
         and message.kind in _AGENT_INITIATED_VISIBLE_KINDS
     )
+
+
+def ready_output_delivers_user_visible_text(
+    message: ReadyOutputMessage,
+) -> bool:
+    """Whether adapters should push assistant text to the human on this channel.
+
+    ``BOOTSTRAP_INTERIM`` rows are never pushed as standalone user-visible text;
+    all other kinds deliver when their text is non-blank (monolog may be blank
+    on tool-background-only turns).
+    """
+    match message.kind:
+        case (
+            DownlinkKind.USER_REPLY
+            | DownlinkKind.PROACTIVE
+            | DownlinkKind.SCHEDULED
+            | DownlinkKind.MONOLOG
+            | DownlinkKind.TOOL_BACKGROUND
+        ):
+            return bool(message.text.strip())
+        case _:
+            return False
 
 
 @dataclass(frozen=True)
@@ -160,7 +189,7 @@ class OutputQueue:
         async with self._memory_lock:
             batch_id = append_input.batch_id
             if batch_id == "":
-                batch_id = f"agent-initiated:{uuid.uuid4()}"
+                batch_id = f"{_SYNTHETIC_AGENT_BATCH_PREFIX}{uuid.uuid4()}"
             message_id = str(uuid.uuid4())
             output = AgentOutputMessage(
                 message_id=message_id,

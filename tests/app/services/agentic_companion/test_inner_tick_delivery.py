@@ -1,16 +1,16 @@
-"""InnerTickDelivery: WebSocket queue vs Weixin plain text."""
+"""InnerTickDelivery: IM plain-text sinks and pump-owned App-WS."""
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.services.agentic_companion.inner_tick_delivery import (
+    InnerTickDelivery,
     deliver_inner_tick_assistant,
+    inner_tick_delivery_for_pump_owned,
     inner_tick_delivery_for_telegram,
     inner_tick_delivery_for_weixin,
-    inner_tick_delivery_for_ws,
 )
 
 
@@ -24,34 +24,18 @@ async def test_deliver_inner_tick_assistant_weixin_skips_blank() -> None:
     delivery = inner_tick_delivery_for_weixin(sink)
     await deliver_inner_tick_assistant(
         delivery,
-        ws_payload=None,
         assistant_text="",
     )
     assert sent == []
 
 
 @pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_ws_skips_blank() -> None:
-    queue: asyncio.Queue = asyncio.Queue()
-    delivery = inner_tick_delivery_for_ws(queue)
+async def test_deliver_inner_tick_assistant_pump_owned_is_noop() -> None:
+    delivery = inner_tick_delivery_for_pump_owned(ChannelKind.APP_WS)
     await deliver_inner_tick_assistant(
         delivery,
-        ws_payload={"text": ""},
-        assistant_text="",
-    )
-    assert queue.empty()
-
-
-@pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_ws_puts_payload() -> None:
-    queue: asyncio.Queue = asyncio.Queue()
-    delivery = inner_tick_delivery_for_ws(queue)
-    await deliver_inner_tick_assistant(
-        delivery,
-        ws_payload={"text": "hello"},
         assistant_text="hello",
     )
-    assert queue.get_nowait() == {"text": "hello"}
 
 
 @pytest.mark.asyncio
@@ -64,42 +48,9 @@ async def test_deliver_inner_tick_assistant_weixin_calls_sink() -> None:
     delivery = inner_tick_delivery_for_weixin(sink)
     await deliver_inner_tick_assistant(
         delivery,
-        ws_payload=None,
         assistant_text="  proactive hello  ",
     )
     assert sent == ["proactive hello"]
-
-
-@pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_weixin_skips_blank() -> None:
-    sent: list[str] = []
-
-    async def sink(text: str) -> None:
-        sent.append(text)
-
-    delivery = inner_tick_delivery_for_weixin(sink)
-    await deliver_inner_tick_assistant(
-        delivery,
-        ws_payload=None,
-        assistant_text="   ",
-    )
-    assert sent == []
-
-
-@pytest.mark.asyncio
-async def test_deliver_inner_tick_assistant_telegram_skips_blank() -> None:
-    sent: list[str] = []
-
-    async def sink(text: str) -> None:
-        sent.append(text)
-
-    delivery = inner_tick_delivery_for_telegram(sink)
-    await deliver_inner_tick_assistant(
-        delivery,
-        ws_payload=None,
-        assistant_text="",
-    )
-    assert sent == []
 
 
 @pytest.mark.asyncio
@@ -112,29 +63,21 @@ async def test_deliver_inner_tick_assistant_telegram_calls_sink() -> None:
     delivery = inner_tick_delivery_for_telegram(sink)
     await deliver_inner_tick_assistant(
         delivery,
-        ws_payload=None,
         assistant_text="  telegram proactive  ",
     )
     assert sent == ["telegram proactive"]
 
 
-def test_inner_tick_delivery_rejects_multiple_media() -> None:
-    import pytest
-
-    from app.core.companion_harness.companion.runtime_channel import (
-        ChannelKind,
-    )
-    from app.services.agentic_companion.inner_tick_delivery import (
-        InnerTickDelivery,
-    )
-
+def test_inner_tick_delivery_rejects_multiple_im_sinks() -> None:
     async def _telegram_sink(_: str) -> None:
+        return None
+
+    async def _weixin_sink(_: str) -> None:
         return None
 
     with pytest.raises(AssertionError):
         InnerTickDelivery(
-            ws_outbound_queue=asyncio.Queue(),
-            weixin_assistant_text=None,
+            weixin_assistant_text=_weixin_sink,
             telegram_assistant_text=_telegram_sink,
             runtime_channel=ChannelKind.TELEGRAM,
         )

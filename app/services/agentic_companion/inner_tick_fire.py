@@ -51,12 +51,10 @@ from app.core.companion_harness.runtime.inner_tick_fire import (
     proactive_chat_remain_seconds,
 )
 from app.core.config import global_config_loaded_from_config_yaml
-from app.schemas.chat import ChatCompletionRequest, ChatMessage
 from app.schemas.chat_websocket import (
     build_inner_tick_wire_meta,
     dump_chat_ws_companion_wire_meta,
 )
-from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import chat_history_service, companion_chat_service
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.inner_tick_deliver import (
@@ -89,20 +87,6 @@ def _throttle_snapshot(
         last_monolog_line_count=coordinator.last_monolog_transcript_line_count(),
         last_autonomy_monotonic=coordinator.last_autonomy_inner_tick_monotonic(),
         last_autonomy_line_count=coordinator.last_autonomy_transcript_line_count(),
-    )
-
-
-def _stub_request(
-    *,
-    user_text: str,
-    preset_uid: str,
-    implicit: ImplicitSignalBundle | None,
-) -> ChatCompletionRequest:
-    stub_utc = implicit.client_time if implicit else None
-    return ChatCompletionRequest(
-        messages=[ChatMessage(role="user", content=user_text)],
-        message_id=preset_uid,
-        user_time_context=stub_utc,
     )
 
 
@@ -154,15 +138,6 @@ async def try_fire_scheduled_inner_tick(
         if due_task is None:
             return False
 
-        if coordinator.inner_tick_monolog_foreground_pending():
-            logger.debug(
-                "companion_ws_scheduled_reminder skipped prev_monolog_pending "
-                "ws_conn_id={} user={} agent={}",
-                ws_conn_id,
-                coords.user_id,
-                coords.agent_id,
-            )
-            return False
         coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
         if coordinator.inner_tick_proactive_tool_bg_still_running():
             logger.debug(
@@ -199,22 +174,14 @@ async def try_fire_scheduled_inner_tick(
         else:
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
-        ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
         delivered = await deliver_visible_inner_tick_turn(
             InnerTickVisibleDeliverInput(
                 delivery=fire_input.delivery,
                 session_id=session_id,
-                agent_id=coords.agent_id,
                 chat_row_agent_id=coords.chat_row_agent_id,
-                ws_conn_id=ws_conn_id,
                 preset_uid=preset_uid,
                 transcript_user_text=kernel_result.transcript_user_text,
                 companion_turn=companion_turn,
-                stub_request=_stub_request(
-                    user_text=kernel_result.transcript_user_text,
-                    preset_uid=preset_uid,
-                    implicit=ws_implicit,
-                ),
                 user_wire_meta=build_inner_tick_wire_meta(
                     InnerTickKind.SCHEDULED,
                     scheduled_task_id=due_task.id,
@@ -299,22 +266,14 @@ async def try_fire_proactive_chat_inner_tick(
         else:
             coordinator.bind_inner_tick_proactive_tool_bg_idle(None)
 
-        ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
         delivered = await deliver_visible_inner_tick_turn(
             InnerTickVisibleDeliverInput(
                 delivery=fire_input.delivery,
                 session_id=session_id,
-                agent_id=coords.agent_id,
                 chat_row_agent_id=coords.chat_row_agent_id,
-                ws_conn_id=ws_conn_id,
                 preset_uid=preset_uid,
                 transcript_user_text=kernel_result.transcript_user_text,
                 companion_turn=companion_turn,
-                stub_request=_stub_request(
-                    user_text=kernel_result.transcript_user_text,
-                    preset_uid=preset_uid,
-                    implicit=ws_implicit,
-                ),
                 user_wire_meta=build_inner_tick_wire_meta(
                     InnerTickKind.PROACTIVE_CHAT,
                 ),
@@ -488,79 +447,32 @@ async def try_fire_monolog_inner_tick(
     coordinator = fire_input.coordinator
     ws_conn_id = fire_input.ws_conn_id
     session_id = generate_session_id(str(coords.chat_row_id))
-    ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
-    stub_request = _stub_request(
-        user_text=MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
-        preset_uid=preset_uid,
-        implicit=ws_implicit,
-    )
 
     async with inner_tick_turn_scope(session=scope_session):
-        if coordinator.inner_tick_monolog_foreground_pending():
-            logger.debug(
-                "companion_ws_monolog_inner_tick skipped prev_inner_tick_pending "
-                "ws_conn_id={} user={} agent={}",
-                ws_conn_id,
-                coords.user_id,
-                coords.agent_id,
-            )
-            return False
-
-        coordinator.set_foreground_pending(
-            preset_uid,
-            {
-                "session_id": session_id,
-                "agent_id": coords.agent_id,
-                "user_id": coords.user_id,
-                "chat_id": coords.chat_row_id,
-                "request": stub_request,
-                "effective_local_id": None,
-                "ws_inner_tick_monolog": True,
-            },
+        kernel_result = await kernel_fire_throttled(
+            InnerTickKind.MONOLOG,
+            kernel_input,
         )
-        try:
-            kernel_result = await kernel_fire_throttled(
-                InnerTickKind.MONOLOG,
-                kernel_input,
-            )
-        except Exception as exc:
-            if not getattr(exc, "companion_tool_background_started", False):
-                coordinator.remove_foreground_pending(preset_uid)
-            raise
 
         companion_turn = kernel_result.turn
         reply_stripped = str(companion_turn.assistant_text or "").strip()
-        if not companion_turn.tool_background_started:
-            coordinator.remove_foreground_pending(preset_uid)
 
         user_meta = build_inner_tick_wire_meta(InnerTickKind.MONOLOG)
-        user_row_id = await chat_history_service.add_user_message_async(
+        await chat_history_service.add_user_message_async(
             session_id,
             MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
             meta_data=dump_chat_ws_companion_wire_meta(user_meta),
         )
-
-        if (
-            companion_turn.tool_background_started
-            and coordinator.has_foreground_pending(preset_uid)
-        ):
-            coordinator.update_foreground_pending(
-                preset_uid,
-                {"foreground_user_message_id": user_row_id},
-            )
 
         if reply_stripped:
             await deliver_visible_inner_tick_turn(
                 InnerTickVisibleDeliverInput(
                     delivery=fire_input.delivery,
                     session_id=session_id,
-                    agent_id=coords.agent_id,
                     chat_row_agent_id=coords.chat_row_agent_id,
-                    ws_conn_id=ws_conn_id,
                     preset_uid=preset_uid,
                     transcript_user_text=kernel_result.transcript_user_text,
                     companion_turn=companion_turn,
-                    stub_request=stub_request,
                     user_wire_meta=user_meta,
                     companion_scheduled_reminder=None,
                     scheduled_task_id=None,

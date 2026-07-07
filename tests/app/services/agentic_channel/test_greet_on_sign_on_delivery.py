@@ -12,7 +12,6 @@ import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.output_queue import (
-    OutputDeliveryUnroutableError,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
@@ -172,15 +171,70 @@ async def test_agent_initiated_proactive_kind_delivers_via_im_channel() -> None:
 
 
 @pytest.mark.asyncio
-async def test_agent_initiated_greeting_unroutable_on_app_ws() -> None:
+async def test_agent_initiated_greeting_delivers_via_app_ws_pump() -> None:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+
     scope = AgentScope(user_id="user-greet-ws", agent_id="agent-greet-ws")
     presence = AgentChannelPresence(scope)
     outbound = asyncio.Queue()
     _wire_app_ws_active_channel(scope, outbound=outbound)
     message = _agent_initiated_greeting_message(kind=DownlinkKind.USER_REPLY)
 
-    with pytest.raises(OutputDeliveryUnroutableError):
+    class _SessionContext:
+        async def __aenter__(self):
+            return AsyncMock()
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+    with (
+        patch(
+            "app.services.agentic_channel.adapters.app_ws.AsyncSessionLocal",
+            return_value=_SessionContext(),
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize."
+            "resolve_chat_model_for_scope",
+            new=AsyncMock(
+                return_value=SimpleNamespace(id_on_provider="test-model")
+            ),
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize."
+            "chat_history_service.get_latest_ai_message_info",
+            new=AsyncMock(return_value={"meta_data": {"source": "greeting"}}),
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize."
+            "chat_history_service.get_latest_user_message_id",
+            new=AsyncMock(return_value=1),
+        ),
+        patch(
+            "app.services.agentic_companion.ws_outbound_materialize."
+            "agent_status_line_for_chat_header",
+            new=AsyncMock(return_value="status"),
+        ),
+    ):
         await presence._deliver_ready_via_active_channel(message)
+
+    payload = await outbound.get()
+    assert "Hello" in _choices_text_from_outbound(payload)
+    assert "Inty" in _choices_text_from_outbound(payload)
+
+
+def _choices_text_from_outbound(payload) -> str:
+    if hasattr(payload, "model_dump"):
+        payload = payload.model_dump()
+    data = payload.get("data")
+    assert isinstance(data, dict)
+    choices = data.get("choices")
+    assert isinstance(choices, list) and choices
+    message = choices[0].get("message")
+    assert isinstance(message, dict)
+    content = message.get("content")
+    assert isinstance(content, str)
+    return content
 
 
 @pytest.mark.asyncio
