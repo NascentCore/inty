@@ -7,6 +7,9 @@ from loguru import logger
 
 API_ONLY_ENV_NAME = "INTY_API_ONLY"
 _API_ONLY_TRUTHY_VALUES = {"1", "true", "yes", "on"}
+# Disk subdir under app/static; public URLs still use /evaluation/ (see vite base).
+# TODO(3499): rename public URL prefix to /ops_web_ui/ with legacy redirect when nginx is updated.
+OPS_WEB_UI_STATIC_SUBDIR = "ops_web_ui"
 
 
 def is_api_only_mode_enabled() -> bool:
@@ -21,7 +24,7 @@ def configure_evaluation_web_routes(
     static_root_dir: str,
     api_only_mode_enabled: bool,
 ) -> None:
-    """按开关配置 evaluation 前端路由与静态资源服务。"""
+    """按开关配置 Ops Web UI 静态资源服务（对外 URL 前缀仍为 /evaluation/）。"""
     if api_only_mode_enabled:
         logger.info("API only mode enabled, skip serving evaluation web UI.")
         return
@@ -31,7 +34,7 @@ def configure_evaluation_web_routes(
             "/static", StaticFiles(directory=static_root_dir), name="static"
         )
 
-    ops_web_ui_static_dir = os.path.join(static_root_dir, "ops_web_ui")
+    ops_web_ui_static_dir = os.path.join(static_root_dir, OPS_WEB_UI_STATIC_SUBDIR)
     ops_web_ui_index = os.path.join(ops_web_ui_static_dir, "index.html")
 
     @app.get(

@@ -1,6 +1,6 @@
-# Evaluation Tests - 评测测试
+# Evaluation Tests - ops_web_ui
 
-这个目录包含 evaluation 系统的所有测试文件，使用 [Vitest](https://vitest.dev/guide/) 测试框架。
+这个目录包含 ops_web_ui 的所有测试文件，使用 [Vitest](https://vitest.dev/guide/) 测试框架。
 
 ```bash
 # 运行所有测试 (一次性)

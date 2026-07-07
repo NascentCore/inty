@@ -5,13 +5,14 @@ from fastapi.testclient import TestClient
 
 from backend.ops.api.evaluation_web import (
     API_ONLY_ENV_NAME,
+    OPS_WEB_UI_STATIC_SUBDIR,
     configure_evaluation_web_routes,
     is_api_only_mode_enabled,
 )
 
 
 def _prepare_static_dir(tmp_path: Path) -> str:
-    ops_web_ui_dir = tmp_path / "ops_web_ui"
+    ops_web_ui_dir = tmp_path / OPS_WEB_UI_STATIC_SUBDIR
     ops_web_ui_dir.mkdir(parents=True, exist_ok=True)
     (ops_web_ui_dir / "index.html").write_text(
         "evaluation-home", encoding="utf-8"
@@ -57,7 +58,7 @@ def test_configure_evaluation_web_routes_enabled(tmp_path):
         assert static_file.status_code == 200
         assert static_file.text == "asset-content"
 
-        static_mounted = client.get("/static/ops_web_ui/index.html")
+        static_mounted = client.get(f"/static/{OPS_WEB_UI_STATIC_SUBDIR}/index.html")
         assert static_mounted.status_code == 200
 
 
@@ -75,4 +76,4 @@ def test_configure_evaluation_web_routes_disabled_in_api_only_mode(tmp_path):
         assert client.get("/").status_code == 404
         assert client.get("/evaluation").status_code == 404
         assert client.get("/evaluation/asset.txt").status_code == 404
-        assert client.get("/static/ops_web_ui/index.html").status_code == 404
+        assert client.get(f"/static/{OPS_WEB_UI_STATIC_SUBDIR}/index.html").status_code == 404

@@ -1,4 +1,4 @@
-# Ops 平台镜像：evaluation Web UI + 完整 /api/v1，与主后端分离部署。
+# Ops 平台镜像：ops_web_ui Web UI + 完整 /api/v1，与主后端分离部署。
 # 第一阶段：构建前端
 FROM node:18-slim AS frontend-builder
 
