@@ -137,11 +137,22 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_scope_inner_tick_poll_order_monolog_autonomy_dreaming() -> (
+async def test_run_scope_inner_tick_poll_order_scheduled_monolog_autonomy_dreaming() -> (
     None
 ):
     scope = CompanionScope("u", "a", "c")
     with (
+        patch.object(
+            scope_inner_tick_poll,
+            "get_presence",
+            return_value=None,
+        ),
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_scheduled_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as scheduled,
         patch.object(
             scope_inner_tick_poll,
             "try_fire_monolog_for_scope",
@@ -165,9 +176,89 @@ async def test_run_scope_inner_tick_poll_order_monolog_autonomy_dreaming() -> (
             scope=scope
         )
     assert fired is True
+    scheduled.assert_awaited_once()
     maintenance.assert_awaited_once()
     autonomy.assert_awaited_once()
     dreaming.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_scope_inner_tick_poll_scheduled_first_when_no_presence() -> None:
+    scope = CompanionScope("u", "a", "c")
+    with (
+        patch.object(
+            scope_inner_tick_poll,
+            "get_presence",
+            return_value=None,
+        ),
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_scheduled_for_scope",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as scheduled,
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_monolog_for_scope",
+            new_callable=AsyncMock,
+        ) as maintenance,
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_autonomy_for_scope",
+            new_callable=AsyncMock,
+        ) as autonomy,
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_dreaming_for_scope",
+            new_callable=AsyncMock,
+        ) as dreaming,
+    ):
+        fired = await scope_inner_tick_poll.run_scope_inner_tick_poll_for_scope(
+            scope=scope
+        )
+    assert fired is True
+    scheduled.assert_awaited_once()
+    maintenance.assert_not_awaited()
+    autonomy.assert_not_awaited()
+    dreaming.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_scope_inner_tick_poll_skips_scheduled_when_presence_live() -> None:
+    scope = CompanionScope("u", "a", "c")
+    with (
+        patch.object(
+            scope_inner_tick_poll,
+            "get_presence",
+            return_value=MagicMock(),
+        ),
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_scheduled_for_scope",
+            new_callable=AsyncMock,
+        ) as scheduled,
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_monolog_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ) as maintenance,
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_autonomy_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+        patch.object(
+            scope_inner_tick_poll,
+            "try_fire_dreaming_for_scope",
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+    ):
+        await scope_inner_tick_poll.run_scope_inner_tick_poll_for_scope(scope=scope)
+    scheduled.assert_not_awaited()
+    maintenance.assert_awaited_once()
 
 
 @pytest.mark.asyncio

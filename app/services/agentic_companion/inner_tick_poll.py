@@ -7,12 +7,9 @@ user; multiple tabs are out of scope (``companion_harness`` AGENTS.md).
 
 Each poll wake tries at most one activity, in priority order: proactive → scheduled.
 
-Scope tracks (monolog, autonomy, dreaming) run on ``scope_inner_tick_poll`` (#3255).
-
-TODO(scheduled-presence-independent): ``try_fire_scheduled_inner_tick`` here ties due
-``schedule_queue`` tasks to signed-on presence; move fire to ``scope_inner_tick_poll``
-(or a dedicated scheduler) so reminders run at exec time without waiting for the user
-to be online — #3689
+Scope tracks (scheduled when offline, monolog, autonomy, dreaming) run on
+``scope_inner_tick_poll`` (#3255, #3689). Offline due scheduled tasks fire from the
+scope worker; this poll still handles proactive and scheduled when the user is signed on.
 
 TODO(inner-tick-poll-multi-track): Try every **due** track per wake (e.g. scheduled must not
 be skipped when proactive fires) — product decision #3273
@@ -55,5 +52,4 @@ async def run_inner_tick_poll(
     # TODO(inner-tick-poll-multi-track): #3273 — do not early-return; attempt each due track per wake.
     if await inner_tick_fire.try_fire_proactive_chat_inner_tick(fire_input):
         return
-    # TODO(scheduled-presence-independent): scheduled must not be presence-only — #3689
     await inner_tick_fire.try_fire_scheduled_inner_tick(fire_input)

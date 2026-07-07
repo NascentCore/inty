@@ -43,7 +43,7 @@ from app.services.ws_session_messages import WsOutboundPayload
 class InnerTickVisibleDeliverInput:
     """One user-visible inner-tick round after kernel turn completes."""
 
-    delivery: InnerTickDelivery
+    delivery: InnerTickDelivery | None
     session_id: str
     agent_id: str
     chat_row_agent_id: str
@@ -94,6 +94,9 @@ async def deliver_visible_inner_tick_turn(
         agent_id=deliver_input.chat_row_agent_id,
         meta_data=companion_ai_meta,
     )
+
+    if deliver_input.delivery is None:
+        return True
 
     # AgenticLoop already appended this turn's visible rows to the scope
     # OutputQueue; on IM channels the presence output pump owns delivery of

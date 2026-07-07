@@ -1,4 +1,4 @@
-"""Scope autonomous inner-tick tracks: monolog, autonomy, dreaming (#3255).
+"""Scope autonomous inner-tick tracks: scheduled, monolog, autonomy, dreaming (#3255, #3689).
 
 Orchestration only — Postgres reads go through ``inner_tick_scope`` /
 ``scope_inner_tick_persistence``; kernel due + turns via ``companion_harness.runtime``.
@@ -28,12 +28,20 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.runtime.inner_tick_fire import (
     InnerTickKernelInput,
     InnerTickThrottleSnapshot,
+    due_scheduled_task,
     inner_tick_remain_seconds,
+    kernel_fire_scheduled,
     kernel_fire_throttled,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.schemas.chat import ChatCompletionRequest, ChatMessage
+from app.schemas.chat_websocket import build_inner_tick_wire_meta
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services import companion_chat_service
+from app.services.agentic_companion.inner_tick_deliver import (
+    InnerTickVisibleDeliverInput,
+    deliver_visible_inner_tick_turn,
+)
 from app.services.agentic_companion.inner_tick_kernel_context import (
     build_inner_tick_kernel_context,
 )
@@ -49,6 +57,7 @@ from app.services.agentic_companion.scope_inner_tick_state import (
     get_scope_inner_tick_state,
 )
 from app.services.agentic_companion.session import InnerTickCoords
+from app.services.chat_service import generate_session_id
 from app.utils.models_catalog import GenAIModel
 
 
@@ -86,6 +95,120 @@ async def _scope_kernel_context(
         ),
         preset_uid=preset_uid,
     )
+
+
+async def try_fire_scheduled_for_scope(
+    *,
+    coords: InnerTickCoords,
+    poll_source: str,
+    chat_resolve_mode: InnerTickChatResolveMode,
+    implicit_signal_bundle: ImplicitSignalBundle | None,
+) -> bool:
+    """Fire one due schedule_queue task without live presence (#3689)."""
+    resolved = await resolve_inner_tick_scope_coords_for_triple(
+        coords=coords,
+        poll_source=poll_source,
+        model_source=InnerTickModelSource.CHAT_DEFAULT,
+        chat_resolve_mode=chat_resolve_mode,
+    )
+    if resolved is None:
+        return False
+
+    preset_uid = str(uuid.uuid4())
+    scope = CompanionScope(
+        user_id=resolved.user_id,
+        companion_id=resolved.agent_id,
+        chat_id=str(resolved.chat_row_id),
+    )
+    ctx_pair = await _scope_kernel_context(
+        resolved_user_id=resolved.user_id,
+        resolved_agent_id=resolved.agent_id,
+        resolved_chat_row_id=resolved.chat_row_id,
+        resolved_model=resolved.model_override,
+        scope=scope,
+        preset_uid=preset_uid,
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    if ctx_pair is None:
+        return False
+    kernel_input, scope_session = ctx_pair
+    session_id = generate_session_id(str(resolved.chat_row_id))
+    user_time_context = (
+        implicit_signal_bundle.client_time
+        if implicit_signal_bundle is not None
+        else None
+    )
+
+    async with inner_tick_turn_scope(session=scope_session):
+        due_task = due_scheduled_task(kernel_input.mem_store)
+        if due_task is None:
+            return False
+
+        kernel_result = await kernel_fire_scheduled(kernel_input, due_task)
+        if kernel_result is None:
+            logger.warning(
+                "scope_scheduled_reminder empty reply poll_source={} user={} "
+                "agent={} task_id={}",
+                poll_source,
+                resolved.user_id,
+                resolved.agent_id,
+                due_task.id,
+            )
+            return True
+
+        stub_request = ChatCompletionRequest(
+            messages=[
+                ChatMessage(
+                    role="user",
+                    content=kernel_result.transcript_user_text,
+                )
+            ],
+            message_id=preset_uid,
+            user_time_context=user_time_context,
+        )
+        delivered = await deliver_visible_inner_tick_turn(
+            InnerTickVisibleDeliverInput(
+                delivery=None,
+                session_id=session_id,
+                agent_id=resolved.agent_id,
+                chat_row_agent_id=resolved.chat_row_agent_id,
+                ws_conn_id=poll_source,
+                preset_uid=preset_uid,
+                transcript_user_text=kernel_result.transcript_user_text,
+                companion_turn=kernel_result.turn,
+                stub_request=stub_request,
+                user_wire_meta=build_inner_tick_wire_meta(
+                    InnerTickKind.SCHEDULED,
+                    scheduled_task_id=due_task.id,
+                ),
+                companion_scheduled_reminder=True,
+                scheduled_task_id=due_task.id,
+                log_label="scope_scheduled_reminder",
+                skip_user_history=False,
+            )
+        )
+
+    if delivered:
+        logger.info(
+            "scope_scheduled_reminder persisted poll_source={} user={} agent={} "
+            "chat_id={} task_id={}",
+            poll_source,
+            resolved.user_id,
+            resolved.agent_id,
+            resolved.chat_row_id,
+            due_task.id,
+        )
+    else:
+        logger.info(
+            "scope_scheduled_reminder silent poll_source={} user={} agent={} "
+            "chat_id={} task_id={}",
+            poll_source,
+            resolved.user_id,
+            resolved.agent_id,
+            resolved.chat_row_id,
+            due_task.id,
+        )
+    return True
 
 
 async def try_fire_autonomy_for_scope(

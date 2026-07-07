@@ -73,3 +73,54 @@ async def test_im_channel_skips_direct_send_when_queue_rows_exist() -> None:
     assert delivered is True
     add_ai.assert_awaited_once()
     assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_delivery_none_persists_history_without_channel_send() -> None:
+    with (
+        patch(
+            "app.services.agentic_companion.inner_tick_deliver."
+            "chat_history_service.add_user_message_async",
+            new=AsyncMock(),
+        ) as add_user,
+        patch(
+            "app.services.agentic_companion.inner_tick_deliver."
+            "chat_history_service.add_ai_message_sync_async",
+            new=AsyncMock(return_value=102),
+        ) as add_ai,
+        patch(
+            "app.services.agentic_companion.inner_tick_deliver."
+            "deliver_inner_tick_assistant",
+            new=AsyncMock(),
+        ) as channel_send,
+    ):
+        delivered = await deliver_visible_inner_tick_turn(
+            InnerTickVisibleDeliverInput(
+                delivery=None,
+                session_id="session-1",
+                agent_id="agent-1",
+                chat_row_agent_id="agent-1",
+                ws_conn_id="scope_inner_tick_worker",
+                preset_uid="uid-1",
+                transcript_user_text="[scheduled reminder]",
+                companion_turn=CompanionTurnResult(
+                    assistant_text="reminder text",
+                    output_message_ids=("out-1",),
+                ),
+                stub_request=ChatCompletionRequest(
+                    messages=[ChatMessage(role="user", content="[scheduled]")],
+                    message_id="uid-1",
+                ),
+                user_wire_meta=ChatWsCompanionWireMessageMetaData(
+                    source="inner_tick"
+                ),
+                companion_scheduled_reminder=True,
+                scheduled_task_id="task-1",
+                log_label="scope_scheduled_reminder",
+                skip_user_history=False,
+            )
+        )
+    assert delivered is True
+    add_user.assert_awaited_once()
+    add_ai.assert_awaited_once()
+    channel_send.assert_not_awaited()

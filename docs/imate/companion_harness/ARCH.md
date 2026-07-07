@@ -106,7 +106,7 @@ Load-bearing seams for one inbound user message. Track-specific branches (greeti
  OutputQueue ──► channel delivery
 
  parallel (scope inner-tick poll, under turn_lock):
-        inner_tick_fire (runtime) ──► monolog · autonomy · proactive · scheduled · dreaming due
+        scheduled (no presence) · monolog · autonomy · dreaming due
                                               │
                                               └──► run_turn (same kernel)
 

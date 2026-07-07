@@ -201,7 +201,7 @@ relationship state 今天**隐含**在这些 MemDoc 里；CRS 的职责是把它
   - 触发：idle poll
   - 用户可见：是（主动心跳）
 - **`SCHEDULED`**
-  - 触发：定时队列
+  - 触发：`schedule_queue` 到点；**scope inner-tick worker**（无 presence）或 **presence idle poll**（在线）
   - 用户可见：Determined by the agentic loop (executing the scheduled task)
 - **`MONOLOG`** (monolog)
   - 触发：idle poll
