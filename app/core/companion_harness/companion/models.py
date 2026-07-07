@@ -575,23 +575,22 @@ def merge_transcripts_by_ts(
     return [t[3] for t in tagged]
 
 
+# TODO(structural-simplicity): Extract shared monolog/autonomy vs main-track partition
+# for path + load policy (distinct from inner_tick_kind_for_track proactive/scheduled). — #3516
+
+
 def companion_turn_transcript_loaded_messages(
     store: MemoryStore,
     *,
     rel_main_transcript: str,
     rel_inner_tick_transcript: str,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
+    track: CompanionTurnTrack,
 ) -> list[ChatMessage]:
-    """Transcript rows for assembling this turn's ``messages``.
+    """Transcript rows for assembling this turn's messages list.
 
-    Monolog inner-tick (``InnerTickActivity.MONOLOG``) persists only to
-    ``transcript_inner_tick.jsonl`` via ``transcript_relative_path_for_turn_persistence``;
-    it never appends to ``transcript.jsonl``. User chat and proactive/scheduled inner ticks
-    load ``transcript.jsonl`` as-is; monolog turns merge the inner file for their own LLM
-    context.
-
-    TODO(#3401): derive merge/path policy from ``CompanionTurnTrack`` via ``inner_tick_kind_for_track``.
+    Monolog and autonomy inner-tick tracks merge main and inner JSONL for LLM
+    context. User chat, bootstrap, greeting, proactive, and scheduled tracks
+    load main transcript only.
     """
     raw_main = load_transcript_projection_from_store(
         store, rel_main_transcript, TranscriptProjection.FULL
@@ -599,29 +598,47 @@ def companion_turn_transcript_loaded_messages(
     raw_inner = load_transcript_projection_from_store(
         store, rel_inner_tick_transcript, TranscriptProjection.FULL
     )
-    tick_proactive = (
-        inner_tick_turn
-        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if inner_tick_turn and not tick_proactive:
-        return merge_transcripts_by_ts(raw_main, raw_inner)
-    return raw_main
+    match track:
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
+            return merge_transcripts_by_ts(raw_main, raw_inner)
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            return raw_main
+        case _ as unexpected:
+            raise AssertionError(
+                f"unexpected CompanionTurnTrack for transcript load: {unexpected!r}"
+            )
 
 
 def transcript_relative_path_for_turn_persistence(
     *,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
+    track: CompanionTurnTrack,
 ) -> str:
-    """Scope-relative JSONL path for run_turn user/assistant transcript appends.
-
-    TODO(#3401): take ``CompanionTurnTrack`` (or ``InnerTickKind``) instead of bool + activity pair.
-    """
-    tick_proactive = (
-        inner_tick_turn
-        and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
-    if inner_tick_turn and not tick_proactive:
-        # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3400
-        return TRANSCRIPT_INNER_TICK_JSONL_REL
-    return TRANSCRIPT_JSONL_REL
+    """Scope-relative JSONL path for run_turn user/assistant transcript appends."""
+    match track:
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
+            # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3400
+            return TRANSCRIPT_INNER_TICK_JSONL_REL
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            return TRANSCRIPT_JSONL_REL
+        case _ as unexpected:
+            raise AssertionError(
+                f"unexpected CompanionTurnTrack for transcript path: {unexpected!r}"
+            )

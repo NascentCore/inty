@@ -132,15 +132,12 @@ def append_runtime_output_format_system_message(
 def companion_tools_for_turn(
     *,
     track: CompanionTurnTrack,
-    # TODO(#3401): drop inner_tick_turn / inner_tick_activity; derive tool set from track via inner_tick_kind_for_track.
-    # TODO(abstraction): The following 3 args should be removed, and reflect the combination in track: CompanionTurnTrack — #3453
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
     implicit_user_signed_on_turn: bool = False,
+    # TODO(abstraction): implicit_user_signed_on_turn should be reflected in track — #3453
     # TODO(companion-channel-tools): Filter tool schemas by ``runtime_context.channel`` — #3362
     # TODO(telegram-meta-ops-tools): Telegram meta tools only when dedicated-bot — #3397 / #3361
 ) -> list[dict[str, Any]]:
-    """OpenAI tool schemas for this turn (independent of which system-message wrapper runs)."""
+    """OpenAI tool schemas for this turn."""
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             tools_for_turn = build_openai_bootstrap_track_tools()
@@ -148,24 +145,23 @@ def companion_tools_for_turn(
             tools_for_turn = []
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
             tools_for_turn = build_openai_repl_tools_inner_tick_autonomy()
-        case _:
-            tick_proactive = (
-                inner_tick_turn
-                and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-            )
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
+            tools_for_turn = build_openai_repl_tools_inner_tick()
+        case (
+            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
             # TODO(cross-track-image-delivery): PROACTIVE_CHAT tools=[] — visual offers — #3285
             # need AUTONOMY asset handoff or user-chat tool leg; see #3285 #3468.
-            tools_for_turn = (
-                []
-                if tick_proactive
-                else (
-                    build_openai_repl_tools_inner_tick()
-                    if inner_tick_turn
-                    else build_openai_repl_tools()
-                )
+            tools_for_turn = []
+        case CompanionTurnTrack.USER_CHAT:
+            tools_for_turn = build_openai_repl_tools()
+        case _ as unexpected:
+            raise AssertionError(
+                f"unexpected CompanionTurnTrack for tools: {unexpected!r}"
             )
-            if implicit_user_signed_on_turn and not inner_tick_turn:
-                tools_for_turn = []
+    if implicit_user_signed_on_turn and track == CompanionTurnTrack.USER_CHAT:
+        tools_for_turn = []
     return tools_for_turn
 
 
@@ -270,8 +266,6 @@ def companion_turn_tools_and_system_messages(
         implicit_user_signed_on_turn = True
     tools_for_turn = companion_tools_for_turn(
         track=track,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=route_inner_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
     route_mode = resolve_turn_route_mode(
@@ -317,8 +311,6 @@ def refresh_companion_turn_prompt_stack(
     )
     tools_for_turn = companion_tools_for_turn(
         track=track,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=inner_tick_activity,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
     match track:

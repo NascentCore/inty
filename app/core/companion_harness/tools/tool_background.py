@@ -536,8 +536,7 @@ async def run_tool_background_loop(
     scope_registry_key = memory_store.scope.registry_key()
     image_asset_baseline = len(list_image_asset_records(memory_store))
     transcript_append_rel = transcript_relative_path_for_turn_persistence(
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=inner_tick_activity,
+        track=companion_turn_track,
     )
     tool_api_id = tool_model.id_on_provider
     try:
