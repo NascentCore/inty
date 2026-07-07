@@ -219,10 +219,11 @@ Open PRs checked: none — no overlap with tasks below.
 
 Source: companion harness partial-convergence (`PR-5` legacy turn/downlink delete + Stage 2 typed WS emit); gate baseline green for soft orchestration + typed outbound.
 
-Related issues: #3632 (code done), #3401 (slice 1 partial), #3490/#3211/#3543 (partial), #3207/#3208 (partial).
+Related issues: #3632 (closed), #3401 (slice 1+2 merged pull/3765–3766), #3490/#3211/#3543 (partial), #3207/#3208 (partial).
 
 ### Open tasks
 
 - [x] **HYGIENE-2026-70** #3632: remove stale `start_tool_background_job` references in `dual_llm_foreground_chat.py` module doc and `CompanionTurnResult.tool_background_started` Field description. Fixed in Stage 1 PR-5 branch.
 - [x] **HYGIENE-2026-71** #3208: remove completed emit-path TODO from `chat_ws._agent_chat_ws_completions_impl` (typed `ChatWebSocketQueuedSuccessFrame` via `build_chat_ws_queued_success_frame`). Fixed in Stage 2 branch.
-- [x] **HYGIENE-2026-72** #3401: `append_turn_track_tail_user_transcript_rows` track-only (`inner_tick_kind_for_track`); dedup `turn.py` inline block; `test_turn_tail_user_track_metadata.py` (7 cases). Fixed on branch 2026-07-07.
+- [x] **HYGIENE-2026-72** #3401: `append_turn_track_tail_user_transcript_rows` track-only (`inner_tick_kind_for_track`); dedup `turn.py` inline block; `test_turn_tail_user_track_metadata.py` (7 cases). Merged pull/3765.
+- [x] **HYGIENE-2026-73** #3401 slice 2: `transcript_relative_path_for_turn_persistence`, `companion_turn_transcript_loaded_messages`, `companion_tools_for_turn`, `load_companion_turn_state` track-only; `test_transcript_inner_tick_streams.py` + `test_prompt_stack_tools_for_turn.py`. Merged pull/3766.

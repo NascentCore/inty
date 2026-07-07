@@ -210,5 +210,5 @@ def append_turn_track_tail_user_transcript_rows(
             raise AssertionError(
                 f"unexpected InnerTickKind for transcript user row: {unexpected!r}"
             )
-    # TODO(#3401): replace bool JSONL flags with typed transcript user-turn kind.
+    # TODO(#3401) slice 3: replace bool JSONL flags with typed transcript user-turn kind.
     store.append_jsonl_record(transcript_relative_path, user_row)

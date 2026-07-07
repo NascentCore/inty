@@ -2,12 +2,12 @@
 
 Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage 2).
 
-## GitHub issue progress (this branch)
+## GitHub issue progress (merged to `main`)
 
 | Issue | Status after PR-5 + Stage 2 |
 |-------|-----------------------------|
-| #3632 | **Code done** — `start_tool_background_job` removed; dual-LLM tool leg inline `AgenticLoop` + `OutputQueue` only; issue open until PR merge |
-| #3401 | **Partial (slice 1+2)** — slice 1: `append_turn_track_tail_user_transcript_rows` track-only; slice 2: `transcript_relative_path_for_turn_persistence`, `companion_turn_transcript_loaded_messages`, `companion_tools_for_turn`, `load_companion_turn_state` track-only; tests in `test_transcript_inner_tick_streams.py`, `test_prompt_stack_tools_for_turn.py` |
+| #3632 | **Closed** — pull/3764 (Stage 2); threaded `start_tool_background_job` removed |
+| #3401 | **Partial (slice 1+2 merged)** — pull/3765 slice 1 tail user JSONL; pull/3766 slice 2 path/load/tools/`load_companion_turn_state` track-only; slice 3 (`TurnRouteMode` vs `AgenticLoopMechanism`) open |
 | #3490 | **Partial** — App-WS `background_events` recv-loop + `WebSocketDownlink` deleted; `foreground_pending` kept for inner-tick (#3580) |
 | #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
 | #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
@@ -15,7 +15,7 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 | #3543 | **Partial** — WS `TOOL_BACKGROUND` / `USER_REPLY` via presence pump; inner-tick App-WS still direct `outbound_queue.put` |
 | #3398 | **Open** — epic; dual vs single-LLM debate unchanged |
 
-Branch: `yzhao/3401-agentic-loop-track-mechanism` (or merge target). Gate doc updated after code review 2026-07-07.
+Merged to `main`: pull/3765 (#3401 slice 1), pull/3766 (#3401 slice 2). Gate doc updated 2026-07-07 post-merge.
 
 ## Checklist status
 

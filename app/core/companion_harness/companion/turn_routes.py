@@ -54,11 +54,12 @@ class TurnRouteMode(str, Enum):
     (tools run only in ``tool_background``). Otherwise in-turn sync chat uses
     ``PROACTIVE_CHAT_SYNC``, ``INNER_TICK_SYNC``, or ``CHAT_ONLY_SYNC``.
 
-    TODO(#3401): Slice 3 — split ``TurnRouteMode`` from track semantics vs
-    ``AgenticLoopMechanism``; resolve via ``InnerTickKind`` registry + config.
+    TODO(#3401) slice 3: split ``TurnRouteMode`` from track semantics vs
+    ``AgenticLoopMechanism``; replace ``resolve_turn_route_mode(inner_tick_turn, …)``
+    with track/config registry (``turn_flags_for_track`` then removable).
     """
 
-    # TODO(#3401): rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
+    # TODO(#3401) slice 3: rename members to drop ``_SYNC`` / avoid leaking execution-strategy names;
     # prefer track-aligned or product semantics (e.g. inner-tick mode labels).
     PROACTIVE_CHAT_SYNC = "proactive_chat_sync"
     INNER_TICK_SYNC = "inner_tick_sync"

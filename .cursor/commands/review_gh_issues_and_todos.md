@@ -1,4 +1,8 @@
-# Review GitHub Issue & TODO
+# Review Docs, GitHub Issues, and TODOs in code files
+
+- Docs: markdown files that are not AGENTS.md
+- GitHub issues and their references in TODOs of code files
+- TODOs in code files without referencing GitHub issues
 
 ## 分工
 

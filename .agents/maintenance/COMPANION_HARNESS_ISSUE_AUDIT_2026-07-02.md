@@ -23,8 +23,8 @@ Cron consolidation run. Scope: companion harness issues + inline TODO refs.
 
 Branch convergence: legacy turn orchestration + parallel WS downlink removed; typed `WsOutboundPayload` emit. See `.agents/maintenance/COMPANION_HARNESS_REFACTOR_GATE_BASELINE.md`.
 
-- **#3632** — code done on branch (threaded `start_tool_background_job` removed; queue path only); issue still open until PR merge.
-- **#3401** — slice 1: track-only transcript user JSONL flags in `turn_tail_user.py`; tests in `test_turn_tail_user_track_metadata.py`.
+- **#3632** — closed; merged via Stage 2 pull/3764.
+- **#3401** — slice 1+2 merged (pull/3765 tail user JSONL; pull/3766 path/load/tools); slice 3 route mode vs loop mechanism open.
 - **#3490 / #3211 / #3543 / #3207** — partial progress commented on GitHub; audit lane updated below.
 
 | # | title | class | lane | action | TODO |
@@ -81,7 +81,7 @@ Branch convergence: legacy turn orchestration + parallel WS downlink removed; ty
 | 3396 | [Ops Telegram] Shared-bot routing (Option A): current path & meta-op constraints | healthy | other | review | no |
 | 3397 | [Companion] Telegram Bots API meta-operations as channel tools | healthy | other | review | yes |
 | 3398 | [Epic] agentic_companion — dual-LLM vs single-LLM user-turn | healthy | refactor | **partial** — soft gate met (AgenticLoop-only orchestration); bootstrap compose + #3369 open | yes |
-| 3401 | [Agentic companion] Separate CompanionTurnTrack from AgenticLoopMechanism | healthy | other | **partial** — transcript user JSONL flags track-only (`turn_tail_user.py`); path/tools/route mode open | yes |
+| 3401 | [Agentic companion] Separate CompanionTurnTrack from AgenticLoopMechanism | healthy | other | **partial** — slice 1+2 merged (tail JSONL, path/load/tools track-only); slice 3 route mode + typed JSONL wire open | yes |
 | 3402 | [Agentic companion] UserVisibleChunk harness contract (decoupled channel downlink) | healthy | other | review | yes |
 | 3405 | [Agentic companion] Design conceptual & logical memory hierarchy | healthy | other | review | yes |
 | 3407 | Converge transcript.jsonl assistant rows to shared Pydantic write model | healthy | other | review | no |
@@ -169,7 +169,7 @@ Branch convergence: legacy turn orchestration + parallel WS downlink removed; ty
 | 3629 | [Agentic companion] PromptPlan 端到端 typed prompt，OpenAI wire 仅在 AsyncLlmClient | healthy | other | review | yes |
 | 3630 | [Agentic companion] LangSmith per-call 收敛：LlmInvocationContext + AgenticLoop/LlmClient | healthy | other | review | yes |
 | 3631 | [Agentic companion] tool_background 改用 AsyncLlmClient，去掉 sync/to_thread | healthy | other | review | yes |
-| 3632 | [Agentic companion] 退役 legacy threaded tool_bg，tool leg 内联 AgenticLoop | healthy | hygiene_defer | **code done** — branch removes threaded job; close after PR merge | yes |
+| 3632 | [Agentic companion] 退役 legacy threaded tool_bg，tool leg 内联 AgenticLoop | healthy | hygiene_defer | **closed** — pull/3764 | no |
 | 3633 | [Agentic companion] LangSmith parent RunTree：随 legacy 退役收缩 TurnOrchestrator | healthy | hygiene_defer | no_ready_for_agent | yes |
 | 3634 | [Agentic companion] Dreaming 人格化 AgenticLoop entry（独立于 user-turn） | healthy | other | review | yes |
 | 3647 | [user-reported] behavior: 用户在美国西海岸时区，但助手的回应未考虑时区，错误地假设了上海时间。 | healthy | other | review | no |

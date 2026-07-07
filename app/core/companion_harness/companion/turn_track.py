@@ -2,8 +2,11 @@
 
 Production entrypoints choose a ``CompanionTurnTrack`` before calling the core
 turn runner.  This module maps tracks to legacy kernel booleans
-(``inner_tick_turn`` and ``InnerTickActivity``) and to LangSmith lane labels
-used for trace filtering.
+(``inner_tick_turn`` and ``InnerTickActivity``) for route-mode resolution
+(``turn_routes.resolve_turn_route_mode``) and LangSmith lane labels.
+
+TODO(#3401) slice 3: drop ``turn_flags_for_track`` once route mode derives from
+track + ``AgenticLoopMechanism`` only.
 """
 
 from __future__ import annotations
