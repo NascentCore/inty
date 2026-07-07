@@ -208,6 +208,118 @@ def test_extract_github_issue_url_from_tool_turn_messages() -> None:
     assert extract_github_issue_url_from_tool_turn_messages(messages) == url
 
 
+def test_build_user_feedback_disclosure_display_text_url_only() -> None:
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        build_user_feedback_disclosure_display_text,
+    )
+
+    url = "https://github.com/NascentCore/inty/issues/11"
+    assert (
+        build_user_feedback_disclosure_display_text(
+            issue_url=url,
+            llm_reply="",
+        )
+        == url
+    )
+
+
+def test_build_user_feedback_disclosure_display_text_prepends_reply() -> None:
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        build_user_feedback_disclosure_display_text,
+    )
+
+    url = "https://github.com/NascentCore/inty/issues/11"
+    display = build_user_feedback_disclosure_display_text(
+        issue_url=url,
+        llm_reply="抱歉，我会更注意时区。",
+    )
+    assert display.startswith(url)
+    assert "抱歉" in display
+
+
+@pytest.mark.asyncio
+async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
+    monkeypatch,
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+    from app.services.agentic_companion.downlink import DownlinkKind
+
+    class _FakeRecord:
+        def __init__(self, message_id: str, text: str, sequence: int) -> None:
+            self.message_id = message_id
+            self.text = text
+            self.sequence = sequence
+
+    issue_url = "https://github.com/NascentCore/inty/issues/3652"
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.VISIBLE,
+    )
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.append_agent_output = AsyncMock(
+            return_value=_FakeRecord("msg-disclosure", issue_url, 3)
+        )
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            appended = await mod.append_user_feedback_issue_disclosure_to_output_queue(
+                user_id="user-testing",
+                agent_id="agent-1",
+                batch_id="batch-1",
+                user_msg_uuid="client-msg-1",
+                issue_url=issue_url,
+                llm_reply="",
+            )
+
+    assert appended is True
+    persisted = repo.append_agent_output.await_args.args[0]
+    assert persisted.batch_id == "batch-1"
+    assert persisted.message_ids == ("client-msg-1",)
+    assert persisted.kind == DownlinkKind.TOOL_BACKGROUND
+    assert persisted.text == issue_url
+
+
+@pytest.mark.asyncio
+async def test_append_user_feedback_issue_disclosure_skipped_when_hidden(
+    monkeypatch,
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from app.core.companion_harness.tools import companion_user_feedback as mod
+
+    monkeypatch.setattr(
+        mod,
+        "resolve_user_feedback_disclosure_mode",
+        lambda: UserFeedbackDisclosureMode.HIDDEN,
+    )
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session_cls.return_value = session
+        appended = await mod.append_user_feedback_issue_disclosure_to_output_queue(
+            user_id="user-testing",
+            agent_id="agent-1",
+            batch_id="batch-1",
+            user_msg_uuid="client-msg-1",
+            issue_url="https://github.com/NascentCore/inty/issues/1",
+            llm_reply="",
+        )
+    assert appended is False
+    session_cls.assert_not_called()
+
+
 def test_resolve_user_visible_feedback_display_text_visible(
     monkeypatch,
 ) -> None:
