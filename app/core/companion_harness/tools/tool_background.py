@@ -709,8 +709,6 @@ async def run_tool_background_loop(
             appended_capture_from_len = len(messages_with_tool_results)
             tools = refresh_companion_turn_prompt_stack(
                 store=memory_store,
-                inner_tick_turn=inner_tick_turn,
-                inner_tick_activity=inner_tick_activity,
                 messages=messages_with_tool_results,
                 track=companion_turn_track,
                 runtime_context=runtime_context,

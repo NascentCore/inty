@@ -77,9 +77,8 @@ from app.core.companion_harness.prompt_builder import (
 from app.core.companion_harness.loop.agentic_loop import AgenticLoop
 from app.core.companion_harness.loop.config import (
     AgenticLoopMechanism,
-    UserTurnLlmLoopMode,
+    resolve_agentic_loop_mechanism,
     resolved_user_turn_batch_messages_llm_call_mode,
-    resolved_user_turn_llm_loop_mode,
 )
 from app.core.companion_harness.agentic_companion.types import (
     synthetic_user_message_batch,
@@ -98,7 +97,6 @@ from .dual_llm_message_stacks import (
     replace_leading_system_messages_multi,
 )
 from .turn_deps import CompanionTurnDeps
-from .turn_track import turn_flags_for_track
 from .turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
@@ -111,9 +109,6 @@ from .turn_tail_user import (
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
-)
-from .turn_routes import (
-    TurnRouteMode,
 )
 from .transcript_assistant_row import (
     TranscriptAssistantRowBuildInput,
@@ -235,7 +230,6 @@ async def _run_companion_turn_core(
     assert agentic_output_queue is not None
     t0 = time.perf_counter()
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     implicit_signal_bundle = runtime_context.implicit_signal_bundle
 
     runtime_flags = resolve_turn_runtime_flags(
@@ -245,6 +239,7 @@ async def _run_companion_turn_core(
     )
     user_text = runtime_flags.effective_user_text
     tick_proactive = runtime_flags.tick_proactive
+    inner_tick_turn = runtime_flags.inner_tick_turn
     route_inner_activity = runtime_flags.route_inner_activity
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
@@ -350,7 +345,6 @@ async def _run_companion_turn_core(
         tail_splice_thoughts=list(ai_private_splice_plan.thoughts),
     )
     tools_for_turn = prompt_plan.tools_for_turn
-    route_mode = prompt_plan.route_mode
     messages = prompt_plan.messages
     trace_id = str(uuid.uuid4())
     langsmith_trace_acc = ""
@@ -410,13 +404,11 @@ async def _run_companion_turn_core(
         if langsmith_parent_run is not None:
             logger.debug(
                 "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
-                "user_msg_uuid={} ls_trace_id={} route_mode={} defer_end_to_bg={}",
+                "user_msg_uuid={} ls_trace_id={} defer_end_to_bg={}",
                 trace_id,
                 user_msg_uuid,
                 _ls_tid,
-                route_mode.value,
-                route_mode
-                == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
+                bool(tools_for_turn),
             )
 
         _langsmith_cm = nullcontext()
@@ -461,7 +453,6 @@ async def _run_companion_turn_core(
                         )
 
                     # TODO(!3460): Move dual-LLM message-stack assembly into loop/context.py.
-                    llm_loop_mode = resolved_user_turn_llm_loop_mode()
                     agentic_loop = AgenticLoop(
                         store=store,
                         llm_client=llm_client.async_llm_client,
@@ -513,108 +504,114 @@ async def _run_companion_turn_core(
                             mechanism=AgenticLoopMechanism.SINGLE_LLM,
                             context=loop_context,
                         )
-                    elif (
-                        llm_loop_mode == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
-                    ):
-                        transcript_window = loaded_state.transcript_window
-                        if track_uses_ai_private_splice(track):
-                            transcript_window = expand_manifest_rows(
-                                store,
-                                loaded_state.transcript_window,
-                            )
-                        single_llm_prompt_plan = PromptBuilder(
-                            bundle=bundle,
-                            context=context,
-                            runtime_context=runtime_context,
-                        ).build_user_chat_prompt(
-                            transcript_window=transcript_window,
-                            tail_user_messages=tail_user_messages,
-                            tools=tuple(tools_for_turn),
-                            implicit_sign_on_turn=implicit_sign_on_turn,
-                            tail_splice_thoughts=ai_private_splice_plan.thoughts,
-                        )
-                        loop_context = build_settled_user_chat_loop_context(
-                            messages=messages,
-                            tools_for_turn=tools_for_turn,
-                            repository_only_store_text=repository_only_store_text,
-                            trace_id=trace_id,
-                            user_text=user_text,
-                            ts_user=ts_user,
-                            user_msg_uuid=user_msg_uuid,
-                            transcript_rel=rel_tr_agentic_loop,
-                            langsmith_slice=langsmith_slice,
-                            runtime_context=runtime_context,
-                            stack_depth=sum(
-                                1
-                                for message in single_llm_prompt_plan.messages
-                                if message.role.value == "system"
-                            ),
-                            langsmith_trace_id=langsmith_trace_acc,
-                            langsmith_run_id=langsmith_llm_run_acc,
-                            after_tool_messages_appended=_settled_single_llm_after_tool_round,
-                            output_queue=agentic_output_queue,
-                            user_message_batch=user_message_batch,
-                            tail_user_messages=tail_user_messages,
-                            prompt_plan=single_llm_prompt_plan,
-                        )
-                        loop_out = await agentic_loop.run_track_turn(
-                            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-                            context=loop_context,
-                        )
                     else:
-                        _, chat_system_msgs = dual_llm_system_message_variants(
-                            store=store,
-                            bundle=bundle,
-                            context=context,
-                            inner_tick_turn=False,
-                            route_inner_activity=route_inner_activity,
-                            runtime_context=runtime_context,
-                        )
-                        _stack_depth = len(prompt_plan.system_messages)
-                        chat_msgs = replace_leading_system_messages_multi(
-                            messages,
-                            chat_system_msgs,
-                            stack_depth=_stack_depth,
-                        )
-                        dual_llm_prompt_builder = PromptBuilder(
-                            bundle=bundle,
-                            context=context,
-                            runtime_context=runtime_context,
-                        )
-                        tool_plan = dual_llm_prompt_builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
-                            base_messages=messages,
-                            stack_depth=_stack_depth,
-                            tools=tuple(tools_for_turn),
-                        )
-                        tool_msgs = prompt_messages_to_openai_dicts(
-                            tool_plan.messages
-                        )
-                        loop_context = build_settled_dual_llm_user_chat_loop_context(
-                            messages=messages,
-                            tools_for_turn=tools_for_turn,
-                            repository_only_store_text=repository_only_store_text,
-                            trace_id=trace_id,
-                            user_text=user_text,
-                            ts_user=ts_user,
-                            user_msg_uuid=user_msg_uuid,
-                            transcript_rel=rel_tr_agentic_loop,
-                            langsmith_slice=langsmith_slice,
-                            runtime_context=runtime_context,
-                            stack_depth=_stack_depth,
-                            langsmith_trace_id=langsmith_trace_acc,
-                            langsmith_run_id=langsmith_llm_run_acc,
-                            output_queue=agentic_output_queue,
-                            user_message_batch=user_message_batch,
-                            tail_user_messages=tail_user_messages,
-                            dual_llm_chat_msgs=tuple(chat_msgs),
-                            dual_llm_tool_msgs=tuple(tool_msgs),
-                            prompt_bundle=bundle,
-                            context_meta=context,
-                        )
-                        loop_out = await agentic_loop.run_track_turn(
-                            mechanism=AgenticLoopMechanism.DUAL_LLM,
-                            context=loop_context,
-                        )
+                        match resolve_agentic_loop_mechanism(track=track):
+                            case AgenticLoopMechanism.SINGLE_LLM:
+                                transcript_window = (
+                                    loaded_state.transcript_window
+                                )
+                                if track_uses_ai_private_splice(track):
+                                    transcript_window = expand_manifest_rows(
+                                        store,
+                                        loaded_state.transcript_window,
+                                    )
+                                single_llm_prompt_plan = PromptBuilder(
+                                    bundle=bundle,
+                                    context=context,
+                                    runtime_context=runtime_context,
+                                ).build_user_chat_prompt(
+                                    transcript_window=transcript_window,
+                                    tail_user_messages=tail_user_messages,
+                                    tools=tuple(tools_for_turn),
+                                    implicit_sign_on_turn=implicit_sign_on_turn,
+                                    tail_splice_thoughts=ai_private_splice_plan.thoughts,
+                                )
+                                loop_context = build_settled_user_chat_loop_context(
+                                    messages=messages,
+                                    tools_for_turn=tools_for_turn,
+                                    repository_only_store_text=repository_only_store_text,
+                                    trace_id=trace_id,
+                                    user_text=user_text,
+                                    ts_user=ts_user,
+                                    user_msg_uuid=user_msg_uuid,
+                                    transcript_rel=rel_tr_agentic_loop,
+                                    langsmith_slice=langsmith_slice,
+                                    runtime_context=runtime_context,
+                                    stack_depth=sum(
+                                        1
+                                        for message in single_llm_prompt_plan.messages
+                                        if message.role.value == "system"
+                                    ),
+                                    langsmith_trace_id=langsmith_trace_acc,
+                                    langsmith_run_id=langsmith_llm_run_acc,
+                                    after_tool_messages_appended=_settled_single_llm_after_tool_round,
+                                    output_queue=agentic_output_queue,
+                                    user_message_batch=user_message_batch,
+                                    tail_user_messages=tail_user_messages,
+                                    prompt_plan=single_llm_prompt_plan,
+                                )
+                                loop_out = await agentic_loop.run_track_turn(
+                                    mechanism=AgenticLoopMechanism.SINGLE_LLM,
+                                    context=loop_context,
+                                )
+                            case AgenticLoopMechanism.DUAL_LLM:
+                                _, chat_system_msgs = (
+                                    dual_llm_system_message_variants(
+                                        store=store,
+                                        bundle=bundle,
+                                        context=context,
+                                        inner_tick_turn=False,
+                                        route_inner_activity=route_inner_activity,
+                                        runtime_context=runtime_context,
+                                    )
+                                )
+                                _stack_depth = len(prompt_plan.system_messages)
+                                chat_msgs = (
+                                    replace_leading_system_messages_multi(
+                                        messages,
+                                        chat_system_msgs,
+                                        stack_depth=_stack_depth,
+                                    )
+                                )
+                                dual_llm_prompt_builder = PromptBuilder(
+                                    bundle=bundle,
+                                    context=context,
+                                    runtime_context=runtime_context,
+                                )
+                                tool_plan = dual_llm_prompt_builder.build_settled_user_chat_dual_llm_tool_prompt_plan(
+                                    base_messages=messages,
+                                    stack_depth=_stack_depth,
+                                    tools=tuple(tools_for_turn),
+                                )
+                                tool_msgs = prompt_messages_to_openai_dicts(
+                                    tool_plan.messages
+                                )
+                                loop_context = build_settled_dual_llm_user_chat_loop_context(
+                                    messages=messages,
+                                    tools_for_turn=tools_for_turn,
+                                    repository_only_store_text=repository_only_store_text,
+                                    trace_id=trace_id,
+                                    user_text=user_text,
+                                    ts_user=ts_user,
+                                    user_msg_uuid=user_msg_uuid,
+                                    transcript_rel=rel_tr_agentic_loop,
+                                    langsmith_slice=langsmith_slice,
+                                    runtime_context=runtime_context,
+                                    stack_depth=_stack_depth,
+                                    langsmith_trace_id=langsmith_trace_acc,
+                                    langsmith_run_id=langsmith_llm_run_acc,
+                                    output_queue=agentic_output_queue,
+                                    user_message_batch=user_message_batch,
+                                    tail_user_messages=tail_user_messages,
+                                    dual_llm_chat_msgs=tuple(chat_msgs),
+                                    dual_llm_tool_msgs=tuple(tool_msgs),
+                                    prompt_bundle=bundle,
+                                    context_meta=context,
+                                )
+                                loop_out = await agentic_loop.run_track_turn(
+                                    mechanism=AgenticLoopMechanism.DUAL_LLM,
+                                    context=loop_context,
+                                )
                     last_text = loop_out.assistant_text
                     significance_meta = loop_out.significance_meta
                     turn_recall = loop_out.turn_recall
@@ -828,7 +825,7 @@ async def _run_companion_turn_core(
                     )
                 else:
                     raise RuntimeError(
-                        f"unhandled turn track={track.value} route_mode={route_mode.value}; "
+                        f"unhandled turn track={track.value}; "
                         "all tracks must run via AgenticLoop + OutputQueue"
                     )
             except BaseException as exc:

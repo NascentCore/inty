@@ -1,8 +1,8 @@
 """Select and refresh the companion prompt stack for each turn track.
 
 The companion turn track is the public routing fact: it decides which tool
-schemas are exposed, which system-message wrapper is used, and which route mode
-must be enforced.  Mid-turn refreshes re-read MemoryStore and ``context.json`` so
+schemas are exposed, and which system-message wrapper is used.  Mid-turn
+refreshes re-read MemoryStore and ``context.json`` so
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
 
@@ -35,12 +35,10 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 from .models import (
     CompanionTurnTrack,
     ContextMeta,
-    InnerTickActivity,
     load_context_meta,
     load_prompt_bundle,
 )
 from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
-from .turn_track import turn_flags_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
     ChannelKind,
@@ -60,13 +58,11 @@ from .prompts.system_messages import (
 from app.core.companion_harness.loop.runtime_system_clauses import (
     append_configured_fixed_reply_language_system_messages,
 )
-from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 
 
 def _async_tool_system_messages_for_track(
     *,
     track: CompanionTurnTrack,
-    route_mode: TurnRouteMode,
     bundle: PromptBundle,
     context: ContextMeta,
     store: MemoryStore,
@@ -77,11 +73,6 @@ def _async_tool_system_messages_for_track(
     spec = inner_tick_spec(kind)
     builder = spec.async_tool_prompt_builder
     assert builder is not None
-    if route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL:
-        raise RuntimeError(
-            f"{spec.turn_track.value} track requires ASYNC route, got "
-            f"{route_mode.value}"
-        )
     return builder(bundle, context, store)
 
 
@@ -173,7 +164,6 @@ def companion_system_messages_for_track(
     bundle: PromptBundle,
     context: ContextMeta,
     track: CompanionTurnTrack,
-    route_mode: TurnRouteMode,
     runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
     """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
@@ -203,7 +193,6 @@ def companion_system_messages_for_track(
         ):
             out = _async_tool_system_messages_for_track(
                 track=track,
-                route_mode=route_mode,
                 bundle=bundle,
                 context=context,
                 store=store,
@@ -214,14 +203,6 @@ def companion_system_messages_for_track(
                 "PromptBuilder.bootstrap_turn_system_dicts (turn_pipeline)"
             )
         case CompanionTurnTrack.USER_CHAT:
-            if (
-                route_mode
-                != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-            ):
-                raise RuntimeError(
-                    "user_chat track requires ASYNC route, got "
-                    f"{route_mode.value}"
-                )
             out = build_settled_user_turn_dual_chat_leg_system_messages(
                 bundle,
                 context,
@@ -251,7 +232,7 @@ def companion_turn_tools_and_system_messages(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     ),
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], TurnRouteMode]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """
     Single source for companion chat-round tools list and system message stack.
 
@@ -261,34 +242,25 @@ def companion_turn_tools_and_system_messages(
     the async foreground/tool-background route.  Proactive, scheduled, and
     implicit sign-on greeting tracks are chat-only system stacks with no tools.
     """
-    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
     if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
         implicit_user_signed_on_turn = True
     tools_for_turn = companion_tools_for_turn(
         track=track,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
-    route_mode = resolve_turn_route_mode(
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=route_inner_activity,
-        tools_enabled=bool(tools_for_turn),
-    )
     system_messages = companion_system_messages_for_track(
         store=store,
         bundle=bundle,
         context=context,
         track=track,
-        route_mode=route_mode,
         runtime_context=runtime_context,
     )
-    return tools_for_turn, system_messages, route_mode
+    return tools_for_turn, system_messages
 
 
 def refresh_companion_turn_prompt_stack(
     *,
     store: MemoryStore,
-    inner_tick_turn: bool,
-    inner_tick_activity: InnerTickActivity,
     messages: list[dict[str, Any]],
     track: CompanionTurnTrack,
     runtime_context: TurnRuntimeContext = TurnRuntimeContext(
@@ -307,7 +279,7 @@ def refresh_companion_turn_prompt_stack(
     bundle = load_prompt_bundle(store, meta=context)
     implicit_user_signed_on_turn = implicit_user_signed_on_chat_turn(
         implicit_signal_bundle=runtime_context.implicit_signal_bundle,
-        inner_tick_turn=inner_tick_turn,
+        inner_tick_turn=inner_tick_kind_for_track(track) is not None,
     )
     tools_for_turn = companion_tools_for_turn(
         track=track,
@@ -325,7 +297,6 @@ def refresh_companion_turn_prompt_stack(
         ):
             refreshed = _async_tool_system_messages_for_track(
                 track=track,
-                route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
                 bundle=bundle,
                 context=context,
                 store=store,

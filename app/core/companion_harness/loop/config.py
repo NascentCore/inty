@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from app.core.companion_harness.companion.models import CompanionTurnTrack
+
 
 class UserTurnLlmLoopMode(StrEnum):
     """Which production AgenticLoop method settled user turns use."""
@@ -55,3 +57,18 @@ def resolved_companion_harness_reply_language() -> str | None:
     return (
         global_config_loaded_from_config_yaml.agent.companion_harness.language
     )
+
+
+def resolve_agentic_loop_mechanism(
+    *,
+    track: CompanionTurnTrack,
+) -> AgenticLoopMechanism:
+    """Map production track to AgenticLoop mechanism; only USER_CHAT reads llm_loop_mode config."""
+    match track:
+        case CompanionTurnTrack.USER_CHAT:
+            mode = resolved_user_turn_llm_loop_mode()
+            if mode == UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM:
+                return AgenticLoopMechanism.SINGLE_LLM
+            return AgenticLoopMechanism.DUAL_LLM
+        case _:
+            return AgenticLoopMechanism.SINGLE_LLM

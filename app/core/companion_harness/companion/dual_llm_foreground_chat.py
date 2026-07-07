@@ -1,6 +1,6 @@
 """Dual-LLM async foreground chat leg (envelope completion + tool-path handoff).
 
-Extracted from turn.run_turn ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL for reuse by
+Extracted from turn.run_turn dual-LLM user-chat path for reuse by
 the production AgenticLoop. Does not start tool_background; caller passes
 tool_msgs_for_bg into run_tool_background_loop (inline AgenticLoop tool phase).
 
