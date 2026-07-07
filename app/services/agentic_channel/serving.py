@@ -209,7 +209,6 @@ async def drain_and_deliver_user_chat_turn(
     runtime_channel: ChannelKind,
     delivery_wire_id: str,
     implicit_signal_bundle: ImplicitSignalBundle,
-    background_output_sink,
     deliver_message: DeliverReadyMessageFn,
 ) -> UserChatTurnDeliveryResult:
     """Drain one input batch while pumping OutputQueue ready messages."""
@@ -233,7 +232,6 @@ async def drain_and_deliver_user_chat_turn(
             scope,
             runtime_channel=runtime_channel,
             implicit_signal_bundle=implicit_signal_bundle,
-            background_output_sink=background_output_sink,
         )
     finally:
         stop_event.set()
@@ -261,7 +259,6 @@ async def drain_scope_once_via_companion(
     *,
     runtime_channel: ChannelKind,
     implicit_signal_bundle: ImplicitSignalBundle,
-    background_output_sink,
 ) -> DrainScopeOnceResult:
     """Drain one input batch; return user-visible text and tool_bg ownership."""
     model = await resolve_chat_model_for_scope(scope)
@@ -274,7 +271,6 @@ async def drain_scope_once_via_companion(
             result = await companion.drain_once(
                 resolved_chat_model=model,
                 runtime_channel=runtime_channel,
-                background_output_sink=background_output_sink,
                 implicit_signal_bundle=implicit_signal_bundle,
             )
         except Exception:
@@ -306,7 +302,6 @@ async def handle_sync_user_turn_via_queues(
     inbound: InboundWireMessage,
     runtime_channel: ChannelKind,
     implicit_signal_bundle: ImplicitSignalBundle,
-    background_output_sink,
     deliver_message: DeliverReadyMessageFn,
 ) -> UserChatTurnDeliveryResult:
     """Enqueue inbound user text, drain one batch, pull OutputQueue for delivery."""
@@ -316,6 +311,5 @@ async def handle_sync_user_turn_via_queues(
         runtime_channel=runtime_channel,
         delivery_wire_id=inbound.wire_id,
         implicit_signal_bundle=implicit_signal_bundle,
-        background_output_sink=background_output_sink,
         deliver_message=deliver_message,
     )

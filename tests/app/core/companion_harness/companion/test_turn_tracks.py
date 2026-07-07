@@ -45,11 +45,9 @@ def _minimal_turn_deps(**overrides: object) -> CompanionTurnDeps:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
-        background_output_sink=None,
         preset_user_msg_uuid=None,
         langsmith_parent_run_enabled=False,
         tool_bg_idle_event=None,
-        bootstrap_interim_output_sink=None,
     )
     if overrides:
         return replace(deps, **overrides)

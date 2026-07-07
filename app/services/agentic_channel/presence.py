@@ -1,7 +1,4 @@
-"""In-process agent-channel presence: shared inner-tick + tool_bg per scope.
-
-TODO(!3490): Remove queue USER_CHAT ``foreground_pending`` + ``background_sink``.
-"""
+"""In-process agent-channel presence: shared inner-tick per scope."""
 
 from __future__ import annotations
 
@@ -45,7 +42,6 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_companion.downlink import (
     agent_initiated_visible_downlink,
     queue_user_reply_downlink,
-    tool_background_downlink,
 )
 from app.services.agentic_companion.inner_tick_poll import run_inner_tick_poll
 from app.core.companion_harness.companion.utc import (
@@ -114,7 +110,6 @@ class AgentChannelPresence:
         self._loop = asyncio.get_running_loop()
         self._coordinator = Coordinator.for_loop(self._loop)
         self._session: Session | None = None
-        self._tool_bg_task: asyncio.Task[None] | None = None
         self._queue_serving: ScopeQueueServing | None = None
 
     @property
@@ -162,17 +157,12 @@ class AgentChannelPresence:
             poll_seconds=poll_secs,
             run_one_poll=_run_poll,
         )
-        self._tool_bg_task = asyncio.create_task(
-            self._tool_background_consumer(),
-            name=f"agent_channel_tool_bg_{self._scope.agent_id}",
-        )
         registry = get_scope_channel_registry(self._scope)
         initial_channel = registry.active_channel()
         if initial_channel is None:
             initial_channel = ChannelKind.APP_WS
         self._queue_serving = ScopeQueueServing(
             self._scope,
-            background_output_sink=self._coordinator.background_sink,
             deliver_message=self._deliver_ready_via_active_channel,
             on_drain_complete=self._on_queue_drain_complete,
             runtime_channel=initial_channel,
@@ -183,11 +173,6 @@ class AgentChannelPresence:
         if self._queue_serving is not None:
             await self._queue_serving.stop()
             self._queue_serving = None
-        task = self._tool_bg_task
-        if task is not None and (not task.done()):
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-        self._tool_bg_task = None
         if self._session is not None:
             await self._session.stop()
             self._session = None
@@ -394,43 +379,6 @@ class AgentChannelPresence:
                 english=_IM_TURN_FAILED,
                 chinese="Companion 回合失败，请查看 Ops 日志。",
             )
-
-    async def _tool_background_consumer(self) -> None:
-        while True:
-            ev = await self._coordinator.background_events.get()
-            registry = get_scope_channel_registry(self._scope)
-            active = registry.active_channel()
-            if active == ChannelKind.APP_WS:
-                downlink = registry.downlinks.get(active)
-                if downlink is None:
-                    continue
-                try:
-                    await downlink.deliver(
-                        tool_background_downlink(tool_output=ev)
-                    )
-                except Exception:
-                    logger.exception("agent_channel tool_bg deliver failed")
-                continue
-            ctx = self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
-            if ctx is None:
-                logger.warning(
-                    "agent_channel tool_bg missing foreground ctx user_msg_uuid={}",
-                    ev.user_msg_uuid,
-                )
-                continue
-            self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
-            if not ev.output_to_user:
-                continue
-            try:
-                if active is None:
-                    continue
-                downlink = registry.downlinks.get(active)
-                if downlink is None:
-                    continue
-                await downlink.deliver(tool_background_downlink(tool_output=ev))
-                self._coordinator.remove_foreground_pending(ev.user_msg_uuid)
-            except Exception:
-                logger.exception("agent_channel tool_bg deliver failed")
 
 
 class _NoopSessionDownlink:

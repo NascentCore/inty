@@ -22,10 +22,6 @@ from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.companion.scope_turn_lock import (
-    companion_scope_from_foreground_ctx,
-    get_scope_turn_lock,
-)
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
@@ -42,7 +38,6 @@ from app.services.agentic_channel.serving import (
     enqueue_inbound_wire_message,
 )
 from app.services.chat_service import generate_session_id
-from app.services.agentic_companion.downlink import tool_background_downlink
 from app.services.agentic_companion.inner_tick_delivery import (
     inner_tick_delivery_for_weixin,
 )
@@ -77,12 +72,11 @@ class WeixinInprocessPresence:
         self._coordinator = Coordinator.for_loop(self._loop)
         self._downlink: WeixinDownlink | None = None
         self._presence: Session | None = None
-        self._tool_bg_task: asyncio.Task[None] | None = None
         self._subscription_svc = subscription_service
         self._inty_user_id: str | None = None
 
     async def start(self, transport: WeixinTransport) -> None:
-        """Store agent-channel inner-tick coords, start poll + tool_bg consumer.
+        """Store agent-channel inner-tick coords and start proactive poll worker.
 
         Inner-tick shares ``AgentScope.memory_store_chat_id()`` with ``handle_user_text``
         so proactive/scheduled ticks read the same MemoryStore transcript as user chat.
@@ -130,17 +124,8 @@ class WeixinInprocessPresence:
             poll_seconds=poll_secs,
             run_one_poll=_run_poll,
         )
-        self._tool_bg_task = asyncio.create_task(
-            self._tool_background_consumer(),
-            name=f"weixin_tool_bg_{agent_id}",
-        )
 
     async def stop(self) -> None:
-        task = self._tool_bg_task
-        if task is not None and (not task.done()):
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
-        self._tool_bg_task = None
         if self._presence is not None:
             await self._presence.stop()
         self._coordinator.sign_out()
@@ -236,7 +221,6 @@ class WeixinInprocessPresence:
                 runtime_channel=ChannelKind.WECHAT_WEIXIN,
                 delivery_wire_id=wire_id,
                 implicit_signal_bundle=implicit_bundle,
-                background_output_sink=self._coordinator.background_sink,
                 deliver_message=deliver_weixin_message,
             )
             if not delivery_result.tool_background_started:
@@ -257,32 +241,3 @@ class WeixinInprocessPresence:
     async def _push_weixin_assistant_text(self, text: str) -> None:
         assert self._downlink is not None
         await self._downlink.send_assistant_text(text)
-
-    async def _tool_background_consumer(self) -> None:
-        assert self._downlink is not None
-        while True:
-            ev = await self._coordinator.background_events.get()
-            # Pop to detect stale uuid; re-set so deliver holds turn_lock without losing ctx.
-            ctx = self._coordinator.pop_foreground_pending(ev.user_msg_uuid)
-            if ctx is None:
-                logger.warning(
-                    "weixin tool_bg missing foreground ctx user_msg_uuid={}",
-                    ev.user_msg_uuid,
-                )
-                continue
-            self._coordinator.set_foreground_pending(ev.user_msg_uuid, ctx)
-            scope = companion_scope_from_foreground_ctx(ctx)
-            if scope is None:
-                logger.warning(
-                    "weixin tool_bg missing scope coords user_msg_uuid={}",
-                    ev.user_msg_uuid,
-                )
-                continue
-            scope_lock = get_scope_turn_lock(scope)
-            try:
-                async with scope_lock:
-                    await self._downlink.deliver(
-                        tool_background_downlink(tool_output=ev)
-                    )
-            except Exception:
-                logger.exception("weixin tool_bg deliver failed")

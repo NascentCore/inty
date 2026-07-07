@@ -50,9 +50,6 @@ from app.core.companion_harness.companion.schedule_queue import (
     next_due_task_for_execution,
     scheduled_task_synthetic_user_text,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BackgroundToolEventSink,
-)
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
 )
@@ -102,7 +99,6 @@ class InnerTickKernelInput:
     throttle: InnerTickThrottleSnapshot
     runtime_context: TurnRuntimeContext
     preset_user_msg_uuid: str
-    background_output_sink: BackgroundToolEventSink | None
     agentic_output_queue: OutputQueue
     user_message_batch: UserMessageBatch
 
@@ -179,7 +175,6 @@ async def kernel_fire_scheduled(
             await kernel_input.manager.run_inner_tick_scheduled_turn(
                 kernel_input.session,
                 synthetic_user_text,
-                background_output_sink=None,
                 preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                 runtime_context=kernel_input.runtime_context,
                 agentic_output_queue=kernel_input.agentic_output_queue,
@@ -216,7 +211,6 @@ async def kernel_fire_proactive(
     companion_turn = (
         await kernel_input.manager.run_inner_tick_proactive_chat_turn(
             kernel_input.session,
-            background_output_sink=None,
             preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
             runtime_context=kernel_input.runtime_context,
             agentic_output_queue=kernel_input.agentic_output_queue,
@@ -256,7 +250,6 @@ async def kernel_fire_throttled(
             companion_turn = (
                 await kernel_input.manager.run_inner_tick_monolog_turn(
                     kernel_input.session,
-                    background_output_sink=kernel_input.background_output_sink,
                     preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                     runtime_context=kernel_input.runtime_context,
                     agentic_output_queue=kernel_input.agentic_output_queue,
@@ -273,7 +266,6 @@ async def kernel_fire_throttled(
             companion_turn = (
                 await kernel_input.manager.run_inner_tick_autonomy_turn(
                     kernel_input.session,
-                    background_output_sink=kernel_input.background_output_sink,
                     preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
                     runtime_context=kernel_input.runtime_context,
                     agentic_output_queue=kernel_input.agentic_output_queue,

@@ -75,7 +75,6 @@ class ScopeQueueServing:
         self,
         scope: AgentScope,
         *,
-        background_output_sink,
         deliver_message: DeliverReadyMessageFn,
         on_drain_complete: OnDrainCompleteFn,
         runtime_channel: ChannelKind,
@@ -85,7 +84,6 @@ class ScopeQueueServing:
         assert on_drain_complete is not None
         assert runtime_channel is not None
         self._scope = scope
-        self._background_output_sink = background_output_sink
         self._deliver_message = deliver_message
         self._on_drain_complete = on_drain_complete
         self._wake = asyncio.Event()
@@ -193,7 +191,6 @@ class ScopeQueueServing:
                     self._scope,
                     runtime_channel=runtime_channel,
                     implicit_signal_bundle=implicit_bundle,
-                    background_output_sink=self._background_output_sink,
                 )
             except Exception:
                 logger.exception(

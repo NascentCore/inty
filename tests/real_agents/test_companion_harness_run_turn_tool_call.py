@@ -13,9 +13,17 @@ TODO(real-llm-tests): _InstrumentedLlmClient.chat_completion must accept and
 from __future__ import annotations
 
 import os
+import threading
+import uuid
 from typing import Any
 
 import pytest
+
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    get_output_queue_for_scope,
+)
+from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 
 from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -110,6 +118,15 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
         "to list the MemoryStore scope root. Do not guess. After you receive the tool output, reply in one "
         "short English sentence. That sentence MUST contain the exact substring hello.txt."
     )
+    user_msg_uuid = str(uuid.uuid4())
+    agent_scope = AgentScope(user_id=scope.user_id, agent_id=scope.companion_id)
+    output_queue = get_output_queue_for_scope(agent_scope)
+    user_batch = UserMessageBatch(
+        batch_id=str(uuid.uuid4()),
+        message_ids=(user_msg_uuid,),
+    )
+    tool_bg_idle = threading.Event()
+    tool_bg_idle.set()
     out = await run_companion_user_chat_turn(
         user_prompt,
         deps=CompanionTurnDeps(
@@ -122,11 +139,11 @@ async def test_run_turn_real_llm_lists_scope_then_names_hello_file(
                 channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
             ),
-            background_output_sink=None,
-            preset_user_msg_uuid=None,
+            preset_user_msg_uuid=user_msg_uuid,
             langsmith_parent_run_enabled=None,
-            tool_bg_idle_event=None,
-            bootstrap_interim_output_sink=None,
+            tool_bg_idle_event=tool_bg_idle,
+            agentic_output_queue=output_queue,
+            user_message_batch=user_batch,
         ),
     )
 

@@ -132,7 +132,7 @@ async def materialize_queue_user_reply_from_durable(
             scope.agent_id,
         ),
     )
-    return payload.model_dump(exclude_none=True)
+    return payload
 
 
 async def materialize_implicit_greeting_ws_payload(
@@ -209,7 +209,7 @@ async def materialize_implicit_greeting_ws_payload(
             scope.agent_id,
         ),
     )
-    return payload.model_dump(exclude_none=True)
+    return payload
 
 
 async def materialize_tool_background_ws_payload(
@@ -303,4 +303,4 @@ async def materialize_tool_background_ws_payload(
         agent_id=agent_id,
         status_line=await agent_status_line_for_chat_header(db, agent_id),
     )
-    return payload.model_dump(exclude_none=True)
+    return payload

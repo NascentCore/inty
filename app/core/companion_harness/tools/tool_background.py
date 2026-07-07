@@ -12,7 +12,6 @@ Issues: https://github.com/NascentCore/inty/issues/3123,
 https://github.com/NascentCore/inty/issues/3113.
 
 TODO(!3631): Use AsyncLlmClient instead of asyncio.to_thread(chat_completion_sync, ...).
-TODO(!3632): Retire start_tool_background_job threaded path once queue-serving covers all channels.
 """
 
 from __future__ import annotations
@@ -33,9 +32,6 @@ from openai import BadRequestError
 
 from app.utils.models_catalog import GenAIModel
 
-from app.core.companion_harness.llm.chat_completions import (
-    create_chat_completion_sync,
-)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
     SOURCE_TOOL_BACKGROUND_CONTINUE,
@@ -49,16 +45,8 @@ from app.core.companion_harness.tools.runtime import (
 )
 
 from app.core.companion_harness.companion.llm_chat_runtime import (
-    companion_turn_langsmith_parent_trace_id_str,
-    end_companion_turn_root_run_safe,
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
-)
-from app.core.llms.client import LLM_SCENE_TOOL_CALL
-from app.core.companion_harness.companion.llm_runtime_events import (
-    LlmRuntimeEventBind,
-    companion_llm_runtime_event_bind_ctx,
-    exc_chain_includes_llm_inference_failure_root_causes,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -75,9 +63,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
-)
-from app.core.companion_harness.companion.runtime_events import (
-    append_runtime_event,
 )
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     envelope_to_assistant_metadata_dict,
@@ -98,7 +83,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 
 from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
-    execute_tool_call,
     round_includes_generation_tool,
     tool_requires_client_delivery_on_success,
 )
@@ -107,20 +91,6 @@ from .tool_bg_routing import resolve_tool_background_finish_envelope
 
 _OUTPUT_QUEUE: queue.Queue["ToolOutputEvent"] | None = None
 _OUTPUT_QUEUE_LOCK = threading.Lock()
-_DB_LOOP_TLS = threading.local()
-
-
-def set_tool_background_db_loop(loop: asyncio.AbstractEventLoop) -> None:
-    """Bind the session's main asyncio loop for tool_background thread DB work."""
-    _DB_LOOP_TLS.loop = loop
-
-
-def clear_tool_background_db_loop() -> None:
-    _DB_LOOP_TLS.loop = None
-
-
-_ACTIVE_THREADS: set[threading.Thread] = set()
-_ACTIVE_THREADS_LOCK = threading.Lock()
 _ABORT_TOOL_BG_LOCK = threading.Lock()
 _ABORTED_TOOL_BG_USER_MSG_UUIDS: set[str] = set()
 _BG_TOOL_MAX_ROUNDS = 24
@@ -355,16 +325,6 @@ def output_queue() -> queue.Queue[ToolOutputEvent]:
 
 def push_output_event(event: ToolOutputEvent) -> None:
     output_queue().put(event)
-
-
-def _register_thread(worker: threading.Thread) -> None:
-    with _ACTIVE_THREADS_LOCK:
-        _ACTIVE_THREADS.add(worker)
-
-
-def _unregister_thread(worker: threading.Thread) -> None:
-    with _ACTIVE_THREADS_LOCK:
-        _ACTIVE_THREADS.discard(worker)
 
 
 def _assistant_text_from_completion_response(resp: Any) -> str:
@@ -989,151 +949,3 @@ async def run_tool_background_loop(
         )
     finally:
         clear_tool_background_abort_flag(user_msg_uuid)
-
-
-def start_tool_background_job(
-    *,
-    memory_store: MemoryStore,
-    request_messages: list[dict[str, Any]],
-    tool_model: GenAIModel,
-    user_msg_uuid: str,
-    trace_id: str,
-    tools: list[Any],
-    on_event: Callable[[ToolOutputEvent], None] | None = None,
-    execute_tool_call_fn: Callable[..., Any] = execute_tool_call,
-    client: Any,
-    companion_turn_track: CompanionTurnTrack,
-    chat_completions_sync: ChatCompletionsSyncPort | None = None,
-    trace_hooks: ToolBackgroundTraceHooks | None = None,
-    write_allowlist: frozenset[str] | None = None,
-    repository_only_store_text: bool = False,
-    main_event_loop: asyncio.AbstractEventLoop | None = None,
-    langsmith_parent_run: Any | None = None,
-    inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
-    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
-        implicit_signal_bundle=None,
-    ),
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    tool_bg_idle_event: threading.Event | None = None,
-    force_tools_first_round: bool = True,
-) -> None:
-    sync_port = chat_completions_sync or create_chat_completion_sync
-
-    def _effective_on_event(ev: ToolOutputEvent) -> None:
-        if on_event is not None:
-            on_event(ev)
-        else:
-            push_output_event(ev)
-
-    def _runner() -> None:
-        # Register here with current_thread(), not the Thread instance from threading.Thread(...).
-        # Unit tests patch threading.Thread with MagicMock; pre-start register would leak mocks.
-        _register_thread(threading.current_thread())
-        _tb_phase = "inner_tick" if inner_tick_turn else "tool_background"
-        llm_bg_bind_token = companion_llm_runtime_event_bind_ctx.set(
-            LlmRuntimeEventBind(
-                memory_store=memory_store,
-                trace_id=trace_id,
-                user_msg_uuid=user_msg_uuid,
-                phase=_tb_phase,
-                scene=LLM_SCENE_TOOL_CALL,
-            )
-        )
-        bg_ls_err: str | None = None
-
-        def _run_async_tool_loop() -> None:
-            asyncio.run(
-                run_tool_background_loop(
-                    memory_store=memory_store,
-                    request_messages=request_messages,
-                    tool_model=tool_model,
-                    user_msg_uuid=user_msg_uuid,
-                    trace_id=trace_id,
-                    tools=tools,
-                    on_event=_effective_on_event,
-                    execute_tool_call_fn=execute_tool_call_fn,
-                    client=client,
-                    chat_completion_sync=sync_port,
-                    trace_hooks=trace_hooks,
-                    write_allowlist=write_allowlist,
-                    repository_only_store_text=repository_only_store_text,
-                    inner_tick_turn=inner_tick_turn,
-                    inner_tick_activity=inner_tick_activity,
-                    runtime_context=runtime_context,
-                    langsmith_slice=langsmith_slice,
-                    companion_turn_track=companion_turn_track,
-                    force_tools_first_round=force_tools_first_round,
-                )
-            )
-
-        try:
-            try:
-                if main_event_loop is not None:
-                    set_tool_background_db_loop(main_event_loop)
-                if langsmith_parent_run is not None:
-                    from langsmith.run_helpers import set_tracing_parent
-
-                    with set_tracing_parent(langsmith_parent_run):
-                        _run_async_tool_loop()
-                else:
-                    _run_async_tool_loop()
-            except Exception as exc:
-                bg_ls_err = repr(exc)
-                logger.exception("repl.turn.bg job failed")
-                if not exc_chain_includes_llm_inference_failure_root_causes(
-                    exc
-                ):
-                    ev: dict[str, Any] = {
-                        "ts": utc_iso_ts(),
-                        "kind": "tool_background_failure",
-                        "trace_id": trace_id,
-                        "user_msg_uuid": user_msg_uuid,
-                        "tool_model_name": tool_model.id_on_provider,
-                        "inner_tick_turn": inner_tick_turn,
-                        "inner_tick_activity": inner_tick_activity.value,
-                        "error_type": type(exc).__name__,
-                        "detail": str(exc),
-                    }
-                    ph = getattr(exc, "provider_http_status", None)
-                    if isinstance(ph, int):
-                        ev["provider_http_status"] = ph
-                    try:
-                        append_runtime_event(memory_store, ev)
-                    except Exception:
-                        logger.warning(
-                            "repl.turn.bg append_runtime_event failed trace_id={}",
-                            trace_id,
-                            exc_info=True,
-                        )
-            finally:
-                end_companion_turn_root_run_safe(
-                    langsmith_parent_run,
-                    error=bg_ls_err,
-                    ls_end_source="tool_background_thread",
-                )
-                clear_tool_background_db_loop()
-        finally:
-            companion_llm_runtime_event_bind_ctx.reset(llm_bg_bind_token)
-            # TODO(tool-bg-idle-starves-user-chat): Sole normal path that sets idle after — #3123
-            # clear() below; hung LLM/tool loop here starves user chat on the same session.
-            # https://github.com/NascentCore/inty/issues/3123
-            if tool_bg_idle_event is not None:
-                tool_bg_idle_event.set()
-            _unregister_thread(threading.current_thread())
-
-    if tool_bg_idle_event is not None:
-        tool_bg_idle_event.clear()
-
-    t = threading.Thread(target=_runner, name="inty-v2-tool-bg", daemon=False)
-    logger.debug(
-        "langsmith_companion_parent_run tool_bg_thread_start inty_trace_id={} "
-        "user_msg_uuid={} ls_trace_id={} thread_name={} daemon={}",
-        trace_id,
-        user_msg_uuid,
-        companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
-        t.name,
-        t.daemon,
-    )
-    t.start()

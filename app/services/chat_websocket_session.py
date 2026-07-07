@@ -24,9 +24,9 @@ async def chat_ws_outbound_pump(
     """FIFO drain of outbound JSON payloads produced by adapters/handlers onto the WebSocket."""
     try:
         while True:
-            payload = await outbound_queue.get()
+            frame = await outbound_queue.get()
             try:
-                await websocket.send_json(payload)
+                await websocket.send_json(frame.model_dump(exclude_none=True))
             except WebSocketDisconnect:
                 logger.debug(
                     "chat_ws_outbound_pump send_json: client disconnected"

@@ -32,6 +32,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
     bootstrap_queue_turn_deps,
+    queue_serving_turn_deps,
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     companion_llm_client_with_scripted_transport,
@@ -96,22 +97,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
     out = asyncio.run(
         run_companion_inner_tick_scheduled_turn(
             scheduled_text,
-            deps=CompanionTurnDeps(
-                store=store,
-                llm_client=client,  # type: ignore[arg-type]
-                transcript_compaction=None,
-                transcript_llm_window_max_messages=None,
-                repository_only_store_text=False,
-                runtime_context=TurnRuntimeContext(
-                    channel=ChannelKind.APP_WS,
-                    implicit_signal_bundle=None,
-                ),
-                background_output_sink=None,
-                preset_user_msg_uuid=None,
-                langsmith_parent_run_enabled=False,
-                tool_bg_idle_event=None,
-                bootstrap_interim_output_sink=None,
-            ),
+            deps=queue_serving_turn_deps(store, client),
         )
     )
 
@@ -162,7 +148,7 @@ async def test_bootstrap_without_queue_raises_runtime_error(
         scripted_harness_llm_config(),
         (fake_step_text("bootstrap reply"),),
     )
-    with pytest.raises(RuntimeError, match="agentic_output_queue"):
+    with pytest.raises(AssertionError):
         await _run_companion_turn_core(
             "bootstrap hello",
             track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
@@ -176,11 +162,9 @@ async def test_bootstrap_without_queue_raises_runtime_error(
                     channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
                 ),
-                background_output_sink=None,
                 preset_user_msg_uuid=None,
                 langsmith_parent_run_enabled=False,
                 tool_bg_idle_event=None,
-                bootstrap_interim_output_sink=None,
             ),
         )
 

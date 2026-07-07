@@ -34,10 +34,6 @@ from app.core.companion_harness.companion.dreaming_observability import (
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BackgroundToolEventSink,
-    BootstrapInterimOutputSink,
-)
 from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
 )
@@ -461,11 +457,9 @@ async def run_user_chat(
     user_text: str,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
-    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
 ) -> CompanionTurnResult:
     """Run one user-chat turn via maintenance HTTP API.
 
@@ -484,13 +478,11 @@ async def run_user_chat(
         run_track=lambda manager, session: manager.run_user_chat_turn(
             session,
             user_text,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
                 implicit_signal_bundle=implicit_signal_bundle,
             ),
-            bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         ),
     )
 
@@ -504,7 +496,6 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
     resolved_chat_model: GenAIModel,
     implicit_signal_bundle: ImplicitSignalBundle,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
     agentic_output_queue: OutputQueue | None = None,
@@ -521,7 +512,6 @@ async def run_companion_implicit_sign_on_greeting_turn_for_api(
         run_track=lambda manager, session: manager.run_implicit_sign_on_greeting_turn(
             session,
             user_text,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
@@ -540,7 +530,6 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
@@ -555,7 +544,6 @@ async def run_companion_inner_tick_proactive_chat_turn_for_api(
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_proactive_chat_turn(
             session,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
@@ -573,7 +561,6 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
@@ -592,7 +579,6 @@ async def run_companion_inner_tick_scheduled_turn_for_api(
         run_track=lambda manager, session: manager.run_inner_tick_scheduled_turn(
             session,
             scheduled_user_text,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
@@ -609,7 +595,6 @@ async def run_companion_inner_tick_monolog_turn_for_api(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
@@ -624,7 +609,6 @@ async def run_companion_inner_tick_monolog_turn_for_api(
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_monolog_turn(
             session,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
@@ -641,7 +625,6 @@ async def run_inner_tick_autonomy(
     chat_id: str | int,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     runtime_channel: ChannelKind = ChannelKind.APP_WS,
@@ -657,7 +640,6 @@ async def run_inner_tick_autonomy(
         session_id=session_id,
         run_track=lambda manager, session: manager.run_inner_tick_autonomy_turn(
             session,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=TurnRuntimeContext(
                 channel=runtime_channel,
@@ -675,7 +657,6 @@ async def run_companion_chat_turn_for_api(
     user_text: str,
     resolved_chat_model: GenAIModel,
     session_id: str | None = None,
-    background_output_sink: BackgroundToolEventSink | None = None,
     preset_user_msg_uuid: str | None = None,
     implicit_signal_bundle: ImplicitSignalBundle | None = None,
     inner_tick_turn: bool = False,
@@ -689,7 +670,6 @@ async def run_companion_chat_turn_for_api(
         "chat_id": chat_id,
         "resolved_chat_model": resolved_chat_model,
         "session_id": session_id,
-        "background_output_sink": background_output_sink,
         "preset_user_msg_uuid": preset_user_msg_uuid,
         "implicit_signal_bundle": implicit_signal_bundle,
         "runtime_channel": runtime_channel,

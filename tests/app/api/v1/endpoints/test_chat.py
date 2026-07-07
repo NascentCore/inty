@@ -40,9 +40,17 @@ from app.core.uuid import get_new_user_id
 from app.models.chat_history import ChatHistory
 from app.models.memory import Memory
 from app.models.user import AuthType, User as UserModel
-from app.schemas.chat import ChatMusicGenerationResponse
+from app.schemas.chat import (
+    ChatCompletionRequest,
+    ChatMessage,
+    ChatMusicGenerationResponse,
+)
+from app.schemas.chat_websocket import ChatWebSocketQueuedSuccessFrame
+from app.services.chat_completion_wire import (
+    build_chat_ws_queued_success_frame,
+    build_companion_ws_completion_data,
+)
 from app.schemas.response import (
-    APIResponse,
     BizError,
     BusinessErrorCode,
     UsageLimitExceeded,
@@ -80,6 +88,39 @@ def db_session():
     session = Session()
     yield session
     session.close()
+
+
+def _stub_ws_queued_success_frame(
+    *,
+    agent_id: str,
+    content: str,
+    request: ChatCompletionRequest | None = None,
+) -> ChatWebSocketQueuedSuccessFrame:
+    """Minimal typed success frame for WS-layer tests that stub ``_agent_chat_ws_completions_impl``."""
+    assert agent_id != ""
+    resolved_request = request or ChatCompletionRequest(
+        messages=[ChatMessage(role="user", content="hi")],
+    )
+    last_user_text = "hi"
+    if resolved_request.messages:
+        last_user_text = str(resolved_request.messages[-1].content or "hi")
+    completion = build_companion_ws_completion_data(
+        response_text_content=content,
+        response_content_parts=None,
+        last_user_text=last_user_text,
+        latest_message_info=None,
+        audio_url=None,
+        request=resolved_request,
+        source_imate_id=agent_id,
+        user_message_id=None,
+        subscription_actions=None,
+        client_local_id=None,
+    )
+    return build_chat_ws_queued_success_frame(
+        completion=completion,
+        agent_id=agent_id,
+        status_line=None,
+    )
 
 
 def _cleanup_chat_history_session(db_session, session_id: str) -> None:
@@ -1108,7 +1149,6 @@ def _patch_companion_ws_queue_turn(
             user_text=user_text,
             preset_user_msg_uuid=client_message_id,
             implicit_signal_bundle=implicit_bundle,
-            background_output_sink=None,
         )
         queue_message_id = client_message_id or "queue-synthetic"
         if isinstance(turn_result, CompanionTurnResult):
@@ -2435,15 +2475,13 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
             assert ack["ok"] is True
             time.sleep(0.2)
             assert (
-                ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
-                >= 1
+                ticks["proactive"] + ticks["monolog"] + ticks["scheduled"] >= 1
             )
 
     n_at_close = ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
     time.sleep(0.35)
     assert (
-        ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
-        == n_at_close
+        ticks["proactive"] + ticks["monolog"] + ticks["scheduled"] == n_at_close
     )
 
     companion_chat_service.clear_companion_chat_service_caches()
@@ -2656,7 +2694,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-channel=ChannelKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )
@@ -2903,51 +2941,31 @@ def test_chat_websocket_companion_accepts_text_only_multipart_user_turn(
 def test_chat_websocket_reuses_connection_for_multiple_agents(
     monkeypatch: pytest.MonkeyPatch, chat_business_error_app: FastAPI
 ):
-    user = _make_user(auth_type=AuthType.GOOGLE)
+    """One WebSocket session can serve sequential turns for different agents."""
+    companion_agent_ids: list[str] = []
 
-    async def fake_ws_user(websocket, db):
-        return user
+    async def fake_run_companion_chat_turn_for_api(**kwargs):
+        agent_id = str(kwargs["agent_id"])
+        companion_agent_ids.append(agent_id)
+        turn_index = len(companion_agent_ids)
+        uid = str(kwargs.get("preset_user_msg_uuid") or "")
+        return CompanionTurnResult(
+            assistant_text=f"reply:{agent_id}",
+            user_msg_uuid=uid,
+            assistant_msg_uuid=(f"33333333-3333-4333-8333-{turn_index:012d}"),
+        )
 
-    async def fake_agent_chat_ws_completions(
-        *,
-        db,
-        agent_id,
-        request,
-        current_user,
-        subscription_svc,
-        voice_svc=None,
-        companion_background_sink=None,
-        companion_ws_foreground_pending=None,
-        companion_ws_inner_tick_ctx=None,
-        companion_ws=None,
-        implicit_greeting_turn=False,
-        ws_outbound_queue=None,
-        ws_conn_id=None,
-    ):
-        return APIResponse.success(
-            data={
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": f"reply:{agent_id}",
-                        },
-                        "finish_reason": "stop",
-                    }
-                ],
-                "source_imate_id": request.target_imate_id,
-            }
-        ).model_dump(exclude_none=True)
-
-    monkeypatch.setattr(
-        chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user
+    _setup_companion_ws_chat_test_env(
+        monkeypatch,
+        agent_id="agent-a",
+        chat_id="chat-multi-1",
+        latest_user_message_db_id=60,
+        ai_message_id=601,
+        run_companion_chat_turn_for_api=fake_run_companion_chat_turn_for_api,
     )
-    monkeypatch.setattr(
-        chat_ws_v1,
-        "_agent_chat_ws_completions_impl",
-        fake_agent_chat_ws_completions,
-    )
+
+    first_turn_uuid = "11111111-1111-4111-8111-aaaaaaaaaaaa"
+    second_turn_uuid = "22222222-2222-4222-8222-bbbbbbbbbbbb"
 
     with FastAPITestClient(chat_business_error_app) as client:
         with client.websocket_connect("/api/v1/chat/ws") as websocket:
@@ -2957,6 +2975,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                     "request": {
                         "messages": [{"role": "user", "content": "hello a"}],
                         "target_imate_id": "imate-a",
+                        "message_id": first_turn_uuid,
                     },
                 }
             )
@@ -2968,6 +2987,7 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
                     "request": {
                         "messages": [{"role": "user", "content": "hello b"}],
                         "target_imate_id": "imate-b",
+                        "message_id": second_turn_uuid,
                     },
                 }
             )
@@ -2975,11 +2995,22 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
 
     assert first_response["code"] == 200
     assert first_response["agent_id"] == "agent-a"
-    assert first_response["data"]["source_imate_id"] == "imate-a"
+    assert first_response["data"]["source_imate_id"] == "agent-a"
+    assert (
+        first_response["data"]["choices"][0]["message"]["content"]
+        == "reply:agent-a"
+    )
 
     assert second_response["code"] == 200
     assert second_response["agent_id"] == "agent-b"
-    assert second_response["data"]["source_imate_id"] == "imate-b"
+    assert second_response["data"]["source_imate_id"] == "agent-b"
+    assert (
+        second_response["data"]["choices"][0]["message"]["content"]
+        == "reply:agent-b"
+    )
+    assert companion_agent_ids == ["agent-a", "agent-b"]
+
+    companion_chat_service.clear_companion_chat_service_caches()
 
 
 def test_chat_websocket_idle_timeout_reads_config(
@@ -2993,8 +3024,9 @@ def test_chat_websocket_idle_timeout_reads_config(
         return user
 
     async def fake_agent_chat_ws_completions(**kwargs):
-        return APIResponse.success(data={"choices": []}).model_dump(
-            exclude_none=True
+        return _stub_ws_queued_success_frame(
+            agent_id=str(kwargs["agent_id"]),
+            content="",
         )
 
     expected_idle = float(
@@ -3065,7 +3097,6 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         current_user,
         subscription_svc,
         voice_svc=None,
-        companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         companion_ws=None,
@@ -3074,17 +3105,11 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         ws_conn_id=None,
     ):
         captured["effective_user_id"] = current_user.id
-        return APIResponse.success(
-            data={
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": "ok"},
-                        "finish_reason": "stop",
-                    }
-                ],
-            }
-        ).model_dump(exclude_none=True)
+        return _stub_ws_queued_success_frame(
+            agent_id=str(agent_id),
+            content="ok",
+            request=request,
+        )
 
     monkeypatch.setattr(
         chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user
@@ -3129,7 +3154,6 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         current_user,
         subscription_svc,
         voice_svc=None,
-        companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         companion_ws=None,
@@ -3138,17 +3162,11 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         ws_conn_id=None,
     ):
         captured["user_time_context"] = request.user_time_context
-        return APIResponse.success(
-            data={
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": "ok"},
-                        "finish_reason": "stop",
-                    }
-                ],
-            }
-        ).model_dump(exclude_none=True)
+        return _stub_ws_queued_success_frame(
+            agent_id=str(agent_id),
+            content="ok",
+            request=request,
+        )
 
     monkeypatch.setattr(
         chat_ws_v1, "_get_current_user_from_websocket", fake_ws_user

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import threading
-from typing import TYPE_CHECKING
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -38,7 +37,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
 )
-from .models import CompanionTurnResult
+from .models import CompanionTurnResult, CompanionTurnTrack
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -50,7 +49,6 @@ from .scope_turn_lock import (
     get_scope_turn_lock,
 )
 from .turn_deps import CompanionTurnDeps
-from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_monolog_turn,
@@ -63,14 +61,15 @@ from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
     is_scope_initialized_in_store,
 )
-
-if TYPE_CHECKING:
-    from app.core.companion_harness.agentic_companion.output_queue import (
-        OutputQueue,
-    )
-    from app.core.companion_harness.agentic_companion.types import (
-        UserMessageBatch,
-    )
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueue,
+    get_output_queue_for_scope,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    UserMessageBatch,
+    synthetic_user_message_batch,
+)
 
 
 class CompanionConfig(BaseModel):
@@ -240,16 +239,45 @@ class CompanionManager:
             else override
         )
 
+    def _agent_scope_for_session(self, session: CompanionSession) -> AgentScope:
+        companion_scope = session.store.scope
+        return AgentScope(
+            user_id=companion_scope.user_id,
+            agent_id=companion_scope.companion_id,
+        )
+
+    def _resolve_agentic_queue_serving(
+        self,
+        session: CompanionSession,
+        *,
+        agentic_output_queue: OutputQueue | None,
+        user_message_batch: UserMessageBatch | None,
+        preset_user_msg_uuid: str | None,
+        track_label: str,
+    ) -> tuple[OutputQueue, UserMessageBatch | None]:
+        """Ensure every turn has a scope ``OutputQueue``; synthesize batch when possible."""
+        assert track_label != ""
+        resolved_queue = agentic_output_queue
+        if resolved_queue is None:
+            resolved_queue = get_output_queue_for_scope(
+                self._agent_scope_for_session(session)
+            )
+        resolved_batch = user_message_batch
+        if resolved_batch is None and preset_user_msg_uuid is not None:
+            resolved_batch = synthetic_user_message_batch(
+                user_msg_uuid=preset_user_msg_uuid,
+                track_label=track_label,
+            )
+        return resolved_queue, resolved_batch
+
     def _build_turn_deps(
         self,
         session: CompanionSession,
         *,
-        background_output_sink: BackgroundToolEventSink | None,
         preset_user_msg_uuid: str | None,
         runtime_context: TurnRuntimeContext,
-        bootstrap_interim_output_sink: BootstrapInterimOutputSink | None,
-        agentic_output_queue: OutputQueue | None = None,
-        user_message_batch: UserMessageBatch | None = None,
+        agentic_output_queue: OutputQueue,
+        user_message_batch: UserMessageBatch | None,
         input_batch=None,
     ) -> CompanionTurnDeps:
         return CompanionTurnDeps(
@@ -258,14 +286,12 @@ class CompanionManager:
             transcript_compaction=session.config.transcript_compaction,
             transcript_llm_window_max_messages=session.config.transcript_llm_window_max_messages,
             repository_only_store_text=session.config.repository_only_store_text,
-            background_output_sink=background_output_sink,
             preset_user_msg_uuid=preset_user_msg_uuid,
             runtime_context=runtime_context,
             langsmith_parent_run_enabled=self._langsmith_parent_run_enabled(
                 session
             ),
             tool_bg_idle_event=session.tool_bg_idle,
-            bootstrap_interim_output_sink=bootstrap_interim_output_sink,
             agentic_output_queue=agentic_output_queue,
             user_message_batch=user_message_batch,
             input_batch=input_batch,
@@ -279,25 +305,30 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
-        bootstrap_interim_output_sink: BootstrapInterimOutputSink | None = None,
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
         input_batch=None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.USER_CHAT.value,
+            )
+        )
         return await run_companion_user_chat_turn(
             user_text,
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=bootstrap_interim_output_sink,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
                 input_batch=input_batch,
@@ -309,7 +340,6 @@ class CompanionManager:
         session: CompanionSession,
         user_text: str,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
@@ -318,14 +348,21 @@ class CompanionManager:
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING.value,
+            )
+        )
         return await run_companion_implicit_sign_on_greeting_turn(
             user_text,
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=None,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
             ),
@@ -335,7 +372,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
@@ -344,13 +380,20 @@ class CompanionManager:
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT.value,
+            )
+        )
         return await run_companion_inner_tick_proactive_chat_turn(
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=None,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
             ),
@@ -361,7 +404,6 @@ class CompanionManager:
         session: CompanionSession,
         scheduled_user_text: str,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
@@ -370,14 +412,21 @@ class CompanionManager:
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.INNER_TICK_SCHEDULED.value,
+            )
+        )
         return await run_companion_inner_tick_scheduled_turn(
             scheduled_user_text,
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=None,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
             ),
@@ -387,7 +436,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
@@ -396,13 +444,20 @@ class CompanionManager:
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.INNER_TICK_MONOLOG.value,
+            )
+        )
         return await run_companion_inner_tick_monolog_turn(
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=None,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
             ),
@@ -412,7 +467,6 @@ class CompanionManager:
         self,
         session: CompanionSession,
         *,
-        background_output_sink: BackgroundToolEventSink | None = None,
         preset_user_msg_uuid: str | None = None,
         runtime_context: TurnRuntimeContext = TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
@@ -421,13 +475,20 @@ class CompanionManager:
         agentic_output_queue: OutputQueue | None = None,
         user_message_batch: UserMessageBatch | None = None,
     ) -> CompanionTurnResult:
+        agentic_output_queue, user_message_batch = (
+            self._resolve_agentic_queue_serving(
+                session,
+                agentic_output_queue=agentic_output_queue,
+                user_message_batch=user_message_batch,
+                preset_user_msg_uuid=preset_user_msg_uuid,
+                track_label=CompanionTurnTrack.INNER_TICK_AUTONOMY.value,
+            )
+        )
         return await run_inner_tick_autonomy(
             deps=self._build_turn_deps(
                 session,
-                background_output_sink=background_output_sink,
                 preset_user_msg_uuid=preset_user_msg_uuid,
                 runtime_context=runtime_context,
-                bootstrap_interim_output_sink=None,
                 agentic_output_queue=agentic_output_queue,
                 user_message_batch=user_message_batch,
             ),

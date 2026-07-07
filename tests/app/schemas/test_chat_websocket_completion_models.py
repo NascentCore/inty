@@ -8,6 +8,7 @@ import pytest
 
 from app.core.companion_harness.companion.inner_tick_kind import InnerTickKind
 from app.schemas.chat_websocket import (
+    ChatWebSocketQueuedPlainError,
     ChatWebSocketQueuedSuccessFrame,
     ChatWsCompanionWireMessageMetaData,
     ChatWsCompletionData,
@@ -242,3 +243,26 @@ def test_build_chat_ws_queued_success_frame_round_trip() -> None:
     assert round_trip.agent_id == "agent-uuid"
     assert round_trip.status_line == "Online"
     assert round_trip.data.id == completion.id
+
+
+def test_chat_ws_queued_error_frame_round_trip() -> None:
+    from app.schemas.chat_websocket import chat_ws_queued_error_frame
+
+    frame = chat_ws_queued_error_frame(
+        status_code=502,
+        message="upstream failed",
+        agent_id="agent-uuid",
+        ws_extra={
+            "error_kind": "llm_inference_backend",
+            "llm_provider_http_status": 503,
+        },
+    )
+    round_trip = ChatWebSocketQueuedPlainError.model_validate(
+        frame.model_dump(exclude_none=True)
+    )
+    assert round_trip.code == 502
+    assert round_trip.message == "upstream failed"
+    assert round_trip.agent_id == "agent-uuid"
+    dumped = round_trip.model_dump(exclude_none=True)
+    assert dumped["error_kind"] == "llm_inference_backend"
+    assert dumped["llm_provider_http_status"] == 503

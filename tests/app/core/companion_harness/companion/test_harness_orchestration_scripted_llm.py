@@ -580,11 +580,8 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
                 implicit_signal_bundle=None,
             ),
         )
-        assert session.tool_bg_idle.wait(timeout=30.0)
 
-        assert result.assistant_text == ""
         assert result.inner_tick_activity == InnerTickActivity.MONOLOG.value
-        assert result.tool_background_started is True
         assert fake.script_index == len(script)
 
         thoughts = load_ai_private_thoughts(session.store)
@@ -597,9 +594,5 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
         assert len(inner_rows) >= 1
         assert inner_rows[0]["role"] == "user"
         assert inner_rows[0].get("inner_tick") is True
-
-        done_rows = scripted_tool_background_done_rows(session.store)
-        assert len(done_rows) == 1
-        assert done_rows[0].get("tool_calls_count") == 1
     finally:
         await delete_guest_scope_for_test(scope)

@@ -2,26 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import threading
-from pathlib import Path
-from types import SimpleNamespace
-from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 
-from app.core.companion_harness.llm.chat_completions import (
-    create_chat_completion_sync,
-)
 from app.core.companion_harness.companion.llm_chat_runtime import (
     companion_turn_langsmith_parent_trace_id_str,
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
 )
-from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.models import (
-    CompanionTurnTrack,
     InnerTickActivity,
 )
 from app.core.companion_harness.companion.langsmith_turn_slice import (
@@ -30,26 +20,8 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
-    TurnRuntimeContext,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
-)
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.tools.tool_background import (
-    start_tool_background_job,
-)
-from app.core.companion_harness.companion.turn import (
-    run_companion_user_chat_turn,
-)
-from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
+from app.utils.models_catalog import resolve_chat_text_model
 
 _APP_SLICE = CompanionTurnLangsmithSlice.app_default()
 
@@ -373,222 +345,3 @@ def test_companion_turn_langsmith_parent_trace_id_str_empty_for_none() -> None:
 
 def test_end_companion_turn_root_run_safe_noop_for_none() -> None:
     end_companion_turn_root_run_safe(None)
-
-
-@patch("app.core.companion_harness.tools.tool_background.threading.Thread")
-@patch(
-    "app.core.companion_harness.tools.tool_background.set_tool_background_db_loop"
-)
-@patch(
-    "app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop"
-)
-@patch("asyncio.run")
-@patch(
-    "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"
-)
-def test_start_tool_background_job_uses_set_tracing_parent_when_parent_given(
-    mock_end: MagicMock,
-    mock_asyncio_run: MagicMock,
-    _mock_clear_loop: MagicMock,
-    _mock_set_loop: MagicMock,
-    mock_thread: MagicMock,
-) -> None:
-    parent = MagicMock()
-    entered: list[bool] = []
-
-    class _CM:
-        def __enter__(self) -> None:
-            entered.append(True)
-
-        def __exit__(self, *args: object) -> bool:
-            return False
-
-    def _fake_set_parent(run: object) -> _CM:
-        assert run is parent
-        return _CM()
-
-    with patch(
-        "langsmith.run_helpers.set_tracing_parent",
-        side_effect=_fake_set_parent,
-    ):
-        mock_t = MagicMock()
-        mock_thread.return_value = mock_t
-        st = MemoryStore(scope=CompanionScope("u", "a", "c"), repository=None)
-        start_tool_background_job(
-            memory_store=st,
-            request_messages=[{"role": "user", "content": "hi"}],
-            tool_model=resolve_chat_text_model("m"),
-            user_msg_uuid="uuid",
-            trace_id="tr",
-            tools=[],
-            client=MagicMock(),
-            companion_turn_track=CompanionTurnTrack.USER_CHAT,
-            langsmith_parent_run=parent,
-            langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
-        )
-        runner = mock_thread.call_args.kwargs["target"]
-        runner()
-
-    assert entered == [True]
-    mock_asyncio_run.assert_called_once()
-    coro = mock_asyncio_run.call_args[0][0]
-    coro.close()
-    mock_end.assert_called_once_with(
-        parent, error=None, ls_end_source="tool_background_thread"
-    )
-
-
-@patch("app.core.companion_harness.tools.tool_background.threading.Thread")
-@patch(
-    "app.core.companion_harness.tools.tool_background.set_tool_background_db_loop"
-)
-@patch(
-    "app.core.companion_harness.tools.tool_background.clear_tool_background_db_loop"
-)
-@patch("asyncio.run")
-@patch(
-    "app.core.companion_harness.tools.tool_background.end_companion_turn_root_run_safe"
-)
-def test_start_tool_background_job_skips_set_tracing_parent_without_parent(
-    mock_end: MagicMock,
-    mock_asyncio_run: MagicMock,
-    _mock_clear_loop: MagicMock,
-    _mock_set_loop: MagicMock,
-    mock_thread: MagicMock,
-) -> None:
-    with patch("langsmith.run_helpers.set_tracing_parent") as mock_sp:
-        mock_t = MagicMock()
-        mock_thread.return_value = mock_t
-        st = MemoryStore(scope=CompanionScope("u", "a", "c"), repository=None)
-        start_tool_background_job(
-            memory_store=st,
-            request_messages=[{"role": "user", "content": "hi"}],
-            tool_model=resolve_chat_text_model("m"),
-            user_msg_uuid="uuid",
-            trace_id="tr",
-            tools=[],
-            client=MagicMock(),
-            companion_turn_track=CompanionTurnTrack.USER_CHAT,
-            langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
-        )
-        runner = mock_thread.call_args.kwargs["target"]
-        runner()
-
-    mock_sp.assert_not_called()
-    mock_asyncio_run.assert_called_once()
-    mock_asyncio_run.call_args[0][0].close()
-    mock_end.assert_called_once_with(
-        None, error=None, ls_end_source="tool_background_thread"
-    )
-
-
-class _FakeAsyncDualLLMClient:
-    def __init__(self) -> None:
-        self.config = CompanionLLMConfig(
-            api_key="k",
-            default_model=resolve_chat_text_model("m/default"),
-            chat_model=resolve_chat_text_model("m/chat"),
-            tool_model=resolve_chat_text_model("m/tool"),
-            async_chat_front_timeout_sec=120.0,
-        )
-        self.chat_calls: list[dict[str, Any]] = []
-
-    def resolve_model(self, role: str) -> GenAIModel:
-        return resolve_chat_text_model(f"m/{role}")
-
-    def chat_completion(self, **kwargs: Any) -> Any:
-        self.chat_calls.append(kwargs)
-        env = {
-            "user_facing_reply": "foreground ok",
-            "importance_round": 5,
-            "importance_user_message": 5,
-            "importance_assistant_message": 5,
-        }
-        msg = SimpleNamespace(
-            content=json.dumps(env),
-            tool_calls=[],
-        )
-        return SimpleNamespace(choices=[SimpleNamespace(message=msg)])
-
-    def sync_client_for_route(self, _route: str) -> object:
-        return object()
-
-    @property
-    def chat_completions_sync(self):
-        return create_chat_completion_sync
-
-    def complete_text(
-        self, messages: list[dict[str, Any]], *, model_role: str = "memory"
-    ) -> str:
-        return ""
-
-
-@pytest.mark.asyncio
-async def test_run_turn_async_dual_passes_langsmith_parent_run_kwarg(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    store = MemoryStore(
-        scope=CompanionScope("ls", "agent", str(tmp_path.resolve())),
-        repository=None,
-    )
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
-    store.write_document(IDENTITY_MD_REL, "id\n")
-    store.write_document(SOUL_MD_REL, "s\n")
-    store.write_document(USER_MD_REL, "u\n")
-    store.write_document(MEMORY_MD_REL, "m\n")
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
-
-    sentinel = MagicMock()
-    parent_kwargs: list[dict[str, Any]] = []
-
-    def _fake_create_root(**kwargs: Any) -> MagicMock:
-        parent_kwargs.append(kwargs)
-        return sentinel
-
-    monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.create_companion_turn_root_run",
-        _fake_create_root,
-    )
-
-    bg_jobs: list[dict[str, Any]] = []
-
-    def _capture_bg(**kwargs: Any) -> None:
-        bg_jobs.append(kwargs)
-
-    monkeypatch.setattr(
-        "app.core.companion_harness.companion.turn.start_tool_background_job",
-        _capture_bg,
-    )
-
-    client = _FakeAsyncDualLLMClient()
-    await run_companion_user_chat_turn(
-        "hello async dual langsmith",
-        deps=CompanionTurnDeps(
-            store=store,
-            llm_client=client,  # type: ignore[arg-type]
-            transcript_compaction=None,
-            transcript_llm_window_max_messages=None,
-            repository_only_store_text=False,
-            runtime_context=TurnRuntimeContext(
-                channel=ChannelKind.TELEGRAM,
-                implicit_signal_bundle=None,
-            ),
-            background_output_sink=None,
-            preset_user_msg_uuid=None,
-            langsmith_parent_run_enabled=None,
-            tool_bg_idle_event=_idle_tool_bg(),
-            bootstrap_interim_output_sink=None,
-        ),
-    )
-
-    assert len(bg_jobs) == 1
-    assert bg_jobs[0]["langsmith_parent_run"] is sentinel
-    assert bg_jobs[0]["chat_completions_sync"] is client.chat_completions_sync
-    assert len(parent_kwargs) == 1
-    slice_ = parent_kwargs[0]["langsmith_slice"]
-    assert slice_.runtime_channel == ChannelKind.TELEGRAM
-    assert slice_.channel_source == LangsmithChannelSource.EXPLICIT_TURN
-    assert len(client.chat_calls) == 1
-    fg_meta = client.chat_calls[0]["langsmith_extra"]["metadata"]
-    assert fg_meta["inty_runtime_channel"] == "telegram"
-    assert fg_meta["inty_runtime_channel_source"] == "explicit_turn"

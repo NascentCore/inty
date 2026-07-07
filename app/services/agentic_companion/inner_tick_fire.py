@@ -111,7 +111,6 @@ async def _kernel_context(
     fire_input: InnerTickFireInput,
     *,
     preset_uid: str,
-    background_output_sink,
 ) -> tuple[InnerTickKernelInput, CompanionSession] | None:
     ws_implicit = implicit_signal_bundle_from_tc_box(fire_input.tc_box)
     return await build_inner_tick_kernel_context(
@@ -125,7 +124,6 @@ async def _kernel_context(
             implicit_signal_bundle=ws_implicit,
         ),
         preset_uid=preset_uid,
-        background_output_sink=background_output_sink,
     )
 
 
@@ -144,9 +142,7 @@ async def try_fire_scheduled_inner_tick(
         return False
 
     preset_uid = str(uuid.uuid4())
-    ctx_pair = await _kernel_context(
-        coords, fire_input, preset_uid=preset_uid, background_output_sink=None
-    )
+    ctx_pair = await _kernel_context(coords, fire_input, preset_uid=preset_uid)
     if ctx_pair is None:
         return False
     kernel_input, scope_session = ctx_pair
@@ -267,9 +263,7 @@ async def try_fire_proactive_chat_inner_tick(
         return False
 
     preset_uid = str(uuid.uuid4())
-    ctx_pair = await _kernel_context(
-        coords, fire_input, preset_uid=preset_uid, background_output_sink=None
-    )
+    ctx_pair = await _kernel_context(coords, fire_input, preset_uid=preset_uid)
     if ctx_pair is None:
         return False
     kernel_input, scope_session = ctx_pair
@@ -369,7 +363,6 @@ async def try_fire_autonomy_inner_tick(
         coords,
         fire_input,
         preset_uid=preset_uid,
-        background_output_sink=fire_input.coordinator.background_sink,
     )
     if ctx_pair is None:
         return False
@@ -399,7 +392,6 @@ async def try_fire_autonomy_inner_tick(
         throttle=kernel_input.throttle,
         runtime_context=autonomy_runtime,
         preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
-        background_output_sink=kernel_input.background_output_sink,
         agentic_output_queue=kernel_input.agentic_output_queue,
         user_message_batch=kernel_input.user_message_batch,
     )
@@ -481,7 +473,6 @@ async def try_fire_monolog_inner_tick(
         coords,
         fire_input,
         preset_uid=preset_uid,
-        background_output_sink=fire_input.coordinator.background_sink,
     )
     if ctx_pair is None:
         return False

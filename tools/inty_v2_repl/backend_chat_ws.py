@@ -37,7 +37,13 @@ from app.schemas.chat import (
     UserTimeContext,
 )
 from app.schemas.chat_websocket import (
+    ChatWebSocketQueuedPlainError,
+    ChatWebSocketQueuedSuccessFrame,
     ChatWebSocketRequest,
+    ChatWsClientContextFrame,
+    ChatWsUserSignedOnFrame,
+    ChatWsUserSignedOutFrame,
+    ChatWsWsConnDroppedFrame,
     normalize_websocket_companion_message_id_uuid,
 )
 from loguru import logger
@@ -72,23 +78,17 @@ def _ws_close_reason_text(reason: object | None) -> str:
 
 
 def _ws_user_signed_on_json(agent_id: str, *, message_id: str) -> str:
-    return json.dumps(
-        {
-            "type": "user_signed_on",
-            "agent_id": agent_id.strip(),
-            "message_id": message_id,
-        }
-    )
+    return ChatWsUserSignedOnFrame(
+        agent_id=agent_id.strip(),
+        message_id=message_id,
+    ).model_dump_json(exclude_none=True)
 
 
 def _ws_user_signed_out_json(agent_id: str, *, message_id: str) -> str:
-    return json.dumps(
-        {
-            "type": "user_signed_out",
-            "agent_id": agent_id.strip(),
-            "message_id": message_id,
-        }
-    )
+    return ChatWsUserSignedOutFrame(
+        agent_id=agent_id.strip(),
+        message_id=message_id,
+    ).model_dump_json(exclude_none=True)
 
 
 def _ws_conn_dropped_json(
@@ -99,17 +99,13 @@ def _ws_conn_dropped_json(
     ws_close_code: int | None,
     ws_close_reason: str,
 ) -> str:
-    payload: dict[str, Any] = {
-        "type": "ws_conn_dropped",
-        "agent_id": agent_id.strip(),
-        "dropped_at_utc": dropped_at_utc,
-        "message_id": message_id,
-    }
-    if ws_close_code is not None:
-        payload["ws_close_code"] = ws_close_code
-    if ws_close_reason.strip():
-        payload["ws_close_reason"] = ws_close_reason.strip()
-    return json.dumps(payload)
+    return ChatWsWsConnDroppedFrame(
+        agent_id=agent_id.strip(),
+        dropped_at_utc=dropped_at_utc,
+        message_id=message_id or None,
+        ws_close_code=ws_close_code,
+        ws_close_reason=ws_close_reason.strip() or None,
+    ).model_dump_json(exclude_none=True)
 
 
 def http_base_to_ws_chat_url(
@@ -141,35 +137,26 @@ def parse_chat_completion_ws_payload(
 
 
 def _parse_chat_response_payload(data: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    # TODO(issue#3208): parse via ChatWebSocketQueuedSuccessFrame.model_validate.
     if data.get("type") == "pong":
         raise ValueError("unexpected pong in response queue")
     code = data.get("code")
     if code is None:
         raise ValueError(f"chat ws response missing code: {data!r}")
     if code != 200:
-        msg = data.get("message")
-        if not isinstance(msg, str):
-            msg = str(msg)
-        aid = data.get("agent_id")
-        raise BackendChatWsError(
-            int(code), msg, agent_id=str(aid) if aid is not None else None
-        )
-    inner = data.get("data") or {}
-    choices = inner.get("choices") or []
-    if not choices:
+        err = ChatWebSocketQueuedPlainError.model_validate(data)
+        raise BackendChatWsError(err.code, err.message, agent_id=err.agent_id)
+    frame = ChatWebSocketQueuedSuccessFrame.model_validate(data)
+    if not frame.data.choices:
         raise ValueError(f"chat ws success but no choices: {data!r}")
-    msg0 = (choices[0] or {}).get("message") or {}
-    content = msg0.get("content")
+    msg0 = frame.data.choices[0].message
+    content = msg0.content
     if not isinstance(content, str):
         raise ValueError(f"chat ws assistant content not a string: {content!r}")
-    meta_raw = msg0.get("meta_data")
     meta: dict[str, Any] = {}
-    if isinstance(meta_raw, dict):
-        meta = dict(meta_raw)
-    audio_url = msg0.get("audio_url")
-    if isinstance(audio_url, str) and audio_url.strip():
-        meta["audio_url"] = audio_url.strip()
+    if msg0.meta_data is not None:
+        meta = msg0.meta_data.model_dump(by_alias=True, exclude_none=True)
+    if isinstance(msg0.audio_url, str) and msg0.audio_url.strip():
+        meta["audio_url"] = msg0.audio_url.strip()
     return content, meta
 
 
@@ -218,9 +205,9 @@ def build_ws_user_time_context_now() -> UserTimeContext:
 
 
 def _ws_client_context_json() -> str:
-    tc = build_ws_user_time_context_now()
-    blob = tc.model_dump(by_alias=True, exclude_none=True)
-    return json.dumps({"type": "client_context", "time_context": blob})
+    return ChatWsClientContextFrame(
+        time_context=build_ws_user_time_context_now(),
+    ).model_dump_json(exclude_none=True)
 
 
 def _ws_chat_turn_send_payload(
