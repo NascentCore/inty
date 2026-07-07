@@ -301,7 +301,7 @@ def test_phase_settle_spec_timeouts() -> None:
 def test_regression_pass_gate_passed() -> None:
     mod = _load_regression_module()
 
-    gate = mod.RegressionPassGate(
+    gate = mod.InfraPassGate(
         bootstrap_done=True,
         greeting_present=True,
         memdoc_errors=(),
@@ -310,17 +310,16 @@ def test_regression_pass_gate_passed() -> None:
         settled_ok=True,
         has_report_errors=False,
         input_all_delivered=True,
-        output_all_delivered=True,
+        output_user_visible_delivered=True,
+        github_pipeline_ok=True,
         proactive_present=True,
         proactive_silent_ok=True,
-        github_issue_ok=True,
-        github_disclosure_ok=True,
         scope=mod.RegressionScope.FULL,
         skip_db_checks=False,
         proactive_min_rounds=1,
     )
     assert gate.passed() is True
-    gate_fail = mod.RegressionPassGate(
+    gate_fail = mod.InfraPassGate(
         bootstrap_done=True,
         greeting_present=True,
         memdoc_errors=("memdoc",),
@@ -329,16 +328,104 @@ def test_regression_pass_gate_passed() -> None:
         settled_ok=True,
         has_report_errors=False,
         input_all_delivered=True,
-        output_all_delivered=True,
+        output_user_visible_delivered=True,
+        github_pipeline_ok=True,
         proactive_present=True,
         proactive_silent_ok=True,
-        github_issue_ok=True,
-        github_disclosure_ok=True,
         scope=mod.RegressionScope.FULL,
         skip_db_checks=False,
         proactive_min_rounds=1,
     )
     assert gate_fail.passed() is False
+
+
+def test_infra_pass_gate_disclosure_eval_does_not_block() -> None:
+    mod = _load_regression_module()
+
+    gate = mod.InfraPassGate(
+        bootstrap_done=True,
+        greeting_present=True,
+        memdoc_errors=(),
+        experience_profile_ok=True,
+        dreaming_ok=True,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=True,
+        output_user_visible_delivered=True,
+        github_pipeline_ok=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        scope=mod.RegressionScope.FULL,
+        skip_db_checks=False,
+        proactive_min_rounds=1,
+    )
+    assert gate.passed() is True
+
+
+def test_infra_pass_gate_safe_subset() -> None:
+    mod = _load_regression_module()
+
+    gate = mod.InfraPassGate(
+        bootstrap_done=False,
+        greeting_present=True,
+        memdoc_errors=("would fail",),
+        experience_profile_ok=False,
+        dreaming_ok=False,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=False,
+        output_user_visible_delivered=False,
+        github_pipeline_ok=False,
+        proactive_present=False,
+        proactive_silent_ok=False,
+        scope=mod.RegressionScope.SAFE_SUBSET,
+        skip_db_checks=True,
+        proactive_min_rounds=0,
+    )
+    assert gate.passed() is True
+
+
+def test_output_user_visible_delivered() -> None:
+    mod = _load_regression_module()
+
+    assert mod._output_user_visible_delivered(
+        [
+            ("delivered", ""),
+            ("delivered", ""),
+            (
+                "skipped",
+                "agent-initiated:inner_tick_proactive_chat:x",
+            ),
+        ]
+    )
+    assert not mod._output_user_visible_delivered(
+        [("delivered", ""), ("skipped", "a21cdfca-user-visible")]
+    )
+    assert not mod._output_user_visible_delivered(
+        [("delivered", ""), ("pending", "")]
+    )
+    assert not mod._output_user_visible_delivered([])
+
+
+def test_parse_output_delivery_rows() -> None:
+    mod = _load_regression_module()
+
+    rows = mod._parse_output_delivery_rows(
+        "delivered|batch-1\nskipped|agent-initiated:inner_tick_proactive_chat:x\n"
+    )
+    assert rows == [
+        ("delivered", "batch-1"),
+        ("skipped", "agent-initiated:inner_tick_proactive_chat:x"),
+    ]
+
+
+def test_proactive_early_exit_ready() -> None:
+    mod = _load_regression_module()
+
+    assert mod._proactive_early_exit_ready(1, 1) is True
+    assert mod._proactive_early_exit_ready(0, 1) is False
+    assert mod._proactive_early_exit_ready(2, 1) is True
+    assert mod._proactive_early_exit_ready(1, 0) is False
 
 
 def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
@@ -354,7 +441,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         False,
         None,
     )
-    summary, gate = mod._build_regression_summary(
+    summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         bootstrap_done="true",
         context_mode="roleplay",
         greeting_result=mod.ImplicitSignOnGreetingResult(
@@ -400,15 +487,15 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         in_q="delivered|1",
         out_q="delivered|1",
         in_all_delivered=True,
-        out_all_delivered=True,
+        output_user_visible_delivered=True,
         companion_bond_state="ACTIVE",
         skip_db_checks=False,
         scope=mod.RegressionScope.FULL,
         proactive_min_rounds=1,
     )
-    assert summary["github_issue_disclosed_in_chat"] == "pass"
-    assert gate.github_disclosure_ok is True
-    assert gate.passed() is True
+    assert summary["eval"]["github_issue_disclosed_in_chat"] == "skipped"
+    assert eval_telemetry.github_disclosed_in_chat is False
+    assert infra_gate.passed() is True
 
     undisclosed = mod.GithubIssueE2eResult(
         "u1",
@@ -420,7 +507,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         False,
         "no snapshot",
     )
-    summary_skip, gate_skip = mod._build_regression_summary(
+    summary_skip, infra_gate_skip, eval_skip = mod._build_regression_summary(
         bootstrap_done="true",
         context_mode="roleplay",
         greeting_result=mod.ImplicitSignOnGreetingResult(
@@ -466,14 +553,15 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
         in_q="delivered|1",
         out_q="delivered|1",
         in_all_delivered=True,
-        out_all_delivered=True,
+        output_user_visible_delivered=True,
         companion_bond_state="ACTIVE",
         skip_db_checks=False,
         scope=mod.RegressionScope.FULL,
         proactive_min_rounds=1,
     )
-    assert summary_skip["github_issue_disclosed_in_chat"] == "skipped"
-    assert gate_skip.github_disclosure_ok is True
+    assert summary_skip["eval"]["github_issue_disclosed_in_chat"] == "skipped"
+    assert eval_skip.github_disclosed_in_chat is False
+    assert infra_gate_skip.passed() is False
 
 
 def test_query_input_batch_id_for_client_message_id() -> None:
@@ -553,7 +641,7 @@ def _github_summary_fixture_kwargs(
         "in_q": "delivered|1",
         "out_q": "delivered|1",
         "in_all_delivered": True,
-        "out_all_delivered": True,
+        "output_user_visible_delivered": True,
         "companion_bond_state": "ACTIVE",
         "skip_db_checks": False,
         "scope": mod.RegressionScope.FULL,
@@ -573,14 +661,14 @@ def test_build_regression_summary_debug_disclosure_fails_without_chat_url() -> N
         True,
         None,
     )
-    summary, gate = mod._build_regression_summary(
+    summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         **_github_summary_fixture_kwargs(
             mod, github_result=github, app_debug=True
         )
     )
-    assert summary["github_issue_disclosed_in_chat"] == "fail"
-    assert gate.github_disclosure_ok is False
-    assert gate.passed() is False
+    assert summary["eval"]["github_issue_disclosed_in_chat"] == "fail"
+    assert eval_telemetry.github_disclosed_in_chat is False
+    assert infra_gate.passed() is True
 
 
 def test_build_regression_summary_debug_disclosure_passes_when_disclosed() -> None:
@@ -595,14 +683,14 @@ def test_build_regression_summary_debug_disclosure_passes_when_disclosed() -> No
         True,
         None,
     )
-    summary, gate = mod._build_regression_summary(
+    summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         **_github_summary_fixture_kwargs(
             mod, github_result=github, app_debug=True
         )
     )
-    assert summary["github_issue_disclosed_in_chat"] == "pass"
-    assert gate.github_disclosure_ok is True
-    assert gate.passed() is True
+    assert summary["eval"]["github_issue_disclosed_in_chat"] == "pass"
+    assert eval_telemetry.github_disclosed_in_chat is True
+    assert infra_gate.passed() is True
 
 
 def test_verify_bootstrap_memdocs_detects_customization(tmp_path) -> None:
@@ -742,7 +830,7 @@ def test_build_regression_summary_skip_db_checks() -> None:
         False,
         None,
     )
-    summary, gate = mod._build_regression_summary(
+    summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         bootstrap_done="true",
         context_mode="roleplay",
         greeting_result=mod.ImplicitSignOnGreetingResult(
@@ -788,7 +876,7 @@ def test_build_regression_summary_skip_db_checks() -> None:
         in_q="",
         out_q="",
         in_all_delivered=False,
-        out_all_delivered=False,
+        output_user_visible_delivered=False,
         companion_bond_state="",
         skip_db_checks=True,
         scope=mod.RegressionScope.FULL,
@@ -801,7 +889,7 @@ def test_build_regression_summary_skip_db_checks() -> None:
         summary["dreaming_consolidation"]
         == mod.RegressionCheckStatus.SKIPPED.value
     )
-    assert gate.passed() is True
+    assert infra_gate.passed() is True
 
 
 _SAMPLE_DREAMING_LOG = """\

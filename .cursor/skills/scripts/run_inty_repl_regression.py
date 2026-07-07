@@ -35,8 +35,8 @@ Run with shell cwd = repository root (or any path under the repo).
 Config: default ``devops/config.yaml.regression_tests`` (real LLM/GitHub E2E gate).
 ``devops/config.yaml.local`` is for engineer REPL tuning; ``devops/config.yaml.test`` is pytest-only (faked externals).
 
-TODO(#3606): Split mandatory pass gate (infra-only) from live LLM eval smoke;
-github_issue_e2e and proactive target rounds should not block exit 0.
+TODO(#3606, issues/3783): Add FakeOpenAI scripted companion_record_user_feedback once
+app.utils.github.issues has a fake (see GitHub issue for scripted github-feedback CI backfill).
 TODO: Extract phase drivers (greeting, bootstrap, github_issue) into sibling modules
 once ``run_regression`` stabilizes; keep shared settle/queue helpers here.
 """
@@ -92,7 +92,7 @@ _DEFAULT_EXPERIENCE_PROFILE_TURN = (
 _DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
 _BOOTSTRAP_USER_NAME_MARKER = "大雄"
 _BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
-_DEFAULT_DREAMING_WAIT_SEC = 900.0
+_DEFAULT_DREAMING_WAIT_SEC = 45.0
 _DREAMING_POLL_SEC = 3.0
 _EXPERIENCE_PROFILE_POLL_SEC = 2.0
 _EXPERIENCE_PROFILE_POLL_TIMEOUT_SEC = 120.0
@@ -105,7 +105,7 @@ _RECV_POLL_SEC = 0.25
 _INPUT_QUEUE_POLL_SEC = 0.5
 _TURN_REPLY_TIMEOUT_SEC = 180.0
 _TURN_TRAILING_QUIET_SEC = 5.0
-_BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 20.0
+_BOOTSTRAP_TURN_SETTLE_QUIET_SEC = 8.0
 _BOOTSTRAP_TURN_SETTLE_MAX_SEC = 300.0
 _SETTLED_TURN_TIMEOUT_SEC = 900.0
 _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
@@ -115,11 +115,12 @@ _PRE_SETTLED_WS_DRAIN_QUIET_SEC = 3.0
 # ``--proactive-target-rounds``: stretch goal logged in summary; does not fail the run.
 _DEFAULT_PROACTIVE_MIN_ROUNDS = 1
 _DEFAULT_PROACTIVE_TARGET_ROUNDS = 2
-_DEFAULT_PROACTIVE_WAIT_SEC = 120.0
+_DEFAULT_PROACTIVE_WAIT_SEC = 30.0
 _PROACTIVE_LEGACY_SILENT_TOKEN = "[SILENT]"
 _PROACTIVE_RECV_CHUNK_SEC = 5.0
 _POST_PROACTIVE_DRAIN_QUIET_SEC = 5.0
-_POST_PROACTIVE_DRAIN_MAX_SEC = 20.0
+_POST_PROACTIVE_DRAIN_MAX_SEC = 8.0
+_INNER_TICK_SKIPPED_BATCH_PREFIX = "agent-initiated:inner_tick"
 _GITHUB_ISSUE_URL_RE = re.compile(
     r"https://github\.com/[^/\s]+/[^/\s]+/issues/(\d+)"
 )
@@ -280,27 +281,42 @@ class PhaseSettleSpec:
 
 
 @dataclass(frozen=True)
-class RegressionPassGate:
-    """Mandatory infra pass bits for ``run_regression`` exit code."""
+class InfraPassGate:
+    """L0 deterministic infra bits; ``passed()`` alone drives process exit code (#3606 gate lane)."""
 
+    # bootstrap interactive-complete flag observed true in agent-scope context.json
     bootstrap_done: bool
+    # at least one WS downlink had meta_data.source=greeting after connect
     greeting_present: bool
+    # MemDoc acceptance errors (USER/IDENTITY/STYLE customized, SOUL/MEMORY seed); empty == pass
     memdoc_errors: tuple[str, ...]
+    # context_mode == roleplay after companion_set_experience_profile
     experience_profile_ok: bool
+    # scope-worker dreaming produced checkpoint + MEMORY.md change (infra only, not curator shape)
     dreaming_ok: bool
+    # settled turn produced a delivered, coherent reply
     settled_ok: bool
+    # any phase appended a hard error to report["errors"]
     has_report_errors: bool
+    # InputQueue has no pending/claimed/failed rows for the run
     input_all_delivered: bool
-    output_all_delivered: bool
+    # OutputQueue user-visible rows all delivered; agent-initiated inner_tick skipped rows excluded
+    output_user_visible_delivered: bool
+    # github feedback pipeline physically reachable: issue created + closed (fallback allowed)
+    github_pipeline_ok: bool
+    # >= proactive_min_rounds synthetic proactive rows observed (scheduler infra)
     proactive_present: bool
+    # no legacy [SILENT] token leaked into any proactive preview
     proactive_silent_ok: bool
-    github_issue_ok: bool
-    github_disclosure_ok: bool
+    # SAFE_SUBSET (prod) shrinks the mandatory set to greeting + settled only
     scope: RegressionScope
+    # remote targets skip direct Postgres; skipped DB bits must not fail the gate
     skip_db_checks: bool
+    # 0 disables the proactive gate entirely (dev/prod presets)
     proactive_min_rounds: int
 
     def passed(self) -> bool:
+        """True when every mandatory infra bit holds for the selected scope."""
         if self.scope == RegressionScope.SAFE_SUBSET:
             return (
                 self.settled_ok
@@ -310,13 +326,11 @@ class RegressionPassGate:
         memdoc_ok = self.skip_db_checks or not self.memdoc_errors
         dreaming_ok_gate = self.skip_db_checks or self.dreaming_ok
         input_ok = self.skip_db_checks or self.input_all_delivered
-        output_ok = self.skip_db_checks or self.output_all_delivered
+        output_ok = self.skip_db_checks or self.output_user_visible_delivered
         proactive_ok = (
             self.proactive_min_rounds == 0
             or (self.proactive_present and self.proactive_silent_ok)
         )
-        # ``scope == SAFE_SUBSET`` already returned above; below this point scope is
-        # always FULL, so gates here only need to account for ``skip_db_checks``.
         bootstrap_ok = self.bootstrap_done or self.skip_db_checks
         return (
             self.settled_ok
@@ -328,10 +342,26 @@ class RegressionPassGate:
             and memdoc_ok
             and self.experience_profile_ok
             and proactive_ok
-            and self.github_issue_ok
-            and self.github_disclosure_ok
+            and self.github_pipeline_ok
             and dreaming_ok_gate
         )
+
+
+@dataclass(frozen=True)
+class EvalTelemetry:
+    """L1 live-LLM behavior metrics; never affects process exit code."""
+
+    # model called companion_record_user_feedback natively (False == in-process fallback)
+    github_tool_native: bool
+    # debug-mode: WS-visible chat contained the issue URL from tool result / fallback row
+    github_disclosed_in_chat: bool
+    # stretch: total proactive rounds reached proactive_target_rounds
+    proactive_target_met: bool
+    # visible vs silent proactive round counts (telemetry only)
+    proactive_visible_rounds: int
+    proactive_silent_rounds: int
+    # dreaming one-shot LangSmith tool-call verification passed (path/coverage/changed)
+    dreaming_one_shot_ok: bool | None
 
 
 @dataclass(frozen=True)
@@ -919,6 +949,56 @@ def _query_output_queue_status_counts(
     return _query_queue_status_counts(
         repo_root, config_path, kind=DeliveryQueueKind.OUTPUT, agent_id=agent_id
     )
+
+
+def _parse_output_delivery_rows(raw: str) -> list[tuple[str, str]]:
+    """Parse ``status|batch_id`` lines from OutputQueue per-row delivery query."""
+    rows: list[tuple[str, str]] = []
+    for line in raw.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("|", 1)
+        status = parts[0].strip()
+        batch_id = parts[1].strip() if len(parts) > 1 else ""
+        rows.append((status, batch_id))
+    return rows
+
+
+def _query_output_delivery_rows(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    agent_id: str,
+) -> list[tuple[str, str]]:
+    """Return every OutputQueue row ``(status, batch_id)`` for one agent."""
+    assert agent_id != ""
+    raw = _psql(
+        repo_root,
+        config_path,
+        "SELECT status, COALESCE(batch_id, '') FROM agentic_companion_output_queue "
+        f"WHERE agent_id = '{agent_id}' ORDER BY sequence_id;",
+    )
+    return _parse_output_delivery_rows(raw)
+
+
+def _output_user_visible_delivered(rows: list[tuple[str, str]]) -> bool:
+    """True when user-visible OutputQueue rows are delivered (inner_tick skipped allowed)."""
+    if not rows:
+        return False
+    has_delivered = False
+    for status, batch_id in rows:
+        if status == "delivered":
+            has_delivered = True
+            continue
+        if status == "skipped" and batch_id.startswith(_INNER_TICK_SKIPPED_BATCH_PREFIX):
+            continue
+        return False
+    return has_delivered
+
+
+def _proactive_early_exit_ready(row_count: int, min_rounds: int) -> bool:
+    """True when DB proactive synthetic rows satisfy the infra minimum."""
+    return min_rounds > 0 and row_count >= min_rounds
 
 
 def _wait_output_queue_idle(
@@ -2440,8 +2520,6 @@ def _finalize_proactive_report(
         flush=True,
     )
     if summary["total"] < proactive_target_rounds:
-        # TODO(#3606): Target round count is eval telemetry; do not append to
-        # report["errors"] when splitting regression vs live LLM eval.
         print(
             f"{_TAG} proactive target {proactive_target_rounds} round(s) not met "
             f"(got {summary['total']}); a silent first round blocks scheduling another "
@@ -3345,16 +3423,15 @@ def _build_regression_summary(
     in_q: str,
     out_q: str,
     in_all_delivered: bool,
-    out_all_delivered: bool,
+    output_user_visible_delivered: bool,
     companion_bond_state: str,
     skip_db_checks: bool,
     scope: RegressionScope,
     proactive_min_rounds: int,
-) -> tuple[dict[str, Any], RegressionPassGate]:
-    """Compute JSON summary + mandatory pass gate from phase results."""
-    github_issue_ok = github_result.error is None and github_result.closed
-    github_disclosure_ok = not app_debug or github_result.disclosed_in_chat
-    gate = RegressionPassGate(
+) -> tuple[dict[str, Any], InfraPassGate, EvalTelemetry]:
+    """Compute JSON summary, infra pass gate, and L1 eval telemetry from phase results."""
+    github_pipeline_ok = github_result.error is None and github_result.closed
+    infra_gate = InfraPassGate(
         bootstrap_done=bootstrap_done == "true",
         greeting_present=greeting_result.present,
         memdoc_errors=memdoc_result.errors,
@@ -3363,14 +3440,26 @@ def _build_regression_summary(
         settled_ok=settled_ok,
         has_report_errors=bool(report_errors),
         input_all_delivered=in_all_delivered,
-        output_all_delivered=out_all_delivered,
+        output_user_visible_delivered=output_user_visible_delivered,
+        github_pipeline_ok=github_pipeline_ok,
         proactive_present=proactive_present,
         proactive_silent_ok=proactive_silent_ok,
-        github_issue_ok=github_issue_ok,
-        github_disclosure_ok=github_disclosure_ok,
         scope=scope,
         skip_db_checks=skip_db_checks,
         proactive_min_rounds=proactive_min_rounds,
+    )
+    one_shot_ok = (
+        None
+        if skip_db_checks or dreaming_result.one_shot is None
+        else dreaming_result.one_shot.ok
+    )
+    eval_telemetry = EvalTelemetry(
+        github_tool_native=not github_result.tool_fallback,
+        github_disclosed_in_chat=github_result.disclosed_in_chat,
+        proactive_target_met=proactive_target_met,
+        proactive_visible_rounds=proactive_summary["visible"],
+        proactive_silent_rounds=proactive_summary["silent"],
+        dreaming_one_shot_ok=one_shot_ok,
     )
     memdoc_status = (
         RegressionCheckStatus.SKIPPED.value
@@ -3386,7 +3475,7 @@ def _build_regression_summary(
         if skip_db_checks
         else (
             RegressionCheckStatus.PASS.value
-            if gate.dreaming_ok
+            if infra_gate.dreaming_ok
             else RegressionCheckStatus.FAIL.value
         )
     )
@@ -3404,10 +3493,30 @@ def _build_regression_summary(
         if skip_db_checks
         else (
             RegressionCheckStatus.PASS.value
-            if out_all_delivered
+            if output_user_visible_delivered
             else RegressionCheckStatus.FAIL.value
         )
     )
+    if scope == RegressionScope.SAFE_SUBSET:
+        disclosure_eval = RegressionCheckStatus.SKIPPED.value
+    elif not app_debug:
+        disclosure_eval = RegressionCheckStatus.SKIPPED.value
+    elif github_pipeline_ok and github_result.disclosed_in_chat:
+        disclosure_eval = RegressionCheckStatus.PASS.value
+    elif github_pipeline_ok:
+        disclosure_eval = RegressionCheckStatus.FAIL.value
+    else:
+        disclosure_eval = RegressionCheckStatus.SKIPPED.value
+    if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0:
+        proactive_target_eval = RegressionCheckStatus.SKIPPED.value
+    else:
+        proactive_target_eval = "met" if proactive_target_met else "miss"
+    if skip_db_checks or dreaming_result.one_shot is None:
+        dreaming_one_shot_eval = RegressionCheckStatus.SKIPPED.value
+    elif dreaming_result.one_shot.ok:
+        dreaming_one_shot_eval = RegressionCheckStatus.PASS.value
+    else:
+        dreaming_one_shot_eval = RegressionCheckStatus.FAIL.value
     summary = {
         "target_scope": scope.value,
         "db_checks": (
@@ -3415,7 +3524,7 @@ def _build_regression_summary(
             if skip_db_checks
             else RegressionCheckStatus.PASS.value
         ),
-        "bootstrap": "complete" if gate.bootstrap_done else "incomplete",
+        "bootstrap": "complete" if infra_gate.bootstrap_done else "incomplete",
         "context_mode": context_mode,
         "implicit_sign_on_greeting": (
             RegressionCheckStatus.PASS.value
@@ -3433,15 +3542,6 @@ def _build_regression_summary(
             )
         ),
         "dreaming_consolidation": dreaming_status,
-        "dreaming_one_shot": (
-            RegressionCheckStatus.SKIPPED.value
-            if skip_db_checks or dreaming_result.one_shot is None
-            else (
-                RegressionCheckStatus.PASS.value
-                if dreaming_result.one_shot.ok
-                else RegressionCheckStatus.FAIL.value
-            )
-        ),
         "settled_queue_turn": (
             RegressionCheckStatus.PASS.value
             if settled_ok and not report_errors
@@ -3452,19 +3552,8 @@ def _build_regression_summary(
             if scope == RegressionScope.SAFE_SUBSET
             else (
                 RegressionCheckStatus.PASS.value
-                if github_issue_ok
+                if github_pipeline_ok
                 else RegressionCheckStatus.FAIL.value
-            )
-        ),
-        "github_issue_disclosed_in_chat": (
-            RegressionCheckStatus.SKIPPED.value
-            if scope == RegressionScope.SAFE_SUBSET
-            else (
-                RegressionCheckStatus.PASS.value
-                if github_disclosure_ok and github_issue_ok
-                else RegressionCheckStatus.FAIL.value
-                if app_debug
-                else RegressionCheckStatus.SKIPPED.value
             )
         ),
         "proactive_inner_tick": (
@@ -3472,13 +3561,6 @@ def _build_regression_summary(
             if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
             else ("present" if proactive_present else "missing")
         ),
-        "proactive_target_rounds": (
-            RegressionCheckStatus.SKIPPED.value
-            if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
-            else ("met" if proactive_target_met else "miss")
-        ),
-        "proactive_silent_rounds": proactive_summary["silent"],
-        "proactive_visible_rounds": proactive_summary["visible"],
         "proactive_no_silent_token": (
             RegressionCheckStatus.SKIPPED.value
             if scope == RegressionScope.SAFE_SUBSET or proactive_min_rounds == 0
@@ -3492,9 +3574,17 @@ def _build_regression_summary(
         "input_queue_counts": in_q.strip(),
         "output_queue_counts": out_q.strip(),
         "input_all_delivered": input_delivery_status,
-        "output_all_delivered": output_delivery_status,
+        "output_user_visible_delivered": output_delivery_status,
+        "eval": {
+            "github_tool_native": eval_telemetry.github_tool_native,
+            "github_issue_disclosed_in_chat": disclosure_eval,
+            "proactive_target_rounds": proactive_target_eval,
+            "dreaming_one_shot": dreaming_one_shot_eval,
+            "proactive_visible_rounds": eval_telemetry.proactive_visible_rounds,
+            "proactive_silent_rounds": eval_telemetry.proactive_silent_rounds,
+        },
     }
-    return summary, gate
+    return summary, infra_gate, eval_telemetry
 
 
 def run_regression(
@@ -4003,7 +4093,29 @@ def run_regression(
                         flush=True,
                     )
                     proactive_deadline = time.monotonic() + proactive_wait_sec
+                    proactive_db_early_exit = (
+                        not skip_db_checks and proactive_min_rounds > 0
+                    )
                     while time.monotonic() < proactive_deadline:
+                        if proactive_db_early_exit:
+                            proactive_rows = _query_proactive_chat_history_rows(
+                                repo_root,
+                                config_path,
+                                user_id=user_id,
+                                agent_id=agent_id,
+                                run_started_at_utc=run_started_at_utc,
+                            )
+                            if _proactive_early_exit_ready(
+                                len(proactive_rows),
+                                proactive_min_rounds,
+                            ):
+                                print(
+                                    f"{_TAG} proactive early exit: "
+                                    f"db_rows={len(proactive_rows)} "
+                                    f">= min_rounds={proactive_min_rounds}",
+                                    flush=True,
+                                )
+                                break
                         text, meta, err = _wait_downlink(
                             bridge,
                             timeout_sec=min(
@@ -4215,12 +4327,17 @@ LIMIT 8;
         and "failed" not in in_q
         and bool(in_q.strip())
     )
-    out_all_delivered = (
-        "pending" not in out_q
-        and "failed" not in out_q
-        and "skipped" not in out_q
-        and bool(out_q.strip())
-    )
+    if skip_db_checks:
+        output_user_visible_delivered = True
+    else:
+        output_delivery_rows = _query_output_delivery_rows(
+            repo_root,
+            config_path,
+            agent_id=agent_id,
+        )
+        output_user_visible_delivered = _output_user_visible_delivered(
+            output_delivery_rows
+        )
 
     report["companion_bond"] = {
         "user_id": user_id,
@@ -4228,7 +4345,7 @@ LIMIT 8;
         "state": companion_bond_state,
     }
 
-    summary, pass_gate = _build_regression_summary(
+    summary, infra_gate, eval_telemetry = _build_regression_summary(
         bootstrap_done=bootstrap_done,
         context_mode=context_mode,
         greeting_result=greeting_result,
@@ -4246,24 +4363,34 @@ LIMIT 8;
         in_q=in_q,
         out_q=out_q,
         in_all_delivered=in_all_delivered,
-        out_all_delivered=out_all_delivered,
+        output_user_visible_delivered=output_user_visible_delivered,
         companion_bond_state=companion_bond_state or "",
         skip_db_checks=skip_db_checks,
         scope=scope,
         proactive_min_rounds=proactive_min_rounds,
     )
     report["summary"] = summary
+    report["eval_telemetry"] = {
+        "github_tool_native": eval_telemetry.github_tool_native,
+        "github_disclosed_in_chat": eval_telemetry.github_disclosed_in_chat,
+        "proactive_target_met": eval_telemetry.proactive_target_met,
+        "proactive_visible_rounds": eval_telemetry.proactive_visible_rounds,
+        "proactive_silent_rounds": eval_telemetry.proactive_silent_rounds,
+        "dreaming_one_shot_ok": eval_telemetry.dreaming_one_shot_ok,
+    }
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"{_TAG} report written to {report_path}", flush=True)
-    print(f"{_TAG} SUMMARY: {json.dumps(summary, ensure_ascii=False)}", flush=True)
+    print(
+        f"{_TAG} SUMMARY: {json.dumps(summary, ensure_ascii=False)} "
+        f"eval={json.dumps(summary.get('eval', {}), ensure_ascii=False)}",
+        flush=True,
+    )
 
-    # TODO(#3606): ``github_issue_ok`` gates on live model tool use; keep infra checks
-    # mandatory and move LLM-behavior phases to optional eval report.
-    return 0 if pass_gate.passed() else 1
+    return 0 if infra_gate.passed() else 1
 
 
 def main(argv: list[str] | None = None) -> int:
