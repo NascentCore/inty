@@ -16,7 +16,6 @@ from app.core.companion_harness.companion.turn_pipeline import (
     build_companion_turn_prompt_plan,
     load_companion_turn_state,
 )
-from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
@@ -98,6 +97,3 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
     ).bootstrap_turn_system_dicts()
     assert plan.system_messages == expected_system
     assert plan.tools_for_turn == build_openai_bootstrap_track_tools()
-    assert (
-        plan.route_mode == TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    )

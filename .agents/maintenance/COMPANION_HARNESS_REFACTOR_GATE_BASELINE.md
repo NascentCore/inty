@@ -7,7 +7,7 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 | Issue | Status after PR-5 + Stage 2 |
 |-------|-----------------------------|
 | #3632 | **Closed** — pull/3764 (Stage 2); threaded `start_tool_background_job` removed |
-| #3401 | **Partial (slice 1+2 merged)** — pull/3765 slice 1 tail user JSONL; pull/3766 slice 2 path/load/tools/`load_companion_turn_state` track-only; slice 3 (`TurnRouteMode` vs `AgenticLoopMechanism`) open |
+| #3401 | **Partial (slice 1–3 on branch)** — pull/3765 slice 1; pull/3766 slice 2; slice 3 (`resolve_agentic_loop_mechanism`, delete `TurnRouteMode`) on `yzhao/3401-slice-3-mechanism-resolver`; slice 3b typed JSONL + `resolve_agentic_loop` Protocol still open |
 | #3490 | **Partial** — App-WS `background_events` recv-loop + `WebSocketDownlink` deleted; `foreground_pending` kept for inner-tick (#3580) |
 | #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
 | #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
@@ -27,11 +27,20 @@ Merged to `main`: pull/3765 (#3401 slice 1), pull/3766 (#3401 slice 2). Gate doc
 | Dreaming unchanged (non-turn batch) | OK |
 | Soft gate: no live turn.py orchestration | **Met** — ``_run_companion_turn_core`` routes only via ``AgenticLoop`` + ``OutputQueue``; parallel ``background_events`` / ``WebSocketDownlink`` removed |
 | WS typed outbound emit (Stage 2) | **Met** — ``WsOutboundPayload`` union; pump ``model_dump``; materializers + REPL ``model_validate`` |
-| Track-derived transcript user JSONL flags (#3401) | **Partial** — slice 1 tail user rows track-only; slice 2 path/load/tools track-only; JSONL wire typed kind still open |
+| Track-derived transcript user JSONL flags (#3401) | **Partial** — slice 1 tail user rows track-only; slice 2 path/load/tools track-only; slice 3 mechanism resolver + route mode deleted (branch); JSONL wire typed kind still open |
 | Memory phase CI | **Pass** |
 | User-reported blockers | Open — see user_bug lane |
 
-## Verification run (2026-07-07)
+## Verification run (2026-07-07, slice 3 branch)
+
+```
+check_companion_turn_invariants.py — PASSED
+pytest tests/app/core/companion_harness — 572 passed (~9s)
+rg TurnRouteMode|resolve_turn_route_mode — no live production/test callers
+rg turn_flags_for_track — live call only llm_chat_runtime.py (LangSmith bridge)
+```
+
+## Verification run (2026-07-07, main post slice 1–2)
 
 ```
 check_companion_turn_invariants.py — PASSED
@@ -49,7 +58,7 @@ REPL regression — not run (requires Ops :8001)
 1. #3493 Weixin enqueue+wake
 2. #3542–#3543 inner-tick/output pump (App-WS greeting + inner-tick converge on pump-owned delivery)
 3. #3580 maintenance/autonomy on AgenticLoop
-4. #3401 slice 3: `TurnRouteMode` vs loop mechanism split
+4. #3401 slice 3b: typed JSONL user-turn kind; `resolve_agentic_loop` Protocol; remove `turn_flags_for_track` LangSmith bridge
 5. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
 
 CRS (#3341) and product (#3323) remain **blocked** on inner-tick AgenticLoop (#3580) and Weixin transport (#3493).

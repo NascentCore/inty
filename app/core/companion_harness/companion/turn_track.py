@@ -1,12 +1,9 @@
 """Turn-track adapters for the companion kernel.
 
-Production entrypoints choose a ``CompanionTurnTrack`` before calling the core
-turn runner.  This module maps tracks to legacy kernel booleans
-(``inner_tick_turn`` and ``InnerTickActivity``) for route-mode resolution
-(``turn_routes.resolve_turn_route_mode``) and LangSmith lane labels.
+``turn_flags_for_track`` is a LangSmith-only legacy bridge (see ``llm_chat_runtime``).
+``langsmith_inty_turn_lane_for_companion_track`` groups traces by coarse lane.
 
-TODO(#3401) slice 3: drop ``turn_flags_for_track`` once route mode derives from
-track + ``AgenticLoopMechanism`` only.
+TODO(#3401): remove ``turn_flags_for_track`` once LangSmith metadata is track-native.
 """
 
 from __future__ import annotations
@@ -18,7 +15,7 @@ from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 def turn_flags_for_track(
     track: CompanionTurnTrack,
 ) -> tuple[bool, InnerTickActivity]:
-    """Translate a production track into the legacy kernel routing flags."""
+    """Translate a production track into legacy LangSmith routing flags."""
 
     kind = inner_tick_kind_for_track(track)
     if kind is not None:

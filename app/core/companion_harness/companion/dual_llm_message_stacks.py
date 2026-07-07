@@ -1,4 +1,4 @@
-"""Dual-LLM chat vs tool message stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
+"""Dual-LLM chat vs tool message stacks for settled ``USER_CHAT`` dual mechanism.
 
 Builds separate system-message prefixes for the foreground chat leg and the tool_background leg,
 then splices them onto the shared transcript tail via ``replace_leading_system_messages_multi``.
@@ -49,9 +49,9 @@ def dual_llm_system_message_variants(
     route_inner_activity: InnerTickActivity,
     runtime_context: TurnRuntimeContext,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Foreground ``chat_track`` vs tool-path stacks for ``ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL``.
+    """Foreground ``chat_track`` vs tool-path stacks for dual-LLM ``USER_CHAT``.
 
-    Implicit sign-on rounds never reach this helper (they use ``CHAT_ONLY_SYNC``).
+    Implicit sign-on rounds never reach this helper (greeting track uses its own stack).
     """
     if (
         inner_tick_turn

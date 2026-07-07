@@ -27,7 +27,6 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
-from app.core.companion_harness.companion.turn_routes import TurnRouteMode
 
 
 def _system_contents(messages: list[dict[str, object]]) -> list[str]:
@@ -259,7 +258,6 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
             bundle=bundle,
             context=context,
             track=CompanionTurnTrack.USER_CHAT,
-            route_mode=TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL,
             runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.WECHAT_WEIXIN,
                 implicit_signal_bundle=None,
@@ -353,7 +351,6 @@ def test_implicit_sign_on_system_messages_include_fixed_reply_language_from_conf
                     workspace_bootstrap_user_interactive_completed=False,
                 ),
                 track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
-                route_mode=TurnRouteMode.CHAT_ONLY_SYNC,
                 runtime_context=TurnRuntimeContext(
                     channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,
@@ -388,7 +385,6 @@ def test_implicit_sign_on_system_messages_omit_reply_language_when_config_unset(
                 bundle=bundle,
                 context=ContextMeta(),
                 track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
-                route_mode=TurnRouteMode.CHAT_ONLY_SYNC,
                 runtime_context=TurnRuntimeContext(
                     channel=ChannelKind.APP_WS,
                     implicit_signal_bundle=None,

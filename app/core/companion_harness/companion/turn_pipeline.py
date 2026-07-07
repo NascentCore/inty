@@ -34,7 +34,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from .inner_tick_kind import inner_tick_kind_for_track
+from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -51,7 +51,6 @@ from .models import (
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
-from .turn_track import turn_flags_for_track
 from .dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     load_dreaming_state,
@@ -60,7 +59,6 @@ from .prompt_stack import (
     companion_tools_for_turn,
     companion_turn_tools_and_system_messages,
 )
-from .turn_routes import TurnRouteMode, resolve_turn_route_mode
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
     ConversationCompactor,
@@ -84,6 +82,7 @@ class CompanionTurnRuntimeFlags:
 
     effective_user_text: str
     tick_proactive: bool
+    inner_tick_turn: bool
     route_inner_activity: InnerTickActivity
     implicit_sign_on_turn: bool
     turn_type: AssistantTurnSource
@@ -105,14 +104,11 @@ class CompanionTurnLoadedState:
 
 @dataclass(frozen=True)
 class CompanionTurnPromptPlan:
-    """Prompt, tools, and route selected for one companion turn."""
+    """Prompt and tools selected for one companion turn."""
 
     tools_for_turn: list[dict[str, Any]]
     system_messages: list[dict[str, Any]]
-    route_mode: TurnRouteMode
     messages: list[dict[str, Any]]
-    use_dual_structured_chat: bool
-    use_proactive_structured_chat: bool
     transcript_compaction: dict[str, Any] | None = None
 
 
@@ -123,7 +119,13 @@ def resolve_turn_runtime_flags(
     implicit_signal_bundle: ImplicitSignalBundle | None,
 ) -> CompanionTurnRuntimeFlags:
     """Normalize user text and turn labels before MemoryStore reads."""
-    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
+    kind = inner_tick_kind_for_track(track)
+    inner_tick_turn = kind is not None
+    route_inner_activity = (
+        inner_tick_spec(kind).activity
+        if kind is not None
+        else InnerTickActivity.MONOLOG
+    )
     tick_proactive = track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
     tick_scheduled = track == CompanionTurnTrack.INNER_TICK_SCHEDULED
     implicit_sign_on_turn = (
@@ -151,6 +153,7 @@ def resolve_turn_runtime_flags(
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,
+        inner_tick_turn=inner_tick_turn,
         route_inner_activity=route_inner_activity,
         implicit_sign_on_turn=implicit_sign_on_turn,
         turn_type=turn_type,
@@ -229,8 +232,7 @@ def build_companion_turn_prompt_plan(
     transcript_compaction: TranscriptCompactionConfig | None,
     tail_splice_thoughts: list[AiPrivateThought],
 ) -> CompanionTurnPromptPlan:
-    """Assemble system messages, route, and final request messages."""
-    inner_tick_turn, route_inner_activity = turn_flags_for_track(track)
+    """Assemble system messages and final request messages."""
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
@@ -245,13 +247,8 @@ def build_companion_turn_prompt_plan(
                 context=loaded_state.context,
                 runtime_context=runtime_context,
             ).bootstrap_turn_system_dicts()
-            route_mode = resolve_turn_route_mode(
-                inner_tick_turn=False,
-                inner_tick_activity=InnerTickActivity.MONOLOG,
-                tools_enabled=bool(tools_for_turn),
-            )
         case _:
-            tools_for_turn, system_messages, route_mode = (
+            tools_for_turn, system_messages = (
                 companion_turn_tools_and_system_messages(
                     store=store,
                     bundle=loaded_state.bundle,
@@ -261,14 +258,6 @@ def build_companion_turn_prompt_plan(
                     runtime_context=runtime_context,
                 )
             )
-    use_dual_structured_chat = (
-        (not inner_tick_turn)
-        and (not tools_for_turn)
-        and route_mode != TurnRouteMode.ASYNC_FOREGROUND_CHAT_BACKGROUND_TOOL
-    )
-    use_proactive_structured_chat = (
-        route_inner_activity == InnerTickActivity.PROACTIVE_CHAT
-    )
     use_ai_private_splice = track_uses_ai_private_splice(track)
 
     def _transcript_dialogue() -> list[dict[str, Any]]:
@@ -287,7 +276,10 @@ def build_companion_turn_prompt_plan(
         )
 
     transcript_compaction_meta: dict[str, Any] | None = None
-    if transcript_compaction is not None and not inner_tick_turn:
+    if (
+        transcript_compaction is not None
+        and inner_tick_kind_for_track(track) is None
+    ):
         rel_compact = paths.context_compaction_state_json
         prior_state = load_compaction_state_from_store(store, rel_compact)
         compactor = ConversationCompactor(
@@ -352,9 +344,6 @@ def build_companion_turn_prompt_plan(
     return CompanionTurnPromptPlan(
         tools_for_turn=tools_for_turn,
         system_messages=system_messages,
-        route_mode=route_mode,
         messages=messages,
-        use_dual_structured_chat=use_dual_structured_chat,
-        use_proactive_structured_chat=use_proactive_structured_chat,
         transcript_compaction=transcript_compaction_meta,
     )
