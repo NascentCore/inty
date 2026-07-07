@@ -27,7 +27,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    InnerTickActivity,
 )
 from app.core.companion_harness.companion.proactive_chat_envelope import (
     PROACTIVE_CHAT_RESPONSE_FORMAT,
@@ -45,7 +44,9 @@ from app.core.companion_harness.loop.agentic_loop import (
     _run_chat_only_prompt_plan,
     _UserVisibleOutputAppender,
 )
-from app.core.companion_harness.loop.config import AgenticLoopMechanism
+from tests.app.core.companion_harness.loop.context_builder_test_support import (
+    loop_execution_for_track,
+)
 from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
     build_inner_tick_chat_only_loop_context,
@@ -148,7 +149,12 @@ def _common_context_kwargs(store: MemoryStore) -> dict:
 async def test_greeting_uses_dual_llm_envelope_with_retrial() -> None:
     store = _store()
     context = build_implicit_sign_on_greeting_loop_context(
-        **_common_context_kwargs(store)
+        **_common_context_kwargs(store),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
     envelope = json.dumps(
         {
@@ -191,8 +197,12 @@ async def test_scheduled_uses_proactive_envelope_and_inner_tick_scene() -> None:
     store = _store()
     context = build_inner_tick_chat_only_loop_context(
         track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
-        route_inner_activity=InnerTickActivity.PROACTIVE_CHAT,
         **_common_context_kwargs(store),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
     envelope = json.dumps(
         {"output_to_user": True, "message": "Reminder: stretch break."}
@@ -224,8 +234,12 @@ async def test_scheduled_envelope_silence_skips_output_and_row() -> None:
     store = _store()
     context = build_inner_tick_chat_only_loop_context(
         track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
-        route_inner_activity=InnerTickActivity.PROACTIVE_CHAT,
         **_common_context_kwargs(store),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
     envelope = json.dumps({"output_to_user": False, "message": ""})
     llm_client = MagicMock()
@@ -251,8 +265,12 @@ async def test_proactive_uses_chat_scene_and_high_reasoning() -> None:
     store = _store()
     context = build_inner_tick_chat_only_loop_context(
         track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
-        route_inner_activity=InnerTickActivity.PROACTIVE_CHAT,
         **_common_context_kwargs(store),
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+            user_text="hi",
+            has_openai_tools=False,
+        ),
     )
     envelope = json.dumps(
         {"output_to_user": True, "message": "Thinking of you."}
@@ -293,9 +311,12 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
     context = build_inner_tick_tool_loop_context(
         track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
         tools_for_turn=tools,
-        write_allowlist=frozenset({"LIFE_CURRENTS.md"}),
-        route_inner_activity=InnerTickActivity.AUTONOMY,
         **kwargs,
+        execution=loop_execution_for_track(
+            track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
+            user_text="hi",
+            has_openai_tools=True,
+        ),
     )
 
     captured_sinks: list[object] = []
@@ -306,6 +327,7 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
         store,
         llm_client,
         interim_output_sink,
+        max_tool_call_rounds,
     ):
         captured_sinks.append(interim_output_sink)
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -329,10 +351,7 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
             store=store,
             llm_client=MagicMock(),
             legacy_llm_client=MagicMock(),
-        ).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=context,
-        )
+        ).run_single_llm_turn(context=context)
 
     assert captured_sinks == [None]
     queue.append_visible_message.assert_not_awaited()

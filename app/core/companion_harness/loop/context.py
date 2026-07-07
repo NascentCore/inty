@@ -4,6 +4,10 @@ Assembles immutable inputs for one turn (messages, tools, tracing, outbound
 queue handles) from values already built upstream. Does not decide prompt
 wording or call the language model.
 
+Per-turn resolved execution knobs are built by ``track_loop_plugin`` via
+``build_loop_execution_policy`` and carried on ``AgenticLoopContext.execution``.
+``companion_turn_track`` is transcript/logging routing only at loop runtime.
+
 TODO(world-engine-agent-profile): Introduce ``AgentBehavior`` protocol and — #3701
 ``AgentProfile`` / ``CompanionProfile`` / ``SubAgentProfile`` config (epic #3700).
 """
@@ -22,9 +26,6 @@ from app.core.companion_harness.agentic_companion.types import (
     AgenticLoopInputBatch,
     UserMessageBatch,
 )
-from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
-    BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
-)
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
@@ -34,26 +35,16 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
-    InnerTickActivity,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_BOOTSTRAP_TRACK,
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-    SOURCE_IMPLICIT_SIGN_ON_GREETING,
-    SOURCE_SINGLE_COMPLETION,
-)
+from app.core.companion_harness.loop.track_policy import LoopExecutionPolicy
 from app.core.companion_harness.prompt_builder import (
     PromptPlan,
     openai_dialogue_dicts_to_prompt_messages,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
-)
 
 AfterToolMessagesHook = Callable[
     [list[dict[str, Any]]],
@@ -65,14 +56,13 @@ AfterToolMessagesHook = Callable[
 class AgenticLoopLangsmithContext:
     """Tracing and correlation metadata attached to one agentic loop turn.
 
-    Bundles the slice used for invocation extras plus foreground source label
-    and identifiers that tie model calls back to the user message.
+    Bundles the slice used for invocation extras plus identifiers that tie
+    model calls back to the user message. Foreground LangSmith source labels
+    come from ``execution.foreground_source`` on the parent context.
     """
 
     # Channel tags for LangSmith parent runs and LLM child spans.
     turn_slice: CompanionTurnLangsmithSlice
-    # Invocation-extra label (e.g. SOURCE_SINGLE_COMPLETION, SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE).
-    foreground_source: str
     # LangSmith trace id for the foreground LLM span on this turn.
     trace_id: str
     # LangSmith run id for the foreground LLM span on this turn.
@@ -84,16 +74,19 @@ class AgenticLoopContext:
     """Everything needed to run one user-facing turn through the agentic loop.
 
     Built before execution starts by ``build_*_loop_context`` or ``track_loop_plugin``;
-    consumed once per turn by ``AgenticLoop.run_track_turn``. Does not decide prompt
-    wording or call the language model.
+    consumed once per turn by ``AgenticLoop.run_single_llm_turn`` or
+    ``AgenticLoop.run_dual_llm_turn``. Execution knobs are pre-resolved on
+    ``execution``; loop does not look up ``TRACK_POLICY``.
     """
 
     # Legacy OpenAI wire message stack from turn prep; single-LLM reads prompt_plan (#3629).
     openai_messages: tuple[dict[str, Any], ...]
     # Tool schemas in OpenAI wire form; dual-LLM background loop reads this, single-LLM uses prompt_plan.tools.
     openai_tools: tuple[dict[str, Any], ...]
-    # MemoryStore document paths tools may write this turn (per-track allowlist).
-    write_allowlist: frozenset[str]
+    # Production routing track; transcript/logging key only at loop runtime.
+    companion_turn_track: CompanionTurnTrack
+    # Resolved execution knobs; built by plugin via ``build_loop_execution_policy``.
+    execution: LoopExecutionPolicy
     # When true, tool store writes persist text only.
     repository_only_store_text: bool
     # Companion turn correlation id for transcript, OutputQueue, tool events, and logs.
@@ -108,20 +101,12 @@ class AgenticLoopContext:
     tail_user_messages: tuple[TurnTailUserMessage, ...]
     # Target transcript JSONL path (e.g. transcript.jsonl).
     transcript_rel: str
-    # Foreground LangSmith slice, source label, and span ids.
+    # Foreground LangSmith slice and span ids.
     langsmith: AgenticLoopLangsmithContext
-    # True for idle inner-tick turns (not user-initiated chat).
-    inner_tick_turn: bool
-    # Idle poll activity; drives structured output, downlink kind, delivery suppression.
-    inner_tick_activity: InnerTickActivity
     # Per-turn channel kind and implicit signals; passed to tool background loop.
     runtime_context: TurnRuntimeContext
-    # In-turn sync tool rounds; 0 = chat-only, BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS for tool loops.
-    max_tool_rounds: int
     # Hook to refresh system prefix after each tool round; None for greeting/inner tick/dual-LLM.
     after_tool_messages_appended: AfterToolMessagesHook | None
-    # Enable high-reasoning LLM mode (e.g. proactive inner tick).
-    high_reasoning: bool
     # Durable outbound queue; user-visible assistant lines stream here during the turn.
     output_queue: OutputQueue
     # InputQueue batch claimed for this turn; synthetic for greeting/inner tick without a claim.
@@ -134,16 +119,12 @@ class AgenticLoopContext:
     prompt_plan: PromptPlan | None = None
     # Leading system message count; used when assembling dual-LLM stacks, not read in loop execution.
     stack_depth: int = 0
-    # Production routing track; selects chat-only vs tool loop and silent-track suppression.
-    companion_turn_track: CompanionTurnTrack | None = None
     # Dual-LLM foreground chat wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None
     # Dual-LLM background tool wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None = None
     # Memory-doc bodies for dual-LLM prompt assembly; carried for correlation, consumed upstream.
     prompt_bundle: PromptBundle | None = None
-    # Dual-LLM only; skip structured foreground envelope for silent inner ticks (monolog/autonomy).
-    skip_foreground_envelope: bool = False
 
 
 @dataclass(frozen=True)
@@ -204,6 +185,7 @@ def build_implicit_sign_on_greeting_loop_context(
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan,
+    execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble implicit sign-on greeting context for single-LLM ``AgenticLoop``."""
     assert transcript_rel != ""
@@ -211,7 +193,8 @@ def build_implicit_sign_on_greeting_loop_context(
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -220,21 +203,15 @@ def build_implicit_sign_on_greeting_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_IMPLICIT_SIGN_ON_GREETING,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=0,
         after_tool_messages_appended=None,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
         stack_depth=stack_depth,
     )
 
@@ -258,7 +235,7 @@ def build_inner_tick_chat_only_loop_context(
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan,
-    route_inner_activity: InnerTickActivity,
+    execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble proactive/scheduled inner-tick context for chat-only ``AgenticLoop``."""
     assert transcript_rel != ""
@@ -270,7 +247,8 @@ def build_inner_tick_chat_only_loop_context(
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=(),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        companion_turn_track=track,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -279,21 +257,15 @@ def build_inner_tick_chat_only_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_SINGLE_COMPLETION,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=True,
-        inner_tick_activity=route_inner_activity,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=0,
         after_tool_messages_appended=None,
-        high_reasoning=track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        companion_turn_track=track,
         stack_depth=stack_depth,
     )
 
@@ -303,7 +275,6 @@ def build_inner_tick_tool_loop_context(
     track: CompanionTurnTrack,
     messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
-    write_allowlist: frozenset[str],
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
@@ -319,7 +290,7 @@ def build_inner_tick_tool_loop_context(
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan,
-    route_inner_activity: InnerTickActivity,
+    execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble monolog/autonomy inner-tick context for inline tool ``AgenticLoop``."""
     assert transcript_rel != ""
@@ -327,12 +298,12 @@ def build_inner_tick_tool_loop_context(
         CompanionTurnTrack.INNER_TICK_MONOLOG,
         CompanionTurnTrack.INNER_TICK_AUTONOMY,
     )
-    tool_rounds = BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS if tools_for_turn else 0
 
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
-        write_allowlist=write_allowlist,
+        companion_turn_track=track,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -341,23 +312,16 @@ def build_inner_tick_tool_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_SINGLE_COMPLETION,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=True,
-        inner_tick_activity=route_inner_activity,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=tool_rounds,
         after_tool_messages_appended=None,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        companion_turn_track=track,
         stack_depth=stack_depth,
-        skip_foreground_envelope=True,
     )
 
 
@@ -380,6 +344,7 @@ def build_settled_user_chat_loop_context(
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
+    execution: LoopExecutionPolicy,
     prompt_plan: PromptPlan | None = None,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for single-LLM ``AgenticLoop``."""
@@ -389,7 +354,8 @@ def build_settled_user_chat_loop_context(
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -398,23 +364,17 @@ def build_settled_user_chat_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_SINGLE_COMPLETION,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=after_tool_messages_appended,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         context_meta=None,
         prompt_plan=prompt_plan,
         stack_depth=stack_depth,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
     )
 
 
@@ -440,6 +400,7 @@ def build_settled_dual_llm_user_chat_loop_context(
     dual_llm_tool_msgs: tuple[dict[str, Any], ...],
     prompt_bundle: PromptBundle,
     context_meta: ContextMeta,
+    execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for dual-LLM ``AgenticLoop``."""
     assert user_text.strip() != ""
@@ -450,7 +411,8 @@ def build_settled_dual_llm_user_chat_loop_context(
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -459,26 +421,19 @@ def build_settled_dual_llm_user_chat_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=None,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         context_meta=context_meta,
         stack_depth=stack_depth,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
         dual_llm_tool_msgs=dual_llm_tool_msgs,
         prompt_bundle=prompt_bundle,
-        skip_foreground_envelope=False,
     )
 
 
@@ -502,6 +457,7 @@ def build_bootstrap_user_chat_loop_context(
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     prompt_plan: PromptPlan,
+    execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble bootstrap ``USER_CHAT_BOOTSTRAP`` context for single-LLM ``AgenticLoop``."""
     assert user_text.strip() != ""
@@ -510,7 +466,8 @@ def build_bootstrap_user_chat_loop_context(
     return AgenticLoopContext(
         openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
-        write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
@@ -519,20 +476,14 @@ def build_bootstrap_user_chat_loop_context(
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=langsmith_slice,
-            foreground_source=SOURCE_BOOTSTRAP_TRACK,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
         ),
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
-        max_tool_rounds=BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
         after_tool_messages_appended=after_tool_messages_appended,
-        high_reasoning=False,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         stack_depth=stack_depth,
     )

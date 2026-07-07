@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
-from app.core.companion_harness.companion.models import InnerTickActivity
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     turn_recall_from_envelope,
 )
@@ -51,8 +50,7 @@ def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() ->
 ):
     create_sync = MagicMock()
     out = resolve_tool_background_finish_envelope(
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.AUTONOMY,
+        skip_finish_envelope_routing=True,
         client=None,
         model="m",
         create_completion_sync=create_sync,
@@ -66,13 +64,10 @@ def test_resolve_tool_background_finish_envelope_skips_routing_for_autonomy() ->
     assert out.importance_round == 5
 
 
-def test_resolve_tool_background_finish_envelope_routes_for_monolog() -> (
-    None
-):
+def test_resolve_tool_background_finish_envelope_routes_for_monolog() -> None:
     create_sync = MagicMock(return_value=_completion_response("not json"))
     out = resolve_tool_background_finish_envelope(
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
+        skip_finish_envelope_routing=False,
         client=None,
         model="m",
         create_completion_sync=create_sync,

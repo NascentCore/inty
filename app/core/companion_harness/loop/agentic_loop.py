@@ -36,7 +36,6 @@ from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
     InTurnSyncToolLoopResult,
 )
 from app.core.companion_harness.companion.turn_tail_user import (
-    append_tail_user_transcript_rows,
     append_turn_track_tail_user_transcript_rows,
 )
 from app.core.companion_harness.companion.llm_chat_runtime import (
@@ -45,8 +44,6 @@ from app.core.companion_harness.companion.llm_chat_runtime import (
 )
 from app.core.llms.client import (
     AsyncLlmClient,
-    LLM_SCENE_CHAT,
-    LLM_SCENE_INNER_TICK,
     LlmClient,
 )
 from app.core.companion_harness.companion.message_format import (
@@ -56,18 +53,13 @@ from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
 )
-from app.core.companion_harness.companion.inner_tick_kind import (
-    inner_tick_kind_for_track,
-    inner_tick_spec,
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    user_visible_assistant_text,
 )
 from app.core.companion_harness.companion.proactive_chat_envelope import (
     PROACTIVE_CHAT_RESPONSE_FORMAT,
     split_proactive_chat_message,
-)
-from app.core.companion_harness.companion.models import (
-    InnerTickActivity,
-    CompanionTurnTrack,
-    user_visible_assistant_text,
 )
 from app.core.companion_harness.companion.turn_routes import (
     BootstrapInterimOutput,
@@ -94,7 +86,6 @@ from app.core.companion_harness.tools.image_gate import (
     list_image_asset_records,
 )
 
-from .config import AgenticLoopMechanism
 from .context import AgenticLoopContext, AgenticLoopOutput
 from .runtime_system_clauses import apply_agentic_loop_runtime_system_clauses
 
@@ -116,18 +107,6 @@ def _generated_image_refs_since(
     return tuple(refs)
 
 
-def _track_suppresses_user_delivery(
-    track: CompanionTurnTrack | None,
-) -> bool:
-    """True for silent tracks (e.g. AUTONOMY) whose text must never reach OutputQueue."""
-    if track is None:
-        return False
-    kind = inner_tick_kind_for_track(track)
-    if kind is None:
-        return False
-    return inner_tick_spec(kind).suppresses_user_delivery
-
-
 def _append_user_transcript_row(
     *,
     store: MemoryStore,
@@ -146,21 +125,12 @@ def _append_user_transcript_row(
         == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     ):
         return
-    track = context.companion_turn_track
-    if track is not None:
-        append_turn_track_tail_user_transcript_rows(
-            store,
-            context.transcript_rel,
-            tail_user_messages=context.tail_user_messages,
-            trace_id=context.trace_id,
-            track=track,
-        )
-        return
-    append_tail_user_transcript_rows(
+    append_turn_track_tail_user_transcript_rows(
         store,
         context.transcript_rel,
         tail_user_messages=context.tail_user_messages,
         trace_id=context.trace_id,
+        track=context.companion_turn_track,
     )
 
 
@@ -272,6 +242,7 @@ async def _run_prompt_plan_tool_loop(
     store: MemoryStore,
     llm_client: AsyncLlmClient,
     interim_output_sink,
+    max_tool_call_rounds: int,
 ) -> InTurnSyncToolLoopResult:
     """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
 
@@ -279,17 +250,17 @@ async def _run_prompt_plan_tool_loop(
     TODO(!3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
     """
     assert context.prompt_plan is not None
+    execution = context.execution
     transcript_rel = context.transcript_rel
     trace_id = context.trace_id
     user_msg_uuid = context.user_msg_uuid
     prompt_plan = context.prompt_plan
     loop_tools = list(prompt_plan.tools)
     chat_model = llm_client.resolve_model("chat")
-    allow = context.write_allowlist
+    allow = execution.write_allowlist
     langsmith_slice = context.langsmith.turn_slice
-    foreground_source = context.langsmith.foreground_source
     langsmith_extra = langsmith_slice.foreground_invocation_extra(
-        source=foreground_source,
+        source=execution.foreground_source.value,
         extra_metadata=None,
     )
 
@@ -305,7 +276,7 @@ async def _run_prompt_plan_tool_loop(
         tool_choice=prompt_plan.tool_choice,
         model=chat_model,
         langsmith_extra=langsmith_extra,
-        high_reasoning=context.high_reasoning,
+        high_reasoning=execution.high_reasoning,
     )
     working_messages = deepcopy(request_messages)
     langsmith_trace_acc = langsmith_trace_id_from_completion(initial_resp) or ""
@@ -334,7 +305,7 @@ async def _run_prompt_plan_tool_loop(
             tool_choice=prompt_plan.tool_choice,
             model=chat_model,
             langsmith_extra=langsmith_extra,
-            high_reasoning=context.high_reasoning,
+            high_reasoning=execution.high_reasoning,
         )
         nonlocal langsmith_trace_acc, langsmith_llm_run_acc
         tid = langsmith_trace_id_from_completion(next_resp)
@@ -412,7 +383,7 @@ async def _run_prompt_plan_tool_loop(
     loop_result = await resolve_openai_tool_call_loop_async(
         response=initial_resp,
         openai_messages=working_messages,
-        max_tool_call_rounds=context.max_tool_rounds,
+        max_tool_call_rounds=max_tool_call_rounds,
         execute_tool_call=execute_tool_call,
         continue_chat=continue_chat,
         build_assistant_tool_call_message=openai_assistant_message_dict,
@@ -461,7 +432,7 @@ async def _run_chat_only_prompt_plan(
     """
     assert context.prompt_plan is not None
     track = context.companion_turn_track
-    assert track is not None
+    execution = context.execution
     request_messages = prompt_messages_to_openai_dicts(
         context.prompt_plan.messages
     )
@@ -471,17 +442,10 @@ async def _run_chat_only_prompt_plan(
     )
     chat_model = llm_client.resolve_model("chat")
     langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
-        source=context.langsmith.foreground_source,
+        source=execution.foreground_source.value,
         extra_metadata=None,
     )
-    # Legacy parity: only PROACTIVE_CHAT keeps the chat scene among inner ticks;
-    # SCHEDULED stays on the inner-tick scene despite sharing the PROACTIVE_CHAT activity.
-    llm_scene = (
-        LLM_SCENE_INNER_TICK
-        if context.inner_tick_turn
-        and track != CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-        else LLM_SCENE_CHAT
-    )
+    llm_scene = execution.llm_scene.value
     match track:
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             downlink_kind = DownlinkKind.PROACTIVE
@@ -510,7 +474,7 @@ async def _run_chat_only_prompt_plan(
                 response_format=response_format,
                 scene=llm_scene,
                 langsmith_extra=langsmith_extra,
-                high_reasoning=context.high_reasoning,
+                high_reasoning=execution.high_reasoning,
                 max_attempts=int(greet_cfg.llm_max_attempts),
                 per_attempt_timeout_sec=float(greet_cfg.llm_timeout_sec),
                 trace_id=context.trace_id,
@@ -523,7 +487,7 @@ async def _run_chat_only_prompt_plan(
                 tools=None,
                 response_format=response_format,
                 langsmith_extra=langsmith_extra,
-                high_reasoning=context.high_reasoning,
+                high_reasoning=execution.high_reasoning,
                 scene=llm_scene,
             )
     langsmith_trace_acc = langsmith_trace_id_from_completion(resp) or ""
@@ -625,20 +589,7 @@ class AgenticLoop:
         self.llm_client = llm_client
         self.legacy_llm_client = legacy_llm_client
 
-    async def run_track_turn(
-        self,
-        *,
-        mechanism: AgenticLoopMechanism,
-        context: AgenticLoopContext,
-    ) -> AgenticLoopOutput:
-        """Execute one turn through the unified loop; visible output goes to OutputQueue only."""
-        match mechanism:
-            case AgenticLoopMechanism.SINGLE_LLM:
-                return await self._run_single_llm_turn(context=context)
-            case AgenticLoopMechanism.DUAL_LLM:
-                return await self._run_dual_llm_turn(context=context)
-
-    async def _run_single_llm_turn(
+    async def run_single_llm_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
         """Execute one single-LLM turn; each non-empty assistant ``content`` → ``OutputQueue``."""
@@ -661,10 +612,11 @@ class AgenticLoop:
 
         if context.prompt_plan is None:
             raise RuntimeError(
-                "_run_single_llm_turn requires prompt_plan; "
+                "run_single_llm_turn requires prompt_plan; "
                 "build context via PromptBuilder before invoking AgenticLoop"
             )
-        if context.max_tool_rounds == 0:
+        execution = context.execution
+        if execution.max_tool_call_rounds == 0:
             sync_result = await _run_chat_only_prompt_plan(
                 context,
                 llm_client=self.llm_client,
@@ -677,11 +629,10 @@ class AgenticLoop:
                 llm_client=self.llm_client,
                 interim_output_sink=(
                     None
-                    if _track_suppresses_user_delivery(
-                        context.companion_turn_track
-                    )
+                    if execution.suppresses_user_delivery
                     else _emit_user_reply
                 ),
+                max_tool_call_rounds=execution.max_tool_call_rounds,
             )
         return AgenticLoopOutput(
             assistant_text=sync_result.assistant_text,
@@ -697,7 +648,7 @@ class AgenticLoop:
             output_message_ids=tuple(appender.persisted_ids),
         )
 
-    async def _run_dual_llm_turn(
+    async def run_dual_llm_turn(
         self, *, context: AgenticLoopContext
     ) -> AgenticLoopOutput:
         """Execute one dual-LLM turn; foreground and tool-leg user-visible text → ``OutputQueue``."""
@@ -713,6 +664,7 @@ class AgenticLoop:
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
         llm_client = self.legacy_llm_client
+        execution = context.execution
         chat_msgs = list(context.dual_llm_chat_msgs)
         tool_msgs = list(context.dual_llm_tool_msgs)
         apply_agentic_loop_runtime_system_clauses(
@@ -721,15 +673,6 @@ class AgenticLoop:
         )
         chat_model = llm_client.resolve_model("chat")
         tool_model = llm_client.resolve_model("tool")
-        tick_proactive = (
-            context.inner_tick_turn
-            and context.inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT
-        )
-        foreground_scene = (
-            LLM_SCENE_INNER_TICK
-            if context.inner_tick_turn and not tick_proactive
-            else LLM_SCENE_CHAT
-        )
 
         fg_result = await run_dual_llm_foreground_chat(
             DualLlmForegroundChatInput(
@@ -738,11 +681,10 @@ class AgenticLoop:
                 tool_msgs=tool_msgs,
                 chat_model=chat_model,
                 langsmith_slice=context.langsmith.turn_slice,
-                foreground_scene=foreground_scene,
-                high_reasoning=context.high_reasoning,
+                foreground_scene=execution.llm_scene.value,
+                high_reasoning=execution.high_reasoning,
                 trace_id=context.trace_id,
-                skip_foreground_envelope=context.skip_foreground_envelope,
-                route_inner_activity=context.inner_tick_activity,
+                skip_foreground_envelope=execution.skip_foreground_envelope,
                 langsmith_trace_id=context.langsmith.trace_id,
                 langsmith_run_id=context.langsmith.run_id,
             )
@@ -774,10 +716,11 @@ class AgenticLoop:
             execute_tool_call_fn=execute_tool_call,
             client=llm_client.sync_client_for_route("tool"),
             chat_completion_sync=llm_client.chat_completions_sync,
-            write_allowlist=context.write_allowlist,
+            write_allowlist=execution.write_allowlist,
             repository_only_store_text=context.repository_only_store_text,
-            inner_tick_turn=context.inner_tick_turn,
-            inner_tick_activity=context.inner_tick_activity,
+            suppress_user_delivery=execution.suppresses_user_delivery,
+            skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
+            activity_label=execution.tool_bg_activity_label,
             runtime_context=context.runtime_context,
             langsmith_slice=context.langsmith.turn_slice,
             companion_turn_track=context.companion_turn_track,

@@ -38,16 +38,15 @@ from app.core.companion_harness.loop.context import (
 from app.core.companion_harness.loop.track_loop_input import (
     CompanionTurnLoopInput,
 )
+from app.core.companion_harness.loop.track_policy import (
+    build_loop_execution_policy,
+)
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     PromptPlan,
     prompt_messages_to_openai_dicts,
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
-)
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
-    MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
 )
 
 
@@ -92,16 +91,12 @@ def _expanded_transcript_window(
     return transcript_window
 
 
-def _memory_store_write_allowlist_for_track(
-    track: CompanionTurnTrack,
-) -> frozenset[str]:
-    match track:
-        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
-            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
-        case CompanionTurnTrack.INNER_TICK_MONOLOG:
-            return frozenset()
-        case _:
-            return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+def _loop_execution_policy(prepared: CompanionTurnLoopInput):
+    return build_loop_execution_policy(
+        track=prepared.track,
+        runtime_flags=prepared.runtime_flags,
+        has_openai_tools=bool(prepared.tools_for_turn),
+    )
 
 
 def _agentic_loop(prepared: CompanionTurnLoopInput) -> AgenticLoop:
@@ -144,6 +139,7 @@ class BootstrapUserChatPlugin:
             implicit_sign_on_turn=p.runtime_flags.implicit_sign_on_turn,
             tail_splice_thoughts=p.ai_private_splice_plan.thoughts,
         )
+        execution = _loop_execution_policy(p)
         loop_context = build_bootstrap_user_chat_loop_context(
             messages=p.messages,
             tools_for_turn=p.tools_for_turn,
@@ -165,11 +161,9 @@ class BootstrapUserChatPlugin:
             user_message_batch=p.user_message_batch,
             tail_user_messages=p.tail_user_messages,
             prompt_plan=bootstrap_prompt_plan,
+            execution=execution,
         )
-        return await _agentic_loop(p).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=loop_context,
-        )
+        return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
 class SettledUserChatPlugin:
@@ -182,7 +176,7 @@ class SettledUserChatPlugin:
         runtime_context = p.runtime_context
         bundle = p.loaded_state.bundle
         context = p.loaded_state.context
-        route_inner_activity = p.runtime_flags.route_inner_activity
+        execution = _loop_execution_policy(p)
 
         match resolve_agentic_loop_mechanism(track=p.track):
             case AgenticLoopMechanism.SINGLE_LLM:
@@ -228,11 +222,11 @@ class SettledUserChatPlugin:
                     output_queue=p.agentic_output_queue,
                     user_message_batch=p.user_message_batch,
                     tail_user_messages=p.tail_user_messages,
+                    execution=execution,
                     prompt_plan=single_llm_prompt_plan,
                 )
-                return await _agentic_loop(p).run_track_turn(
-                    mechanism=AgenticLoopMechanism.SINGLE_LLM,
-                    context=loop_context,
+                return await _agentic_loop(p).run_single_llm_turn(
+                    context=loop_context
                 )
             case AgenticLoopMechanism.DUAL_LLM:
                 # TODO(!3460): Move dual-LLM message-stack assembly into loop/context.py.
@@ -241,7 +235,7 @@ class SettledUserChatPlugin:
                     bundle=bundle,
                     context=context,
                     inner_tick_turn=False,
-                    route_inner_activity=route_inner_activity,
+                    route_inner_activity=p.runtime_flags.route_inner_activity,
                     runtime_context=runtime_context,
                 )
                 stack_depth = len(p.prompt_plan.system_messages)
@@ -282,10 +276,10 @@ class SettledUserChatPlugin:
                     dual_llm_tool_msgs=tuple(tool_msgs),
                     prompt_bundle=bundle,
                     context_meta=context,
+                    execution=execution,
                 )
-                return await _agentic_loop(p).run_track_turn(
-                    mechanism=AgenticLoopMechanism.DUAL_LLM,
-                    context=loop_context,
+                return await _agentic_loop(p).run_dual_llm_turn(
+                    context=loop_context
                 )
 
 
@@ -295,6 +289,7 @@ class ImplicitSignOnGreetingPlugin:
     async def run(self, prepared: CompanionTurnLoopInput) -> AgenticLoopOutput:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
+        execution = _loop_execution_policy(p)
         greeting_prompt_plan = prompt_plan_from_openai_messages(
             p.messages,
             tools=(),
@@ -316,11 +311,9 @@ class ImplicitSignOnGreetingPlugin:
             user_message_batch=user_message_batch,
             tail_user_messages=p.tail_user_messages,
             prompt_plan=greeting_prompt_plan,
+            execution=execution,
         )
-        return await _agentic_loop(p).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=loop_context,
-        )
+        return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
 class InnerTickChatOnlyPlugin:
@@ -329,6 +322,7 @@ class InnerTickChatOnlyPlugin:
     async def run(self, prepared: CompanionTurnLoopInput) -> AgenticLoopOutput:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
+        execution = _loop_execution_policy(p)
         inner_prompt_plan = prompt_plan_from_openai_messages(
             p.messages,
             tools=(),
@@ -351,12 +345,9 @@ class InnerTickChatOnlyPlugin:
             user_message_batch=user_message_batch,
             tail_user_messages=p.tail_user_messages,
             prompt_plan=inner_prompt_plan,
-            route_inner_activity=p.runtime_flags.route_inner_activity,
+            execution=execution,
         )
-        return await _agentic_loop(p).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=loop_context,
-        )
+        return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
 class InnerTickToolLoopPlugin:
@@ -365,6 +356,7 @@ class InnerTickToolLoopPlugin:
     async def run(self, prepared: CompanionTurnLoopInput) -> AgenticLoopOutput:
         p = prepared
         user_message_batch = _user_message_batch_or_synthetic(p)
+        execution = _loop_execution_policy(p)
         throttle_prompt_plan = prompt_plan_from_openai_messages(
             p.messages,
             tools=tuple(p.tools_for_turn),
@@ -373,7 +365,6 @@ class InnerTickToolLoopPlugin:
             track=p.track,
             messages=p.messages,
             tools_for_turn=p.tools_for_turn,
-            write_allowlist=_memory_store_write_allowlist_for_track(p.track),
             repository_only_store_text=p.repository_only_store_text,
             trace_id=p.trace_id,
             user_text=p.user_text,
@@ -389,12 +380,9 @@ class InnerTickToolLoopPlugin:
             user_message_batch=user_message_batch,
             tail_user_messages=p.tail_user_messages,
             prompt_plan=throttle_prompt_plan,
-            route_inner_activity=p.runtime_flags.route_inner_activity,
+            execution=execution,
         )
-        return await _agentic_loop(p).run_track_turn(
-            mechanism=AgenticLoopMechanism.SINGLE_LLM,
-            context=loop_context,
-        )
+        return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
 _BOOTSTRAP_PLUGIN = BootstrapUserChatPlugin()
