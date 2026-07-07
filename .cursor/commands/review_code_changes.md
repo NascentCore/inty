@@ -45,6 +45,7 @@ that means the code lacks hierarchy.
 - Do not use dict in passing data between components
 - Use `dataclass` for internal data structure (not facing users or external services)
 - Use `Pydantic` models for interfacing with externals (users & external services like 3rd party http, cloud service etc.)
+- Thoroughly document data type and its members
 
 ## Function arguments
 
