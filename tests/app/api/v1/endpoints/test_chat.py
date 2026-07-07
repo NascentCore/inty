@@ -3046,6 +3046,8 @@ def test_chat_websocket_idle_timeout_reads_config(
         captured["timeouts"].append(timeout)
         if len(captured["timeouts"]) == 1:
             return await aw
+        if asyncio.iscoroutine(aw):
+            aw.close()
         raise asyncio.TimeoutError()
 
     monkeypatch.setattr(
@@ -3089,26 +3091,12 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_ws_completions(
-        *,
-        db,
-        agent_id,
-        request,
-        current_user,
-        subscription_svc,
-        voice_svc=None,
-        companion_ws_foreground_pending=None,
-        companion_ws_inner_tick_ctx=None,
-        companion_ws=None,
-        implicit_greeting_turn=False,
-        ws_outbound_queue=None,
-        ws_conn_id=None,
-    ):
-        captured["effective_user_id"] = current_user.id
+    async def fake_agent_chat_ws_completions(**kwargs):
+        captured["effective_user_id"] = kwargs["current_user"].id
         return _stub_ws_queued_success_frame(
-            agent_id=str(agent_id),
+            agent_id=str(kwargs["agent_id"]),
             content="ok",
-            request=request,
+            request=kwargs["request"],
         )
 
     monkeypatch.setattr(
@@ -3146,26 +3134,12 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
     async def fake_ws_user(websocket, db):
         return user
 
-    async def fake_agent_chat_ws_completions(
-        *,
-        db,
-        agent_id,
-        request,
-        current_user,
-        subscription_svc,
-        voice_svc=None,
-        companion_ws_foreground_pending=None,
-        companion_ws_inner_tick_ctx=None,
-        companion_ws=None,
-        implicit_greeting_turn=False,
-        ws_outbound_queue=None,
-        ws_conn_id=None,
-    ):
-        captured["user_time_context"] = request.user_time_context
+    async def fake_agent_chat_ws_completions(**kwargs):
+        captured["user_time_context"] = kwargs["request"].user_time_context
         return _stub_ws_queued_success_frame(
-            agent_id=str(agent_id),
+            agent_id=str(kwargs["agent_id"]),
             content="ok",
-            request=request,
+            request=kwargs["request"],
         )
 
     monkeypatch.setattr(

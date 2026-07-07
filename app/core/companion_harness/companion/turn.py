@@ -10,7 +10,7 @@ only appends transcript JSONL on ``MemoryStore``; batch curation belongs in **Dr
 scope ``OutputQueue``. Settled ``USER_CHAT`` routes via ``user_turn.llm_loop_mode`` to
 ``SINGLE_LLM`` or ``DUAL_LLM`` mechanism; inner ticks and greeting use ``SINGLE_LLM``.
 
-TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink``; retire non-queue ``bootstrap_interim_output_sink``.
+TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink`` for all queue-serving delivery paths.
 TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
 
 TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves — #3123
@@ -105,7 +105,7 @@ from .turn_pipeline import (
     resolve_turn_runtime_flags,
 )
 from .turn_tail_user import (
-    append_tail_user_transcript_rows,
+    append_turn_track_tail_user_transcript_rows,
     resolve_turn_tail_user_messages,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -321,6 +321,24 @@ async def _run_companion_turn_core(
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
     user_msg_uuid = tail_user_messages[-1].message_id
+    if (
+        track
+        in (
+            CompanionTurnTrack.USER_CHAT,
+            CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+        )
+        and user_message_batch is None
+    ):
+        # Fallback for direct (non-InputQueue) user chat so the AgenticLoop
+        # branch below always has a batch; the App-WS caller delivers from the
+        # turn result while the presence pump skips these rows.
+        # TODO(#3543): user chat is user-initiated; replace the ``agent-initiated:``
+        # batch-id prefix with an explicit direct-turn marker once pump-owned
+        # delivery covers App-WS.
+        user_message_batch = synthetic_user_message_batch(
+            user_msg_uuid=user_msg_uuid,
+            track_label=track.value,
+        )
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
@@ -859,37 +877,13 @@ async def _run_companion_turn_core(
         }
         store.append_jsonl_record(rel_tr, sign_on_row)
     elif not in_turn_sync_persisted_transcript:
-        needs_turn_track_user_row_metadata = (
-            inner_tick_turn
-            or tick_proactive
-            or track == CompanionTurnTrack.INNER_TICK_SCHEDULED
+        append_turn_track_tail_user_transcript_rows(
+            store,
+            rel_tr,
+            tail_user_messages=tail_user_messages,
+            trace_id=trace_id,
+            track=track,
         )
-        if (
-            len(tail_user_messages) > 1
-            or not needs_turn_track_user_row_metadata
-        ):
-            append_tail_user_transcript_rows(
-                store,
-                rel_tr,
-                tail_user_messages=tail_user_messages,
-                trace_id=trace_id,
-            )
-        else:
-            user_row: dict[str, Any] = {
-                "role": "user",
-                "content": tail_user_messages[0].text,
-                "ts": tail_user_messages[0].received_at_utc.isoformat(),
-                "uuid": tail_user_messages[0].message_id,
-            }
-            if inner_tick_turn:
-                user_row["inner_tick"] = True
-            if tick_proactive:
-                # TODO(#3401): use enum for message type, not bool proactive_chat
-                user_row["proactive_chat"] = True
-            if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
-                user_row["scheduled"] = True
-            user_row["trace_id"] = trace_id
-            store.append_jsonl_record(rel_tr, user_row)
     last_text = strip_leading_transcript_timestamp_prefixes(last_text)
     persist_ai_private_splice_if_applicable(
         AiPrivateSplicePersistInput(

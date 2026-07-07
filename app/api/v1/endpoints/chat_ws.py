@@ -301,7 +301,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 voice_svc=voice_svc,
                 companion_ws_foreground_pending=companion_ws.foreground_pending,
                 companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
-                companion_ws=companion_ws,
                 implicit_greeting_turn=True,
                 ws_outbound_queue=outbound_queue,
             )
@@ -820,7 +819,6 @@ async def _agent_chat_ws_completions_impl(
     voice_svc: VoiceService = default_voice_service,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
-    companion_ws: CompanionWebSocketCoordinator | None = None,
     implicit_greeting_turn: bool = False,
     ws_outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
     ws_conn_id: str | None = None,
@@ -830,9 +828,14 @@ async def _agent_chat_ws_completions_impl(
     Companion kernel + wire envelope.
     HTTP-era extras (chat limit gate, legacy TTS, usage accounting, push read side-effects,
     surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
+
+    ``companion_ws_foreground_pending`` / ``companion_ws_inner_tick_ctx`` are mutable slices from
+    the connection-level :class:`~app.core.companion_harness.companion.websocket_coordinator.CompanionWebSocketCoordinator`
+    (not the coordinator object). Connection handlers pass slices so this turn impl stays decoupled
+    from coordinator lifecycle (greeting registration, sign-out clear).
+    TODO(#3488): Unify per-accept WS coordinator with per-scope presence coordinator; stop passing raw dict slices.
     """
     # TODO(cleanup-ws-http-chat-impl): Deduplicate post-turn finalize with HTTP impl where shared.
-    # TODO(issue#3208): wrap ``build_companion_ws_completion_data`` in ChatWebSocketQueuedSuccessFrame.
     assert voice_svc is not None
     try:
         request_handling_timer = Timer("请求处理")
@@ -1515,7 +1518,6 @@ async def chat_completions_websocket(
                         voice_svc=voice_svc,
                         companion_ws_foreground_pending=companion_ws.foreground_pending,
                         companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
-                        companion_ws=companion_ws,
                         ws_outbound_queue=outbound_queue,
                         ws_conn_id=ws_conn_id,
                     ),

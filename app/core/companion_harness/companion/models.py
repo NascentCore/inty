@@ -193,8 +193,8 @@ class CompanionTurnResult(BaseModel):
     tool_background_started: bool = Field(
         default=False,
         description=(
-            "True after start_tool_background_job returned for this turn (background "
-            "thread running tool loop). WebSocket foreground preset correlation is "
+            "True when the turn's tool phase was started (AgenticLoop inline "
+            "run_tool_background_loop). WebSocket foreground preset correlation is "
             "retained until a tool_bg downstream frame is emitted. Successful companion "
             "assistant frames mirror this as meta_data.tool_background_started on the "
             "HTTP/WS payload."
@@ -422,7 +422,9 @@ def load_prompt_bundle(
         style_md=_read_memory_document_required(store, STYLE_MD_REL),
         user_md=_read_memory_document_required(store, USER_MD_REL),
         memory_md=memory_long,
-        techno_core_md=_read_memory_document_optional(store, TECHNO_CORE_MD_REL),
+        techno_core_md=_read_memory_document_optional(
+            store, TECHNO_CORE_MD_REL
+        ),
         living_sphere_md=_read_memory_document_optional(
             store, LIVING_SPHERE_MD_REL
         ),
@@ -588,6 +590,8 @@ def companion_turn_transcript_loaded_messages(
     it never appends to ``transcript.jsonl``. User chat and proactive/scheduled inner ticks
     load ``transcript.jsonl`` as-is; monolog turns merge the inner file for their own LLM
     context.
+
+    TODO(#3401): derive merge/path policy from ``CompanionTurnTrack`` via ``inner_tick_kind_for_track``.
     """
     raw_main = load_transcript_projection_from_store(
         store, rel_main_transcript, TranscriptProjection.FULL
@@ -609,7 +613,10 @@ def transcript_relative_path_for_turn_persistence(
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity,
 ) -> str:
-    """Scope-relative JSONL path for run_turn user/assistant transcript appends."""
+    """Scope-relative JSONL path for run_turn user/assistant transcript appends.
+
+    TODO(#3401): take ``CompanionTurnTrack`` (or ``InnerTickKind``) instead of bool + activity pair.
+    """
     tick_proactive = (
         inner_tick_turn
         and inner_tick_activity == InnerTickActivity.PROACTIVE_CHAT

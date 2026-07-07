@@ -419,8 +419,9 @@ class ChatWebSocketResponse(BaseModel):
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
 
-    TODO(issue#3208): type ``data`` as ``ChatWsCompletionData | None``; success
-    frames should validate as :class:`ChatWebSocketQueuedSuccessFrame`.
+    TODO(issue#3208): HTTP-era ``ChatWebSocketResponse`` still uses loose ``data``;
+    queue path uses :class:`ChatWebSocketQueuedSuccessFrame` (Stage 2 done).
+    Tighten ``data`` to ``ChatWsCompletionData | None`` when HTTP chat migrates (#3207).
     """
 
     model_config = ConfigDict(extra="allow")

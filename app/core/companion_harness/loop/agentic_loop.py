@@ -154,9 +154,6 @@ def _append_user_transcript_row(
             tail_user_messages=context.tail_user_messages,
             trace_id=context.trace_id,
             track=track,
-            inner_tick_turn=context.inner_tick_turn,
-            tick_proactive=track
-            == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
         )
         return
     append_tail_user_transcript_rows(

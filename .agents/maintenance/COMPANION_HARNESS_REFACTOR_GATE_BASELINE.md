@@ -2,6 +2,21 @@
 
 Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage 2).
 
+## GitHub issue progress (this branch)
+
+| Issue | Status after PR-5 + Stage 2 |
+|-------|-----------------------------|
+| #3632 | **Code done** — `start_tool_background_job` removed; dual-LLM tool leg inline `AgenticLoop` + `OutputQueue` only; issue open until PR merge |
+| #3401 | **Partial (slice 1)** — `append_turn_track_tail_user_transcript_rows` track-only via `inner_tick_kind_for_track`; `turn.py` dedup; `test_turn_tail_user_track_metadata.py`; inner-tick `UserMessageBatch` synthesized once at `CompanionManager._resolve_agentic_queue_serving` (no generic-label rewrite shim) |
+| #3490 | **Partial** — App-WS `background_events` recv-loop + `WebSocketDownlink` deleted; `foreground_pending` kept for inner-tick (#3580) |
+| #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
+| #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
+| #3207 / #3208 | **Partial (Stage 2)** — typed `WsOutboundPayload`, materializers, pump, REPL `model_validate`; HTTP meta + `chat_history_service` typed row still open |
+| #3543 | **Partial** — WS `TOOL_BACKGROUND` / `USER_REPLY` via presence pump; inner-tick App-WS still direct `outbound_queue.put` |
+| #3398 | **Open** — epic; dual vs single-LLM debate unchanged |
+
+Branch: `yzhao/3401-agentic-loop-track-mechanism` (or merge target). Gate doc updated after code review 2026-07-07.
+
 ## Checklist status
 
 | Item | Status |
@@ -12,6 +27,7 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 | Dreaming unchanged (non-turn batch) | OK |
 | Soft gate: no live turn.py orchestration | **Met** — ``_run_companion_turn_core`` routes only via ``AgenticLoop`` + ``OutputQueue``; parallel ``background_events`` / ``WebSocketDownlink`` removed |
 | WS typed outbound emit (Stage 2) | **Met** — ``WsOutboundPayload`` union; pump ``model_dump``; materializers + REPL ``model_validate`` |
+| Track-derived transcript user JSONL flags (#3401) | **Partial** — ``append_turn_track_tail_user_transcript_rows`` track-only; ``transcript_relative_path_for_turn_persistence`` still bool pair |
 | Memory phase CI | **Pass** |
 | User-reported blockers | Open — see user_bug lane |
 
@@ -19,9 +35,12 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 
 ```
 check_companion_turn_invariants.py — PASSED
-pytest tests/app/core/companion_harness/companion/ — 258 passed
-pytest tests/app/services tests/app/api tests/app/schemas/test_chat_websocket_completion_models.py — (see CI)
+pytest tests/app/core/companion_harness — 546 passed (~8s)
+pytest tests/app/services — 345 passed (~16s)
+pytest tests/app/api — 90 passed, 48 skipped (~5s; test_chat.py 45 passed ~3s)
+pytest tests/app/schemas/test_chat_websocket_completion_models.py — 14 passed
 rg legacy turn orchestration / WebSocketDownlink / background_events pump — no live production callers
+rg rewrite_generic_inner_tick_batch / GENERIC_INNER_TICK_BATCH_TRACK_LABEL — no references (shim removed in review)
 REPL regression — not run (requires Ops :8001)
 ```
 
@@ -30,6 +49,7 @@ REPL regression — not run (requires Ops :8001)
 1. #3493 Weixin enqueue+wake
 2. #3542–#3543 inner-tick/output pump (App-WS greeting + inner-tick converge on pump-owned delivery)
 3. #3580 maintenance/autonomy on AgenticLoop
-4. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
+4. #3401 slice 2: ``transcript_relative_path_for_turn_persistence`` + ``prompt_stack.companion_tools_for_turn`` track-only
+5. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
 
 CRS (#3341) and product (#3323) remain **blocked** on inner-tick AgenticLoop (#3580) and Weixin transport (#3493).
