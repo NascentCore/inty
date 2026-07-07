@@ -287,8 +287,7 @@ async def _run_companion_turn_core(
 
     loaded_state = load_companion_turn_state(
         store=store,
-        inner_tick_turn=inner_tick_turn,
-        route_inner_activity=route_inner_activity,
+        track=track,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
     )
     if tick_proactive:
@@ -439,8 +438,7 @@ async def _run_companion_turn_core(
                     in_turn_sync_persisted_transcript = True
                     rel_tr_agentic_loop = (
                         transcript_relative_path_for_turn_persistence(
-                            inner_tick_turn=False,
-                            inner_tick_activity=route_inner_activity,
+                            track=track,
                         )
                     )
 
@@ -703,8 +701,7 @@ async def _run_companion_turn_core(
                         )
                     rel_tr_inner = (
                         transcript_relative_path_for_turn_persistence(
-                            inner_tick_turn=True,
-                            inner_tick_activity=route_inner_activity,
+                            track=track,
                         )
                     )
                     inner_prompt_plan = prompt_plan_from_openai_messages(
@@ -773,8 +770,7 @@ async def _run_companion_turn_core(
                         )
                     rel_tr_throttle = (
                         transcript_relative_path_for_turn_persistence(
-                            inner_tick_turn=True,
-                            inner_tick_activity=route_inner_activity,
+                            track=track,
                         )
                     )
                     throttle_prompt_plan = prompt_plan_from_openai_messages(
@@ -857,8 +853,7 @@ async def _run_companion_turn_core(
         paths.transcript
         if implicit_sign_on_turn
         else transcript_relative_path_for_turn_persistence(
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=route_inner_activity,
+            track=track,
         )
     )
     assistant_msg_uuid = (

@@ -34,6 +34,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from .inner_tick_kind import inner_tick_kind_for_track
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -178,8 +179,7 @@ def _companion_user_time_context_system_for_llm(
 def load_companion_turn_state(
     *,
     store: MemoryStore,
-    inner_tick_turn: bool,
-    route_inner_activity: InnerTickActivity,
+    track: CompanionTurnTrack,
     transcript_llm_window_max_messages: int | None,
 ) -> CompanionTurnLoadedState:
     """Load context, prompt bundle, and transcript head for one turn."""
@@ -192,10 +192,9 @@ def load_companion_turn_state(
         store,
         rel_main_transcript=rel_main_tr,
         rel_inner_tick_transcript=rel_inner_tr,
-        inner_tick_turn=inner_tick_turn,
-        inner_tick_activity=route_inner_activity,
+        track=track,
     )
-    if not inner_tick_turn:
+    if inner_tick_kind_for_track(track) is None:
         loaded = apply_dreaming_checkpoint_to_prompt_rows(
             loaded, load_dreaming_state(store)
         )
@@ -239,8 +238,6 @@ def build_companion_turn_prompt_plan(
 
             tools_for_turn = companion_tools_for_turn(
                 track=track,
-                inner_tick_turn=False,
-                inner_tick_activity=InnerTickActivity.MONOLOG,
                 implicit_user_signed_on_turn=implicit_sign_on_turn,
             )
             system_messages = PromptBuilder(

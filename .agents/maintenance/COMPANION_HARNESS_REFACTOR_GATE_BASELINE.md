@@ -7,7 +7,7 @@ Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage
 | Issue | Status after PR-5 + Stage 2 |
 |-------|-----------------------------|
 | #3632 | **Code done** — `start_tool_background_job` removed; dual-LLM tool leg inline `AgenticLoop` + `OutputQueue` only; issue open until PR merge |
-| #3401 | **Partial (slice 1)** — `append_turn_track_tail_user_transcript_rows` track-only via `inner_tick_kind_for_track`; `turn.py` dedup; `test_turn_tail_user_track_metadata.py`; inner-tick `UserMessageBatch` synthesized once at `CompanionManager._resolve_agentic_queue_serving` (no generic-label rewrite shim) |
+| #3401 | **Partial (slice 1+2)** — slice 1: `append_turn_track_tail_user_transcript_rows` track-only; slice 2: `transcript_relative_path_for_turn_persistence`, `companion_turn_transcript_loaded_messages`, `companion_tools_for_turn`, `load_companion_turn_state` track-only; tests in `test_transcript_inner_tick_streams.py`, `test_prompt_stack_tools_for_turn.py` |
 | #3490 | **Partial** — App-WS `background_events` recv-loop + `WebSocketDownlink` deleted; `foreground_pending` kept for inner-tick (#3580) |
 | #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
 | #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
@@ -27,7 +27,7 @@ Branch: `yzhao/3401-agentic-loop-track-mechanism` (or merge target). Gate doc up
 | Dreaming unchanged (non-turn batch) | OK |
 | Soft gate: no live turn.py orchestration | **Met** — ``_run_companion_turn_core`` routes only via ``AgenticLoop`` + ``OutputQueue``; parallel ``background_events`` / ``WebSocketDownlink`` removed |
 | WS typed outbound emit (Stage 2) | **Met** — ``WsOutboundPayload`` union; pump ``model_dump``; materializers + REPL ``model_validate`` |
-| Track-derived transcript user JSONL flags (#3401) | **Partial** — ``append_turn_track_tail_user_transcript_rows`` track-only; ``transcript_relative_path_for_turn_persistence`` still bool pair |
+| Track-derived transcript user JSONL flags (#3401) | **Partial** — slice 1 tail user rows track-only; slice 2 path/load/tools track-only; JSONL wire typed kind still open |
 | Memory phase CI | **Pass** |
 | User-reported blockers | Open — see user_bug lane |
 
@@ -49,7 +49,7 @@ REPL regression — not run (requires Ops :8001)
 1. #3493 Weixin enqueue+wake
 2. #3542–#3543 inner-tick/output pump (App-WS greeting + inner-tick converge on pump-owned delivery)
 3. #3580 maintenance/autonomy on AgenticLoop
-4. #3401 slice 2: ``transcript_relative_path_for_turn_persistence`` + ``prompt_stack.companion_tools_for_turn`` track-only
+4. #3401 slice 3: `TurnRouteMode` vs loop mechanism split
 5. Stage 3/4 replan: prompt single source (#3463), retrieval/projection (#3523/#3521)
 
 CRS (#3341) and product (#3323) remain **blocked** on inner-tick AgenticLoop (#3580) and Weixin transport (#3493).

@@ -8,7 +8,7 @@ from app.core.companion_harness.companion.dreaming import (
     DreamingState,
     save_dreaming_state,
 )
-from app.core.companion_harness.companion.models import InnerTickActivity
+from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_pipeline import (
     load_companion_turn_state,
@@ -63,15 +63,12 @@ def test_load_companion_turn_state_applies_dreaming_checkpoint(
             last_processed_latest_user_ts=datetime(
                 2026, 1, 2, 9, 0, tzinfo=UTC
             ),
-            last_processed_calendar_date=datetime(
-                2026, 1, 2, 0, 0, tzinfo=UTC
-            ),
+            last_processed_calendar_date=datetime(2026, 1, 2, 0, 0, tzinfo=UTC),
         ),
     )
     loaded = load_companion_turn_state(
         store=store,
-        inner_tick_turn=False,
-        route_inner_activity=InnerTickActivity.MONOLOG,
+        track=CompanionTurnTrack.USER_CHAT,
         transcript_llm_window_max_messages=None,
     )
     assert [row.content for row in loaded.loaded_transcript] == ["after"]
