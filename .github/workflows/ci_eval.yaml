@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - evaluation/**
+      - ops_web_ui/**
       - .github/workflows/ci_eval.yaml
 
 concurrency:
@@ -34,22 +34,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-evaluation-npm-${{ hashFiles('evaluation/package-lock.json') }}
+          key: ${{ runner.os }}-ops-web-ui-npm-${{ hashFiles('ops_web_ui/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-evaluation-npm-
+            ${{ runner.os }}-ops-web-ui-npm-
 
-      - name: Install evaluation dependencies
-        working-directory: evaluation
+      - name: Install ops_web_ui dependencies
+        working-directory: ops_web_ui
         run: npm ci
 
       - name: Run ESLint checks
-        working-directory: evaluation
+        working-directory: ops_web_ui
         run: npm run lint:check
 
       - name: Run TypeScript checks
-        working-directory: evaluation
+        working-directory: ops_web_ui
         run: npm run type-check
 
       - name: Run unit tests
-        working-directory: evaluation
+        working-directory: ops_web_ui
         run: npm run test

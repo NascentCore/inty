@@ -28,7 +28,7 @@ rcfile = "pylintrc"
 [tool.ty.src]
 exclude = [
     "experimental",
-    "evaluation",
+    "ops_web_ui",
     "tools/scripts",
     "tests",
     "**/migrations",

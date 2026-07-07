@@ -4,9 +4,9 @@ FROM node:18-slim AS frontend-builder
 
 WORKDIR /
 
-COPY evaluation/ evaluation/
+COPY ops_web_ui/ ops_web_ui/
 
-RUN ./evaluation/build.sh
+RUN ./ops_web_ui/build.sh
 
 # 第二阶段：构建后端
 FROM python:3.12-slim AS base
@@ -60,7 +60,7 @@ COPY android_app/docs/CHANGE_LOGS.md android_app/docs/CHANGE_LOGS.md
 COPY ${CONFIG_FILE} config.yaml
 # TODO(INTY_CONFIG_YAML): ENV INTY_CONFIG_YAML=config.yaml
 
-COPY --from=frontend-builder /app/static/evaluation/ app/static/evaluation/
+COPY --from=frontend-builder /app/static/ops_web_ui/ app/static/ops_web_ui/
 
 EXPOSE 8001
 

@@ -227,7 +227,7 @@ Currently-supported channels:
 
 ## 成效判断（What "good" looks like）
 
-不是指标，是 relationship 模型应当推动的**定性信号**（current working stance，将由 prototype 修正）；分层评测方法论见 [EVALUATION.md](./EVALUATION.md)，运营评测台见 [evaluation/](/evaluation/)。
+不是指标，是 relationship 模型应当推动的**定性信号**（current working stance，将由 prototype 修正）；分层评测方法论见 [EVALUATION.md](./EVALUATION.md)，运营评测台见 [ops_web_ui/](/ops_web_ui/)。
 
 - 用户**跨周回访、持续再投入**（retention，最终代理指标）。
 - Inty **正确回忆并引用过往表露**（penetration depth 在起作用）。

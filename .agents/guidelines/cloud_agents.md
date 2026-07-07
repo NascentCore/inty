@@ -22,7 +22,7 @@ This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](.
 
 ### Not in `install` (on-demand or dashboard snapshot)
 
-Sections below (Android SDK at `/opt/android-sdk`, `evaluation/node_modules`, emulator AVD) describe **optional snapshot/dashboard setup**, not the committed install script. If missing on a fresh VM, either run the relevant setup during agent-driven environment creation and save a snapshot, or add steps to `cloud-agent-install.sh`.
+Sections below (Android SDK at `/opt/android-sdk`, `ops_web_ui/node_modules`, emulator AVD) describe **optional snapshot/dashboard setup**, not the committed install script. If missing on a fresh VM, either run the relevant setup during agent-driven environment creation and save a snapshot, or add steps to `cloud-agent-install.sh`.
 
 ### Faster cold starts (optional)
 
@@ -94,7 +94,7 @@ Use dev tools as `uv run ruff …` / `uv run black …`, or after `source .venv/
    - `--test` and `--dev` share the same seeds; `--dev` uses uvicorn `--reload`, `--test` does not (CI). Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).
    - **`Environment.TEST` in Python** comes from `config.yaml` (`app.environment`), not from the `--test` CLI flag.
    - The server runs on `http://localhost:8000`
-3. **Ops backend (port 8001, optional for REPL / ops stack)**: `source .venv/bin/activate && ./backend/ops/start.sh --local --no-build-frontend` skips `evaluation/build.sh` (faster startup if `app/static/evaluation` is already populated). Omit `--no-build-frontend` when you need a fresh evaluation static bundle. For REPL-style debugging, add `--debug --log-file ./inty-ops-local.log` (chat WS REPL: [`tools/inty_v2_repl/README.md`](tools/inty_v2_repl/README.md)). See `backend/ops/start.sh --help`.
+3. **Ops backend (port 8001, optional for REPL / ops stack)**: `source .venv/bin/activate && ./backend/ops/start.sh --local --no-build-frontend` skips `ops_web_ui/build.sh` (faster startup if `app/static/ops_web_ui` is already populated). Omit `--no-build-frontend` when you need a fresh ops web UI static bundle. For REPL-style debugging, add `--debug --log-file ./inty-ops-local.log` (chat WS REPL: [`tools/inty_v2_repl/README.md`](tools/inty_v2_repl/README.md)). See `backend/ops/start.sh --help`.
 
 ## Running tests
 
@@ -121,7 +121,7 @@ For targeted testing after changing specific modules, see the module-to-task map
 **Evaluation frontend (TypeScript/Vite):**
 
 ```bash
-cd evaluation
+cd ops_web_ui
 npm install            # not in committed install script; run once or use dashboard snapshot
 npm run test          # vitest
 npm run type-check    # tsc --noEmit
@@ -129,7 +129,7 @@ npm run build         # vite build (production bundle)
 npx eslint . --ext .ts,.tsx  # lint
 ```
 
-See also `evaluation/AGENTS.md`. On snapshot VMs `node_modules` may already exist.
+See also `ops_web_ui/AGENTS.md`. On snapshot VMs `node_modules` may already exist.
 
 ## Lint / formatting
 

@@ -108,7 +108,7 @@ def main(
     )
     print(token)
     print()
-    print("可以在 evaluation/start.sh 中使用:")
+    print("可以在 ops_web_ui/start.sh 中使用:")
     print(f'export INTY_API_KEY="{token}"')
 
     try:

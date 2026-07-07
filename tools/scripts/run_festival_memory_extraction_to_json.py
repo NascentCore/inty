@@ -1,5 +1,5 @@
 """
-节日记忆抽取：接受与 evaluation 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
+节日记忆抽取：接受与 ops_web_ui 表单相同输入，执行与 POST /evaluation/admin/festival-memory-extraction/run 相同流程，
 结果写入 JSON 文件而非 memory 表。
 
 注意⚠️：由于时间有限，本脚本只是使用了与 POST /evaluation/admin/festival-memory-extraction/run 完全一样的代码，

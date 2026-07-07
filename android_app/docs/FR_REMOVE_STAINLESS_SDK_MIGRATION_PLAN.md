@@ -316,7 +316,7 @@
 ### A.4 仓库治理层状态
 
 - `.gitmodules` 中 `android_app/library/inty_sdk` 条目已移除（文件已删除）；
-- `.prettierignore` 中 `android_app/library/inty_sdk` 与 `evaluation/inty_sdk` 已移除；
+- `.prettierignore` 中 `android_app/library/inty_sdk` 与 `ops_web_ui/inty_sdk` 已移除；
 - `.github/workflows/ci_android_app.yaml` 中 `android_app/library/inty_sdk` 变更触发映射已移除；
 - `tools/scripts/update_inty_sdk_submodule.sh` 已删除（此前为废弃 no-op，避免误操作主仓库）；
 - `android_app/README.md` 已移除 Android submodule 初始化指引。

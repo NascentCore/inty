@@ -33,10 +33,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: evaluation/package-lock.json
+          cache-dependency-path: ops_web_ui/package-lock.json
 
-      - name: Install frontend deps (evaluation)
-        working-directory: evaluation
+      - name: Install frontend deps (ops_web_ui)
+        working-directory: ops_web_ui
         run: npm ci
 
       - name: Install markdownlint-cli2 (tools/markdownlint)

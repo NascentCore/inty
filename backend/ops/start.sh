@@ -30,8 +30,8 @@ Usage: $0 [--local|--dev] [--debug] [--workspace DIR] [--build-frontend|--no-bui
     --local|--dev        Use devops/config.yaml.local when INTY_CONFIG_YAML unset (engineer REPL).
                          REPL regression: export INTY_CONFIG_YAML=devops/config.yaml.regression_tests first.
                          pytest/CI uses devops/config.yaml.test (faked externals). Seeds admin + report fixtures.
-    --build-frontend     Run evaluation/build.sh before uvicorn (default: on).
-    --no-build-frontend  Skip that step; use existing app/static/evaluation.
+    --build-frontend     Run ops_web_ui/build.sh before uvicorn (default: on).
+    --no-build-frontend  Skip that step; use existing app/static/ops_web_ui.
 
   There is no --log-file; use --workspace DIR if you need logs outside the default .inty directory.
 EOF
@@ -109,10 +109,10 @@ fi
 
 if [ "$LOCAL" = true ]; then
   if [ "$BUILD_FRONTEND" = true ]; then
-    echo "Building evaluation static assets (npm install + build -> app/static/evaluation)..."
-    ./evaluation/build.sh
+    echo "Building ops_web_ui static assets (npm install + build -> app/static/ops_web_ui)..."
+    ./ops_web_ui/build.sh
   else
-    echo "Skipping evaluation static build (--no-build-frontend)."
+    echo "Skipping ops_web_ui static build (--no-build-frontend)."
   fi
 
   OPS_BEARER_TOKEN_FILE="${INTY_OPS_BEARER_TOKEN_FILE:-$REPO_ROOT/.inty_ops_bearer_token}"
@@ -133,7 +133,7 @@ if [ "$LOCAL" = true ]; then
   python tools/scripts/seed_report_test_data.py
 
   echo "在另外一个 terminal 窗口运行下面的命令来启动评测平台 UI"
-  echo "cd evaluation && npm run dev"
+  echo "cd ops_web_ui && npm run dev"
 
   echo "Starting ops backend server on port $OPS_PORT..."
   python -m uvicorn backend.ops.main:app --host 0.0.0.0 --port "$OPS_PORT" "${UVICORN_LOG_LEVEL[@]}"

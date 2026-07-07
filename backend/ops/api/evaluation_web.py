@@ -31,8 +31,8 @@ def configure_evaluation_web_routes(
             "/static", StaticFiles(directory=static_root_dir), name="static"
         )
 
-    evaluation_static_dir = os.path.join(static_root_dir, "evaluation")
-    evaluation_index = os.path.join(evaluation_static_dir, "index.html")
+    ops_web_ui_static_dir = os.path.join(static_root_dir, "ops_web_ui")
+    ops_web_ui_index = os.path.join(ops_web_ui_static_dir, "index.html")
 
     @app.get(
         "/",
@@ -40,7 +40,7 @@ def configure_evaluation_web_routes(
         include_in_schema=False,
     )
     async def evaluation_frontend_root():
-        return FileResponse(evaluation_index)
+        return FileResponse(ops_web_ui_index)
 
     @app.get(
         "/evaluation",
@@ -48,7 +48,7 @@ def configure_evaluation_web_routes(
         include_in_schema=False,
     )
     async def evaluation_frontend_legacy():
-        return FileResponse(evaluation_index)
+        return FileResponse(ops_web_ui_index)
 
     @app.get(
         "/evaluation/{path:path}",
@@ -59,6 +59,6 @@ def configure_evaluation_web_routes(
         # GET /evaluation/ matches this route with an empty path; join(..., "") is the directory, not a file.
         segment = (path or "").strip("/")
         if not segment:
-            return FileResponse(evaluation_index)
-        file_path = os.path.join(evaluation_static_dir, segment)
+            return FileResponse(ops_web_ui_index)
+        file_path = os.path.join(ops_web_ui_static_dir, segment)
         return FileResponse(file_path)

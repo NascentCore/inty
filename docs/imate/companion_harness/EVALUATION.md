@@ -1,10 +1,10 @@
 # Companion Evaluation: 评测一个 personal AI companion 的第一性原理
 
 > 本文件由 AI（编码智能体）依据 repo 现有散点记录与公开科研文献综合生成（generated entirely by the coding agent）。
-> 读者：思考「评什么、为什么这么评」的设计者与工程师；运营评测台操作见 [evaluation/](/evaluation/)。
+> 读者：思考「评什么、为什么这么评」的设计者与工程师；运营评测台操作见 [ops_web_ui/](/ops_web_ui/)。
 > 用途：先立**第一性原理**（评测对象是什么、依据何在），再把工程化的分层与对照作为**次要落地说明**。
 > 设计压缩在一处、以 pointer 传播：关系三轴定义在 [DESIGN.md](./DESIGN.md) 与 CRS Epic（#3341），定性信号锚点在 [DESIGN.md](./DESIGN.md)「成效判断」，本文不复制其措辞。
-> 判断「某机制是否已实现」前**必须先读代码**（`evaluation/`、scripted CI 测试、REPL regression）。
+> 判断「某机制是否已实现」前**必须先读代码**（`ops_web_ui/`、scripted CI 测试、REPL regression）。
 
 ## 第一性原理（First principle）
 
@@ -83,8 +83,8 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 
 - **L0 Deterministic invariants（CI 必过）**：format/protocol/safety、无 `[SILENT]` 泄漏、queue delivered、bootstrap 完成。守的是「管道」，不量陪伴。来源：FakeOpenAI scripted 测试。
 - **L1 Behavioral eval（live LLM，report-only）**：scripted 场景下行为是否出现（tool 调用、proactive 文案、recall、repair）。随机性高，**只产报告不 block**。来源 #3606。
-- **L2 Qualitative relationship signals（rubric / 人评）**：对 transcript 按上文 construct rubric 打分（PPR、表露深度、bid/repair）。来源 `evaluation/` 人评台、#457 对话评价数据集。
-- **L3 Real-usage outcomes**：自愿回访 + 情绪收束 + 福祉量表 + 产品内 `companion_record_user_feedback`（`ComplaintCategory`→issue）。来源 #3323、`evaluation/` 分析页。
+- **L2 Qualitative relationship signals（rubric / 人评）**：对 transcript 按上文 construct rubric 打分（PPR、表露深度、bid/repair）。来源 `ops_web_ui/` 人评台、#457 对话评价数据集。
+- **L3 Real-usage outcomes**：自愿回访 + 情绪收束 + 福祉量表 + 产品内 `companion_record_user_feedback`（`ComplaintCategory`→issue）。来源 #3323、`ops_web_ui/` 分析页。
 
 **方法论不变式（#3606）**：L0=regression（确定性，gate CI exit code）；L1–L3=eval（随机/定性，report-only）。让 live LLM 行为决定 CI 是反模式。
 
@@ -92,7 +92,7 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 
 - 对照（succinct）：task agent（如 Terminal-Bench / Self-Harness, arXiv 2606.09498）有 deterministic verifier + i.i.d. task split，可单分数回归；companion **无 ground-truth verifier、path-dependent、n=1、信号慢**，故只能上文的纵向三角化。
 - 现状 vs 缺口（诚实）：
-  - 已具备：L0 scripted/infra gate、`evaluation/` 人评与分析台、`companion_record_user_feedback` 负反馈链路。
+  - 已具备：L0 scripted/infra gate、`ops_web_ui/` 人评与分析台、`companion_record_user_feedback` 负反馈链路。
   - 缺口：L2 的 construct rubric 与 LLM-judge 判分**未系统落地**；L1 缺**可复现 scenario-replay**（冻结 agent 快照 + 模拟用户）以治 path-dependence；ESM/EMA 与 validated scales 尚未接入产品；#457 仍雏形。
 - 落地顺序（P/S）：
   - P1/S1：scenario-replay + frozen-snapshot 基建（无它 L1/L2 无法可复现）。
@@ -121,5 +121,5 @@ Repo pointers：
 
 - [DESIGN.md](./DESIGN.md) — 成效判断、关系三轴（权威锚点）。
 - [BRAINSTORM.md](./BRAINSTORM.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）；见 §「iMate智能体陪伴系统点子」。
-- `evaluation/` — 运营人评与行为分析台。
+- `ops_web_ui/` — 运营人评与行为分析台。
 - Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。

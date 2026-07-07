@@ -11,12 +11,12 @@ from backend.ops.api.evaluation_web import (
 
 
 def _prepare_static_dir(tmp_path: Path) -> str:
-    evaluation_dir = tmp_path / "evaluation"
-    evaluation_dir.mkdir(parents=True, exist_ok=True)
-    (evaluation_dir / "index.html").write_text(
+    ops_web_ui_dir = tmp_path / "ops_web_ui"
+    ops_web_ui_dir.mkdir(parents=True, exist_ok=True)
+    (ops_web_ui_dir / "index.html").write_text(
         "evaluation-home", encoding="utf-8"
     )
-    (evaluation_dir / "asset.txt").write_text("asset-content", encoding="utf-8")
+    (ops_web_ui_dir / "asset.txt").write_text("asset-content", encoding="utf-8")
     return str(tmp_path)
 
 
@@ -57,7 +57,7 @@ def test_configure_evaluation_web_routes_enabled(tmp_path):
         assert static_file.status_code == 200
         assert static_file.text == "asset-content"
 
-        static_mounted = client.get("/static/evaluation/index.html")
+        static_mounted = client.get("/static/ops_web_ui/index.html")
         assert static_mounted.status_code == 200
 
 
@@ -75,4 +75,4 @@ def test_configure_evaluation_web_routes_disabled_in_api_only_mode(tmp_path):
         assert client.get("/").status_code == 404
         assert client.get("/evaluation").status_code == 404
         assert client.get("/evaluation/asset.txt").status_code == 404
-        assert client.get("/static/evaluation/index.html").status_code == 404
+        assert client.get("/static/ops_web_ui/index.html").status_code == 404

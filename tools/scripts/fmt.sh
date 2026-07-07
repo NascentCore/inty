@@ -29,7 +29,7 @@ if [ "$FORMAT_ALL" = true ]; then
     # Format all Python files
     run_black "${PYTHON_FORMAT_PATHS[@]}"
     # Format all other files
-    npx prettier --write evaluation/ web_app/
+    npx prettier --write ops_web_ui/ web_app/
     run_markdownlint
     echo "Formatting complete!"
     echo
