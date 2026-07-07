@@ -1,10 +1,12 @@
-"""Shared test fixtures for queue-serving bootstrap ``USER_CHAT_BOOTSTRAP`` turns."""
+"""Shared test fixtures for queue-serving companion turns (bootstrap and settled)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 import uuid
+from dataclasses import replace
 from typing import Any
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
@@ -92,19 +94,140 @@ def bootstrap_user_message_batch(
     return batch, user_msg_id
 
 
-def bootstrap_queue_turn_deps(
+class _TestAsyncLlmClientAdapter:
+    """Minimal ``AsyncLlmClient`` stand-in delegating to a sync test double."""
+
+    def __init__(self, sync_client: Any) -> None:
+        self._sync = sync_client
+
+    @property
+    def config(self) -> Any:
+        return self._sync.config
+
+    def resolve_model(self, role: str) -> Any:
+        return self._sync.resolve_model(role)
+
+    async def chat_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
+        model: Any = None,
+        response_format: dict[str, Any] | None = None,
+        scene: Any = None,
+        langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
+    ) -> Any:
+        _ = scene
+        kw: dict[str, Any] = {"messages": messages}
+        if model is not None:
+            kw["model"] = model
+        if tools is not None:
+            kw["tools"] = tools
+        if tool_choice is not None:
+            kw["tool_choice"] = tool_choice
+        if response_format is not None:
+            kw["response_format"] = response_format
+        if langsmith_extra is not None:
+            kw["langsmith_extra"] = langsmith_extra
+        if high_reasoning:
+            kw["high_reasoning"] = high_reasoning
+        if hasattr(self._sync, "chat_completion"):
+            return await asyncio.to_thread(self._sync.chat_completion, **kw)
+        raise AssertionError("sync test client missing chat_completion")
+
+    async def chat_completion_with_retrial(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        model: Any,
+        tools: list[Any] | None,
+        tool_choice: str | None,
+        response_format: dict[str, Any] | None,
+        scene: Any,
+        langsmith_extra: dict[str, Any] | None,
+        high_reasoning: bool,
+        max_attempts: int,
+        per_attempt_timeout_sec: float,
+        trace_id: str | None,
+        attempt_log_label: str,
+    ) -> Any:
+        sync_retrial = getattr(self._sync, "chat_completion_with_retrial", None)
+        if sync_retrial is not None:
+            if asyncio.iscoroutinefunction(sync_retrial):
+                return await sync_retrial(
+                    messages=messages,
+                    model=model,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    response_format=response_format,
+                    scene=scene,
+                    langsmith_extra=langsmith_extra,
+                    high_reasoning=high_reasoning,
+                    max_attempts=max_attempts,
+                    per_attempt_timeout_sec=per_attempt_timeout_sec,
+                    trace_id=trace_id,
+                    attempt_log_label=attempt_log_label,
+                )
+            return await asyncio.to_thread(
+                sync_retrial,
+                messages=messages,
+                model=model,
+                tools=tools,
+                tool_choice=tool_choice,
+                response_format=response_format,
+                scene=scene,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=high_reasoning,
+                max_attempts=max_attempts,
+                per_attempt_timeout_sec=per_attempt_timeout_sec,
+                trace_id=trace_id,
+                attempt_log_label=attempt_log_label,
+            )
+        _ = trace_id
+        _ = attempt_log_label
+        assert max_attempts >= 1
+        return await asyncio.wait_for(
+            self.chat_completion(
+                messages=messages,
+                model=model,
+                tools=tools,
+                tool_choice=tool_choice,
+                response_format=response_format,
+                scene=scene,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=high_reasoning,
+            ),
+            timeout=per_attempt_timeout_sec,
+        )
+
+
+def wire_test_async_llm_client(llm_client: Any) -> None:
+    """Attach ``async_llm_client`` to plain sync test doubles used by turn tests."""
+    if getattr(llm_client, "async_llm_client", None) is not None:
+        return
+    setattr(
+        llm_client, "async_llm_client", _TestAsyncLlmClientAdapter(llm_client)
+    )
+
+
+def queue_serving_turn_deps(
     store: MemoryStore,
     llm_client: Any,
     *,
-    bootstrap_interim_output_sink: Any = None,
     preset_user_msg_uuid: str | None = None,
+    user_message_batch: UserMessageBatch | None = None,
+    **overrides: object,
 ) -> CompanionTurnDeps:
-    """``CompanionTurnDeps`` with in-memory OutputQueue for bootstrap AgenticLoop turns."""
+    """``CompanionTurnDeps`` with in-memory ``OutputQueue`` for AgenticLoop turns."""
+    wire_test_async_llm_client(llm_client)
     output_queue = bootstrap_queue_for_companion_scope(store.scope)
     user_batch, default_user_msg_id = bootstrap_user_message_batch()
+    resolved_batch = user_message_batch or user_batch
     tool_bg_idle = threading.Event()
     tool_bg_idle.set()
-    return CompanionTurnDeps(
+    deps = CompanionTurnDeps(
         store=store,
         llm_client=llm_client,
         transcript_compaction=None,
@@ -114,11 +237,26 @@ def bootstrap_queue_turn_deps(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
-        background_output_sink=None,
         preset_user_msg_uuid=preset_user_msg_uuid or default_user_msg_id,
         langsmith_parent_run_enabled=False,
         tool_bg_idle_event=tool_bg_idle,
-        bootstrap_interim_output_sink=bootstrap_interim_output_sink,
         agentic_output_queue=output_queue,
-        user_message_batch=user_batch,
+        user_message_batch=resolved_batch,
+    )
+    if overrides:
+        return replace(deps, **overrides)
+    return deps
+
+
+def bootstrap_queue_turn_deps(
+    store: MemoryStore,
+    llm_client: Any,
+    *,
+    preset_user_msg_uuid: str | None = None,
+) -> CompanionTurnDeps:
+    """``CompanionTurnDeps`` with in-memory OutputQueue for bootstrap AgenticLoop turns."""
+    return queue_serving_turn_deps(
+        store,
+        llm_client,
+        preset_user_msg_uuid=preset_user_msg_uuid,
     )

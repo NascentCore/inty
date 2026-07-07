@@ -72,7 +72,6 @@ async def test_scope_serving_delivers_each_output_row_once() -> None:
 
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=deliver_message,
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.TELEGRAM,
@@ -130,7 +129,6 @@ async def test_wake_triggers_drain_until_empty() -> None:
     on_complete = AsyncMock()
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
         runtime_channel=ChannelKind.TELEGRAM,
@@ -171,7 +169,6 @@ async def test_drain_failure_does_not_kill_worker() -> None:
     )
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.TELEGRAM,
@@ -212,7 +209,6 @@ async def test_tool_background_batch_still_reports_completion() -> None:
     on_complete = AsyncMock()
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=on_complete,
         runtime_channel=ChannelKind.TELEGRAM,
@@ -239,7 +235,6 @@ async def test_start_recovers_after_pump_task_exits() -> None:
     scope = AgentScope(user_id="user-restart", agent_id="agent-restart")
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.TELEGRAM,
@@ -273,7 +268,6 @@ async def test_stop_cancels_input_and_pump_tasks() -> None:
     scope = AgentScope(user_id="user-stop", agent_id="agent-stop")
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.TELEGRAM,
@@ -391,7 +385,6 @@ async def test_output_pump_claims_after_wake_sets_runtime_channel() -> None:
     deliver_mock = AsyncMock()
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=deliver_mock,
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.APP_WS,
@@ -435,7 +428,6 @@ async def test_drain_on_start_uses_constructor_runtime_channel() -> None:
     )
     serving = ScopeQueueServing(
         scope,
-        background_output_sink=None,
         deliver_message=AsyncMock(),
         on_drain_complete=AsyncMock(),
         runtime_channel=ChannelKind.TELEGRAM,

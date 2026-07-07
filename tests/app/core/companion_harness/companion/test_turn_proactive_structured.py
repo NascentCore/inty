@@ -18,9 +18,8 @@ from app.core.companion_harness.companion.turn import (
     run_companion_inner_tick_scheduled_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
+from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+    queue_serving_turn_deps,
 )
 from app.core.companion_harness.companion.schedule_queue import (
     scheduled_task_synthetic_user_text,
@@ -80,22 +79,7 @@ def _seed_workspace(store: MemoryStore) -> None:
 def _default_deps(
     store: MemoryStore, client: _FakeProactiveLLMClient
 ) -> CompanionTurnDeps:
-    return CompanionTurnDeps(
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
-        transcript_compaction=None,
-        transcript_llm_window_max_messages=None,
-        repository_only_store_text=False,
-        runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
-            implicit_signal_bundle=None,
-        ),
-        background_output_sink=None,
-        preset_user_msg_uuid=None,
-        langsmith_parent_run_enabled=False,
-        tool_bg_idle_event=None,
-        bootstrap_interim_output_sink=None,
-    )
+    return queue_serving_turn_deps(store, client)
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:

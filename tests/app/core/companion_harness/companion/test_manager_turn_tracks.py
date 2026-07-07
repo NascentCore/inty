@@ -67,10 +67,6 @@ async def test_manager_implicit_sign_on_greeting_forwards_implicit_signal_bundle
         ].runtime_context.implicit_signal_bundle
         is bundle
     )
-    assert (
-        track_mock.await_args.kwargs["deps"].bootstrap_interim_output_sink
-        is None
-    )
 
 
 @pytest.mark.asyncio

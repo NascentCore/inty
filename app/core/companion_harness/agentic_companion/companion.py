@@ -18,8 +18,8 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
     get_scope_turn_lock,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BackgroundToolEventSink,
+from app.core.companion_harness.companion.scope_turn_lock import (
+    get_scope_turn_lock,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel
@@ -74,7 +74,6 @@ class AgenticCompanion:
         *,
         resolved_chat_model: GenAIModel,
         runtime_channel: ChannelKind,
-        background_output_sink: BackgroundToolEventSink | None,
         implicit_signal_bundle: ImplicitSignalBundle,
         injected_runtime: InjectedCompanionRuntime | None = None,
     ) -> AgenticCompanionRunResult | None:
@@ -104,7 +103,6 @@ class AgenticCompanion:
                     user_text=user_text,
                     resolved_chat_model=resolved_chat_model,
                     runtime_channel=runtime_channel,
-                    background_output_sink=background_output_sink,
                     preset_user_msg_uuid=preset_uid,
                     implicit_signal_bundle=implicit_signal_bundle,
                     agentic_output_queue=domain_output_queue,

@@ -16,6 +16,7 @@ from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from .models import CompanionTurnTrack
 from .implicit_signal_messages import USER_SIGNED_ON_TRIGGER_USER_TEXT
 from .transcript_user_row import (
     TranscriptUserRowBuildInput,
@@ -165,3 +166,47 @@ def append_tail_user_transcript_rows(
             ),
             ts=message.received_at_utc.isoformat(),
         )
+
+
+def append_turn_track_tail_user_transcript_rows(
+    store: MemoryStore,
+    transcript_relative_path: str,
+    *,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    trace_id: str,
+    track: CompanionTurnTrack,
+    inner_tick_turn: bool,
+    tick_proactive: bool,
+) -> None:
+    """Persist tail user rows with inner-tick track metadata when required."""
+    assert transcript_relative_path != ""
+    assert tail_user_messages
+    assert trace_id != ""
+    needs_turn_track_user_row_metadata = (
+        inner_tick_turn
+        or tick_proactive
+        or track == CompanionTurnTrack.INNER_TICK_SCHEDULED
+    )
+    if len(tail_user_messages) > 1 or not needs_turn_track_user_row_metadata:
+        append_tail_user_transcript_rows(
+            store,
+            transcript_relative_path,
+            tail_user_messages=tail_user_messages,
+            trace_id=trace_id,
+        )
+        return
+    message = tail_user_messages[0]
+    user_row: dict[str, Any] = {
+        "role": "user",
+        "content": message.text,
+        "ts": message.received_at_utc.isoformat(),
+        "uuid": message.message_id,
+    }
+    if inner_tick_turn:
+        user_row["inner_tick"] = True
+    if tick_proactive:
+        user_row["proactive_chat"] = True
+    if track == CompanionTurnTrack.INNER_TICK_SCHEDULED:
+        user_row["scheduled"] = True
+    user_row["trace_id"] = trace_id
+    store.append_jsonl_record(transcript_relative_path, user_row)

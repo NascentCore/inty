@@ -397,9 +397,11 @@ class AsyncLlmClient:
         self,
         *,
         messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]],
-        tool_choice: str | None,
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
         model: GenAIModel | None = None,
+        response_format: dict[str, Any] | None = None,
+        scene: LLMScene | None = None,
         langsmith_extra: dict[str, Any] | None = None,
         high_reasoning: bool = False,
     ) -> Any:
@@ -408,6 +410,7 @@ class AsyncLlmClient:
         TODO(!3629): Accept PromptPlan; convert to OpenAI wire only inside this method.
         TODO(!3630): Accept LlmInvocationContext instead of raw langsmith_extra dict.
         """
+        _ = scene
         _ensure_langsmith_handle_container_end_patch()
         chat_model = model or self.resolve_model("chat")
         api_model = chat_model.id_on_provider
@@ -417,13 +420,15 @@ class AsyncLlmClient:
         }
         if langsmith_extra:
             create_kw["langsmith_extra"] = langsmith_extra
+        if response_format is not None:
+            create_kw["response_format"] = response_format
         if high_reasoning:
             create_kw.update(
                 tool_path_chat_completion_kwargs(
                     resolve_chat_text_model(api_model)
                 )
             )
-        tool_list = list(tools)
+        tool_list = list(tools or [])
         if tool_list:
             create_kw["tools"] = tool_list
             create_kw["parallel_tool_calls"] = True
@@ -470,3 +475,62 @@ class AsyncLlmClient:
                 record_llm_inference_failure(model=api_model, exc=inf)
                 raise inf from exc
         raise RuntimeError("unreachable")
+
+    async def chat_completion_with_retrial(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        model: GenAIModel | None,
+        tools: list[Any] | None,
+        tool_choice: str | None,
+        response_format: dict[str, Any] | None,
+        scene: LLMScene | None,
+        langsmith_extra: dict[str, Any] | None,
+        high_reasoning: bool,
+        max_attempts: int,
+        per_attempt_timeout_sec: float,
+        trace_id: str | None,
+        attempt_log_label: str,
+    ) -> Any:
+        resolved = model or self.resolve_model("tool" if tools else "chat")
+        model_id = resolved.id_on_provider
+        assert max_attempts >= 1
+        assert per_attempt_timeout_sec > 0.0
+        resp = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = await asyncio.wait_for(
+                    self.chat_completion(
+                        messages=messages,
+                        model=resolved,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        response_format=response_format,
+                        scene=scene,
+                        langsmith_extra=langsmith_extra,
+                        high_reasoning=high_reasoning,
+                    ),
+                    timeout=per_attempt_timeout_sec,
+                )
+                break
+            except asyncio.CancelledError:
+                raise
+            except BaseException as exc:
+                record_llm_inference_failure(
+                    model=model_id,
+                    exc=exc,
+                    foreground_timeout_sec=per_attempt_timeout_sec,
+                )
+                logger.warning(
+                    "AsyncLlmClient chat_completion_with_retrial failed label={} "
+                    "attempt={}/{} trace_id={} exc_type={}",
+                    attempt_log_label,
+                    attempt,
+                    max_attempts,
+                    trace_id,
+                    type(exc).__name__,
+                )
+                if attempt >= max_attempts:
+                    raise
+        assert resp is not None
+        return resp

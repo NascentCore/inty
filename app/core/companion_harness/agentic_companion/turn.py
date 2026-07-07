@@ -51,9 +51,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope_turn_lock import (
     assert_scope_turn_lock_held_by_current_task,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BackgroundToolEventSink,
-)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -192,7 +189,6 @@ async def run_agent_turn(
     user_text: str,
     resolved_chat_model: GenAIModel,
     runtime_channel: ChannelKind,
-    background_output_sink: BackgroundToolEventSink | None,
     preset_user_msg_uuid: str | None,
     implicit_signal_bundle,
     agentic_output_queue: OutputQueue | None = None,
@@ -224,7 +220,6 @@ async def run_agent_turn(
     out = await manager.run_user_chat_turn(
         session,
         user_text,
-        background_output_sink=background_output_sink,
         preset_user_msg_uuid=preset_user_msg_uuid,
         runtime_context=TurnRuntimeContext(
             channel=runtime_channel,

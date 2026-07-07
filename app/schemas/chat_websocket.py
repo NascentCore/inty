@@ -7,9 +7,8 @@ implementations; user-visible ``message`` strings on error paths remain English 
 are centralized in :class:`ChatWsCompanionWireMessageMetaData`.
 
 Companion WS downlink completion types (:class:`ChatWsAssistantMessage`,
-:class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are defined in
-Phase 1 only; emit/parse paths still use loose dicts until Phase 2 adoption
-(`GitHub issue #3208 <https://github.com/NascentCore/inty/issues/3208>`_).
+:class:`ChatWsCompletionData`, :class:`ChatWebSocketQueuedSuccessFrame`) are emitted on
+the outbound queue as typed Pydantic frames (Phase 2, issue #3208).
 
 Direction tags in model docstrings:
 
@@ -402,6 +401,8 @@ class ChatWebSocketRequest(BaseModel):
 class ChatWebSocketQueuedPlainError(BaseModel):
     """**Server → client (queued)** minimal error row: ``code``, ``message``, ``data``, ``agent_id``."""
 
+    model_config = ConfigDict(extra="allow")
+
     code: int
     message: str
     data: Any = None
@@ -433,14 +434,14 @@ class ChatWebSocketResponse(BaseModel):
     llm_provider_http_status: Optional[int] = None
 
 
-def chat_ws_queued_error_dict(
+def chat_ws_queued_error_frame(
     *,
     status_code: int,
     message: str,
     agent_id: str,
     ws_extra: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Build a **Server → client (queued)** error dict (optional ``ws_extra`` merged at top level)."""
+) -> ChatWebSocketQueuedPlainError:
+    """Build a **Server → client (queued)** error frame (optional ``ws_extra`` merged at top level)."""
     payload: dict[str, Any] = {
         "code": status_code,
         "message": message,
@@ -449,4 +450,20 @@ def chat_ws_queued_error_dict(
     }
     if ws_extra:
         payload.update(ws_extra)
-    return payload
+    return ChatWebSocketQueuedPlainError.model_validate(payload)
+
+
+def chat_ws_queued_error_dict(
+    *,
+    status_code: int,
+    message: str,
+    agent_id: str,
+    ws_extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Legacy dict builder; prefer :func:`chat_ws_queued_error_frame`."""
+    return chat_ws_queued_error_frame(
+        status_code=status_code,
+        message=message,
+        agent_id=agent_id,
+        ws_extra=ws_extra,
+    ).model_dump(exclude_none=True)

@@ -22,6 +22,9 @@ from app.core.companion_harness.companion.turn import (
     run_companion_implicit_sign_on_greeting_turn,
 )
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
+from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+    queue_serving_turn_deps,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -140,21 +143,14 @@ def _implicit_greeting_deps(
     client: _FakeLLMClient,
 ) -> CompanionTurnDeps:
     bundle = ImplicitSignalBundle(user_signed_on=True)
-    return CompanionTurnDeps(
-        store=store,
-        llm_client=client,  # type: ignore[arg-type]
+    return queue_serving_turn_deps(
+        store,
+        client,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=bundle,
         ),
-        transcript_compaction=None,
-        transcript_llm_window_max_messages=None,
-        repository_only_store_text=False,
-        background_output_sink=None,
-        preset_user_msg_uuid=None,
-        langsmith_parent_run_enabled=False,
         tool_bg_idle_event=_idle_tool_bg(),
-        bootstrap_interim_output_sink=None,
     )
 
 

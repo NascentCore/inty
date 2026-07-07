@@ -11,8 +11,7 @@ Field provenance:
   ``llm_client``, ``transcript_compaction``, ``transcript_llm_window_max_messages``,
   ``repository_only_store_text``, ``langsmith_parent_run_enabled``, ``tool_bg_idle_event``.
 - **Per-turn** (from the wire / API layer each invocation): ``runtime_context``,
-  ``background_output_sink``, ``preset_user_msg_uuid``,
-  ``bootstrap_interim_output_sink``.
+  ``preset_user_msg_uuid``.
 """
 
 from __future__ import annotations
@@ -31,7 +30,6 @@ from .langsmith_turn_slice import CompanionTurnLangsmithSlice
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
-from .turn_routes import BackgroundToolEventSink, BootstrapInterimOutputSink
 
 if TYPE_CHECKING:
     from app.core.companion_harness.agentic_companion.output_queue import (
@@ -91,12 +89,6 @@ class CompanionTurnDeps:
         is forwarded into ``tool_background`` for channel-aware tool behavior.
         TODO(companion-channel-tools): channel tool executors read this + agent scope — #3362
 
-    background_output_sink
-        Optional synchronous callback invoked for each ``ToolOutputEvent`` while
-        ``tool_background`` runs (e.g. push tool progress to WebSocket). ``None``
-        means tool output stays internal until the turn result is returned. Set by
-        the API/WS layer per connection, not from ``CompanionConfig``.
-
     preset_user_msg_uuid
         When set, used as this turn's ``user_msg_uuid`` (correlates client message
         id, LangSmith runs, transcript rows, and REPL metadata). When ``None``,
@@ -118,12 +110,6 @@ class CompanionTurnDeps:
         sees tool summaries already appended. ``None`` skips the wait (tests). Production
         uses ``CompanionSession.tool_bg_idle``.
 
-    bootstrap_interim_output_sink
-        Legacy non-queue ``USER_CHAT_BOOTSTRAP`` only: tool-round interim WebSocket
-        frames via ``CompanionWebSocketCoordinator.bootstrap_interim_output_sink``.
-        Queue-serving bootstrap uses ``agentic_output_queue`` instead. TODO(!3402):
-        ``UserVisibleChunkSink`` for all user-turn visible rounds.
-
     agentic_output_queue
         Domain ``OutputQueue`` for queue-serving ``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``.
         When set with ``user_message_batch``, ``run_turn`` routes through
@@ -140,11 +126,9 @@ class CompanionTurnDeps:
     transcript_llm_window_max_messages: int | None
     repository_only_store_text: bool
     runtime_context: TurnRuntimeContext
-    background_output_sink: BackgroundToolEventSink | None
     preset_user_msg_uuid: str | None
     langsmith_parent_run_enabled: bool | None
     tool_bg_idle_event: threading.Event | None
-    bootstrap_interim_output_sink: BootstrapInterimOutputSink | None
     agentic_output_queue: OutputQueue | None = None
     user_message_batch: UserMessageBatch | None = None
     input_batch: AgenticLoopInputBatch | None = None

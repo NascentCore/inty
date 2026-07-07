@@ -1108,7 +1108,6 @@ def _patch_companion_ws_queue_turn(
             user_text=user_text,
             preset_user_msg_uuid=client_message_id,
             implicit_signal_bundle=implicit_bundle,
-            background_output_sink=None,
         )
         queue_message_id = client_message_id or "queue-synthetic"
         if isinstance(turn_result, CompanionTurnResult):
@@ -2435,15 +2434,13 @@ def test_chat_websocket_companion_inner_tick_worker_stops_after_disconnect(
             assert ack["ok"] is True
             time.sleep(0.2)
             assert (
-                ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
-                >= 1
+                ticks["proactive"] + ticks["monolog"] + ticks["scheduled"] >= 1
             )
 
     n_at_close = ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
     time.sleep(0.35)
     assert (
-        ticks["proactive"] + ticks["monolog"] + ticks["scheduled"]
-        == n_at_close
+        ticks["proactive"] + ticks["monolog"] + ticks["scheduled"] == n_at_close
     )
 
     companion_chat_service.clear_companion_chat_service_caches()
@@ -2656,7 +2653,7 @@ def test_chat_websocket_user_signed_on_companion_bond_conflict(
 ):
     bonded_scope = _run_async_db(
         create_guest_scope_for_test(
-channel=ChannelKind.APP_WS,
+            channel=ChannelKind.APP_WS,
             nickname_prefix="Bonded",
             meta_data={"test": True},
         )
@@ -2916,7 +2913,6 @@ def test_chat_websocket_reuses_connection_for_multiple_agents(
         current_user,
         subscription_svc,
         voice_svc=None,
-        companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         companion_ws=None,
@@ -3065,7 +3061,6 @@ def test_chat_websocket_assume_user_id_ignored_for_non_superuser(
         current_user,
         subscription_svc,
         voice_svc=None,
-        companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         companion_ws=None,
@@ -3129,7 +3124,6 @@ def test_chat_websocket_client_context_fills_time_context_when_request_omits_it(
         current_user,
         subscription_svc,
         voice_svc=None,
-        companion_background_sink=None,
         companion_ws_foreground_pending=None,
         companion_ws_inner_tick_ctx=None,
         companion_ws=None,

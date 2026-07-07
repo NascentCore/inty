@@ -1,10 +1,10 @@
 """In-process agentic companion: coordinator state + session lifecycle across channels.
 
-``Coordinator`` holds tool-background queues, inner-tick coordinates, and overlap guards
-(channel-agnostic). ``Session``
-binds a :class:`~app.services.agentic_companion.downlink.ChannelDownlink` and
-runs the inner-tick poll worker skeleton; transport adapters materialize
-:class:`~app.services.agentic_companion.downlink.Downlink` events.
+``Coordinator`` holds inner-tick coordinates, foreground pending correlation, and overlap
+guards (channel-agnostic). ``Session`` binds a
+:class:`~app.services.agentic_companion.downlink.ChannelDownlink` and runs the inner-tick
+poll worker skeleton; user-visible output routes through scope ``OutputQueue`` and channel
+adapters.
 
 Production companion user paths: **WebSocket + Weixin only**; no HTTP chat unless
 explicitly added later (must share scope turn serialization if it is).
@@ -42,15 +42,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
     get_scope_turn_lock,
 )
-from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutput,
-    BootstrapInterimOutputSink,
-)
-from app.core.companion_harness.tools.tool_background import ToolOutputEvent
-from app.services.agentic_companion.downlink import (
-    ChannelDownlink,
-    bootstrap_interim_downlink,
-)
+from app.services.agentic_companion.downlink import ChannelDownlink
 
 InnerTickPollRunner = Callable[[dict[str, Any]], Awaitable[None]]
 
@@ -131,24 +123,14 @@ class Coordinator:
     - inner_tick_context: the signed-on (user, agent, chat) triple that gates the
     proactive/scheduled poll (the poll no-ops when it is empty), plus monolog/autonomy
     throttle markers.
-    - background_events + background_sink: thread-safe plumbing for inner-tick
-    (proactive/monolog/autonomy) tool-background output, which is not yet routed
-    through OutputQueue (see !3489); queue USER_CHAT tool-leg bypasses this and appends to
-    OutputQueue in-process.
-    - foreground_pending: correlation map for the above inner-tick background events.
+    - foreground_pending: correlation map for queue-serving user turns and inner-tick
+    tool-background delivery metadata.
 
     Distinct from ScopeQueueServing (owns the InputQueue drain + OutputQueue pump tasks) and
     from OutputQueue (durable user-visible output): Coordinator is presence state only.
     """
 
     loop: asyncio.AbstractEventLoop
-    background_events: asyncio.Queue[ToolOutputEvent] = field(
-        default_factory=asyncio.Queue
-    )
-    # TODO(companion-ws-bootstrap-downlink): channel-agnostic queue unused on WS; collapse with downlink. #3209 #3398
-    bootstrap_interim_events: asyncio.Queue[BootstrapInterimOutput] = field(
-        default_factory=asyncio.Queue
-    )
     # TODO(data-type-abstraction): Change this to a dataclass.
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     # TODO(data-type-abstraction): Change this to a dataclass.
@@ -172,18 +154,6 @@ class Coordinator:
     @classmethod
     def for_loop(cls, loop: asyncio.AbstractEventLoop) -> Coordinator:
         return cls(loop=loop)
-
-    def background_sink(self, event: ToolOutputEvent) -> None:
-        """Thread-safe sink passed into tool_background jobs."""
-        self.loop.call_soon_threadsafe(self.background_events.put_nowait, event)
-
-    def bootstrap_interim_output_sink(self) -> BootstrapInterimOutputSink:
-        """Async sink for bootstrap sync tool-loop rounds (queues ``BootstrapInterimOutput``)."""
-
-        async def _sink(ev: BootstrapInterimOutput) -> None:
-            await self.bootstrap_interim_events.put(ev)
-
-        return _sink
 
     def set_foreground_pending(
         self, user_msg_uuid: str, context: dict[str, Any]
@@ -396,17 +366,6 @@ class Session:
 
     def sign_out(self) -> None:
         self.coordinator.inner_tick_context.clear()
-
-    def background_sink(self, event: ToolOutputEvent) -> None:
-        self.coordinator.background_sink(event)
-
-    async def deliver_bootstrap_interim(
-        self, interim: BootstrapInterimOutput
-    ) -> None:
-        # TODO(companion-ws-bootstrap-downlink): WS downlink must handle BOOTSTRAP_INTERIM before this is wired. #3209 #3398
-        await self.downlink.deliver(
-            bootstrap_interim_downlink(interim=interim),
-        )
 
     async def start_inner_tick_worker(
         self,

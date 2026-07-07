@@ -85,7 +85,6 @@ async def _scope_kernel_context(
             implicit_signal_bundle=implicit_signal_bundle,
         ),
         preset_uid=preset_uid,
-        background_output_sink=None,
     )
 
 

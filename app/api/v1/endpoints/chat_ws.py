@@ -11,7 +11,7 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
@@ -37,21 +37,11 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.companion.scope_turn_lock import (
-    companion_scope_from_foreground_ctx,
-    get_scope_turn_lock,
-)
-from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutputSink,
-)
-from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.core.companion_harness.companion.runtime_events import (
     build_user_signed_out_runtime_event_record,
     build_ws_conn_dropped_runtime_event_record,
 )
 from app.core.companion_harness.companion.websocket_coordinator import (
-    BootstrapInterimDeliverCtx,
-    BootstrapInterimQueued,
     ChatWsInflightShutdownRegistry,
     ChatWsInflightTurnTracker,
     CompanionWebSocketCoordinator,
@@ -60,7 +50,6 @@ from app.core.companion_harness.companion.websocket_coordinator import (
 from app.core.model_selection import select_chat_model
 from app.models.user import User
 from app.models.agentic_companion_queue import AgenticCompanionInputQueueRow
-from app.schemas.biz_action import BizAction, ActionType
 from app.schemas.chat import (
     ChatCompletionRequest,
     ChatMessage,
@@ -68,6 +57,7 @@ from app.schemas.chat import (
 )
 from app.schemas.chat_websocket import (
     ChatWebSocketQueuedPlainError,
+    ChatWebSocketQueuedSuccessFrame,
     ChatWebSocketRequest,
     ChatWsClientContextAckFrame,
     ChatWsCompanionWireMessageMetaData,
@@ -76,15 +66,16 @@ from app.schemas.chat_websocket import (
     ChatWsUserSignedOnFrame,
     ChatWsUserSignedOutAckFrame,
     ChatWsUserSignedOutFrame,
+    ChatWsWsConnDroppedAckFrame,
     ChatWsWsConnDroppedFrame,
-    chat_ws_queued_error_dict,
+    chat_ws_queued_error_frame,
     dump_chat_ws_companion_wire_meta,
     normalize_websocket_companion_message_id_uuid,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.schemas.response import APIResponse
 from app.services import agent_service, chat_history_service, chat_service
 from app.services import companion_chat_service
+from app.services.chat_completion_wire import build_chat_ws_queued_success_frame
 from app.services.chat_websocket_session import chat_ws_outbound_pump
 from app.services.ws_session_messages import WsOutboundPayload
 from app.services.agentic_channel.adapters.app_ws import (
@@ -108,21 +99,18 @@ from app.services.agentic_channel.presence import (
     ensure_presence,
     get_presence,
 )
-from app.services.agentic_companion.downlink import tool_background_downlink
 from app.services.agentic_companion.presence_registry import (
     PresenceBusyError,
     companion_presence_registry,
 )
 from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_implicit_greeting_ws_payload,
-    materialize_tool_background_ws_payload,
 )
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
     unregister_app_ws_channel,
     ws_reject_reason_if_other_channel_active,
 )
-from app.services.agentic_companion.ws_downlink import WebSocketDownlink
 from app.services.phone_call_service import (
     PhoneCallConfigError,
     PhoneCallLimitError,
@@ -206,11 +194,11 @@ async def _turn_down_app_ws_channel(scope: AgentScope, *, reason: str) -> None:
 
 def _chat_ws_error_payload_from_http_exception(
     exc: HTTPException, *, agent_id: str
-) -> dict[str, Any]:
+) -> ChatWebSocketQueuedPlainError:
     detail = exc.detail
     message = detail if isinstance(detail, str) else str(detail)
     ws_extra = getattr(exc, "ws_extra", None)
-    return chat_ws_queued_error_dict(
+    return chat_ws_queued_error_frame(
         status_code=exc.status_code,
         message=message,
         agent_id=agent_id,
@@ -311,7 +299,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 current_user=current_user,
                 subscription_svc=subscription_svc,
                 voice_svc=voice_svc,
-                companion_background_sink=companion_ws.background_sink,
                 companion_ws_foreground_pending=companion_ws.foreground_pending,
                 companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                 companion_ws=companion_ws,
@@ -325,12 +312,7 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
             return
         if response is None:
             return
-        if isinstance(response, dict):
-            response_data = dict(response)
-        else:
-            response_data = response.model_dump(exclude_none=True)
-        response_data["agent_id"] = agent_id
-        await outbound_queue.put(response_data)
+        await outbound_queue.put(response)
     except asyncio.CancelledError:
         logger.debug(
             "chat_ws user_signed_on greeting cancelled agent_id={}",
@@ -685,11 +667,10 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         frame = ChatWsWsConnDroppedFrame.model_validate(data)
     except ValidationError:
         await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "invalid_payload",
-            }
+            ChatWsWsConnDroppedAckFrame(
+                ok=False,
+                reason="invalid_payload",
+            ).model_dump(exclude_none=True)
         )
         return True
     agent_id = frame.agent_id.strip()
@@ -699,11 +680,10 @@ async def _try_handle_ws_ws_conn_dropped_frame(
         )
         if chat.agent_id != agent_id:
             await websocket.send_json(
-                {
-                    "type": "ws_conn_dropped_ack",
-                    "ok": False,
-                    "reason": "agent_mismatch",
-                }
+                ChatWsWsConnDroppedAckFrame(
+                    ok=False,
+                    reason="agent_mismatch",
+                ).model_dump(exclude_none=True)
             )
             return True
         subscription = await subscription_svc.get_user_current_subscription(
@@ -734,7 +714,9 @@ async def _try_handle_ws_ws_conn_dropped_frame(
                 received_message_uuid=uuid_part,
             ),
         )
-        await websocket.send_json({"type": "ws_conn_dropped_ack", "ok": True})
+        await websocket.send_json(
+            ChatWsWsConnDroppedAckFrame(ok=True).model_dump(exclude_none=True)
+        )
         logger.info(
             "chat_ws ws_conn_dropped logged companion_runtime_event ws_conn_id={} user={} agent={} chat_id={} "
             "client_dropped_at_utc={} received_message_uuid={}",
@@ -752,11 +734,10 @@ async def _try_handle_ws_ws_conn_dropped_frame(
             agent_id,
         )
         await websocket.send_json(
-            {
-                "type": "ws_conn_dropped_ack",
-                "ok": False,
-                "reason": "server_error",
-            }
+            ChatWsWsConnDroppedAckFrame(
+                ok=False,
+                reason="server_error",
+            ).model_dump(exclude_none=True)
         )
     return True
 
@@ -829,78 +810,6 @@ async def _resolve_assumed_chat_websocket_user(
     return operator_schema
 
 
-# TODO(companion-ws-bootstrap-downlink): move materialize into WebSocketDownlink; drop parallel consumer. #3209 #3398
-async def _deliver_bootstrap_interim_queued(
-    queued: BootstrapInterimQueued,
-) -> None:
-    """Materialize one bootstrap sync tool-loop round into chat history + WS outbound."""
-    ev = queued.ev
-    ctx = queued.ctx
-    meta_data = dump_chat_ws_companion_wire_meta(
-        ChatWsCompanionWireMessageMetaData(
-            source="bootstrap_tool_round",
-            trace_id=ev.trace_id or None,
-            user_msg_uuid=ev.user_msg_uuid or None,
-            assistant_msg_uuid=ev.assistant_msg_uuid or None,
-            langsmith_trace_id=ev.langsmith_trace_id or None,
-            langsmith_run_id=ev.langsmith_run_id or None,
-            bootstrap_round_index=ev.round_index,
-        )
-    )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        ctx.session_id,
-        ev.text,
-        agent_id=ctx.agent_id,
-        meta_data=meta_data,
-    )
-    latest_message_info = None
-    try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(
-                    ctx.db, ai_message_id
-                )
-            )
-    except Exception as e:
-        logger.warning(
-            "bootstrap_interim get_ai_message_info_by_id failed: {}", e
-        )
-    subscription_actions = [
-        BizAction(action_type=ActionType.NONE, message=""),
-    ]
-    completion = build_companion_ws_completion_data(
-        response_text_content=ev.text,
-        response_content_parts=None,
-        last_user_text=ctx.last_user_text,
-        latest_message_info=latest_message_info,
-        audio_url=None,
-        request=ctx.request,
-        source_imate_id=ctx.request.target_imate_id,
-        user_message_id=None,
-        subscription_actions=subscription_actions,
-        client_local_id=ctx.effective_local_id,
-    )
-    payload = APIResponse.success(data=completion.model_dump(exclude_none=True))
-    out = payload.model_dump(exclude_none=True)
-    out["agent_id"] = ctx.agent_id
-    out["status_line"] = await _agent_status_line_for_chat_header(
-        ctx.db, ctx.agent_id
-    )
-    await ctx.outbound_queue.put(out)
-
-
-async def _companion_ws_bootstrap_interim_consumer(
-    companion_ws: CompanionWebSocketCoordinator,
-) -> None:
-    """Drain ``bootstrap_interim_queued_events`` for the lifetime of one ``/api/v1/chat/ws`` session."""
-    while True:
-        queued = await companion_ws.bootstrap_interim_queued_events.get()
-        try:
-            await _deliver_bootstrap_interim_queued(queued)
-        except Exception:
-            logger.exception("companion_ws bootstrap_interim deliver failed")
-
-
 async def _agent_chat_ws_completions_impl(
     *,
     db: AsyncSession,
@@ -909,14 +818,13 @@ async def _agent_chat_ws_completions_impl(
     current_user: UserSchema,
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService = default_voice_service,
-    companion_background_sink: Callable[[ToolOutputEvent], None] | None = None,
     companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
     companion_ws: CompanionWebSocketCoordinator | None = None,
     implicit_greeting_turn: bool = False,
     ws_outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
     ws_conn_id: str | None = None,
-) -> dict | None:
+) -> ChatWebSocketQueuedSuccessFrame | None:
     """One companion chat turn for ``/api/v1/chat/ws`` (production WebSocket path).
 
     Companion kernel + wire envelope.
@@ -1137,28 +1045,6 @@ async def _agent_chat_ws_completions_impl(
                             "agent_settings": agent_data.get("settings"),
                             "language": request.language,
                         }
-                    bootstrap_interim_sink: (
-                        BootstrapInterimOutputSink | None
-                    ) = None
-                    if ws_outbound_queue is not None:
-                        assert companion_ws is not None
-                        # TODO(companion-presence-ws-outbound): deliver via session, not coordinator queue. #3211 #3209 #3398
-                        companion_ws.set_bootstrap_interim_deliver_ctx(
-                            BootstrapInterimDeliverCtx(
-                                db=db,
-                                agent_id=agent_id,
-                                session_id=session_id,
-                                request=request,
-                                last_user_text=last_user_text,
-                                effective_local_id=effective_local_id,
-                                outbound_queue=ws_outbound_queue,
-                            )
-                        )
-                        if implicit_greeting_ws:
-                            bootstrap_interim_sink = (
-                                companion_ws.bootstrap_interim_output_sink()
-                            )
-                        _ = bootstrap_interim_sink
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
@@ -1187,7 +1073,6 @@ async def _agent_chat_ws_completions_impl(
                                 resolved_chat_model=model_override,
                                 implicit_signal_bundle=companion_implicit_bundle,
                                 session_id=session_id,
-                                background_output_sink=companion_background_sink,
                                 preset_user_msg_uuid=companion_preset_uid,
                                 agentic_output_queue=greeting_output_queue,
                                 user_message_batch=greeting_batch,
@@ -1310,9 +1195,6 @@ async def _agent_chat_ws_completions_impl(
                                     companion_preset_uid
                                 ]["foreground_user_message_id"] = bg_user_row_id
                         raise
-                    finally:
-                        if companion_ws is not None:
-                            companion_ws.clear_bootstrap_interim_deliver_ctx()
                     if implicit_greeting_ws:
                         companion_user_row_id = (
                             await _persist_companion_user_message_for_bg(
@@ -1430,13 +1312,12 @@ async def _agent_chat_ws_completions_impl(
         timing_message = request_handling_timer.stop()
         logger.debug(f"聊天请求完成: agent_id={agent_id}, {timing_message}")
 
-        payload = APIResponse.success(
-            data=completion.model_dump(exclude_none=True)
+        status_line = await _agent_status_line_for_chat_header(db, agent_id)
+        return build_chat_ws_queued_success_frame(
+            completion=completion,
+            agent_id=agent_id,
+            status_line=status_line,
         )
-        sl = await _agent_status_line_for_chat_header(db, agent_id)
-        out = payload.model_dump(exclude_none=True)
-        out["status_line"] = sl
-        return out
 
     except HTTPException:
         raise
@@ -1523,111 +1404,19 @@ async def chat_completions_websocket(
 
     tc_box: list[Optional[dict]] = [None]
     companion_ws = CompanionWebSocketCoordinator.for_current_loop()
-    companion_ws.bind_outbound_queue(outbound_queue)
-    # TODO(companion-presence-ws-outbound): one session downlink consumer; no extra bootstrap task. #3211 #3398
-    bootstrap_interim_consumer_task = asyncio.create_task(
-        _companion_ws_bootstrap_interim_consumer(companion_ws),
-        name="companion_ws_bootstrap_interim",
-    )
     inflight_turn_tracker = ChatWsInflightTurnTracker()
     ChatWsInflightShutdownRegistry.register(inflight_turn_tracker)
     ws_leased_agent_id_box: list[Optional[str]] = [None]
 
-    async def _ws_tool_background_materializer(
-        tool_ev: ToolOutputEvent,
-    ) -> WsOutboundPayload:
-        ctx = companion_ws.pop_foreground_pending(tool_ev.user_msg_uuid)
-        assert ctx is not None
-        return await materialize_tool_background_ws_payload(
-            db=db,
-            agent_id=str(ctx["agent_id"]),
-            session_id=str(ctx["session_id"]),
-            ev=tool_ev,
-            request=ctx["request"],
-            effective_local_id=ctx["effective_local_id"],
-            foreground_user_message_id=ctx.get("foreground_user_message_id"),
-        )
-
-    ws_downlink = WebSocketDownlink(
-        outbound_queue,
-        _ws_tool_background_materializer,
-    )
-
     idle = _chat_ws_idle_timeout_seconds()
     try:
         while True:
-            recv_task = asyncio.create_task(
-                asyncio.wait_for(websocket.receive_text(), timeout=idle)
-            )
-            queue_task = asyncio.create_task(
-                companion_ws.background_events.get()
-            )
-            done, _pending = await asyncio.wait(
-                {recv_task, queue_task},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-
-            if queue_task in done:
-                recv_task.cancel()
-                try:
-                    await recv_task
-                except (asyncio.CancelledError, asyncio.TimeoutError):
-                    pass
-                except WebSocketDisconnect:
-                    logger.debug(
-                        "companion tool_bg receive task disconnected while queue event was ready"
-                    )
-                except RuntimeError as exc:
-                    if _is_ws_receive_text_not_connected_runtime_error(exc):
-                        logger.debug(
-                            "companion tool_bg receive task ended during queue dispatch: {}",
-                            exc,
-                        )
-                    else:
-                        raise
-                try:
-                    ev = queue_task.result()
-                except Exception as exc:
-                    logger.warning(
-                        f"companion tool_bg queue result failed: {exc}"
-                    )
-                    continue
-                # TODO(observability): missing ctx often means stale user_msg_uuid or lifecycle bug;
-                # consider metrics and whether to drop vs dead-letter ToolOutputEvent.
-                ctx = companion_ws.pop_foreground_pending(ev.user_msg_uuid)
-                if ctx is None:
-                    logger.warning(
-                        "companion tool_bg missing foreground ctx user_msg_uuid={}",
-                        ev.user_msg_uuid,
-                    )
-                    continue
-                # Pop to detect stale uuid; re-set so deliver holds turn_lock without losing ctx.
-                companion_ws.set_foreground_pending(ev.user_msg_uuid, ctx)
-                scope = companion_scope_from_foreground_ctx(ctx)
-                if scope is None:
-                    logger.warning(
-                        "companion tool_bg missing scope coords user_msg_uuid={}",
-                        ev.user_msg_uuid,
-                    )
-                    continue
-                scope_lock = get_scope_turn_lock(scope)
-                try:
-                    async with scope_lock:
-                        await ws_downlink.deliver(
-                            tool_background_downlink(tool_output=ev)
-                        )
-                except Exception:
-                    logger.exception("companion tool_bg ws completion failed")
-                continue
-
-            queue_task.cancel()
             try:
-                await queue_task
-            except asyncio.CancelledError:
-                pass
-            try:
-                raw = recv_task.result()
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(), timeout=idle
+                )
             except asyncio.TimeoutError:
+                await asyncio.sleep(0)
                 await websocket.close()
                 return
             except WebSocketDisconnect:
@@ -1688,7 +1477,7 @@ async def chat_completions_websocket(
                         message="Chat frame must be a JSON object",
                         data=None,
                         agent_id="",
-                    ).model_dump()
+                    )
                 )
                 continue
             try:
@@ -1700,7 +1489,7 @@ async def chat_completions_websocket(
                         message="Invalid chat WebSocket request",
                         data=json.loads(exc.json()),
                         agent_id=str(data.get("agent_id") or ""),
-                    ).model_dump()
+                    )
                 )
                 continue
             merged_request = _chat_request_with_merged_ws_time_context(
@@ -1724,7 +1513,6 @@ async def chat_completions_websocket(
                         current_user=current_user,
                         subscription_svc=subscription_svc,
                         voice_svc=voice_svc,
-                        companion_background_sink=companion_ws.background_sink,
                         companion_ws_foreground_pending=companion_ws.foreground_pending,
                         companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                         companion_ws=companion_ws,
@@ -1750,12 +1538,7 @@ async def chat_completions_websocket(
                 continue
             if response is None:
                 continue
-            if isinstance(response, dict):
-                response_data = dict(response)
-            else:
-                response_data = response.model_dump(exclude_none=True)
-            response_data["agent_id"] = websocket_request.agent_id
-            await outbound_queue.put(response_data)
+            await outbound_queue.put(response)
     except asyncio.CancelledError:
         logger.debug(
             "chat_ws session cancelled ws_conn_id={} user={}",
@@ -1787,11 +1570,6 @@ async def chat_completions_websocket(
                 ws_conn_id,
             )
             ws_leased_agent_id_box[0] = None
-        bootstrap_interim_consumer_task.cancel()
-        try:
-            await bootstrap_interim_consumer_task
-        except asyncio.CancelledError:
-            pass
         # TODO(ws-disconnect-lifecycle): #3256 — persist-first; finish turns; mark undelivered.
         await inflight_turn_tracker.cancel_all()
         ChatWsInflightShutdownRegistry.unregister(inflight_turn_tracker)

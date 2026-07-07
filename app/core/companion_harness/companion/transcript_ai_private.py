@@ -103,7 +103,6 @@ def should_persist_ai_private_splice(
         track_uses_ai_private_splice(persist_input.track)
         and persist_input.splice_plan.thoughts
         and assistant_text
-        and not persist_input.bootstrap_skip_final_transcript_assistant_row
     )
 
 

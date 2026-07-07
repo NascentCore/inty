@@ -15,6 +15,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.models import (
     user_visible_assistant_text,
 )
+from app.services.ws_session_messages import WsOutboundPayload
 
 WeixinAssistantTextSink = Callable[[str], Awaitable[None]]
 TelegramAssistantTextSink = Callable[[str], Awaitable[None]]
@@ -50,7 +51,7 @@ class InnerTickDelivery:
 async def deliver_inner_tick_assistant(
     delivery: InnerTickDelivery,
     *,
-    ws_payload: dict | None,
+    ws_payload: WsOutboundPayload | None,
     assistant_text: str,
 ) -> None:
     """Push a full WS frame and/or plain channel text after history is persisted."""

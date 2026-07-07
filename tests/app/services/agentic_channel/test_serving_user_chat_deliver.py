@@ -177,7 +177,6 @@ async def test_drain_and_deliver_runs_pump_concurrently() -> None:
                     user_signed_on=False,
                     server_received_at_utc=None,
                 ),
-                background_output_sink=None,
                 deliver_message=deliver_message,
             )
 
@@ -216,7 +215,6 @@ async def test_drain_and_deliver_returns_empty_when_pump_empty() -> None:
                     user_signed_on=False,
                     server_received_at_utc=None,
                 ),
-                background_output_sink=None,
                 deliver_message=AsyncMock(),
             )
 
@@ -262,6 +260,50 @@ async def test_channel_output_pump_delivers_ready_batch_and_acks() -> None:
 
     assert last == "queued reply"
     assert sent == ["queued reply"]
+    fake_queue.ack_delivered.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_channel_output_pump_delivers_tool_background_ready_batch() -> (
+    None
+):
+    scope = AgentScope(user_id="user-tool", agent_id="agent-tool")
+    delivered: list[ReadyOutputMessage] = []
+
+    async def deliver_message(message: ReadyOutputMessage) -> None:
+        delivered.append(message)
+
+    ready = ReadyOutputMessage(
+        message_id="msg-tool-1",
+        batch_id="batch-tool-1",
+        kind=DownlinkKind.TOOL_BACKGROUND,
+        text="tool follow-up visible to user",
+        sequence=1,
+        message_ids=("input-tool-1",),
+    )
+
+    fake_queue = MagicMock()
+    fake_queue.pull_ready_batch = AsyncMock(
+        side_effect=chain([[ready]], repeat(()))
+    )
+    fake_queue.ack_delivered = AsyncMock()
+    stop = asyncio.Event()
+    with patch(
+        "app.services.agentic_channel.serving.get_output_queue_for_scope",
+        return_value=fake_queue,
+    ):
+        task = asyncio.create_task(
+            channel_output_pump(
+                scope, deliver_message=deliver_message, stop_event=stop
+            )
+        )
+        await asyncio.sleep(0.05)
+        stop.set()
+        last = await task
+
+    assert last == "tool follow-up visible to user"
+    assert len(delivered) == 1
+    assert delivered[0].kind == DownlinkKind.TOOL_BACKGROUND
     fake_queue.ack_delivered.assert_awaited()
 
 

@@ -37,6 +37,7 @@ from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
 )
 from app.core.companion_harness.companion.turn_tail_user import (
     append_tail_user_transcript_rows,
+    append_turn_track_tail_user_transcript_rows,
 )
 from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
@@ -144,6 +145,19 @@ def _append_user_transcript_row(
         context.companion_turn_track
         == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     ):
+        return
+    track = context.companion_turn_track
+    if track is not None:
+        append_turn_track_tail_user_transcript_rows(
+            store,
+            context.transcript_rel,
+            tail_user_messages=context.tail_user_messages,
+            trace_id=context.trace_id,
+            track=track,
+            inner_tick_turn=context.inner_tick_turn,
+            tick_proactive=track
+            == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        )
         return
     append_tail_user_transcript_rows(
         store,

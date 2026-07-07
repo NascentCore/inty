@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from loguru import logger
 
@@ -21,7 +20,6 @@ from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     dump_chat_ws_companion_wire_meta,
 )
-from app.schemas.response import APIResponse
 from app.services import chat_history_service
 from app.services.agent_status_line import (
     agent_status_line_for_chat_header as _agent_status_line_for_chat_header,
@@ -35,8 +33,10 @@ from app.services.agentic_companion.ws_turn_support import (
 )
 from app.services.chat_completion_wire import (
     _normalize_chat_response_content,
+    build_chat_ws_queued_success_frame,
     build_companion_ws_completion_data,
 )
+from app.services.ws_session_messages import WsOutboundPayload
 
 
 @dataclass(frozen=True)
@@ -171,17 +171,16 @@ async def deliver_visible_inner_tick_turn(
             subscription_actions=subscription_actions,
             client_local_id=None,
         )
-        payload = APIResponse.success(
-            data=completion.model_dump(exclude_none=True)
-        )
-        out: dict[str, Any] = payload.model_dump(exclude_none=True)
-        out["agent_id"] = deliver_input.agent_id
-        out["status_line"] = await _agent_status_line_for_chat_header(
-            post_db, deliver_input.agent_id
+        ws_payload: WsOutboundPayload = build_chat_ws_queued_success_frame(
+            completion=completion,
+            agent_id=deliver_input.agent_id,
+            status_line=await _agent_status_line_for_chat_header(
+                post_db, deliver_input.agent_id
+            ),
         )
         await deliver_inner_tick_assistant(
             deliver_input.delivery,
-            ws_payload=out,
+            ws_payload=ws_payload,
             assistant_text=response_text_content,
         )
     return True

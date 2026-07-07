@@ -165,7 +165,6 @@ async def test_drain_user_chat_no_tools_delivers_foreground(
                 result = await companion.drain_once(
                     resolved_chat_model=DEEPSEEK_V3_2,
                     runtime_channel=ChannelKind.APP_WS,
-                    background_output_sink=None,
                     implicit_signal_bundle=_implicit_bundle(),
                     injected_runtime=injected,
                 )
@@ -266,7 +265,6 @@ async def test_drain_user_chat_background_tool_round() -> None:
             await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
                 runtime_channel=ChannelKind.APP_WS,
-                background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
             )
@@ -331,7 +329,6 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
                 runtime_channel=ChannelKind.APP_WS,
-                background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
             )
@@ -398,7 +395,6 @@ async def test_drain_empty_input_queue_returns_none() -> None:
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
                 runtime_channel=ChannelKind.APP_WS,
-                background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
             )
@@ -462,7 +458,6 @@ async def test_drain_multi_message_batch_merges_user_text() -> None:
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
                 runtime_channel=ChannelKind.APP_WS,
-                background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
             )
@@ -540,7 +535,6 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
             result = await companion.drain_once(
                 resolved_chat_model=DEEPSEEK_V3_2,
                 runtime_channel=ChannelKind.APP_WS,
-                background_output_sink=None,
                 implicit_signal_bundle=_implicit_bundle(),
                 injected_runtime=injected,
             )

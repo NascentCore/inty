@@ -113,7 +113,6 @@ async def test_kernel_fire_throttled_monolog_result_shape(
         ),
         runtime_context=MagicMock(),
         preset_user_msg_uuid="preset-1",
-        background_output_sink=None,
         agentic_output_queue=MagicMock(),
         user_message_batch=UserMessageBatch(
             batch_id="agent-initiated:inner_tick:preset-1",
@@ -161,7 +160,6 @@ async def test_kernel_fire_throttled_autonomy_result_shape(
         ),
         runtime_context=MagicMock(),
         preset_user_msg_uuid="preset-2",
-        background_output_sink=None,
         agentic_output_queue=MagicMock(),
         user_message_batch=UserMessageBatch(
             batch_id="agent-initiated:inner_tick:preset-2",
