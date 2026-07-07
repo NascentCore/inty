@@ -5,12 +5,6 @@ agentic_companion 里的 presence 指：用户与 companion 处于同一段「�
 WebSocket and Weixin adapters translate :class:`Downlink` into
 ``ChatWebSocketResponse`` / Hermes ``send_text`` without re-entering ``/api/v1/chat/ws``.
 
-TODO(retire-downlink-event): The ``Downlink`` dataclass, its ``*_downlink`` factories, and
-  ``downlink_delivers_user_visible_text`` are superseded by ``ReadyOutputMessage`` /
-  ``ready_output_delivers_user_visible_text``; adapters now consume durable OutputQueue rows
-  via ``ChannelDownlink.deliver(message)``. They have no production caller. Delete them in
-  #3398 P3 and rename ``DownlinkKind`` → ``OutputMessageKind`` (keep only ``DownlinkKind`` and
-  the ``ChannelDownlink`` protocol until then).
 TODO(channel-outbound-affordances): Extend the adapter port with reply threading and emoji
   reaction targets; map transcript UUIDs ↔ channel message IDs — #3440
 TODO(!3451, !3452): Carry user-visible image assets explicitly for native channel image bubbles.
@@ -55,6 +49,13 @@ class Downlink:
     Use the module factories (``user_reply_downlink``, …) so ``kind`` matches populated
     payload fields. ``assistant_text`` is what end users should see when the event is
     delivered; it may be empty for monolog ``tool_bg_only`` turns (no WS/Weixin push).
+
+    TODO(retire-downlink-event): The ``Downlink`` dataclass, its ``*_downlink`` factories, and
+    ``downlink_delivers_user_visible_text`` are superseded by ``ReadyOutputMessage`` /
+    ``ready_output_delivers_user_visible_text``; adapters now consume durable OutputQueue rows
+    via ``ChannelDownlink.deliver(message)``. They have no production caller. Delete them in
+    #3398 P3 and rename ``DownlinkKind`` → ``OutputMessageKind`` (keep only ``DownlinkKind`` and
+    the ``ChannelDownlink`` protocol until then).
     """
 
     kind: DownlinkKind
