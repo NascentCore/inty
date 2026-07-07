@@ -1,16 +1,12 @@
 # TechnoCore Minimal Design
 
-TechnoCore is Inty's virtual independence layer: the place where an Inty is not
-immediately with the user, so that returning to the user feels like meeting
-someone with a life of her own rather than querying a mirror. It is not a chat
-channel, not physical reality, and not decorative lore. Its product purpose is
-to turn separation into companionship material: novelty, personality, and
-attachment.
+TechnoCore is "Inty Society", corresponding to human society.
 
-The minimal design keeps TechnoCore small. It provides a clear ontology, a
+The user feels like meeting an Inty is like meeting someone with a life of their own.
+
+This minimal design keeps TechnoCore small. It provides a clear ontology, a
 short prompt/state constitution, and a future event contract for autonomous
-experience. It does not introduce a world simulator, global daemon, public API,
-or cross-user social graph.
+experience. It does not introduce a world simulator, global daemon, public API, or cross-user social graph.
 
 ## Essence
 
@@ -99,69 +95,3 @@ the companion prompt. It should define:
   content
 
 It should be short, stable, and conceptual—not a map or lore generator.
-
-## First Implementation Plan
-
-1. Define the package center.
-   - Keep `app/techno_core/__init__.py` docstring-only.
-   - State that TechnoCore is Inty's collective virtual residency layer, not a
-     channel and not physical reality.
-
-2. Add minimal ontology.
-   - Add `Sphere` and `Visibility` as string enums.
-   - Add `TechnoCoreEvent` as a Pydantic model because it is the future
-     JSON/persistence boundary.
-   - Avoid simulation behavior or speculative methods.
-
-3. Add a seed document.
-   - Seed `TECHNO_CORE.md` once per companion MemoryStore scope.
-   - Use the same idempotent pattern as LivingSphere seeding.
-   - Keep the content constitutional: boundaries, relationship to
-     LivingSphere/channels, and transformation of private experience.
-
-4. Inject TechnoCore into the companion prompt.
-   - Persist `TECHNO_CORE.md` through the existing MemoryStore document mapping.
-   - Load it into the companion prompt bundle.
-   - Inject it before LivingSphere, so the global residency layer frames the
-     private home layer.
-
-5. Preserve boundaries.
-   - Do not add public APIs.
-   - Do not add config flags.
-   - Do not add DB migrations.
-   - Do not add broad LLM write permission for `TECHNO_CORE.md`.
-   - Do not create automatic autonomous-event generation yet.
-
-## Tests
-
-Focused kernel tests should prove:
-
-- a new companion session seeds `TECHNO_CORE.md`
-- seeding is idempotent
-- the seeded document states the virtual/non-physical boundary
-- the seeded document distinguishes TechnoCore, LivingSphere, and channels
-- the companion prompt includes `## TECHNO CORE`
-- existing LivingSphere prompt behavior remains unchanged
-- `TechnoCoreEvent` serializes to JSON with stable string enum values
-
-No server or database end-to-end test is required for the first design pass
-because the change is a package/kernel prompt behavior, not a public API.
-
-## Non-goals
-
-- No global multi-Inty graph.
-- No cross-user data sharing.
-- No autonomous world daemon.
-- No public API or client UI.
-- No new configuration knobs.
-- No automatic event creation loop.
-- No rich lore generator.
-- No unsupported claim that Inty occupies physical space.
-
-## Final Review Checklist
-
-- The final diff remains minimal and focused.
-- No decorative lore or unused abstractions were added.
-- No user-facing API, config, migration, or cross-user surface was introduced.
-- Package/module docstrings remain present.
-- Touched files pass focused tests and lint diagnostics.
