@@ -7,7 +7,7 @@ similar greetings across turns (models weigh trailing system instructions heavil
 framing the trigger as user input improves variation while keeping the signal last in
 the dialogue before the assistant reply. During interactive bootstrap, ``user_signed_on``
 with ``message_id`` is the first-turn opener (replacing the legacy WebSocket kickoff
-placeholder); system stack carries ``BOOTSTRAP.md`` via ``prompts/system_messages.py`` bootstrap slices.
+placeholder); system stack carries ``BOOTSTRAP.md`` via ``prompting/system_messages.py`` bootstrap slices.
 
 Client wall-clock context (``ImplicitSignalBundle.client_time``) is not injected here;
 ``turn_pipeline`` emits a dedicated ``## user-time-context`` **system** message

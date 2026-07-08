@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.models import (
     InnerTickThrottleKind,
     MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
 )

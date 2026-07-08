@@ -1,6 +1,6 @@
 """Assemble legacy chat-completions system messages for ``clean_prompt_system``.
 
-Not part of the agentic companion ``companion/prompts/system_messages.py`` stack.
+Not part of the agentic companion ``prompting/system_messages.py`` stack.
 """
 
 from __future__ import annotations
