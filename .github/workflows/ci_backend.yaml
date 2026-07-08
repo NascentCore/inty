@@ -143,6 +143,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          PLAN_JSON=$(python .cursor/skills/scripts/affected_test_packages.py \
             --base-ref "origin/${{ github.base_ref }}" \
             --head-ref HEAD \
             --json)
