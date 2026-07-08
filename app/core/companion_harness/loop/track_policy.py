@@ -3,7 +3,7 @@
 ``TRACK_POLICY`` is the loop-layer 1:1 table keyed by ``CompanionTurnTrack``.
 ``build_loop_execution_policy`` merges it with ``inner_tick_kind`` and turn-prep
 runtime flags at plugin build time into ``LoopExecutionPolicy`` on context.
-TODO(#3401): merge registries when loop and turn-prep share one track descriptor.
+TODO(#3393): merge registries when loop and turn-prep share one track descriptor.
 """
 
 from __future__ import annotations

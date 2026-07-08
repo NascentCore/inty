@@ -1,4 +1,4 @@
-"""Per-track PromptPlan assembly for AgenticLoop tracks (#3463).
+"""Per-track PromptPlan assembly for AgenticLoop tracks (#3801).
 
 Generated entirely by Cursor agent.
 """

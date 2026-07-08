@@ -49,7 +49,7 @@ _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     }
 )
 # TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from — #3506
-# mutable MemDoc seeds; persist static kinds in MemoryStore on init. !3506
+# mutable MemDoc seeds; persist static kinds in MemoryStore on init. #3506
 
 
 def load_template_seed_text(filename: str) -> str:
@@ -142,7 +142,7 @@ class MemoryStoreScopePaths:
 
     @property
     def transcript_inner_tick(self) -> str:
-        # TODO(rename-memory-doc): Rename to transcript_inner_tick_monolog.jsonl — #3400
+        # TODO(rename-memory-doc): Rename to transcript_inner_tick_monolog.jsonl — #3817
         # (monolog-only inner tick; update ORM mapping + migrations together).
         return TRANSCRIPT_INNER_TICK_JSONL_REL
 

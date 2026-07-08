@@ -4,7 +4,7 @@ Extracted from turn.run_turn dual-LLM user-chat path for reuse by
 the production AgenticLoop. Does not start tool_background; caller passes
 tool_msgs_for_bg into run_tool_background_loop (inline AgenticLoop tool phase).
 
-TODO(!3630): Build langsmith_extra via LlmInvocationContext instead of langsmith_slice helpers here.
+TODO(#3630): Build langsmith_extra via LlmInvocationContext instead of langsmith_slice helpers here.
 """
 
 from __future__ import annotations

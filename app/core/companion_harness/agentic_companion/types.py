@@ -252,7 +252,7 @@ class AgenticCompanionRunResult(BaseModel):
     assistant_text: str
     tool_background_started: bool
     output_message_ids: tuple[str, ...] = Field(default_factory=tuple)
-    # TODO(!3490): ``input_message_ids`` lets ``ScopeDrainCompletion`` clear legacy
+    # TODO(#3490): ``input_message_ids`` lets ``ScopeDrainCompletion`` clear legacy
     # ``foreground_pending`` per claimed InputQueue row; drop after queue cleanup.
     input_message_ids: tuple[str, ...]
 

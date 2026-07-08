@@ -12,6 +12,6 @@ Target memory projection (order + budget + render) lives in ``prompting.projecti
 after ``memory.retrieval`` selection (#3521). User-readable summary:
 ``docs/imate/companion_harness/MEMORY_STORE.md`` § Memory projection.
 
-TODO(!3453): Add ``PromptTemplate`` dataclass (named-slot render API aligned with Jinja2).
+TODO(#3453): Add ``PromptTemplate`` dataclass (named-slot render API aligned with Jinja2).
 https://github.com/NascentCore/inty/issues/3453
 """

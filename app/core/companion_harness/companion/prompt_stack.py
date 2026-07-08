@@ -9,7 +9,7 @@ model leg continues.
 Legacy imperative assembly for greeting, proactive, scheduled, monolog, and dual-LLM
 paths. Target memory projection lives in ``prompting.projection`` + ``PromptBuilder`` (#3521).
 
-TODO(!3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT`` — #3369.
+TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT``.
 
 TODO(memory-hierarchy-design): After #3405, define per-track memory load policy from agreed
 hierarchy (design issue; options include in-context vs retrieval-required splits).

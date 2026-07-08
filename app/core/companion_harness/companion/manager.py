@@ -5,7 +5,7 @@
 单 wire），见 ``companion_harness`` AGENTS.md「Concurrency (prototype)」。
 
 每个 ``CompanionSession`` 还通过 ``turn_lock`` / ``tool_bg_idle`` 暴露 scope 级串行化状态
-（``scope_turn_lock``；#3272）。
+（``scope_turn_lock``）。
 """
 
 from __future__ import annotations

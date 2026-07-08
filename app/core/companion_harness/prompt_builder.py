@@ -10,11 +10,11 @@ paths still use legacy ``prompt_stack`` / ``build_system_messages`` entrypoints 
 MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly
 is imperative and skips an explicit selection stage (#3521).
 
-TODO(!3453): Named-slot system slices should use declarative templates instead
+TODO(#3453): Named-slot system slices should use declarative templates instead
 of imperative assembly.
 https://github.com/NascentCore/inty/issues/3453
 
-TODO(!3629): PromptPlan end-to-end; OpenAI wire conversion only in AsyncLlmClient.
+TODO(#3629): PromptPlan end-to-end; OpenAI wire conversion only in AsyncLlmClient.
 https://github.com/NascentCore/inty/issues/3629
 """
 
@@ -141,7 +141,7 @@ class PromptPlan:
     messages: tuple[
         PromptMessage, ...
     ]  # TODO(#3453): This should be abstract data type.
-    # TODO(!3398): Type tool schemas instead of OpenAI dict payloads.
+    # TODO(#3398): Type tool schemas instead of OpenAI dict payloads.
     tools: tuple[dict[str, Any], ...]
     tool_choice: str | None  # TODO(#3453): This should be enum.
 
@@ -229,7 +229,7 @@ class PromptBuilder:
 
     def settled_single_llm_system_messages(self) -> list[dict[str, Any]]:
         """Settled ``user_turn`` single-LLM in-turn tools system prefix."""
-        # TODO(!3629): Fold fixed reply-language into one PromptPlan Output assembly site.
+        # TODO(#3629): Fold fixed reply-language into one PromptPlan Output assembly site.
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())

@@ -16,7 +16,7 @@ MemoryStore tools.
 **Capability (content category; runtime org mixed — #3341):** harness innate limits (``HARNESS.md``) → channel
 contracts (``CHANNELS.md``) → tool contracts (``TOOLS.md``). Static harness/tool seeds
 are package-authoritative today; TODO(static-prompt-slice-memstore): persist as — #3506
-non-mutable MemoryStore kinds (!3506). Mutable channel contract remains ``CHANNELS.md``.
+non-mutable MemoryStore kinds (#3506). Mutable channel contract remains ``CHANNELS.md``.
 
 **Persona (content category; runtime org mostly core):** bond MemDocs, bootstrap procedure when phase active.
 
@@ -43,7 +43,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scheduled reminder inner tick | ``PromptBuilder.scheduled_system_dicts`` via ``TrackPromptComposer`` |
 | Implicit sign-on greeting | ``PromptBuilder.greeting_system_dicts`` via ``TrackPromptComposer`` |
 
-TODO(!3515): Define human-preference output guidance for user-visible tracks
+TODO(#3515): Define human-preference output guidance for user-visible tracks
 (``user_turn``, ``proactive_chat``, ``scheduled_activity``, ``sign_on_greeting``)
 before replacing these prompt entrypoints with track-composed templates.
 
@@ -51,7 +51,7 @@ before replacing these prompt entrypoints with track-composed templates.
 
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
-TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name. — #3413
+TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name.
 """
 
 from __future__ import annotations
@@ -272,7 +272,7 @@ def _output_contract_text_with_tools(
     *,
     tool_side_compact: bool = False,
 ) -> str:
-    # TODO(!3470): Interim lines during bootstrap writes should sound like chatting
+    # TODO(#3470): Interim lines during bootstrap writes should sound like chatting
     # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
     base = (
         "输出与工具："
@@ -313,7 +313,7 @@ def _output_contract_text_with_tools(
     return base
 
 
-# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands. — #3463
+# TODO(bootstrap-prompt-single-source): Keep in sync with ``bootstrap.py`` until single-source policy lands. — #3801
 # CRS #3328 (relationship seed); #3367 (TrackWritePolicy registry).
 # Bootstrap completion timing stays LLM-driven (``companion_bootstrap_user_interactive_complete``);
 # no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
@@ -324,7 +324,7 @@ def _output_contract_text_interactive_bootstrap_tools() -> str:
         "输出与工具（交互式关系建立阶段）："
         + _in_turn_tool_round_content_contract_zh()
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        # TODO(!3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
+        # TODO(#3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
         "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
@@ -358,7 +358,7 @@ def _proactive_chat_clause() -> str:
 def _infer_time_zone_prompt_slice() -> str:
     """Guide eager timezone inference for surfaces without automatic device timezone.
 
-    TODO(!3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
+    TODO(#3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
     """
     tool_name = UPDATE_USER_MD.name.value
     return (
@@ -512,7 +512,7 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
         f"3. ``{tool_write}`` 本轮**只允许** relative_path=``{life_currents_md}``；"
         f"**禁止**写 ``{user_md}`` / ``{memory_md}`` / SOUL / STYLE / IDENTITY——档案策展属于 DREAMING / MONOLOG。\n"
-        # TODO(memdoc-belief-provenance): LIFE_CURRENTS theme must cite structured USER/MEMORY
+        # TODO(#3774): LIFE_CURRENTS theme must cite structured USER/MEMORY
         # provenance refs, not prompt-only one-line quotes — #3774 (epic #3341).
         "4. 整文件覆盖写入 ``LIFE_CURRENTS.md`` 时用下列骨架（勿改成「生命流」等心理日记标题）：\n"
         "   ```\n"
@@ -923,7 +923,7 @@ def append_profile_collection_system_messages(
     return out
 
 
-# TODO(!3453): Dual-LLM tool-background leg still uses ``build_system_messages_for_tool_track``;
+# TODO(#3453): Dual-LLM tool-background leg still uses ``build_system_messages_for_tool_track``;
 # migrate to track-composed slices in a follow-up PR.
 
 

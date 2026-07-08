@@ -1,4 +1,4 @@
-"""Canonical scope-relative MemoryStore document path strings (#3413).
+"""Canonical scope-relative MemoryStore document path strings (canonical path constants).
 
 Generated entirely by Cursor agent.
 

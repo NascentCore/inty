@@ -16,7 +16,7 @@ canonical MemDoc; external memory services off by default.
 
 **AwakeTurn invariant**: selection reads only — no MemDoc curation during awake turns.
 
-TODO(counterfactual-fork-diff): Offline fork-at-turn + structural diff over projected
+TODO(#3775): Offline fork-at-turn + structural diff over projected
 slices for CRS counterfactual eval (shared-prefix replay from cache) — #3775 (epic #3341).
 """
 

@@ -15,7 +15,7 @@ class UserTurnLlmLoopMode(StrEnum):
 
 
 class AgenticLoopMechanism(StrEnum):
-    """Loop execution mechanism; orthogonal to ``CompanionTurnTrack`` turn shape (#3401)."""
+    """Loop execution mechanism; orthogonal to ``CompanionTurnTrack`` turn shape (#3393)."""
 
     SINGLE_LLM = "single_llm"
     DUAL_LLM = "dual_llm"
