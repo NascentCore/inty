@@ -8,8 +8,11 @@ once slot membership lives in data (#3549).
 **Today**: ranks mirror hardcoded ``PromptBuilder`` / ``tracks`` assembly order using
 scope-relative paths as stand-ins until slot model lands (#3453).
 
+TODO(#3521): Score-based ordering (slot rank + stability band) deferred — prompt order
+not material at current scale; keep fixed assembly order until #3521 lands.
+
 TODO(track-driven-system-messages-building): Replace path keys with slot ids when — #3453
-PromptTemplate / named-slot assembly lands.
+further named-slot templates migrate remaining imperative assembly.
 """
 
 from __future__ import annotations
