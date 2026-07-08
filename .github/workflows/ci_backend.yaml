@@ -8,6 +8,7 @@ on:
     paths:
       - "pytest.ini"
       - "backend/inty/start.sh"
+      - "backend/**/*.py"
       - "app/**/*.py"
       - "requirements.txt"
       - "tools/scripts/"
@@ -21,6 +22,8 @@ on:
       - "devops/config.yaml.test"
       # 工作流文件
       - ".github/workflows/ci_backend.yaml"
+      - ".cursor/skills/scripts/affected_test_packages.py"
+      - ".cursor/skills/scripts/python_import_scan.py"
 
   pull_request:
     branches:
@@ -28,6 +31,7 @@ on:
     paths:
       - "pytest.ini"
       - "backend/inty/start.sh"
+      - "backend/**/*.py"
       - "app/**/*.py"
       - "requirements.txt"
       - "tools/scripts/"
@@ -41,6 +45,8 @@ on:
       - "devops/config.yaml.test"
       # 工作流文件
       - ".github/workflows/ci_backend.yaml"
+      - ".cursor/skills/scripts/affected_test_packages.py"
+      - ".cursor/skills/scripts/python_import_scan.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -135,6 +141,21 @@ jobs:
         env:
           PYTHONPATH: .
           INTY_CONFIG_YAML: devops/config.yaml.test
+      - name: Compute affected test packages
+        if: github.event_name == 'pull_request'
+        id: affected
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          PLAN_JSON=$(python .cursor/skills/scripts/affected_test_packages.py \
+            --base-ref "origin/${{ github.base_ref }}" \
+            --head-ref HEAD \
+            --json)
+          echo "Affected test plan:"
+          echo "$PLAN_JSON"
+          PYTEST_TARGETS=$(python -c 'import json,sys; plan=json.load(sys.stdin); print("ALL" if plan["run_all"] else " ".join(plan["test_dirs"]))' <<< "$PLAN_JSON")
+          echo "pytest_targets=$PYTEST_TARGETS" >> "$GITHUB_OUTPUT"
+
       - name: Run python tests
         run: |
           # TODO(INTY_CONFIG_YAML): replace cp with INTY_CONFIG_YAML=devops/config.yaml.test
@@ -156,10 +177,24 @@ jobs:
           # Final check with verbose output
           curl --verbose --fail http://localhost:8000
 
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PYTEST_SELECTION="${{ steps.affected.outputs.pytest_targets }}"
+          else
+            PYTEST_SELECTION="ALL"
+          fi
+          if [ "$PYTEST_SELECTION" = "ALL" ]; then
+            PYTEST_TARGETS=(tests/)
+            echo "Running full backend test suite"
+          else
+            # shellcheck disable=SC2206
+            PYTEST_TARGETS=($PYTEST_SELECTION)
+            echo "Running selective backend tests: ${PYTEST_TARGETS[*]}"
+          fi
+
           # noci marker is defined in pytest.ini
           # applied on test functions with noci marker will be skipped on CI
           set +e
-          python -m pytest -m "not noci" -v -s tests/ --capture=fd --show-capture=no
+          python -m pytest -m "not noci" -v -s "${PYTEST_TARGETS[@]}" --capture=fd --show-capture=no
           pytest_exit=$?
           python .cursor/skills/scripts/check_ci_backend_logs.py inty_backend.log --context-name "Inty backend test server"
           log_scan_exit=$?
