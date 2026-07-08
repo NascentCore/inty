@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from jinja2 import UndefinedError
 
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     _output_contract_text_interactive_bootstrap_tools,
 )
 from app.core.companion_harness.prompting.template import (
