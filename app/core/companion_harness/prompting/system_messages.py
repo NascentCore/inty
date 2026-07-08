@@ -51,7 +51,8 @@ before replacing these prompt entrypoints with track-composed templates.
 
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
-TODO(code-consistency): All tool name should be template swapped with LllmFunctionTool.name.
+TODO(code-consistency): Remaining contracts should use ``PromptTemplate`` named slots — #3453
+(follow-up: persona dedup, track-driven assembly, full tool-name variableization).
 """
 
 from __future__ import annotations
@@ -69,6 +70,18 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     CompanionMemoryDocumentKind,
     relative_path_for_kind,
+)
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+)
+from app.core.companion_harness.prompting.template import (
+    BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
+    render_prompt_template,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
@@ -319,26 +332,37 @@ def _output_contract_text_with_tools(
 # no harness max-turn auto-complete — see ``bootstrap.py`` module docstring.
 
 
+def _bootstrap_output_contract_template_variables() -> dict[str, str]:
+    """Named-slot values for bootstrap output contract rendering (#3453)."""
+    return {
+        "in_turn_tool_round_content_contract_zh": _in_turn_tool_round_content_contract_zh(),
+        "memorystore_path_tools_intro_zh": _MEMORYSTORE_PATH_TOOLS_INTRO_ZH,
+        "companionship_doc": COMPANIONSHIP_MD_REL,
+        "identity_doc": IDENTITY_MD_REL,
+        "style_doc": STYLE_MD_REL,
+        "user_doc": USER_MD_REL,
+        "soul_doc": SOUL_MD_REL,
+        "memory_doc": MEMORY_MD_REL,
+        "tool_memory_store_write_document": (
+            CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
+        ),
+        "tool_companion_set_experience_profile": (
+            CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value
+        ),
+        "tool_companion_bootstrap_user_interactive_complete": (
+            CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value
+        ),
+        "tool_memory_store_read_document": (
+            CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
+        ),
+    }
+
+
 def _output_contract_text_interactive_bootstrap_tools() -> str:
-    base = (
-        "输出与工具（交互式关系建立阶段）："
-        + _in_turn_tool_round_content_contract_zh()
-        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        # TODO(#3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
-        + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
-        "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
-        "即使用户配合度低，也基于已有对话写 best-effort 初稿，不可留空模板。"
-        "用户选定内置陪伴模式时调用 **companion_set_experience_profile**（须附 note）。"
-        "当你判断本阶段目标已达成、可与用户进入日常相处节奏时，**必须先完成上述三份初稿写入**，再**必须**调用 "
-        "**companion_bootstrap_user_interactive_complete**（可选短 note）；禁止跳过写入直接 complete；"
-        "未调用该工具前不要声称阶段已结束。"
-        "调用完成后进入日常相处；后续轮次可用 **memory_store_write_document** 按需更新允许列表内的持久化约定稿。"
-        "（TOOLS 操作说明与 significance 评分引导为包内固定模版，不由工具写入。）"
-        "（1）须核对持久化档案时先用 **memory_store_read_document** 读正文；勿编造。"
-        "（2）凡涉及可与持久化档案核对的事实，须先读到持久化正文再作答。"
-        "（3）模型与实现细节类问题：仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
+    return render_prompt_template(
+        BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
+        _bootstrap_output_contract_template_variables(),
     )
-    return base
 
 
 # TODO(cross-track-image-delivery): Proactive has no tools — must not offer to show — #3285

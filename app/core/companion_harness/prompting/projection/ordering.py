@@ -9,6 +9,9 @@ Importance sorts only within a stability band:
 
 **Today**: no score-based sort — assembly order is fixed in ``PromptBuilder`` / ``tracks``.
 
+TODO(#3521): Score-based ordering deferred — ``compute_effective_order`` and stability-band
+sort are not material at current scale; implement when memory projection pipeline lands.
+
 TODO(memory-projection-pipeline): Implement ``compute_effective_order`` when selection — #3521
 stage lands (#3521).
 """
