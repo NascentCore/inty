@@ -10,7 +10,7 @@ Facet multi-membership and tagged-store facets are **out of scope** here — see
 
 TODO(memdoc-frontmatter): Parse/strip frontmatter on read and wire ``set_doc_metadata`` tool. — #3713
 
-TODO(memdoc-belief-provenance): Extend schema with structured belief claim provenance
+TODO(#3774): Extend schema with structured belief claim provenance
 (``created_by``, ``caused_by_event``, evidence refs) beyond ``source`` hint — #3774 (epic #3341).
 """
 

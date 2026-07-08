@@ -67,7 +67,7 @@ class CompanionMemoryDocumentKind(str, Enum):
     LIVING_SPHERE_UPDATES_JSONL = "living_sphere_updates_jsonl"
     TOOLS = "tools"
     # TODO(static-prompt-slice-memstore): Add HARNESS + OUTPUT_FORMAT_IM_DM kinds; load static — #3506
-    # Capability slices from MemoryStore, not _template_doc_truncated. !3506
+    # Capability slices from MemoryStore, not _template_doc_truncated. #3506
     # Package seed SIGNIFICANCE_PERCEPTION.md; scoring semantics consumed via PromptBundle, not ORM-only.
     SIGNIFICANCE_PERCEPTION = "significance_perception"
     TRANSCRIPT = "transcript"
@@ -123,13 +123,13 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
         None,
     ),
     TRANSCRIPT_JSONL_REL: (CompanionMemoryDocumentKind.TRANSCRIPT, None),
-    # TODO(rename-memory-doc): transcript_inner_tick_monolog.jsonl (with scope path + migration). — #3400
+    # TODO(rename-memory-doc): transcript_inner_tick_monolog.jsonl (with scope path + migration). — #3817
     TRANSCRIPT_INNER_TICK_JSONL_REL: (
         CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
         None,
     ),
     CONTEXT_JSON_REL: (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
-    # TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md (with migration). — #3400
+    # TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md (with migration). — #3817
     AI_PRIVATE_MD_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
     # Inner thoughts about the user (MONOLOG)—not LIFE_CURRENTS virtual-world activity.
     # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).

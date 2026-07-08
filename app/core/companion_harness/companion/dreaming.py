@@ -32,10 +32,10 @@ day** (``dreaming_due`` compares ``DreamingState.last_processed_calendar_date`` 
 planned (``TODO(user-feature)``). — #3325
 
 Concurrency: dreaming runs on the **scope inner-tick worker** (#3255) under
-``CompanionSession.turn_lock`` (#3272). Maintenance and AUTONOMY use the same worker.
+``CompanionSession.turn_lock`` (single WebSocket presence). Maintenance and AUTONOMY use the same worker.
 
 Prototype invariant: ``transcript.jsonl`` must not change while a dreaming batch runs
-(``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; #3272 single
+(``turn_lock`` + ``dreaming_idle_seconds`` ≫ tool_background timeouts; single
 presence; #3271 cluster lock). ``dreaming_race_guard_matches`` re-checks that invariant;
 ``run_dreaming_batch_if_due`` raises on mismatch — not a soft retry path.
 

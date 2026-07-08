@@ -99,7 +99,7 @@ def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
     """``uuid`` of the last ``transcript.jsonl`` row in the monolog gate view.
 
     Monolog turns persist to ``transcript_inner_tick.jsonl``
-    (TODO(rename-memory-doc): ``transcript_inner_tick_monolog.jsonl``); this reflects main-track — #3400
+    (TODO(rename-memory-doc): ``transcript_inner_tick_monolog.jsonl``); this reflects main-track — #3817
     state only (same source as ``next_inner_tick_wait_seconds``).
     """
     msgs = _monolog_transcript_messages(store)

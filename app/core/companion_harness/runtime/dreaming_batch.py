@@ -7,7 +7,7 @@ Generated entirely by Cursor agent for Phase 3.4 runtime seam slice.
 hold ``turn_lock`` before calling here. See ``runtime`` package docstring for the
 lock contract.
 
-TODO(!3634): Future persona PromptPlan + AgenticLoop entry for dreaming consolidation.
+TODO(#3634): Future persona PromptPlan + AgenticLoop entry for dreaming consolidation.
 """
 
 from __future__ import annotations
@@ -50,10 +50,10 @@ def run_dreaming_batch_if_due(
     ``dreaming_due`` enforces idle time plus **at most one successful dream per UTC
     calendar day** per scope (intentional; see ``companion.dreaming``).
 
-    Caller must hold scope ``CompanionSession.turn_lock`` (#3272). Re-checks ``dreaming_due`` inside the lock so conditions may change while waiting.
+    Caller must hold scope ``CompanionSession.turn_lock`` (single WebSocket presence). Re-checks ``dreaming_due`` inside the lock so conditions may change while waiting.
     Prototype: ``transcript.jsonl`` must not change during the batch; mismatch after
     ``consolidate_memory_during_dreaming`` raises ``DreamingTranscriptBoundaryMismatchError``
-    (see ``companion.dreaming`` module doc — #3272, #3271, tool_bg timing TODO).
+    (see ``companion.dreaming`` module doc — #3271, tool_bg timing TODO).
     TODO(dreaming-day-rollup): inner-tick merge may require boundary guard on — #3376
     ``transcript_inner_tick.jsonl`` too (#3376).
 

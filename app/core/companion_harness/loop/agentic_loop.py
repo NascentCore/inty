@@ -262,8 +262,8 @@ async def _run_prompt_plan_tool_loop(
 ) -> InTurnSyncToolLoopResult:
     """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
 
-    TODO(!3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
-    TODO(!3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
+    TODO(#3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
+    TODO(#3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
     """
     assert context.prompt_plan is not None
     execution = context.execution
@@ -599,16 +599,13 @@ class AgenticLoop:
     streaming policy. Intended for turns that already have outbound queue and
     inbound batch correlation attached by the turn executor.
 
-    TODO(!3456): User chat must not go silent while tools execute; deliver interim
+    TODO(#3456): User chat must not go silent while tools execute; deliver interim
     chat when the model omits content on tool rounds.
 
-    TODO(!3470): Bootstrap outbound lines during tools should read like natural
+    TODO(#3470): Bootstrap outbound lines during tools should read like natural
     chat while working, not serial status broadcasts.
 
-    TODO(!3459): Migrate proactive, monolog, scheduled, and dreaming turns
-    to this loop instead of legacy in-turn sync paths.
-
-    TODO(!3402): Replace bootstrap-named interim callback types with a neutral
+    TODO(#3402): Replace bootstrap-named interim callback types with a neutral
     per-round visible-text sink shared by queue and non-queue paths. Non-queue
     bootstrap is not a target for this sink (#3466 backup-only).
     """

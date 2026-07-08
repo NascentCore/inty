@@ -25,13 +25,13 @@ config to roll back.
 
 TODO(slot-algebra-compaction): Week/month AGGREGATE and SPLIT morphs in dreaming batch. — #3522
 
-TODO(crs-relationship-signal-log): Fold relationship-signal events into CRS projection
+TODO(#3773): Fold relationship-signal events into CRS projection
 during dreaming consolidation (CQRS write side) — #3773 (epic #3341).
 
-TODO(memdoc-belief-provenance): Curator paths write structured claim provenance
+TODO(#3774): Curator paths write structured claim provenance
 (``derived_from`` / source event id) on USER/MEMORY/COMPANIONSHIP claims — #3774 (epic #3341).
 
-TODO(!3634): Replace headless curator chain with persona AgenticLoop entry when ready.
+TODO(#3634): Replace headless curator chain with persona AgenticLoop entry when ready.
 
 TODO(world-engine-l2-echo): On sub-agent dismiss, merge bounded encounter echo — #3709
 into companion ``MEMORY.md``; generalize bounded-coherent curation (epic #3700).
@@ -834,7 +834,7 @@ def consolidate_memory_during_dreaming(
     tool_bg_idle_event: Event,
 ) -> bool:
     """Batch-curate MemoryDocs; dispatches to sequential or one-shot curator mode."""
-    # TODO(!3634): group (complete_fn, llm_client, langsmith_extra, tool_bg_idle_event)
+    # TODO(#3634): group (complete_fn, llm_client, langsmith_extra, tool_bg_idle_event)
     # into one curator-runtime dataclass when the persona AgenticLoop entry replaces
     # the headless curator chain.
     match curator_mode:

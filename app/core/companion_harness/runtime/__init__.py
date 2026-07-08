@@ -7,7 +7,7 @@ entry points after resolving a ``CompanionSession``.
 
 **Lock contract (prototype):**
 
-- Callers must already hold scope ``CompanionSession.turn_lock`` (#3272) before invoking
+- Callers must already hold scope ``CompanionSession.turn_lock`` (single WebSocket presence) before invoking
   runtime batch orchestrators.
 - Runtime modules do **not** acquire ``turn_lock``.
 - Authoritative ``dreaming_due`` checks run inside the lock within
@@ -16,7 +16,7 @@ entry points after resolving a ``CompanionSession``.
 - Inner-tick AwakeTurn due checks and kernel fires live in
   ``companion_harness.runtime.inner_tick_fire``; channel glue in
   ``app.services.agentic_companion.inner_tick_fire`` holds ``turn_lock`` before calling.
-- One signed-on presence per paired user (#3272); user chat and inner-tick
+- One signed-on presence per paired user (single WebSocket presence); user chat and inner-tick
   (including dreaming) serialize on scope ``turn_lock``.
 - Scope inner-tick worker (#3255) runs monolog, autonomy, dreaming without presence
   via ``scope_inner_tick_poll`` / ``scope_inner_tick_fire``.

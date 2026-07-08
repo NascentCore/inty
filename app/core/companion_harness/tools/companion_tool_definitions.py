@@ -67,7 +67,7 @@ MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP: int = 120_000
 # wire ``turn.py`` write_allowlist and ``build_openai_*_track_tools`` from that registry instead of
 # three parallel ``MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_*`` + ``REPL_DESCRIPTION_OVERRIDES_*`` pairs.
 # https://github.com/nascentcore/inty/issues/3367
-# Allowlists from canonical MemDoc path constants (#3413).
+# Allowlists from canonical MemDoc path constants (canonical path constants).
 MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST: frozenset[str] = frozenset(
     {
         COMPANIONSHIP_MD_REL,
