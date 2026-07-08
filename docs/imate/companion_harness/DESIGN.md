@@ -276,4 +276,5 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 - [issues/3395](https://github.com/NascentCore/inty/issues/3395) — Channel platforms hub（Telegram · WhatsApp · SMS · Hermes）。
 - [issues/3491](https://github.com/NascentCore/inty/issues/3491) — 跨 channel 身份解析到单一 canonical user（Epic；子 issue #3696–#3699）。
 - [issues/3700](https://github.com/NascentCore/inty/issues/3700) — World Engine（AgentHarness + sub-agent）Epic。
+- [issues/3819](https://github.com/NascentCore/inty/issues/3819) — Productionization Epic（可运维上线；cost 管理子 track **#3476** token budget）。
 - [BRAINSTORM.md](./BRAINSTORM.md) — prompt/记忆 activation 方向收敛；§「iMate智能体陪伴系统点子」为仅供灵感的点子集（原 SPECULATIVE_IDEAS）。
