@@ -22,8 +22,6 @@ on:
       - "devops/config.yaml.test"
       # 工作流文件
       - ".github/workflows/ci_backend.yaml"
-      - ".cursor/skills/scripts/affected_test_packages.py"
-      - ".cursor/skills/scripts/python_import_scan.py"
 
   pull_request:
     branches:
@@ -45,8 +43,6 @@ on:
       - "devops/config.yaml.test"
       # 工作流文件
       - ".github/workflows/ci_backend.yaml"
-      - ".cursor/skills/scripts/affected_test_packages.py"
-      - ".cursor/skills/scripts/python_import_scan.py"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -147,7 +143,6 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-          PLAN_JSON=$(python .cursor/skills/scripts/affected_test_packages.py \
             --base-ref "origin/${{ github.base_ref }}" \
             --head-ref HEAD \
             --json)

@@ -2,23 +2,14 @@
 """Forbidden imports: app/ layer boundaries and app/tests.app intra-repo package rules."""
 from __future__ import annotations
 
+import ast
 import json
-import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Annotated
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
-
 import cyclopts
 from loguru import logger
-
-from python_import_scan import (
-    INTRA_REPO_PACKAGE_ROOTS,
-    iter_imports,
-)
 
 app = cyclopts.App(
     help="Check app/ layer boundaries and app + tests/app intra-repo import rules."
@@ -69,6 +60,18 @@ FORBIDDEN_LAYER_DEPENDENCIES: dict[tuple[str, str], str] = {
     ): "External services must not depend on middleware layer.",
 }
 
+# Top-level repo packages (``import <name>``). Not exhaustive for stdlib/third-party.
+INTRA_REPO_PACKAGE_ROOTS = frozenset(
+    {
+        "app",
+        "backend",
+        "experimental",
+        "research",
+        "tests",
+        "tools",
+    }
+)
+
 # ``app/`` and ``tests/app/`` may import these intra-repo roots only.
 ALLOWED_INTRA_REPO_IMPORT_ROOTS = frozenset(
     {
@@ -114,6 +117,55 @@ def _target_layer(module: str) -> str | None:
     return None
 
 
+def _resolve_from_module(
+    file_path: Path, repo_root: Path, node: ast.ImportFrom
+) -> str | None:
+    if node.level == 0:
+        return node.module
+
+    relative_file = file_path.relative_to(repo_root).with_suffix("")
+    package_parts = list(relative_file.parts[:-1])
+
+    up_levels = node.level - 1
+    if up_levels > len(package_parts):
+        return None
+    if up_levels:
+        package_parts = package_parts[: len(package_parts) - up_levels]
+
+    if node.module:
+        package_parts += node.module.split(".")
+
+    if not package_parts:
+        return None
+    return ".".join(package_parts)
+
+
+def _iter_imports(file_path: Path, repo_root: Path) -> list[tuple[str, int]]:
+    imports: list[tuple[str, int]] = []
+    tree = ast.parse(file_path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append((alias.name, node.lineno))
+            continue
+
+        if not isinstance(node, ast.ImportFrom):
+            continue
+
+        module = _resolve_from_module(file_path, repo_root, node)
+        if not module:
+            continue
+
+        if module == "app":
+            for alias in node.names:
+                candidate = f"app.{alias.name}"
+                imports.append((candidate, node.lineno))
+            continue
+
+        imports.append((module, node.lineno))
+    return imports
+
+
 def _intra_repo_import_rule(importer_label: str, module: str) -> str | None:
     root = module.split(".", 1)[0]
     if root not in INTRA_REPO_PACKAGE_ROOTS:
@@ -140,7 +192,7 @@ def _scan_layer_violations(app_root: Path, repo_root: Path) -> list[Violation]:
         scanned_files += 1
 
         try:
-            imported_modules = iter_imports(file_path, repo_root)
+            imported_modules = _iter_imports(file_path, repo_root)
         except SyntaxError as exc:
             logger.error(f"Failed to parse {file_path}: {exc}")
             raise
@@ -181,7 +233,7 @@ def _scan_intra_repo_violations(
     for file_path in sorted(tree_root.rglob("*.py")):
         scanned_files += 1
         try:
-            imported_modules = iter_imports(file_path, repo_root)
+            imported_modules = _iter_imports(file_path, repo_root)
         except SyntaxError as exc:
             logger.error(f"Failed to parse {file_path}: {exc}")
             raise
