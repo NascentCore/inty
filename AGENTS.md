@@ -9,6 +9,15 @@ Inty are AI personal companion.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs, which in turn arouse human users' emotional responses, and cultivate long-term emotional bonding with human users.
 
+## Project plan organization
+
+The whole project can be tracked from this repo.
+
+- High-level designs are written in human-authored markdown docs
+- System architecture are reflected in source code file system layout and the high-level abstractions in the code (package, module, class)
+- Change requests are managed in GitHub issues, with NOTEs TODOs referencing them in the source code
+- Comments in the source code for contextual information
+
 ## Your responsibility
 
 Work with the human partners, to design and implement Python [agentic companion harness](/app/core/companion_harness/).
@@ -36,8 +45,6 @@ You should only changes and use code in the following dirs:
 
 - Agentic companion core modules
   - [companion_harness](/app/core/companion_harness/): Inty's core agentic scaffolding. Docs: [DESIGN.md](/docs/imate/companion_harness/DESIGN.md), [ARCH.md](/docs/imate/companion_harness/ARCH.md).
-  - [living_sphere](/living_sphere/): individual Inty's private virtual space, shared with user.
-  - [techno_core](/techno_core/)：collective virtual world of all Inty.
   - [ws_dto](/app/schemas/chat_websocket.py): data transfer objects on websocket connection.
 - Applications
   - Backend
