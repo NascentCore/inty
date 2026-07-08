@@ -11,7 +11,7 @@ cancel, or always release idle on thread exit.
 Issues: https://github.com/NascentCore/inty/issues/3123,
 https://github.com/NascentCore/inty/issues/3113.
 
-TODO(!3631): Use AsyncLlmClient instead of asyncio.to_thread(chat_completion_sync, ...).
+TODO(#3631): Use AsyncLlmClient instead of asyncio.to_thread(chat_completion_sync, ...).
 """
 
 from __future__ import annotations

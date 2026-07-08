@@ -233,7 +233,7 @@ class SettledUserChatPlugin:
                     context=loop_context
                 )
             case AgenticLoopMechanism.DUAL_LLM:
-                # TODO(!3460): Move dual-LLM message-stack assembly into loop/context.py.
+                # TODO(#3460): Move dual-LLM message-stack assembly into loop/context.py.
                 _, chat_system_msgs = dual_llm_system_message_variants(
                     store=store,
                     bundle=bundle,

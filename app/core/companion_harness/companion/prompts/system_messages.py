@@ -43,7 +43,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scheduled reminder inner tick | ``PromptBuilder.scheduled_system_dicts`` via ``TrackPromptComposer`` |
 | Implicit sign-on greeting | ``PromptBuilder.greeting_system_dicts`` via ``TrackPromptComposer`` |
 
-TODO(!3515): Define human-preference output guidance for user-visible tracks
+TODO(#3515): Define human-preference output guidance for user-visible tracks
 (``user_turn``, ``proactive_chat``, ``scheduled_activity``, ``sign_on_greeting``)
 before replacing these prompt entrypoints with track-composed templates.
 
@@ -355,7 +355,7 @@ def _proactive_chat_clause() -> str:
 def _infer_time_zone_prompt_slice() -> str:
     """Guide eager timezone inference for surfaces without automatic device timezone.
 
-    TODO(!3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
+    TODO(#3411): Real Telegram E2E not yet verified — model must call update_user_md; smoke on local Ops.
     """
     tool_name = UPDATE_USER_MD.name.value
     return (

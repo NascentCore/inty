@@ -185,7 +185,7 @@ def create_companion_turn_root_run(
 ) -> Any | None:
     """Create LangSmith parent RunTree for one companion turn (TurnOrchestrator layer).
 
-    TODO(!3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
+    TODO(#3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
     """
     enabled = (
         companion_turn_langsmith_parent_enabled()
