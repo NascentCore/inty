@@ -39,9 +39,9 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC monolog inner tick plan + tool leg | ``build_system_messages_for_inner_tick_monolog`` |
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
-| Proactive inner tick (``PROACTIVE_CHAT``) | ``build_system_messages_for_inner_tick_proactive_chat`` (bootstrap: inject ``BOOTSTRAP.md`` — #3463) |
-| Scheduled reminder inner tick | ``build_system_messages_for_inner_tick_scheduled`` |
-| Implicit sign-on greeting | ``build_system_messages_for_implicit_sign_on_greeting`` (bootstrap: inject ``BOOTSTRAP.md``, omit Capability package slices; chat-only, no tools) |
+| Proactive inner tick (``PROACTIVE_CHAT``) | ``PromptBuilder.proactive_system_dicts`` via ``TrackPromptComposer`` |
+| Scheduled reminder inner tick | ``PromptBuilder.scheduled_system_dicts`` via ``TrackPromptComposer`` |
+| Implicit sign-on greeting | ``PromptBuilder.greeting_system_dicts`` via ``TrackPromptComposer`` |
 
 TODO(!3515): Define human-preference output guidance for user-visible tracks
 (``user_turn``, ``proactive_chat``, ``scheduled_activity``, ``sign_on_greeting``)
@@ -162,6 +162,15 @@ def _proactive_chat_structured_output_contract_text() -> str:
         "- `message` (string): in-character proactive text for the user when "
         "`output_to_user` is true; must be empty when `output_to_user` is false.\n\n"
         "Do not emit legacy silence tokens or meta commentary about structured output.\n"
+    )
+
+
+def _scheduled_reminder_structured_output_contract_text() -> str:
+    """Structured output contract for scheduled reminder inner ticks."""
+    return (
+        _proactive_chat_structured_output_contract_text()
+        + "\nWhen a scheduled reminder is due, bias `output_to_user` true unless "
+        "nothing appropriate to say remains valid silence.\n"
     )
 
 
@@ -700,12 +709,6 @@ def _persona_system_messages(
                     MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
                 )
             )
-    # TODO(!3463): Also inject bootstrap spec on proactive inner ticks while bootstrap active.
-    if interactive_bootstrap_active and not inner_tick_turn:
-        out.append(_system_message(load_bootstrap_spec_text()))
-        out.append(_system_message(build_bootstrap_tool_call_section()))
-        for block in build_interactive_bootstrap_template_reference_parts():
-            out.append(_system_message(block))
     return out
 
 
@@ -1011,84 +1014,3 @@ def build_system_messages_for_inner_tick_autonomy(
         )
     )
     return out
-
-
-# TODO(!3468): Add integration test — AUTONOMY write to LIFE_CURRENTS must appear in the
-# next PROACTIVE_CHAT stack (fixture trace 019ed438-f634-7941-b109-cbdc9e2e9510).
-def build_system_messages_for_inner_tick_proactive_chat(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    store: MemoryStore,
-) -> list[dict[str, Any]]:
-    """``PROACTIVE_CHAT_SYNC``: proactive chat inner tick while user is idle.
-
-    Reads ``LIFE_CURRENTS.md`` (written by the AUTONOMY track) and injects it
-    as a "for reference only" system block so the assistant can naturally
-    weave today's small thing into the next proactive message without
-    self-advertising.
-
-    TODO(!3463): When ``interactive_bootstrap_active`` during bootstrap, inject
-    ``BOOTSTRAP.md`` and bootstrap-oriented proactive copy so idle nudges finish
-    info gathering instead of generic small talk.
-    """
-    return build_system_messages(
-        bundle,
-        context,
-        enable_tools=False,
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
-        ai_private_text="",
-        include_significance_perception_slice=False,
-        proactive_life_currents_block=_assemble_proactive_chat_life_currents_hint_prompt(
-            store
-        ),
-    ) + [
-        _system_message(_proactive_chat_structured_output_contract_text()),
-    ]
-
-
-def build_system_messages_for_inner_tick_scheduled(
-    bundle: PromptBundle,
-    context: ContextMeta,
-) -> list[dict[str, Any]]:
-    """``PROACTIVE_CHAT_SYNC``: schedule_queue reminder inner tick (scheduled user line)."""
-    return build_system_messages(
-        bundle,
-        context,
-        enable_tools=False,
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.PROACTIVE_CHAT,
-        ai_private_text="",
-        include_significance_perception_slice=False,
-    ) + [
-        _system_message(
-            _proactive_chat_structured_output_contract_text()
-            + "\nWhen a scheduled reminder is due, bias `output_to_user` true unless "
-            "nothing appropriate to say remains valid silence.\n"
-        ),
-    ]
-
-
-def build_system_messages_for_implicit_sign_on_greeting(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    runtime_channel: ChannelKind,
-) -> list[dict[str, Any]]:
-    """``CHAT_ONLY_SYNC`` implicit sign-on greeting (no tools, no Capability contracts)."""
-    bootstrap_active = interactive_bootstrap_active(meta=context)
-    out = build_system_messages(
-        bundle,
-        context,
-        enable_tools=False,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        include_significance_perception_slice=True,
-        interactive_bootstrap_active=bootstrap_active,
-    )
-    return append_profile_collection_system_messages(
-        out,
-        context=context,
-        runtime_channel=runtime_channel,
-        interactive_bootstrap_active=bootstrap_active,
-        user_md=bundle.user_md,
-    )

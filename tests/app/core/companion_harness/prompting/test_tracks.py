@@ -21,7 +21,9 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
+    Phase,
     build_settled_user_turn_dual_chat_leg_system_messages,
+    resolve_compose_phase,
 )
 
 
@@ -45,6 +47,24 @@ def _bundle() -> PromptBundle:
         channels_md="# Channels\n",
         significance_perception_md="# Significance\n",
         companionship_md="ship\n",
+    )
+
+
+def test_resolve_compose_phase_bootstrap_when_incomplete() -> None:
+    assert (
+        resolve_compose_phase(
+            ContextMeta(workspace_bootstrap_user_interactive_completed=False)
+        )
+        == Phase.BOOTSTRAP
+    )
+
+
+def test_resolve_compose_phase_settled_when_complete() -> None:
+    assert (
+        resolve_compose_phase(
+            ContextMeta(workspace_bootstrap_user_interactive_completed=True)
+        )
+        == Phase.SETTLED
     )
 
 

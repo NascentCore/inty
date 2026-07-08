@@ -2,8 +2,10 @@
 
 Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slices,
 transcript window, optional private-thought splice, time context, and tail user.
-Bootstrap and settled single-LLM user chat compose through this module; dual-LLM
-and inner-tick tracks still use legacy ``prompt_stack`` entrypoints (#3398).
+Bootstrap and settled single-LLM user chat compose through this module; greeting,
+proactive, and scheduled chat-only tracks compose system prefixes here (#3463).
+Dual-LLM and monolog/autonomy inner-tick tracks still use legacy ``prompt_stack``
+entrypoints (#3398).
 
 ``PromptPlan`` is the **output** of the memory projection stage (target pipeline:
 MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly
@@ -37,13 +39,27 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.companion.dual_llm_message_stacks import (
     replace_leading_system_messages_multi,
 )
+from app.core.companion_harness.companion.proactive_chat import (
+    BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
+)
 from app.core.companion_harness.companion.prompts.system_messages import (
+    _assemble_proactive_chat_life_currents_hint_prompt,
     _auxiliary_system_messages,
+    _capability_system_messages,
+    _contextual_system_messages,
     _doctrine_system_messages,
+    _output_contract_text,
+    _output_system_messages,
+    _persona_system_messages,
+    _proactive_chat_clause,
+    _proactive_chat_structured_output_contract_text,
+    _scheduled_reminder_structured_output_contract_text,
+    _system_message,
     append_profile_collection_system_messages,
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
+    Phase,
     _capability_bootstrap_single_llm_system_messages,
     _capability_settled_single_llm_system_messages,
     _contextual_bootstrap_user_turn_system_messages,
@@ -52,6 +68,7 @@ from app.core.companion_harness.prompting.tracks import (
     _output_settled_single_llm_system_messages,
     _persona_bootstrap_user_turn_system_messages,
     _persona_settled_user_turn_system_messages,
+    resolve_compose_phase,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -336,20 +353,192 @@ class PromptBuilder:
     def bootstrap_turn_system_dicts(self) -> list[dict[str, Any]]:
         """System prefix for one bootstrap turn: core stack, peripheral gateway, then cohort slices."""
         system_dicts = self.bootstrap_single_llm_system_messages()
-        system_dicts = _append_runtime_channel_system_extras(
+        return self._append_track_peripheral_system_dicts(system_dicts)
+
+    def _compose_phase(self) -> Phase:
+        return resolve_compose_phase(self.context)
+
+    def _append_track_peripheral_system_dicts(
+        self,
+        system_dicts: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Append channel output format, Weixin alias, and bootstrap cohort overlays."""
+        out = _append_runtime_channel_system_extras(
             system_dicts=system_dicts,
             bundle=self.bundle,
             runtime_context=self.runtime_context,
         )
         return append_profile_collection_system_messages(
-            system_dicts,
+            out,
             context=self.context,
             runtime_channel=self.runtime_context.channel,
             interactive_bootstrap_active=(
-                not self.context.workspace_bootstrap_user_interactive_completed
+                self._compose_phase() == Phase.BOOTSTRAP
             ),
             user_md=self.bundle.user_md,
         )
+
+    def _greeting_core_system_dicts(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        match self._compose_phase():
+            case Phase.BOOTSTRAP:
+                out.extend(_capability_bootstrap_single_llm_system_messages())
+                out.extend(
+                    _persona_bootstrap_user_turn_system_messages(
+                        bundle=self.bundle,
+                        context=self.context,
+                    )
+                )
+                if self.bundle.significance_perception_md.strip():
+                    out.append(
+                        _system_message(
+                            self.bundle.significance_perception_md.strip()
+                        )
+                    )
+                out.append(_system_message(_output_contract_text()))
+                out.extend(
+                    _contextual_bootstrap_user_turn_system_messages(
+                        self.context
+                    )
+                )
+            case Phase.SETTLED:
+                out.extend(
+                    _capability_settled_single_llm_system_messages(self.bundle)
+                )
+                out.extend(
+                    _persona_settled_user_turn_system_messages(
+                        bundle=self.bundle,
+                        context=self.context,
+                        include_significance_perception_slice=True,
+                    )
+                )
+                out.append(_system_message(_output_contract_text()))
+                out.extend(
+                    _contextual_settled_user_turn_system_messages(self.context)
+                )
+        return out
+
+    def _settled_inner_tick_chat_core_system_dicts(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        out.extend(
+            _capability_system_messages(
+                bundle=self.bundle,
+                tools_on=False,
+                chat_branch_no_tool_api=False,
+                tool_side_compact=False,
+                inner_tick_turn=True,
+                interactive_bootstrap_active=False,
+            )
+        )
+        out.extend(
+            _persona_system_messages(
+                bundle=self.bundle,
+                context=self.context,
+                inner_tick_turn=True,
+                skip_memory_blocks=False,
+                include_significance_perception_slice=False,
+                interactive_bootstrap_active=False,
+            )
+        )
+        out.extend(
+            _output_system_messages(
+                inner_tick_turn=True,
+                tick_proactive=True,
+                tools_on=False,
+                tool_side_compact=False,
+                async_foreground_chat_stack=False,
+                interactive_bootstrap_active=False,
+                include_significance_perception_slice=False,
+                chat_branch_no_tool_api=False,
+            )
+        )
+        return out
+
+    def _bootstrap_inner_tick_chat_core_system_dicts(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        out.extend(_capability_bootstrap_single_llm_system_messages())
+        out.extend(
+            _persona_bootstrap_user_turn_system_messages(
+                bundle=self.bundle,
+                context=self.context,
+            )
+        )
+        out.append(_system_message(_output_contract_text()))
+        out.extend(
+            _contextual_bootstrap_user_turn_system_messages(self.context)
+        )
+        return out
+
+    def greeting_system_dicts(self) -> list[dict[str, Any]]:
+        """Chat-only implicit sign-on greeting system prefix."""
+        out = self._append_track_peripheral_system_dicts(
+            self._greeting_core_system_dicts()
+        )
+        return append_configured_fixed_reply_language_system_messages(out)
+
+    def proactive_system_dicts(self, store: MemoryStore) -> list[dict[str, Any]]:
+        """Chat-only proactive inner-tick system prefix."""
+        life_currents_block = _assemble_proactive_chat_life_currents_hint_prompt(
+            store
+        )
+        match self._compose_phase():
+            case Phase.BOOTSTRAP:
+                out = self._bootstrap_inner_tick_chat_core_system_dicts()
+                out.append(_system_message(_proactive_chat_clause()))
+                out.append(
+                    _system_message(BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY)
+                )
+                if life_currents_block is not None:
+                    out.append(_system_message(life_currents_block))
+            case Phase.SETTLED:
+                out = self._settled_inner_tick_chat_core_system_dicts()
+                out.extend(
+                    _contextual_system_messages(
+                        context=self.context,
+                        inner_tick_turn=True,
+                        tick_proactive=True,
+                        tick_autonomy=False,
+                        ai_private_text="",
+                        proactive_life_currents_block=life_currents_block,
+                        interactive_bootstrap_active=False,
+                    )
+                )
+        out.append(
+            _system_message(_proactive_chat_structured_output_contract_text())
+        )
+        out = self._append_track_peripheral_system_dicts(out)
+        return append_configured_fixed_reply_language_system_messages(out)
+
+    def scheduled_system_dicts(self) -> list[dict[str, Any]]:
+        """Chat-only scheduled reminder inner-tick system prefix."""
+        match self._compose_phase():
+            case Phase.BOOTSTRAP:
+                out = self._bootstrap_inner_tick_chat_core_system_dicts()
+                out.append(_system_message(_proactive_chat_clause()))
+            case Phase.SETTLED:
+                out = self._settled_inner_tick_chat_core_system_dicts()
+                out.extend(
+                    _contextual_system_messages(
+                        context=self.context,
+                        inner_tick_turn=True,
+                        tick_proactive=True,
+                        tick_autonomy=False,
+                        ai_private_text="",
+                        proactive_life_currents_block=None,
+                        interactive_bootstrap_active=False,
+                    )
+                )
+        out.append(
+            _system_message(_scheduled_reminder_structured_output_contract_text())
+        )
+        out = self._append_track_peripheral_system_dicts(out)
+        return append_configured_fixed_reply_language_system_messages(out)
 
     def _compose_settled_single_llm_user_chat_prompt(
         self,

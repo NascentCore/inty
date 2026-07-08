@@ -44,8 +44,13 @@ PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE = (
     "- If you have something meaningful, set structured output ``output_to_user`` true with your message.\n"
     "- If there is nothing appropriate to say right now, set ``output_to_user`` false with an empty ``message``.\n"
 )
-# TODO(!3463): During interactive bootstrap, add bootstrap-specific proactive copy that
-# reinforces finishing USER.md / IDENTITY.md / STYLE.md / COMPANIONSHIP.md gathering.
+BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY = (
+    "## 关系建立阶段的主动开口\n"
+    "- 用户尚未回复，但交互式关系建立仍未完成。\n"
+    "- 用自然的一两句继续了解对方、推进 USER.md / IDENTITY.md / STYLE.md / "
+    "COMPANIONSHIP.md 所需信息；避免与关系建立无关的泛闲聊或客套。\n"
+    "- 本回合无工具调用；仅输出对用户可见的自然语言短句。\n"
+)
 
 PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER = (
     "[SYSTEM PROACTIVE CHAT] The user has not sent a new message for some time."

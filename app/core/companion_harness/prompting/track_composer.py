@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
 )
@@ -18,7 +19,9 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompt_builder import (
+    PromptBuilder,
     PromptPlan,
     openai_dialogue_dicts_to_prompt_messages,
 )
@@ -27,11 +30,7 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 
 @dataclass(frozen=True)
 class TurnComposeContext:
-    """Immutable per-turn inputs for prompt composition; built by turn prep.
-
-    Target consumer of the not-yet-wired ``compose(track, turn_ctx)`` entry that
-    will drive ``select_slices_for_turn`` → ``project_slices_to_prompt_plan``.
-    """
+    """Immutable per-turn inputs for prompt composition; built by turn prep."""
 
     bundle: PromptBundle
     context_meta: ContextMeta
@@ -39,16 +38,36 @@ class TurnComposeContext:
     interactive_bootstrap_active: bool
     tail_user: TurnTailUserMessage
     inner_tick_activity: InnerTickActivity | None
+    # Proactive LIFE_CURRENTS reads; greeting/scheduled pass the same store for a uniform ctor.
+    store: MemoryStore
 
 
 class TrackPromptComposer:
-    """Per-track PromptPlan assembly; production entry for AgenticLoop tracks.
+    """Per-track prompt assembly; routes chat-only tracks to ``PromptBuilder``."""
 
-    TODO(#3463): Add ``compose(track, turn_ctx: TurnComposeContext)`` that runs the
-    ``select_slices_for_turn`` → ``project_slices_to_prompt_plan`` pipeline once the
-    projection stage (#3521) renders real slices instead of delegating to legacy
-    builders. Today only the OpenAI-dict interim path below is wired.
-    """
+    def system_dicts_for_track(
+        self,
+        track: CompanionTurnTrack,
+        turn_ctx: TurnComposeContext,
+    ) -> list[dict[str, Any]]:
+        """System prefix only; ``turn_pipeline`` appends transcript and tail user."""
+        builder = PromptBuilder(
+            bundle=turn_ctx.bundle,
+            context=turn_ctx.context_meta,
+            runtime_context=turn_ctx.runtime_context,
+        )
+        match track:
+            case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+                return builder.greeting_system_dicts()
+            case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
+                return builder.proactive_system_dicts(turn_ctx.store)
+            case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+                return builder.scheduled_system_dicts()
+            case _ as unexpected:
+                raise AssertionError(
+                    f"TrackPromptComposer.system_dicts_for_track unsupported "
+                    f"track={unexpected!r}"
+                )
 
     def compose_from_openai_messages(
         self,
