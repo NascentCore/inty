@@ -2,22 +2,11 @@
 
 Recorded during Companion Harness partial-convergence plan (Stage 1 PR-5 + Stage 2 + inner-tick gate closure).
 
-## GitHub issue progress (merged to `main`)
+## Issue tracking policy
 
-| Issue | Status after PR-5 + Stage 2 + inner-tick gate closure |
-|-------|------------------------------------------------------|
-| #3632 | **Closed** — pull/3764 (Stage 2); threaded `start_tool_background_job` removed |
-| #3401 | **Partial (slice 1–3b on branch)** — pull/3765 slice 1; pull/3766 slice 2; slice 3 (`resolve_agentic_loop_mechanism`, delete `TurnRouteMode`) merged; slice 3b typed JSONL `inner_tick_kind` + `resolve_agentic_loop` Protocol + track-native LangSmith on branch |
-| #3490 | **Partial** — App-WS `background_events` recv-loop + `WebSocketDownlink` deleted; `foreground_pending` kept for USER_CHAT queue correlation |
-| #3211 | **Partial** — `bootstrap_interim_queued_events` consumer removed; greeting/tool-bg via scope `OutputQueue` + pump (#3576 greeting direct materialize remains) |
-| #3209 | **Superseded direction** — user-turn chunks via `OutputQueue` + `AppWsChannelAdapter` (not `WebSocketDownlink` module); #3402 sink still open |
-| #3207 / #3208 | **Partial (Stage 2)** — typed `WsOutboundPayload`, materializers, pump, REPL `model_validate`; HTTP meta + `chat_history_service` typed row still open |
-| #3543 | **Closed** — all channels pump-owned; `InnerTickDelivery` direct sink removed; `persist_visible_inner_tick_turn` history-only |
-| #3580 | **Closed** — inner-tick orchestration on single-LLM AgenticLoop; legacy WS fire + tool-bg idle removed; autonomy scripted test |
-| #3459 | **Closed** — all non-chat awake tracks on AgenticLoop; MONOLOG + AUTONOMY scripted coverage |
-| #3398 | **Partial** — P3 met (`OutputMessageKind`, delete `Downlink` event族); dual vs single-LLM debate unchanged |
+Per-issue progress lives on **GitHub issue comments** (not duplicated here). Each PR must link issues in its description: `Closes #NNNN` when the PR completes an issue or slice; `Refs #NNNN` for partial progress or epics.
 
-Merged to `main`: pull/3765 (#3401 slice 1), pull/3766 (#3401 slice 2). Gate doc updated 2026-07-08 post inner-tick gate closure.
+This file retains only the **gate checklist**, verification runs, and next-work pointers.
 
 ## Checklist status
 

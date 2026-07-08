@@ -15,7 +15,8 @@ Create a pull request for the current working branch
    - In PR description:
      - Describe changed behaviors from the user's perspective.
      - Include context and motivation.
-     - Include references to GitHub issues as followups.
+     - **Link GitHub issues in the PR body** — `Closes #NNNN` when this PR completes an issue or accepted slice; `Refs #NNNN` for partial progress, epics, or follow-ups. Do not rely on a separate gate-doc issue table.
+     - After merge, record slice progress as a **comment on each linked issue** (PR link, checklist delta, verification). Do not duplicate per-issue status in `COMPANION_HARNESS_REFACTOR_GATE_BASELINE.md`.
 
 3. **Create PR**
    - Create the PR with the above title and description.
