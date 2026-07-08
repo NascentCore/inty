@@ -15,6 +15,8 @@ from app.core.companion_harness.agentic_companion.types import (
     QueueStatus,
     UserMessageBatch,
     WireId,
+    synthetic_user_message_batch,
+    user_message_batch_is_agent_initiated_synthetic,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -83,3 +85,13 @@ def test_user_message_batch_requires_non_empty_ids() -> None:
         UserMessageBatch(batch_id="", message_ids=("input-1",))
     with pytest.raises(AssertionError):
         UserMessageBatch(batch_id="batch-1", message_ids=())
+
+
+def test_user_message_batch_is_agent_initiated_synthetic() -> None:
+    synthetic = synthetic_user_message_batch(
+        user_msg_uuid="uid-1",
+        track_label="user_chat",
+    )
+    assert user_message_batch_is_agent_initiated_synthetic(synthetic) is True
+    claimed = UserMessageBatch(batch_id="input-batch-1", message_ids=("uid-1",))
+    assert user_message_batch_is_agent_initiated_synthetic(claimed) is False

@@ -6,6 +6,15 @@ uses a single in-turn tool loop so the assistant can persist relationship seed
 documents via ``memory_store_write_document`` and mark setup complete before
 normal user-chat routing resumes.
 
+**Primary path (production):** ``ScopeQueueServing`` claims an InputQueue batch,
+runs ``BootstrapUserChatPlugin`` via ``AgenticLoop``, and drains ``OutputQueue``
+through the channel presence pump.
+
+**Backup-only:** direct ``_run_companion_turn_core`` / HTTP helpers without
+queue-serving batch correlation are unsupported for bootstrap (#3466).  Settled
+``USER_CHAT`` may still use a synthetic ``agent-initiated:`` batch as a legacy
+direct-turn fallback; do not extend that pattern for bootstrap.
+
 WebSocket startup does not inject a synthetic kickoff user message.  A signed-on
 client emits the implicit sign-on greeting track, whose system stack carries the
 bootstrap procedure while the tail user line frames the user coming online.  The

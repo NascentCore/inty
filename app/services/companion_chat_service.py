@@ -441,8 +441,8 @@ async def run_user_chat(
     """Run one user-chat turn via maintenance HTTP API.
 
     Interactive bootstrap (``USER_CHAT_BOOTSTRAP``) requires the queue-serving
-    path with ``agentic_output_queue`` and ``user_message_batch``; this helper
-    does not supply them and will raise at turn execution.
+    path with ``agentic_output_queue`` and a real InputQueue ``user_message_batch``;
+    this helper does not supply them and will raise at turn execution (#3466).
     """
     return await _run_companion_api_track_turn(
         track_path="user_chat",

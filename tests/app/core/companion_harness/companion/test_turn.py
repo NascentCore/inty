@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -13,6 +14,10 @@ from app.core.companion_harness.llm.chat_completions import (
 )
 from app.core.llms.client import (
     CompanionLLMConfig,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
+    synthetic_user_message_batch,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.models import CompanionTurnTrack
@@ -31,12 +36,17 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
+    bootstrap_queue_for_companion_scope,
     bootstrap_queue_turn_deps,
+    mark_interactive_bootstrap_completed,
     queue_serving_turn_deps,
+    wire_test_async_llm_client,
 )
+from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     companion_llm_client_with_scripted_transport,
     scripted_harness_llm_config,
+    with_scripted_user_turn_llm_loop_mode,
 )
 from app.external_services.fakes.openai import fake_step_text
 
@@ -147,7 +157,8 @@ async def test_bootstrap_without_queue_raises_runtime_error(
         scripted_harness_llm_config(),
         (fake_step_text("bootstrap reply"),),
     )
-    with pytest.raises(AssertionError):
+    output_queue = bootstrap_queue_for_companion_scope(scope)
+    with pytest.raises(RuntimeError, match="#3466"):
         await _run_companion_turn_core(
             "bootstrap hello",
             track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
@@ -164,8 +175,98 @@ async def test_bootstrap_without_queue_raises_runtime_error(
                 preset_user_msg_uuid=None,
                 langsmith_parent_run_enabled=False,
                 tool_bg_idle_event=None,
+                agentic_output_queue=output_queue,
+                user_message_batch=None,
             ),
         )
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_rejects_agent_initiated_synthetic_batch(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("turn-bootstrap-synthetic", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_bootstrap_workspace(store)
+    client, _ = companion_llm_client_with_scripted_transport(
+        scripted_harness_llm_config(),
+        (fake_step_text("bootstrap reply"),),
+    )
+    output_queue = bootstrap_queue_for_companion_scope(scope)
+    synthetic_batch = synthetic_user_message_batch(
+        user_msg_uuid="preset-bootstrap-uid",
+        track_label=CompanionTurnTrack.USER_CHAT.value,
+    )
+    with pytest.raises(RuntimeError, match="#3466"):
+        await _run_companion_turn_core(
+            "bootstrap hello",
+            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            deps=CompanionTurnDeps(
+                store=store,
+                llm_client=client,
+                transcript_compaction=None,
+                transcript_llm_window_max_messages=None,
+                repository_only_store_text=False,
+                runtime_context=TurnRuntimeContext(
+                    channel=ChannelKind.APP_WS,
+                    implicit_signal_bundle=None,
+                ),
+                preset_user_msg_uuid="preset-bootstrap-uid",
+                langsmith_parent_run_enabled=False,
+                tool_bg_idle_event=None,
+                agentic_output_queue=output_queue,
+                user_message_batch=synthetic_batch,
+            ),
+        )
+
+
+@pytest.mark.asyncio
+async def test_user_chat_direct_turn_still_synthesizes_batch(
+    tmp_path: Path,
+) -> None:
+    scope = CompanionScope("turn-user-chat-direct", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    _seed_workspace(store)
+    mark_interactive_bootstrap_completed(store)
+    client, _ = companion_llm_client_with_scripted_transport(
+        scripted_harness_llm_config(),
+        (fake_step_text("settled reply"),),
+    )
+    wire_test_async_llm_client(client)
+    output_queue = bootstrap_queue_for_companion_scope(scope)
+    tool_bg_idle = threading.Event()
+    tool_bg_idle.set()
+    deps = CompanionTurnDeps(
+        store=store,
+        llm_client=client,
+        transcript_compaction=None,
+        transcript_llm_window_max_messages=None,
+        repository_only_store_text=False,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+        preset_user_msg_uuid=None,
+        langsmith_parent_run_enabled=False,
+        tool_bg_idle_event=tool_bg_idle,
+        agentic_output_queue=output_queue,
+        user_message_batch=None,
+    )
+    with with_scripted_user_turn_llm_loop_mode(
+        UserTurnLlmLoopMode.IN_TURN_SINGLE_LLM
+    ):
+        out = await _run_companion_turn_core(
+            "hello direct",
+            track=CompanionTurnTrack.USER_CHAT,
+            deps=deps,
+        )
+    assert out.assistant_text == "settled reply"
+    ready = await output_queue.pull_ready_batch()
+    assert ready is not None
+    assert ready[0].batch_id.startswith(
+        AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX
+    )
+    assert CompanionTurnTrack.USER_CHAT.value in ready[0].batch_id
 
 
 @pytest.mark.asyncio

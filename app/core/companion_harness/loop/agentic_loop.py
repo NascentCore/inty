@@ -609,7 +609,8 @@ class AgenticLoop:
     to this loop instead of legacy in-turn sync paths.
 
     TODO(!3402): Replace bootstrap-named interim callback types with a neutral
-    per-round visible-text sink shared by queue and non-queue paths.
+    per-round visible-text sink shared by queue and non-queue paths. Non-queue
+    bootstrap is not a target for this sink (#3466 backup-only).
     """
 
     def __init__(

@@ -112,12 +112,15 @@ class CompanionTurnDeps:
 
     agentic_output_queue
         Domain ``OutputQueue`` for queue-serving ``USER_CHAT`` / ``USER_CHAT_BOOTSTRAP``.
-        When set with ``user_message_batch``, ``run_turn`` routes through
-        ``AgenticLoop.run`` instead of dual-LLM or legacy bootstrap interim sink.
+        When set with ``user_message_batch``, ``_run_companion_turn_core`` routes
+        through ``AgenticLoop`` (bootstrap or settled single/dual-LLM plugins).
 
     user_message_batch
-        Correlates ``OutputQueue`` appends with claimed input batch
-        (``batch_id`` + ``message_ids``). Required when ``agentic_output_queue`` is set.
+        Correlates ``OutputQueue`` appends with claimed InputQueue batch
+        (``batch_id`` + ``message_ids``). Required for ``USER_CHAT_BOOTSTRAP``
+        (#3466). Settled ``USER_CHAT`` may omit this only on the backup-only
+        direct-turn path that synthesizes an ``agent-initiated:`` batch in
+        ``turn.py``; synthetic batches are rejected for bootstrap.
     """
 
     store: MemoryStore
