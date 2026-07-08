@@ -14,6 +14,9 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -46,7 +49,11 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages(bundle, ContextMeta())
+    messages = build_system_messages(
+        bundle,
+        ContextMeta(),
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+    )
     doctrine_lines = [
         str(messages[index]["content"]).split("\n")[0] for index in range(3)
     ]
@@ -167,6 +174,7 @@ def test_inner_tick_monolog_omits_infer_time_zone_slice() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
+        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MONOLOG,
@@ -220,6 +228,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         enable_tools=True,
         async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
@@ -317,6 +326,7 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     messages = build_system_messages(
         bundle,
         ContextMeta(),
+        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.AUTONOMY,
@@ -331,9 +341,7 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         c for c in contents if c.startswith("本轮（陪伴主动聊天）")
     ]
     assert proactive_blocks == []
-    monolog_blocks = [
-        c for c in contents if c.startswith("本轮（内在节拍）")
-    ]
+    monolog_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
     assert monolog_blocks == []
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     autonomy_lines = autonomy_blocks[0].split("\n")
@@ -377,3 +385,75 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     assert all("## 工具环收尾：结构化信封" not in c for c in contents)
     assert all("系统仍会向用户投递产物" not in c for c in contents)
+
+
+def test_user_message_turn_includes_about_guidance_slice() -> None:
+    about_body = load_template_seed_text("ABOUT.md").strip()
+    bundle = PromptBundle(
+        identity="id\n",
+        soul="s\n",
+        style_md="st\n",
+        user_md="u\n",
+        memory_md="m\n",
+        about_md=about_body,
+    )
+    messages = build_system_messages(
+        bundle,
+        ContextMeta(),
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+    )
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
+    assert about_body.split("\n")[0] in joined
+
+
+def test_inner_tick_monolog_omits_about_guidance_slice(
+    tmp_path,
+) -> None:
+    about_body = load_template_seed_text("ABOUT.md").strip()
+    bundle = PromptBundle(
+        identity="id\n",
+        soul="s\n",
+        style_md="st\n",
+        user_md="u\n",
+        memory_md="m\n",
+        about_md=about_body,
+    )
+    store = MemoryStore(
+        scope=CompanionScope("sm", "a", tmp_path.name),
+        repository=None,
+    )
+    messages = build_system_messages_for_inner_tick_monolog(
+        bundle,
+        ContextMeta(),
+        store,
+    )
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
+    assert "Describe how a user should interact" not in joined
+
+
+def test_greeting_omits_about_guidance_slice() -> None:
+    about_body = load_template_seed_text("ABOUT.md").strip()
+    bundle = PromptBundle(
+        identity="id\n",
+        soul="s\n",
+        style_md="st\n",
+        user_md="u\n",
+        memory_md="m\n",
+        about_md=about_body,
+    )
+    messages = PromptBuilder(
+        bundle=bundle,
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    ).greeting_system_dicts()
+    joined = "\n".join(
+        str(m["content"]) for m in messages if m["role"] == "system"
+    )
+    assert "Describe how a user should interact" not in joined

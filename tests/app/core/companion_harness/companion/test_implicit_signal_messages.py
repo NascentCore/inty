@@ -15,6 +15,9 @@ from app.core.companion_harness.prompting.system_messages import (
 from app.core.companion_harness.companion.turn_pipeline import (
     resolve_turn_runtime_flags,
 )
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
@@ -74,6 +77,7 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
     msgs = build_system_messages(
         bundle,
         ctx,
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         enable_tools=False,
     )
     joined = "\n".join(

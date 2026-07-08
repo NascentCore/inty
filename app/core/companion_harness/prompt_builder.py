@@ -69,6 +69,9 @@ from app.core.companion_harness.prompting.tracks import (
     _persona_settled_user_turn_system_messages,
     resolve_compose_phase,
 )
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -242,7 +245,13 @@ class PromptBuilder:
             )
         )
         out.extend(_output_settled_single_llm_system_messages())
-        out.extend(_contextual_settled_user_turn_system_messages(self.context))
+        out.extend(
+            _contextual_settled_user_turn_system_messages(
+                self.context,
+                self.bundle,
+                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            )
+        )
         return append_configured_fixed_reply_language_system_messages(out)
 
     def bootstrap_single_llm_system_messages(self) -> list[dict[str, Any]]:
@@ -259,7 +268,11 @@ class PromptBuilder:
         )
         out.extend(_output_bootstrap_single_llm_system_messages())
         out.extend(
-            _contextual_bootstrap_user_turn_system_messages(self.context)
+            _contextual_bootstrap_user_turn_system_messages(
+                self.context,
+                self.bundle,
+                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            )
         )
         return append_configured_fixed_reply_language_system_messages(out)
 
@@ -399,7 +412,9 @@ class PromptBuilder:
                 out.append(_system_message(_output_contract_text()))
                 out.extend(
                     _contextual_bootstrap_user_turn_system_messages(
-                        self.context
+                        self.context,
+                        self.bundle,
+                        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
                     )
                 )
             case Phase.SETTLED:
@@ -415,11 +430,17 @@ class PromptBuilder:
                 )
                 out.append(_system_message(_output_contract_text()))
                 out.extend(
-                    _contextual_settled_user_turn_system_messages(self.context)
+                    _contextual_settled_user_turn_system_messages(
+                        self.context,
+                        self.bundle,
+                        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
+                    )
                 )
         return out
 
-    def _settled_inner_tick_chat_core_system_dicts(self) -> list[dict[str, Any]]:
+    def _settled_inner_tick_chat_core_system_dicts(
+        self,
+    ) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())
@@ -457,7 +478,9 @@ class PromptBuilder:
         )
         return out
 
-    def _bootstrap_inner_tick_chat_core_system_dicts(self) -> list[dict[str, Any]]:
+    def _bootstrap_inner_tick_chat_core_system_dicts(
+        self,
+    ) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         out.extend(_doctrine_system_messages())
         out.extend(_auxiliary_system_messages())
@@ -470,7 +493,11 @@ class PromptBuilder:
         )
         out.append(_system_message(_output_contract_text()))
         out.extend(
-            _contextual_bootstrap_user_turn_system_messages(self.context)
+            _contextual_bootstrap_user_turn_system_messages(
+                self.context,
+                self.bundle,
+                compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
+            )
         )
         return out
 
@@ -481,6 +508,8 @@ class PromptBuilder:
     ) -> list[dict[str, Any]]:
         return _contextual_system_messages(
             context=self.context,
+            bundle=self.bundle,
+            compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
             inner_tick_turn=True,
             tick_proactive=True,
             tick_autonomy=False,
@@ -504,10 +533,12 @@ class PromptBuilder:
             self._greeting_core_system_dicts()
         )
 
-    def proactive_system_dicts(self, store: MemoryStore) -> list[dict[str, Any]]:
+    def proactive_system_dicts(
+        self, store: MemoryStore
+    ) -> list[dict[str, Any]]:
         """Chat-only proactive inner-tick system prefix."""
-        life_currents_block = _assemble_proactive_chat_life_currents_hint_prompt(
-            store
+        life_currents_block = (
+            _assemble_proactive_chat_life_currents_hint_prompt(store)
         )
         match self._compose_phase():
             case Phase.BOOTSTRAP:
@@ -544,7 +575,9 @@ class PromptBuilder:
                     )
                 )
         out.append(
-            _system_message(_scheduled_reminder_structured_output_contract_text())
+            _system_message(
+                _scheduled_reminder_structured_output_contract_text()
+            )
         )
         return self._finalize_chat_only_system_dicts(out)
 

@@ -37,6 +37,7 @@ _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
 _PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
 _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
+        "ABOUT.md",
         "AXIOM.md",
         "BOOTSTRAP.md",
         CHANNELS_MD_REL,
@@ -262,4 +263,3 @@ def ensure_minimal_documents_in_store(store: MemoryStore) -> None:
             store.write_document(rel, _MINIMAL_TRANSCRIPT_SEED)
         else:
             store.write_document(rel, load_template_seed_text(rel))
-

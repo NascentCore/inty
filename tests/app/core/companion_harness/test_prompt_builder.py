@@ -42,6 +42,9 @@ from app.core.companion_harness.prompt_builder import (
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
@@ -474,6 +477,7 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
         for m in build_system_messages(
             bundle,
             context,
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
             enable_tools=True,
             async_foreground_chat_stack=True,
         )
@@ -702,7 +706,9 @@ def test_bootstrap_proactive_injects_bootstrap_spec(tmp_path) -> None:
     assert load_bootstrap_spec_text() in system_text
 
 
-def test_bootstrap_proactive_injects_bootstrap_proactive_overlay(tmp_path) -> None:
+def test_bootstrap_proactive_injects_bootstrap_proactive_overlay(
+    tmp_path,
+) -> None:
     store = MemoryStore(
         scope=CompanionScope("pb-bootstrap-overlay", "agent", tmp_path.name),
         repository=None,
@@ -753,7 +759,9 @@ def test_settled_proactive_omits_bootstrap_spec(tmp_path) -> None:
     )
     builder = PromptBuilder(
         bundle=_bundle(),
-        context=ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+        context=ContextMeta(
+            workspace_bootstrap_user_interactive_completed=True
+        ),
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
@@ -777,7 +785,9 @@ def test_bootstrap_greeting_injects_bootstrap_spec_with_significance() -> None:
             memory_md="",
             significance_perception_md="# Significance\nslice",
         ),
-        context=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+        context=ContextMeta(
+            workspace_bootstrap_user_interactive_completed=False
+        ),
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
@@ -819,7 +829,9 @@ def test_proactive_life_currents_preserved(tmp_path) -> None:
         if row.get("role") == "system"
     ]
     proactive_idx = next(
-        i for i, c in enumerate(contents) if c.startswith("本轮（陪伴主动聊天）")
+        i
+        for i, c in enumerate(contents)
+        if c.startswith("本轮（陪伴主动聊天）")
     )
     life_block = contents[proactive_idx + 1]
     life_lines = life_block.split("\n")

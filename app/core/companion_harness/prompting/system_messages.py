@@ -22,7 +22,7 @@ non-mutable MemoryStore kinds (#3506). Mutable channel contract remains ``CHANNE
 
 **Output (content category; runtime org runtime):** turn output contracts.
 
-**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, etc.).
+**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, ABOUT.md on user-message turns, etc.).
 
 **Track-attached (peripheral runtime org, after stack at track compose):** channel output format,
 Weixin alias (via ``prompt_builder``), Telegram cohort profile collection
@@ -112,6 +112,9 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 
 from app.core.companion_harness.companion.models import (
     ContextMeta,
@@ -655,6 +658,21 @@ def _doctrine_system_messages() -> list[dict[str, Any]]:
     ]
 
 
+def _about_operator_guidance_system_messages(
+    bundle: PromptBundle,
+    compose_trigger: PromptComposeTrigger,
+) -> list[dict[str, Any]]:
+    """Contextual slice: third-person interaction guide from ABOUT.md."""
+    match compose_trigger:
+        case PromptComposeTrigger.USER_MESSAGE:
+            body = bundle.about_md.strip()
+            if body == "":
+                return []
+            return [_system_message(body)]
+        case PromptComposeTrigger.SYSTEM_INITIATED:
+            return []
+
+
 def _auxiliary_system_messages() -> list[dict[str, Any]]:
     """Harness mechanics not part of core doctrine (transcript timestamp contract, etc.)."""
     return [_system_message(_TRANSCRIPT_TIMESTAMP_LLM_DIRECTIVE)]
@@ -796,6 +814,8 @@ def _output_system_messages(
 def _contextual_system_messages(
     *,
     context: ContextMeta,
+    bundle: PromptBundle,
+    compose_trigger: PromptComposeTrigger,
     inner_tick_turn: bool,
     tick_proactive: bool,
     tick_autonomy: bool,
@@ -831,6 +851,9 @@ def _contextual_system_messages(
                 _system_message(_inner_tick_ai_private_section(ai_private_text))
             )
             out.append(_system_message(_inner_tick_turn_section()))
+    out.extend(
+        _about_operator_guidance_system_messages(bundle, compose_trigger)
+    )
     return out
 
 
@@ -839,6 +862,7 @@ def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
     *,
+    compose_trigger: PromptComposeTrigger,
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     inner_tick_turn: bool = False,
@@ -899,6 +923,8 @@ def build_system_messages(
     out.extend(
         _contextual_system_messages(
             context=context,
+            bundle=bundle,
+            compose_trigger=compose_trigger,
             inner_tick_turn=inner_tick_turn,
             tick_proactive=tick_proactive,
             tick_autonomy=tick_autonomy,
@@ -966,6 +992,7 @@ def build_system_messages_for_tool_track(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
     )
 
 
@@ -986,6 +1013,7 @@ def build_system_messages_for_inner_tick_monolog(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
+        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
     )
 
 
@@ -1038,6 +1066,8 @@ def build_system_messages_for_inner_tick_autonomy(
     out.extend(
         _contextual_system_messages(
             context=context,
+            bundle=bundle,
+            compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
             inner_tick_turn=True,
             tick_proactive=False,
             tick_autonomy=True,

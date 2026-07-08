@@ -14,6 +14,9 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
 )
 from app.core.companion_harness.prompt_builder import PromptBuilder
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.system_messages import (
     build_system_messages,
@@ -66,7 +69,13 @@ def test_capability_group_injects_harness_channels_tools_in_order() -> None:
         channels_md="# Channels\nchannel contract",
         tools_md="# Tools\ntool contract",
     )
-    contents = _system_contents(build_system_messages(bundle, ContextMeta()))
+    contents = _system_contents(
+        build_system_messages(
+            bundle,
+            ContextMeta(),
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        )
+    )
     harness_i = contents.index("# Harness\nharness contract")
     channels_i = contents.index("# Channels\nchannel contract")
     tools_i = contents.index("# Tools\ntool contract")
@@ -133,6 +142,7 @@ def test_bootstrap_and_settled_tool_contract_require_interim_content() -> None:
     settled = build_system_messages(
         bundle,
         ContextMeta(),
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         interactive_bootstrap_active=False,
         inner_tick_turn=False,
         enable_tools=True,
@@ -191,6 +201,7 @@ def test_persona_injects_companionship_after_bootstrap() -> None:
         build_system_messages(
             bundle,
             ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         )
     )
     joined = "\n".join(contents)
@@ -240,6 +251,7 @@ def test_persona_injects_seed_companionship_after_bootstrap() -> None:
                 ContextMeta(
                     workspace_bootstrap_user_interactive_completed=True
                 ),
+                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
             )
         )
     )
@@ -259,7 +271,13 @@ def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> (
     )
 
     system_text = "\n".join(
-        _system_contents(build_system_messages(bundle, ContextMeta()))
+        _system_contents(
+            build_system_messages(
+                bundle,
+                ContextMeta(),
+                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            )
+        )
     )
 
     assert "Weixin / ClawBot 联系人显示名" not in system_text

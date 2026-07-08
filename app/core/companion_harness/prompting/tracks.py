@@ -19,6 +19,7 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_spec_text,
 )
 from app.core.companion_harness.prompting.system_messages import (
+    _about_operator_guidance_system_messages,
     _auxiliary_system_messages,
     _doctrine_system_messages,
     _dual_llm_chat_structured_output_contract_text,
@@ -42,6 +43,9 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 
 
 class Phase(StrEnum):
@@ -144,6 +148,9 @@ def _output_settled_dual_chat_leg_system_messages() -> list[dict[str, Any]]:
 
 def _contextual_settled_user_turn_system_messages(
     context: ContextMeta,
+    bundle: PromptBundle,
+    *,
+    compose_trigger: PromptComposeTrigger,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = [
         _system_message(experience_profile_system_clause(context.context_mode))
@@ -154,6 +161,10 @@ def _contextual_settled_user_turn_system_messages(
     if directive_clause is not None:
         out.append(_system_message(directive_clause))
     out.append(_system_message(_infer_time_zone_prompt_slice()))
+    # TODO(!3453): Share settled/bootstrap contextual assembly with system_messages.
+    out.extend(
+        _about_operator_guidance_system_messages(bundle, compose_trigger)
+    )
     return out
 
 
@@ -207,6 +218,9 @@ def _output_bootstrap_single_llm_system_messages() -> list[dict[str, Any]]:
 
 def _contextual_bootstrap_user_turn_system_messages(
     context: ContextMeta,
+    bundle: PromptBundle,
+    *,
+    compose_trigger: PromptComposeTrigger,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     directive_clause = experience_directives_system_clause(
@@ -215,6 +229,10 @@ def _contextual_bootstrap_user_turn_system_messages(
     if directive_clause is not None:
         out.append(_system_message(directive_clause))
     out.append(_system_message(_infer_time_zone_prompt_slice()))
+    # TODO(!3453): Share settled/bootstrap contextual assembly with system_messages.
+    out.extend(
+        _about_operator_guidance_system_messages(bundle, compose_trigger)
+    )
     return out
 
 
@@ -238,5 +256,11 @@ def build_settled_user_turn_dual_chat_leg_system_messages(
         )
     )
     out.extend(_output_settled_dual_chat_leg_system_messages())
-    out.extend(_contextual_settled_user_turn_system_messages(context))
+    out.extend(
+        _contextual_settled_user_turn_system_messages(
+            context,
+            bundle,
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        )
+    )
     return out
