@@ -244,6 +244,26 @@ def test_build_chat_ws_queued_success_frame_round_trip() -> None:
     assert round_trip.data.id == completion.id
 
 
+def test_chat_websocket_response_typed_data_optional() -> None:
+    from app.schemas.chat_websocket import ChatWebSocketResponse
+
+    frame = ChatWebSocketResponse(
+        code=200,
+        message="success",
+        agent_id="agent-uuid",
+        data=None,
+    )
+    assert frame.data is None
+    typed = ChatWebSocketResponse(
+        code=200,
+        message="success",
+        agent_id="agent-uuid",
+        data=ChatWsCompletionData.model_validate(_base_completion_data(FOREGROUND_CHAT_META)),
+    )
+    assert typed.data is not None
+    assert typed.data.id == "chatcmpl-abc123def456"
+
+
 def test_chat_ws_queued_error_frame_round_trip() -> None:
     from app.schemas.chat_websocket import chat_ws_queued_error_frame
 

@@ -842,7 +842,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         ).run_dual_llm_turn(context=context)
 
     assert result.output_message_ids == ("msg-fg", "msg-tool")
-    assert result.tool_background_started is False
+    assert result.tool_background_started is True
     assert result.turn_recall == "recall-1"
     append_inputs = [
         call.args[0] for call in domain.append_visible_message.await_args_list

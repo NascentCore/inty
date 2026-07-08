@@ -79,8 +79,8 @@ async def materialize_queue_user_reply_from_durable(
     session_id = generate_session_id(scope.memory_store_chat_id())
     generated_image = _generated_image_for_wire(message)
     companion_ai_meta = companion_ai_meta_from_queue_delivery(
+        message=message,
         queue_message_id=user_msg_uuid,
-        tool_background_started=message.tool_background_started,
         generated_image=generated_image,
     )
     ai_message_id = await chat_history_service.add_ai_message_sync_async(
@@ -212,51 +212,6 @@ async def materialize_agent_initiated_ws_payload(
         ),
     )
     return payload
-
-
-async def persist_implicit_greeting_ai_chat_history(
-    *,
-    session_id: str,
-    agent_id: str,
-    text: str,
-    companion_turn: CompanionTurnResult,
-) -> int | None:
-    """Persist one implicit sign-on greeting assistant row before pump delivery."""
-    assert text.strip() != ""
-    companion_ai_meta = companion_ai_meta_from_turn_result(
-        companion_turn,
-        companion_scheduled_reminder=None,
-        scheduled_task_id=None,
-    )
-    return await chat_history_service.add_ai_message_sync_async(
-        session_id,
-        text,
-        agent_id=agent_id,
-        meta_data=companion_ai_meta,
-    )
-
-
-async def append_implicit_greeting_output_after_persist(
-    *,
-    output_queue: OutputQueue,
-    user_message_batch: UserMessageBatch,
-    text: str,
-    companion_turn: CompanionTurnResult,
-) -> ReadyOutputMessage:
-    """Append greeting to OutputQueue only after ``chat_history`` persist (App-WS pump path)."""
-    assert text.strip() != ""
-    return await output_queue.append_visible_message(
-        OutputQueueAppendInput(
-            kind=OutputMessageKind.USER_REPLY,
-            batch_id=user_message_batch.batch_id,
-            text=text,
-            message_ids=(),
-            trace_id=companion_turn.trace_id,
-            langsmith_trace_id=companion_turn.langsmith_trace_id,
-            langsmith_run_id=companion_turn.langsmith_run_id,
-            turn_recall=companion_turn.turn_recall,
-        )
-    )
 
 
 async def materialize_tool_background_from_durable(

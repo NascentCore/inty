@@ -16,7 +16,10 @@ from app.schemas.chat_websocket import (
     ChatWsGeneratedImageMeta,
     dump_chat_ws_companion_wire_meta,
 )
-from app.services.agentic_channel.session import ensure_memory_store_session
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.core.companion_harness.agentic_companion.types import WireAssistantSource
 
 
 def image_asset_baseline_for_scope_store(store) -> int:
@@ -84,16 +87,22 @@ def companion_ai_meta_from_turn_result(
 
 def companion_ai_meta_from_queue_delivery(
     *,
+    message: ReadyOutputMessage,
     queue_message_id: str,
-    tool_background_started: bool,
     generated_image: ChatWsGeneratedImageMeta | None = None,
 ) -> dict[str, Any]:
-    """Build assistant ``meta_data`` for queue-delivered App WS user-chat replies."""
+    """Build assistant ``meta_data`` for queue-delivered App WS replies."""
     assert queue_message_id != ""
     meta = ChatWsCompanionWireMessageMetaData(
-        source="chat",
+        source=message.wire_assistant_source.value,
         user_msg_uuid=queue_message_id,
-        tool_background_started=True if tool_background_started else None,
+        trace_id=message.trace_id,
+        langsmith_trace_id=message.langsmith_trace_id,
+        langsmith_run_id=message.langsmith_run_id,
+        turn_recall=message.turn_recall,
+        tool_background_started=(
+            True if message.tool_background_started else None
+        ),
         generated_image=generated_image,
     )
     return dump_chat_ws_companion_wire_meta(meta)

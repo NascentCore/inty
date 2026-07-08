@@ -35,6 +35,19 @@ class OutputMessageKind(StrEnum):
     # Async tool_background loop produced user-visible assistant text.
 
 
+class WireAssistantSource(StrEnum):
+    """WS ``meta_data.source`` for one queue-delivered assistant line."""
+
+    CHAT = "chat"
+    # Settled or bootstrap user-chat foreground reply.
+
+    GREETING = "greeting"
+    # Implicit sign-on greeting (``IMPLICIT_SIGN_ON_GREETING``).
+
+    TOOL_BG = "tool_bg"
+    # Async tool_background finish or follow-up bubble.
+
+
 class QueueStatus(StrEnum):
     """Durable queue row lifecycle."""
 

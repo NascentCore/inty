@@ -21,7 +21,10 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.companion_harness.agentic_companion.types import (
+    OutputMessageKind,
+    WireAssistantSource,
+)
 
 from .postgres_queue import PostgresOutputQueueRepository
 from .types import (
@@ -57,6 +60,7 @@ class OutputQueueAppendInput:
     turn_recall: str | None
     tool_background_started: bool = False
     generated_images: tuple[GeneratedImageRef, ...] = ()
+    wire_assistant_source: WireAssistantSource = WireAssistantSource.CHAT
 
 
 @dataclass(frozen=True)
@@ -75,9 +79,25 @@ class ReadyOutputMessage:
     message_ids: tuple[str, ...]
     tool_background_started: bool = False
     generated_images: tuple[GeneratedImageRef, ...] = ()
+    trace_id: str | None = None
+    langsmith_trace_id: str | None = None
+    langsmith_run_id: str | None = None
+    turn_recall: str | None = None
+    wire_assistant_source: WireAssistantSource = WireAssistantSource.CHAT
 
 
 _SYNTHETIC_AGENT_BATCH_PREFIX = "agent-initiated:"
+
+
+def wire_assistant_source_for_record(record: OutputQueueRecord) -> WireAssistantSource:
+    """Derive WS source from durable row when reloading ready messages."""
+    match record.kind:
+        case OutputMessageKind.TOOL_BACKGROUND:
+            return WireAssistantSource.TOOL_BG
+    if "implicit_sign_on_greeting" in record.batch_id:
+        return WireAssistantSource.GREETING
+    return WireAssistantSource.CHAT
+
 
 _AGENT_INITIATED_VISIBLE_KINDS = frozenset(
     {
@@ -216,12 +236,13 @@ class OutputQueue:
                 text=record.text,
                 sequence=record.sequence,
                 message_ids=append_input.message_ids,
-                tool_background_started=getattr(
-                    record,
-                    "tool_background_started",
-                    False,
-                ),
-                generated_images=getattr(record, "generated_images", ()),
+                tool_background_started=record.tool_background_started,
+                generated_images=record.generated_images,
+                trace_id=record.trace_id,
+                langsmith_trace_id=record.langsmith_trace_id,
+                langsmith_run_id=record.langsmith_run_id,
+                turn_recall=record.turn_recall,
+                wire_assistant_source=append_input.wire_assistant_source,
             )
             self._ready.append(ready)
         return ready
@@ -245,6 +266,11 @@ class OutputQueue:
             message_ids=record.message_ids,
             tool_background_started=record.tool_background_started,
             generated_images=record.generated_images,
+            trace_id=record.trace_id,
+            langsmith_trace_id=record.langsmith_trace_id,
+            langsmith_run_id=record.langsmith_run_id,
+            turn_recall=record.turn_recall,
+            wire_assistant_source=wire_assistant_source_for_record(record),
         )
 
     async def _claim_pending_from_repository(

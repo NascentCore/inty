@@ -278,7 +278,7 @@ def _dual_llm_silent_foreground_tool_bg_script() -> (
         ),
         fake_step_dual_llm_envelope(
             user_facing_reply="Listing complete.",
-            output_to_user=False,
+            output_to_user=True,
             importance_round=_DEFAULT_IMPORTANCE,
             importance_user_message=_DEFAULT_IMPORTANCE,
             importance_assistant_message=_DEFAULT_IMPORTANCE,

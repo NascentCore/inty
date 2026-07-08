@@ -23,13 +23,12 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.core.companion_harness.agentic_companion.types import (
     AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
-    UserMessageBatch,
-)
-from app.core.companion_harness.agentic_companion.types import (
     GeneratedImageRef,
+    OutputMessageKind,
+    UserMessageBatch,
+    WireAssistantSource,
 )
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
@@ -172,6 +171,7 @@ class _UserVisibleOutputAppender:
         langsmith_run_id: str,
         turn_recall: str | None = None,
         tool_background_started: bool = False,
+        wire_assistant_source: WireAssistantSource = WireAssistantSource.CHAT,
     ) -> None:
         visible = user_visible_assistant_text(text)
         if visible is None:
@@ -187,6 +187,7 @@ class _UserVisibleOutputAppender:
                 langsmith_run_id=langsmith_run_id,
                 turn_recall=turn_recall,
                 tool_background_started=tool_background_started,
+                wire_assistant_source=wire_assistant_source,
                 generated_images=(
                     _generated_image_refs_since(
                         self.store,
@@ -240,6 +241,7 @@ class _DomainToolBackgroundAppendSink:
                 langsmith_trace_id=event.langsmith_trace_id,
                 langsmith_run_id=event.langsmith_run_id,
                 turn_recall=event.turn_recall,
+                wire_assistant_source=WireAssistantSource.TOOL_BG,
             )
 
     async def flush(self) -> None:
@@ -561,7 +563,12 @@ async def _run_chat_only_prompt_plan(
         context.trace_id,
         track.value,
     )
-    if last_text and track != CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+    if last_text:
+        wire_source = (
+            WireAssistantSource.GREETING
+            if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            else WireAssistantSource.CHAT
+        )
         await appender.append_visible_message(
             kind=downlink_kind,
             text=last_text,
@@ -569,6 +576,7 @@ async def _run_chat_only_prompt_plan(
             langsmith_trace_id=langsmith_trace_acc,
             langsmith_run_id=langsmith_llm_run_acc,
             turn_recall=turn_recall,
+            wire_assistant_source=wire_source,
         )
     return InTurnSyncToolLoopResult(
         assistant_text=last_text,
@@ -725,6 +733,7 @@ class AgenticLoop:
                 langsmith_trace_id=fg_result.langsmith_trace_id,
                 langsmith_run_id=fg_result.langsmith_run_id,
                 turn_recall=fg_result.turn_recall,
+                tool_background_started=bool(fg_result.tool_msgs_for_bg),
             )
         event_sink = _DomainToolBackgroundAppendSink(
             appender=appender,
@@ -732,6 +741,7 @@ class AgenticLoop:
         )
 
         assert context.companion_turn_track is not None
+        tool_background_started = bool(fg_result.tool_msgs_for_bg)
         await run_tool_background_loop(
             memory_store=self.store,
             request_messages=list(fg_result.tool_msgs_for_bg),
@@ -762,7 +772,7 @@ class AgenticLoop:
             langsmith_trace_id=fg_result.langsmith_trace_id,
             langsmith_run_id=fg_result.langsmith_run_id,
             skip_final_transcript_assistant_row=False,
-            tool_background_started=False,
+            tool_background_started=tool_background_started,
             last_interim_assistant_msg_uuid=None,
             output_message_ids=tuple(appender.persisted_ids),
         )

@@ -2,12 +2,40 @@
 
 from __future__ import annotations
 
+from app.core.companion_harness.agentic_companion.output_queue import (
+    ReadyOutputMessage,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    OutputMessageKind,
+    WireAssistantSource,
+)
 from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.schemas.chat_websocket import ChatWsGeneratedImageMeta
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
     companion_ai_meta_from_turn_result,
 )
+
+
+def _ready_message(
+    *,
+    wire_assistant_source: WireAssistantSource,
+    tool_background_started: bool,
+) -> ReadyOutputMessage:
+    return ReadyOutputMessage(
+        message_id="out-1",
+        batch_id="batch-1",
+        kind=OutputMessageKind.USER_REPLY,
+        text="hi",
+        sequence=1,
+        message_ids=("queue-msg-1",),
+        tool_background_started=tool_background_started,
+        trace_id="trace-1",
+        langsmith_trace_id="ls-trace",
+        langsmith_run_id="ls-run",
+        turn_recall="brief",
+        wire_assistant_source=wire_assistant_source,
+    )
 
 
 def test_companion_ai_meta_from_turn_result_scheduled_reminder_fields() -> None:
@@ -45,18 +73,37 @@ def test_companion_ai_meta_from_turn_result_turn_recall() -> None:
 
 def test_companion_ai_meta_from_queue_delivery_tool_background() -> None:
     meta = companion_ai_meta_from_queue_delivery(
+        message=_ready_message(
+            wire_assistant_source=WireAssistantSource.CHAT,
+            tool_background_started=True,
+        ),
         queue_message_id="queue-msg-1",
-        tool_background_started=True,
     )
     assert meta["user_msg_uuid"] == "queue-msg-1"
     assert meta["tool_background_started"] is True
     assert meta["source"] == "chat"
+    assert meta["langsmith_trace_id"] == "ls-trace"
+    assert meta["turn_recall"] == "brief"
+
+
+def test_companion_ai_meta_from_queue_delivery_greeting_source() -> None:
+    meta = companion_ai_meta_from_queue_delivery(
+        message=_ready_message(
+            wire_assistant_source=WireAssistantSource.GREETING,
+            tool_background_started=False,
+        ),
+        queue_message_id="queue-msg-1",
+    )
+    assert meta["source"] == "greeting"
 
 
 def test_companion_ai_meta_from_queue_delivery_generated_image() -> None:
     meta = companion_ai_meta_from_queue_delivery(
+        message=_ready_message(
+            wire_assistant_source=WireAssistantSource.CHAT,
+            tool_background_started=False,
+        ),
         queue_message_id="queue-msg-2",
-        tool_background_started=False,
         generated_image=ChatWsGeneratedImageMeta(
             image_url="file:///tmp/z_image_test.jpeg",
             width=1024,
