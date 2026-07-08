@@ -68,6 +68,9 @@ from app.core.companion_harness.companion.turn_routes import (
     InTurnInterimOutput,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.loop.in_turn_visible_text import (
+    resolve_in_turn_assistant_visible_text,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompt_builder import (
     prompt_messages_to_openai_dicts,
@@ -350,13 +353,26 @@ async def _run_prompt_plan_tool_loop(
         nonlocal skip_final_transcript_assistant_row
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
-        body = (message.content or "").strip()
-        # TODO(!3457): Deliver interim chat while tools run — when body is empty but
-        # tool_calls present, resolve visible text so user is not silent during tool
-        # execution (!3456).
-        if not body:
+        body = resolve_in_turn_assistant_visible_text(message)
+        if body is None:
+            had_tool_calls_early = bool(
+                getattr(message, "tool_calls", None) or []
+            )
+            if had_tool_calls_early:
+                logger.warning(
+                    "in_turn_visible_text_missing trace_id={} round_index={}",
+                    trace_id,
+                    round_index,
+                )
             return
-        had_tool_calls = bool(getattr(message, "tool_calls", None) or [])
+        had_tool_calls = bool(
+            (
+                message.get("tool_calls")
+                if isinstance(message, dict)
+                else getattr(message, "tool_calls", None)
+            )
+            or []
+        )
         ls_trace = langsmith_trace_acc
         ls_run = langsmith_llm_run_acc
         assistant_msg_uuid = str(uuid.uuid4())

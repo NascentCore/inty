@@ -252,16 +252,23 @@ def _repl_tool_contract_suffix_after_image_clause(
     )
 
 
+def _in_turn_tool_round_content_contract_zh() -> str:
+    """Require brief natural-language ``message.content`` when emitting tool_calls."""
+    return (
+        "发起 tool_calls 时，**必须**在 message.content 写一句简短、自然、面向用户的进行中说明"
+        "（像边做事边聊天，不要机械播报「正在执行工具」或重复状态口号）。"
+    )
+
+
 def _output_contract_text_with_tools(
     *,
     tool_side_compact: bool = False,
 ) -> str:
-    # TODO(!3458): User chat must include brief user-facing ``message.content`` when
-    # starting tool_calls so user is not silent during tool execution — !3456.
     # TODO(!3470): Interim lines during bootstrap writes should sound like chatting
     # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
     base = (
         "输出与工具："
+        + _in_turn_tool_round_content_contract_zh()
         + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
         "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
@@ -306,7 +313,9 @@ def _output_contract_text_with_tools(
 
 def _output_contract_text_interactive_bootstrap_tools() -> str:
     base = (
-        "输出与工具（交互式关系建立阶段）：" + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        "输出与工具（交互式关系建立阶段）："
+        + _in_turn_tool_round_content_contract_zh()
+        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
         # TODO(!3453): Use ``PromptTemplate`` + MemoryDoc name variables for this line.
         + "（0）本阶段用 **memory_store_write_document** 把 **COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md** 落到可用初稿；"
         "**SOUL.md** 与 **MEMORY.md** 本阶段不通过该工具写入（沿用包内模板种子，见 TEMPLATE_REFERENCE）。"
