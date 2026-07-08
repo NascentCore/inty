@@ -7,7 +7,6 @@ presence per paired user — ``companion_harness`` AGENTS.md「Concurrency (prot
 from __future__ import annotations
 
 import json
-import threading
 import time
 import uuid
 from typing import Any
@@ -80,30 +79,6 @@ def companion_memory_store_if_ready(
     if not session.is_initialized:
         return None
     return session.store
-
-
-def companion_session_tool_bg_idle_event(
-    *,
-    user_id: str,
-    agent_id: str,
-    chat_id: str | int,
-    resolved_chat_model: GenAIModel,
-) -> threading.Event:
-    """Return ``CompanionSession.tool_bg_idle`` for WebSocket inner-tick overlap checks.
-
-    TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` clears this event;
-    the next user or proactive turn blocks in ``run_turn`` while holding ``turn_lock``.
-    https://github.com/NascentCore/inty/issues/3123
-    """
-    chat_api_id = resolved_chat_model.id_on_provider
-    tool_api_id = companion_tool_model_api_id(chat_api_id)
-    manager = companion_manager_for_resolved_model(
-        chat_api_id,
-        tool_api_id,
-        companion_runtime_config_fingerprint(),
-    )
-    session = manager.get_or_create_session(user_id, agent_id, str(chat_id))
-    return session.tool_bg_idle
 
 
 def run_dreaming_batch_for_api(
