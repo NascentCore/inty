@@ -120,7 +120,7 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
             ),
             user_msg_uuid="user-2",
             assistant_text="reply",
-            bootstrap_skip_final_transcript_assistant_row=False,
+            skip_final_transcript_assistant_row=False,
         )
     )
     rows = load_transcript_from_store(store, "transcript.jsonl")
@@ -161,7 +161,7 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
         ),
         user_msg_uuid="user-2",
         assistant_text="",
-        bootstrap_skip_final_transcript_assistant_row=False,
+        skip_final_transcript_assistant_row=False,
     )
     assert not should_persist_ai_private_splice(persist_input)
     persist_ai_private_splice_if_applicable(persist_input)

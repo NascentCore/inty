@@ -105,8 +105,7 @@ def ready_output_delivers_user_visible_text(
 ) -> bool:
     """Whether adapters should push assistant text to the human on this channel.
 
-    ``BOOTSTRAP_INTERIM`` rows are never pushed as standalone user-visible text;
-    all other kinds deliver when their text is non-blank (monolog may be blank
+    All known kinds deliver when their text is non-blank (monolog may be blank
     on tool-background-only turns).
     """
     match message.kind:

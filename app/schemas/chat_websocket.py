@@ -230,14 +230,6 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     )
 
     source: Optional[str] = None
-    bootstrap_round_index: Optional[int] = Field(
-        default=None,
-        validation_alias=AliasChoices(
-            "bootstrapRoundIndex", "bootstrap_round_index"
-        ),
-        serialization_alias="bootstrapRoundIndex",
-        description="1-based LLM round index within USER_CHAT_BOOTSTRAP sync tool loop.",
-    )
     inner_tick_activity: Optional[str] = None
     trace_id: Optional[str] = None
     user_msg_uuid: Optional[str] = None

@@ -65,7 +65,7 @@ from app.core.companion_harness.companion.proactive_chat_envelope import (
     split_proactive_chat_message,
 )
 from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutput,
+    InTurnInterimOutput,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -379,7 +379,7 @@ async def _run_prompt_plan_tool_loop(
             emit_every_round or had_tool_calls
         ):
             await interim_output_sink(
-                BootstrapInterimOutput(
+                InTurnInterimOutput(
                     text=body,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=trace_id,
@@ -612,7 +612,7 @@ class AgenticLoop:
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
 
-        async def _emit_user_reply(interim: BootstrapInterimOutput) -> None:
+        async def _emit_user_reply(interim: InTurnInterimOutput) -> None:
             await appender.append_visible_message(
                 kind=OutputMessageKind.USER_REPLY,
                 text=interim.text,

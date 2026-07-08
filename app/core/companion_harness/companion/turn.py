@@ -325,8 +325,8 @@ async def _run_companion_turn_core(
     skip_proactive_assistant_transcript_row = False
     significance_meta: dict[str, Any] | None = None
     turn_recall: str | None = None
-    bootstrap_skip_final_transcript_assistant_row = False
-    bootstrap_last_interim_assistant_msg_uuid: str | None = None
+    skip_final_transcript_assistant_row = False
+    last_interim_assistant_msg_uuid: str | None = None
     in_turn_sync_persisted_transcript = False
     output_message_ids: tuple[str, ...] = ()
     t_loop = time.perf_counter()
@@ -431,10 +431,10 @@ async def _run_companion_turn_core(
                 turn_recall = loop_out.turn_recall
                 langsmith_trace_acc = loop_out.langsmith_trace_id
                 langsmith_llm_run_acc = loop_out.langsmith_run_id
-                bootstrap_skip_final_transcript_assistant_row = (
+                skip_final_transcript_assistant_row = (
                     loop_out.skip_final_transcript_assistant_row
                 )
-                bootstrap_last_interim_assistant_msg_uuid = (
+                last_interim_assistant_msg_uuid = (
                     loop_out.last_interim_assistant_msg_uuid
                 )
                 output_message_ids = loop_out.output_message_ids
@@ -476,8 +476,8 @@ async def _run_companion_turn_core(
         )
     )
     assistant_msg_uuid = (
-        bootstrap_last_interim_assistant_msg_uuid
-        if bootstrap_last_interim_assistant_msg_uuid is not None
+        last_interim_assistant_msg_uuid
+        if last_interim_assistant_msg_uuid is not None
         else str(uuid.uuid4())
     )
     if implicit_sign_on_turn:
@@ -507,13 +507,13 @@ async def _run_companion_turn_core(
             splice_plan=ai_private_splice_plan,
             user_msg_uuid=user_msg_uuid,
             assistant_text=last_text,
-            bootstrap_skip_final_transcript_assistant_row=(
-                bootstrap_skip_final_transcript_assistant_row
+            skip_final_transcript_assistant_row=(
+                skip_final_transcript_assistant_row
             ),
         )
     )
     if (
-        not bootstrap_skip_final_transcript_assistant_row
+        not skip_final_transcript_assistant_row
         and not skip_proactive_assistant_transcript_row
     ):
         append_transcript_assistant_row(

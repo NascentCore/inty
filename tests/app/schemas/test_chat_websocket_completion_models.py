@@ -82,9 +82,8 @@ TOOL_BG_META = {
     "significance_perception": {"importance_round": 5},
 }
 
-BOOTSTRAP_INTERIM_META = {
-    "source": "bootstrap_tool_round",
-    "bootstrapRoundIndex": 2,
+IN_TURN_INTERIM_META = {
+    "source": "chat",
     "user_msg_uuid": "550e8400-e29b-41d4-a716-446655440000",
     "assistant_msg_uuid": "33333333-3333-4333-8333-000000000002",
 }
@@ -103,7 +102,7 @@ INNER_TICK_META = {
     [
         FOREGROUND_CHAT_META,
         TOOL_BG_META,
-        BOOTSTRAP_INTERIM_META,
+        IN_TURN_INTERIM_META,
         INNER_TICK_META,
     ],
 )

@@ -50,7 +50,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutput,
+    InTurnInterimOutput,
 )
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
@@ -66,8 +66,8 @@ from app.core.companion_harness.prompt_builder import (
 from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
-def _bootstrap_interim(*, text: str) -> BootstrapInterimOutput:
-    return BootstrapInterimOutput(
+def _in_turn_interim(*, text: str) -> InTurnInterimOutput:
+    return InTurnInterimOutput(
         text=text,
         user_msg_uuid="user-msg-1",
         trace_id="trace-1",
@@ -260,10 +260,10 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         max_tool_call_rounds,
     ):
         await interim_output_sink(
-            _bootstrap_interim(text="first"),
+            _in_turn_interim(text="first"),
         )
         await interim_output_sink(
-            BootstrapInterimOutput(
+            InTurnInterimOutput(
                 text="second",
                 user_msg_uuid="user-msg-1",
                 trace_id="trace-1",
@@ -326,7 +326,7 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
         max_tool_call_rounds,
     ):
         await interim_output_sink(
-            _bootstrap_interim(text="   "),
+            _in_turn_interim(text="   "),
         )
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
             InTurnSyncToolLoopResult,
@@ -370,7 +370,7 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
         max_tool_call_rounds,
     ):
         await interim_output_sink(
-            _bootstrap_interim(text=""),
+            _in_turn_interim(text=""),
         )
         from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
             InTurnSyncToolLoopResult,

@@ -27,7 +27,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
 )
-from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
 )
@@ -62,7 +61,7 @@ def _tail_user() -> tuple[TurnTailUserMessage, ...]:
     )
 
 
-def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
+def test_bootstrap_prompt_plan_defers_message_assembly_to_plugin(
     tmp_path: Path,
 ) -> None:
     store = MemoryStore(
@@ -90,10 +89,7 @@ def test_bootstrap_prompt_plan_system_messages_match_prompt_builder(
         transcript_compaction=None,
         tail_splice_thoughts=[],
     )
-    expected_system = PromptBuilder(
-        bundle=loaded_state.bundle,
-        context=loaded_state.context,
-        runtime_context=runtime_context,
-    ).bootstrap_turn_system_dicts()
-    assert plan.system_messages == expected_system
+    assert plan.system_messages == []
+    assert plan.messages == []
+    assert plan.transcript_compaction is None
     assert plan.tools_for_turn == build_openai_bootstrap_track_tools()

@@ -34,10 +34,6 @@ class OutputMessageKind(StrEnum):
     TOOL_BACKGROUND = "tool_background"
     # Async tool_background loop produced user-visible assistant text.
 
-    BOOTSTRAP_INTERIM = "bootstrap_interim"
-    # One bootstrap sync tool-loop LLM round before USER_CHAT_BOOTSTRAP ends.
-    # TODO(!3402): Add USER_VISIBLE_CHUNK; retire BOOTSTRAP_INTERIM.
-
 
 class QueueStatus(StrEnum):
     """Durable queue row lifecycle."""
