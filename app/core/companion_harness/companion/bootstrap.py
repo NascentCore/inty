@@ -52,7 +52,7 @@ _BOOTSTRAP_TELEGRAM_PROFILE_PATH = (
     _PKG_DIR / "prompts" / "BOOTSTRAP_TELEGRAM_PROFILE.md"
 )
 
-# Seed-only rels from canonical MemDoc path constants (#3413).
+# Seed-only rels from canonical MemDoc path constants (canonical path constants).
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
     MEMORY_MD_REL,
     SOUL_MD_REL,
@@ -65,7 +65,7 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
 # TODO(person-identity-schema): TEMPLATE_REFERENCE should show generic templates/IDENTITY.md schema once, — #3390
 # not separate USER.md + IDENTITY.md package seeds; runtime bootstrap still writes both paths. #3390
 
-# TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across — #3463
+# TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across — #3801
 # ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
 # ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
 # policy next to ``BOOTSTRAP_WRITABLE_REL_PATHS`` / ``BOOTSTRAP_TRACK_TOOL_NAMES``.
@@ -142,7 +142,7 @@ def interactive_bootstrap_active(
     The current experience profile may already be non-bootstrap because completion
     can preserve an externally chosen relationship mode.
 
-    TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall — #3463
+    TODO(bootstrap-max-turns): Harness-level cap (max user-chat rounds or wall — #3801
     clock) before forcing best-effort MemoryDoc writes + complete — prompt-only
     pacing in ``BOOTSTRAP.md`` is insufficient when the model skips tools.
     But the principle is to let the LLM decide when to complete, not to force it.

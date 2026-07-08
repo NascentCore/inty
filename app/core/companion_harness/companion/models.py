@@ -325,7 +325,7 @@ def _read_memory_document_required(
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
     # TODO(static-prompt-slice-memstore): Replace with MemoryStore reads for static prompt — #3506
-    # slices (HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). !3506
+    # slices (HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). #3506
     text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
         return text[: max_chars - 1] + "..."
@@ -643,7 +643,7 @@ def transcript_relative_path_for_turn_persistence(
             CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
-            # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3400
+            # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3817
             return TRANSCRIPT_INNER_TICK_JSONL_REL
         case (
             CompanionTurnTrack.USER_CHAT

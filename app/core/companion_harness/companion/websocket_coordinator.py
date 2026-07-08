@@ -6,7 +6,7 @@ for ``/api/v1/chat/ws`` presence state. Channel-agnostic state lives in
 
 Each ``chat_completions_websocket`` accept creates one coordinator (one presence wire).
 Prototype: that accept **is** the only wire for the paired user (no multi-tab).
-Turns serialize on scope ``CompanionSession.turn_lock`` (#3272). See
+Turns serialize on scope ``CompanionSession.turn_lock`` (single WebSocket presence). See
 ``session.Coordinator`` and ``companion_harness`` AGENTS.md「Concurrency (prototype)」.
 
 TODO(ws-disconnect-lifecycle): https://github.com/NascentCore/inty/issues/3256 — on shutdown — #3256

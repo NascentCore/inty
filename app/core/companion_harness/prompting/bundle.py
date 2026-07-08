@@ -45,7 +45,7 @@ class PromptBundle(BaseModel):
         default="",
         description=(
             "Harness innate limits: HARNESS.md body for Capability system injection "
-            "(package-static today; TODO !3506 — store-backed static prompt slice)."
+            "(package-static today; TODO #3506 — store-backed static prompt slice)."
         ),
     )
     companionship_md: str = Field(

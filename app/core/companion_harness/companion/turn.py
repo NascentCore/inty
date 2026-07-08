@@ -11,8 +11,8 @@ only appends transcript JSONL on ``MemoryStore``; batch curation belongs in **Dr
 via ``user_turn.llm_loop_mode`` to single-LLM or dual-LLM plugin branches; inner ticks and
 greeting use ``run_single_llm_turn``.
 
-TODO(!3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink`` for all queue-serving delivery paths.
-TODO(!3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398, #3369.
+TODO(#3402): ``UserVisibleChunk`` + single ``UserVisibleChunkSink`` for all queue-serving delivery paths.
+TODO(#3398): Dual-LLM user-turn vs single-LLM in-turn sync — epic #3398.
 
 TODO(tool-bg-idle-starves-user-chat): Hung maintenance ``tool_background`` leaves — #3123
 ``CompanionSession.tool_bg_idle`` cleared; the next proactive or user ``run_turn`` blocks here
@@ -22,7 +22,7 @@ Issues: https://github.com/NascentCore/inty/issues/3123 (orchestration),
 https://github.com/NascentCore/inty/issues/3113 (WS turn_lock).
 
 
-TODO(!3409): Move this module into a focused sub-package; consider renaming to ``track.py``.
+TODO(#3409): Move this module into a focused sub-package; consider renaming to ``track.py``.
 
 TODO(world-engine-turn-spine): Delegate ``_run_companion_turn_core`` to shared — #3702
 AgentHarness turn skeleton via CompanionProfile (epic #3700).
@@ -154,7 +154,7 @@ async def _run_companion_turn_core(
     track: CompanionTurnTrack,
     deps: CompanionTurnDeps,
 ) -> CompanionTurnResult:
-    # TODO(!3473): skip LLM when companion_token_budget_allows_llm is false.
+    # TODO(#3473): skip LLM when companion_token_budget_allows_llm is false.
     """
     执行一轮完整对话。
 

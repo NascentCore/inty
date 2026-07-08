@@ -1,4 +1,4 @@
-"""Track-family AgenticLoop plugins for companion turn dispatch (#3401 slice 3b)."""
+"""Track-family AgenticLoop plugins for companion turn dispatch (#3393 slice 3b)."""
 
 from __future__ import annotations
 

@@ -272,5 +272,8 @@ CRS 把 psychology × time frames × harness 收束为同一套机制（SDCM: At
 - [AUTONOMY.md](./AUTONOMY.md) — inner-tick `AUTONOMY` 轨道与 `LIFE_CURRENTS.md`。
 - [LIVING_SPHERE.md](./LIVING_SPHERE.md) — 用户–伴侣私密虚拟小家与只读 TechnoCore。
 - [FR_WORLD_ENGINE.md](./FR_WORLD_ENGINE.md) — 多 agent 世界引擎、harness 作为 actor supervisor、sub-agent。
+- [issues/3341](https://github.com/NascentCore/inty/issues/3341) — Companion Relationship System (CRS) Epic。
+- [issues/3395](https://github.com/NascentCore/inty/issues/3395) — Channel platforms hub（Telegram · WhatsApp · SMS · Hermes）。
 - [issues/3491](https://github.com/NascentCore/inty/issues/3491) — 跨 channel 身份解析到单一 canonical user（Epic；子 issue #3696–#3699）。
+- [issues/3700](https://github.com/NascentCore/inty/issues/3700) — World Engine（AgentHarness + sub-agent）Epic。
 - [BRAINSTORM.md](./BRAINSTORM.md) — prompt/记忆 activation 方向收敛；§「iMate智能体陪伴系统点子」为仅供灵感的点子集（原 SPECULATIVE_IDEAS）。
