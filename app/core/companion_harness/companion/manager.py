@@ -255,7 +255,13 @@ class CompanionManager:
         preset_user_msg_uuid: str | None,
         track_label: str,
     ) -> tuple[OutputQueue, UserMessageBatch | None]:
-        """Ensure every turn has a scope ``OutputQueue``; synthesize batch when possible."""
+        """Ensure every turn has a scope ``OutputQueue``; synthesize batch when possible.
+
+        Synthetic ``agent-initiated:`` batches from ``preset_user_msg_uuid`` are
+        backup-only for agent-initiated and direct settled ``USER_CHAT`` turns.
+        ``USER_CHAT_BOOTSTRAP`` must receive a real InputQueue-claimed batch from
+        queue-serving callers (#3466).
+        """
         assert track_label != ""
         resolved_queue = agentic_output_queue
         if resolved_queue is None:
