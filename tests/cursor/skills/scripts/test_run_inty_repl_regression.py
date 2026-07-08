@@ -390,6 +390,7 @@ def test_resolve_dreaming_poll_outcome_missing_checkpoint_is_failure() -> None:
 
 def test_regression_exit_code_pass_warn_fail() -> None:
     mod = _load_regression_module()
+
     gate_ok = mod.InfraPassGate(
         bootstrap_done=True,
         greeting_present=True,
@@ -430,6 +431,14 @@ def test_regression_exit_code_pass_warn_fail() -> None:
         proactive_min_rounds=1,
     )
     assert mod._regression_exit_code(infra_gate=gate_fail, warnings=()) == 2
+
+
+def test_warnings_summary_exit_hint_matches_exit_code() -> None:
+    mod = _load_regression_module()
+    assert "exit=1" in mod._warnings_summary_exit_hint(1)
+    assert "human review" in mod._warnings_summary_exit_hint(1)
+    assert "infra gate failed" in mod._warnings_summary_exit_hint(2)
+    assert "exit=2" in mod._warnings_summary_exit_hint(2)
 
 
 def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> None:
