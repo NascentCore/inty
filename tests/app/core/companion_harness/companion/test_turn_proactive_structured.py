@@ -29,6 +29,9 @@ from app.core.companion_harness.llm.chat_completions import (
 )
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_JSONL_REL,
+)
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -83,7 +86,7 @@ def _default_deps(
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
-    raw = store.read_document("transcript.jsonl").strip()
+    raw = store.read_document(TRANSCRIPT_JSONL_REL).strip()
     if not raw:
         return []
     return [json.loads(line) for line in raw.splitlines()]

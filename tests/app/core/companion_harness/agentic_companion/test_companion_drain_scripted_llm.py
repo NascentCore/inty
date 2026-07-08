@@ -44,6 +44,9 @@ from app.core.config import global_config_loaded_from_config_yaml
 from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.core.companion_harness.tools.tool_background import (
     TOOL_RESULTS_TRANSCRIPT_MARKER,
 )
@@ -665,7 +668,7 @@ async def test_drain_bootstrap_turn_persists_interactive_context() -> None:
         store = memory_store_for_injected_runtime(scope, injected)
         assert "user" in scripted_transcript_roles(store)
         assert "assistant" in scripted_transcript_roles(store)
-        ctx = json.loads(store.read_document("context.json"))
+        ctx = json.loads(store.read_document(CONTEXT_JSON_REL))
         assert (
             ctx.get("workspace_bootstrap_user_interactive_completed") is False
         )

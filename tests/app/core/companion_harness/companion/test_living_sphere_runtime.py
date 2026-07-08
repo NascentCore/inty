@@ -18,7 +18,9 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
     LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
 )
 from app.core.companion_harness.prompting.compose_trigger import (
     PromptComposeTrigger,
@@ -52,7 +54,7 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         ("USER.md", "user\n"),
         ("MEMORY.md", "mem\n"),
         ("COMPANIONSHIP.md", "companionship\n"),
-        ("context.json", '{"context_mode":"intimate"}\n'),
+        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
@@ -107,13 +109,13 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
         ("USER.md", "user\n"),
         ("MEMORY.md", "mem\n"),
         ("TECHNO_CORE.md", "tc\n"),
-        ("context.json", '{"context_mode":"intimate"}\n'),
+        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
     update = LivingSphereUpdate(change_request="书架旁加落地灯")
     store.append_jsonl_record(
-        "living_sphere_updates.jsonl",
+        LIVING_SPHERE_UPDATES_JSONL_REL,
         update.model_dump(mode="json"),
     )
 
