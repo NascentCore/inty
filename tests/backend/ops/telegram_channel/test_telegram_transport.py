@@ -518,6 +518,12 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
         message_id = "msg-onboard-greet"
         text = "Hello from Inty."
         sequence = 1
+        tool_background_started = False
+        generated_images = ()
+        trace_id = None
+        langsmith_trace_id = None
+        langsmith_run_id = None
+        turn_recall = None
 
     async def _fake_greeting_turn(**kwargs):
         output_queue = kwargs.get("agentic_output_queue")

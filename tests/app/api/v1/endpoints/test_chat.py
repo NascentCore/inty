@@ -2355,9 +2355,11 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
 ):
     captured: dict = {}
     user_saves: list = []
+    bundle_ready = threading.Event()
 
     async def fake_run_companion_chat_turn_for_api(**kwargs):
         captured["bundle"] = kwargs.get("implicit_signal_bundle")
+        bundle_ready.set()
         return CompanionTurnResult(assistant_text="greet-cf")
 
     _setup_companion_ws_chat_test_env(
@@ -2381,10 +2383,9 @@ def test_chat_websocket_companion_user_signed_on_greeting_sets_bundle(
                 }
             )
             body = websocket.receive_json()
-            if body.get("type") == "user_signed_on_ack":
-                body = websocket.receive_json()
+            assert body.get("type") == "user_signed_on_ack"
 
-    assert body["code"] == 200
+    assert bundle_ready.wait(timeout=5.0)
     bundle = captured["bundle"]
     assert bundle is not None
     assert bundle.user_signed_on is True

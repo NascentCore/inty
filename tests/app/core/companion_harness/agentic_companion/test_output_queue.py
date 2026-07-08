@@ -35,6 +35,21 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 
 
+class _FakePersistedOutputRecord:
+    """Minimal ``append_agent_output`` return shape after OutputQueue wire-meta extension."""
+
+    def __init__(self, message_id: str, text: str, sequence: int) -> None:
+        self.message_id = message_id
+        self.text = text
+        self.sequence = sequence
+        self.tool_background_started = False
+        self.generated_images = ()
+        self.trace_id = None
+        self.langsmith_trace_id = None
+        self.langsmith_run_id = None
+        self.turn_recall = None
+
+
 @pytest.fixture(autouse=True)
 def _clear_registry() -> None:
     clear_output_queues_for_tests()
@@ -81,11 +96,8 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
     scope = AgentScope(user_id="u-agent", agent_id="a-agent")
     queue = OutputQueue(scope=scope)
 
-    class _FakeRecord:
-        def __init__(self, message_id: str, text: str, sequence: int) -> None:
-            self.message_id = message_id
-            self.text = text
-            self.sequence = sequence
+    class _FakeRecord(_FakePersistedOutputRecord):
+        pass
 
     with patch(
         "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
@@ -127,11 +139,8 @@ async def test_multiple_appends_pulled_in_order() -> None:
     scope = AgentScope(user_id="u2", agent_id="a2")
     queue = OutputQueue(scope=scope)
 
-    class _FakeRecord:
-        def __init__(self, message_id: str, text: str, sequence: int) -> None:
-            self.message_id = message_id
-            self.text = text
-            self.sequence = sequence
+    class _FakeRecord(_FakePersistedOutputRecord):
+        pass
 
     with patch(
         "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
@@ -385,11 +394,8 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
     pulled_lock = asyncio.Lock()
     delivered_at = datetime.now(UTC)
 
-    class _FakeRecord:
-        def __init__(self, message_id: str, text: str, sequence: int) -> None:
-            self.message_id = message_id
-            self.text = text
-            self.sequence = sequence
+    class _FakeRecord(_FakePersistedOutputRecord):
+        pass
 
     sequence = 0
 

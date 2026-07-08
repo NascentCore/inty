@@ -135,7 +135,7 @@ def test_bootstrap_and_settled_tool_contract_require_interim_content() -> None:
         ContextMeta(),
         interactive_bootstrap_active=False,
         inner_tick_turn=False,
-        include_tools=True,
+        enable_tools=True,
     )
     settled_joined = "\n".join(_system_contents(settled))
     clause = "发起 tool_calls 时"
