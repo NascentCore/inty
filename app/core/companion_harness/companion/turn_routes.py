@@ -1,4 +1,4 @@
-"""Bootstrap interim output sinks for AgenticLoop tool rounds.
+"""In-turn interim output sinks for AgenticLoop tool rounds.
 
 Typed callbacks for delivering in-turn assistant text before a turn completes.
 """
@@ -17,8 +17,8 @@ BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 
 
 # TODO(#3402): Replace with channel-agnostic ``UserVisibleChunk`` + ``UserVisibleChunkSink``.
-class BootstrapInterimOutput(BaseModel):
-    """One bootstrap sync tool-loop LLM round delivered to the client before turn end."""
+class InTurnInterimOutput(BaseModel):
+    """One in-turn sync tool-loop LLM round delivered to the client before turn end."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -32,4 +32,4 @@ class BootstrapInterimOutput(BaseModel):
     assistant_msg_uuid: str
 
 
-BootstrapInterimOutputSink = Callable[[BootstrapInterimOutput], Awaitable[None]]
+InTurnInterimOutputSink = Callable[[InTurnInterimOutput], Awaitable[None]]

@@ -236,17 +236,15 @@ def build_companion_turn_prompt_plan(
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     match track:
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            from app.core.companion_harness.prompt_builder import PromptBuilder
-
-            tools_for_turn = companion_tools_for_turn(
-                track=track,
-                implicit_user_signed_on_turn=implicit_sign_on_turn,
+            return CompanionTurnPromptPlan(
+                tools_for_turn=companion_tools_for_turn(
+                    track=track,
+                    implicit_user_signed_on_turn=implicit_sign_on_turn,
+                ),
+                system_messages=[],
+                messages=[],
+                transcript_compaction=None,
             )
-            system_messages = PromptBuilder(
-                bundle=loaded_state.bundle,
-                context=loaded_state.context,
-                runtime_context=runtime_context,
-            ).bootstrap_turn_system_dicts()
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT

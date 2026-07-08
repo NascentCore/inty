@@ -58,7 +58,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.llms.client import LLM_SCENE_CHAT, LLM_SCENE_INNER_TICK
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.companion_harness.agentic_companion.types import (
+    OutputMessageKind,
+    WireAssistantSource,
+)
 
 
 def _response(content: str) -> SimpleNamespace:
@@ -187,7 +190,12 @@ async def test_greeting_uses_dual_llm_envelope_with_retrial() -> None:
     assert result.assistant_text == "Welcome back!"
     assert result.significance_meta is not None
     assert result.turn_recall == "greeted after sign-on"
-    appender.output_queue.append_visible_message.assert_not_awaited()
+    appender.output_queue.append_visible_message.assert_awaited_once()
+    append_input = appender.output_queue.append_visible_message.await_args.args[
+        0
+    ]
+    assert append_input.kind == OutputMessageKind.USER_REPLY
+    assert append_input.wire_assistant_source == WireAssistantSource.GREETING
 
 
 @pytest.mark.asyncio

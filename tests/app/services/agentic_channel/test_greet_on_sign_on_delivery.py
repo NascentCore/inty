@@ -38,7 +38,13 @@ from app.services.agentic_channel.serving import (
     _deliver_ready_message,
     flush_scope_output_queue_ready,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.companion_harness.agentic_companion.output_queue import (
+    OutputQueueAppendInput,
+)
+from app.core.companion_harness.agentic_companion.types import (
+    OutputMessageKind,
+    WireAssistantSource,
+)
 
 
 class _FakeResponse:
@@ -285,10 +291,31 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
         message_id = "msg-greet-e2e"
         text = "Hello from Inty."
         sequence = 1
+        tool_background_started = False
+        generated_images = ()
+        trace_id = None
+        langsmith_trace_id = None
+        langsmith_run_id = None
+        turn_recall = None
 
     async def _fake_greeting_turn(**kwargs):
         output_queue = kwargs.get("agentic_output_queue")
+        batch = kwargs.get("user_message_batch")
         assert output_queue is not None
+        assert batch is not None
+        await output_queue.append_visible_message(
+            OutputQueueAppendInput(
+                kind=OutputMessageKind.USER_REPLY,
+                text="Hello from Inty.",
+                batch_id=batch.batch_id,
+                message_ids=batch.message_ids,
+                trace_id=None,
+                langsmith_trace_id=None,
+                langsmith_run_id=None,
+                turn_recall=None,
+                wire_assistant_source=WireAssistantSource.GREETING,
+            )
+        )
         return CompanionTurnResult(assistant_text="Hello from Inty.")
 
     with patch(

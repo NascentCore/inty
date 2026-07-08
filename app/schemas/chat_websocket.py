@@ -230,14 +230,6 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
     )
 
     source: Optional[str] = None
-    bootstrap_round_index: Optional[int] = Field(
-        default=None,
-        validation_alias=AliasChoices(
-            "bootstrapRoundIndex", "bootstrap_round_index"
-        ),
-        serialization_alias="bootstrapRoundIndex",
-        description="1-based LLM round index within USER_CHAT_BOOTSTRAP sync tool loop.",
-    )
     inner_tick_activity: Optional[str] = None
     trace_id: Optional[str] = None
     user_msg_uuid: Optional[str] = None
@@ -419,16 +411,15 @@ class ChatWebSocketResponse(BaseModel):
     include ``error_kind`` and ``llm_provider_http_status`` (and other keys merged from
     ``CompanionInferenceUpstreamHTTPException.ws_extra`` in the handler).
 
-    TODO(issue#3208): HTTP-era ``ChatWebSocketResponse`` still uses loose ``data``;
-    queue path uses :class:`ChatWebSocketQueuedSuccessFrame` (Stage 2 done).
-    Tighten ``data`` to ``ChatWsCompletionData | None`` when HTTP chat migrates (#3207).
+    Queue path uses :class:`ChatWebSocketQueuedSuccessFrame`; this model remains for
+    HTTP-era copies and error envelopes where ``data`` may be absent or loosely shaped.
     """
 
     model_config = ConfigDict(extra="allow")
 
     code: int = 200
     message: str = "success"
-    data: Any = None
+    data: ChatWsCompletionData | None = None
     agent_id: str
     status_line: Optional[str] = None
     error_kind: Optional[str] = None

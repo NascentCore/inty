@@ -120,6 +120,29 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> (
     assert "schedule_task" not in joined
 
 
+def test_bootstrap_and_settled_tool_contract_require_interim_content() -> None:
+    bundle = PromptBundle(
+        identity="identity",
+        soul="soul",
+        user_md="user",
+        memory_md="",
+    )
+    bootstrap_joined = "\n".join(
+        _bootstrap_system_contents(bundle, ContextMeta(), ChannelKind.APP_WS)
+    )
+    settled = build_system_messages(
+        bundle,
+        ContextMeta(),
+        interactive_bootstrap_active=False,
+        inner_tick_turn=False,
+        enable_tools=True,
+    )
+    settled_joined = "\n".join(_system_contents(settled))
+    clause = "发起 tool_calls 时"
+    assert clause in bootstrap_joined
+    assert clause in settled_joined
+
+
 def test_bootstrap_omits_experience_profile_context_mode_clause() -> None:
     bundle = PromptBundle(
         identity="identity",

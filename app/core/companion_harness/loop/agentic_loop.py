@@ -23,13 +23,12 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
 from app.core.companion_harness.agentic_companion.types import (
     AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
-    UserMessageBatch,
-)
-from app.core.companion_harness.agentic_companion.types import (
     GeneratedImageRef,
+    OutputMessageKind,
+    UserMessageBatch,
+    WireAssistantSource,
 )
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
@@ -65,9 +64,12 @@ from app.core.companion_harness.companion.proactive_chat_envelope import (
     split_proactive_chat_message,
 )
 from app.core.companion_harness.companion.turn_routes import (
-    BootstrapInterimOutput,
+    InTurnInterimOutput,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.loop.in_turn_visible_text import (
+    resolve_in_turn_assistant_visible_text,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompt_builder import (
     prompt_messages_to_openai_dicts,
@@ -169,6 +171,7 @@ class _UserVisibleOutputAppender:
         langsmith_run_id: str,
         turn_recall: str | None = None,
         tool_background_started: bool = False,
+        wire_assistant_source: WireAssistantSource = WireAssistantSource.CHAT,
     ) -> None:
         visible = user_visible_assistant_text(text)
         if visible is None:
@@ -184,6 +187,7 @@ class _UserVisibleOutputAppender:
                 langsmith_run_id=langsmith_run_id,
                 turn_recall=turn_recall,
                 tool_background_started=tool_background_started,
+                wire_assistant_source=wire_assistant_source,
                 generated_images=(
                     _generated_image_refs_since(
                         self.store,
@@ -237,6 +241,7 @@ class _DomainToolBackgroundAppendSink:
                 langsmith_trace_id=event.langsmith_trace_id,
                 langsmith_run_id=event.langsmith_run_id,
                 turn_recall=event.turn_recall,
+                wire_assistant_source=WireAssistantSource.TOOL_BG,
             )
 
     async def flush(self) -> None:
@@ -350,13 +355,26 @@ async def _run_prompt_plan_tool_loop(
         nonlocal skip_final_transcript_assistant_row
         nonlocal last_interim_assistant_msg_uuid
         round_index += 1
-        body = (message.content or "").strip()
-        # TODO(!3457): Deliver interim chat while tools run — when body is empty but
-        # tool_calls present, resolve visible text so user is not silent during tool
-        # execution (!3456).
-        if not body:
+        body = resolve_in_turn_assistant_visible_text(message)
+        if body is None:
+            had_tool_calls_early = bool(
+                getattr(message, "tool_calls", None) or []
+            )
+            if had_tool_calls_early:
+                logger.warning(
+                    "in_turn_visible_text_missing trace_id={} round_index={}",
+                    trace_id,
+                    round_index,
+                )
             return
-        had_tool_calls = bool(getattr(message, "tool_calls", None) or [])
+        had_tool_calls = bool(
+            (
+                message.get("tool_calls")
+                if isinstance(message, dict)
+                else getattr(message, "tool_calls", None)
+            )
+            or []
+        )
         ls_trace = langsmith_trace_acc
         ls_run = langsmith_llm_run_acc
         assistant_msg_uuid = str(uuid.uuid4())
@@ -379,7 +397,7 @@ async def _run_prompt_plan_tool_loop(
             emit_every_round or had_tool_calls
         ):
             await interim_output_sink(
-                BootstrapInterimOutput(
+                InTurnInterimOutput(
                     text=body,
                     user_msg_uuid=user_msg_uuid,
                     trace_id=trace_id,
@@ -545,7 +563,12 @@ async def _run_chat_only_prompt_plan(
         context.trace_id,
         track.value,
     )
-    if last_text and track != CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+    if last_text:
+        wire_source = (
+            WireAssistantSource.GREETING
+            if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            else WireAssistantSource.CHAT
+        )
         await appender.append_visible_message(
             kind=downlink_kind,
             text=last_text,
@@ -553,6 +576,7 @@ async def _run_chat_only_prompt_plan(
             langsmith_trace_id=langsmith_trace_acc,
             langsmith_run_id=langsmith_llm_run_acc,
             turn_recall=turn_recall,
+            wire_assistant_source=wire_source,
         )
     return InTurnSyncToolLoopResult(
         assistant_text=last_text,
@@ -612,7 +636,7 @@ class AgenticLoop:
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
 
-        async def _emit_user_reply(interim: BootstrapInterimOutput) -> None:
+        async def _emit_user_reply(interim: InTurnInterimOutput) -> None:
             await appender.append_visible_message(
                 kind=OutputMessageKind.USER_REPLY,
                 text=interim.text,
@@ -709,6 +733,7 @@ class AgenticLoop:
                 langsmith_trace_id=fg_result.langsmith_trace_id,
                 langsmith_run_id=fg_result.langsmith_run_id,
                 turn_recall=fg_result.turn_recall,
+                tool_background_started=bool(fg_result.tool_msgs_for_bg),
             )
         event_sink = _DomainToolBackgroundAppendSink(
             appender=appender,
@@ -716,6 +741,7 @@ class AgenticLoop:
         )
 
         assert context.companion_turn_track is not None
+        tool_background_started = bool(fg_result.tool_msgs_for_bg)
         await run_tool_background_loop(
             memory_store=self.store,
             request_messages=list(fg_result.tool_msgs_for_bg),
@@ -746,7 +772,7 @@ class AgenticLoop:
             langsmith_trace_id=fg_result.langsmith_trace_id,
             langsmith_run_id=fg_result.langsmith_run_id,
             skip_final_transcript_assistant_row=False,
-            tool_background_started=False,
+            tool_background_started=tool_background_started,
             last_interim_assistant_msg_uuid=None,
             output_message_ids=tuple(appender.persisted_ids),
         )

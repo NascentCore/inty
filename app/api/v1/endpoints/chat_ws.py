@@ -103,10 +103,6 @@ from app.services.agentic_companion.presence_registry import (
     PresenceBusyError,
     companion_presence_registry,
 )
-from app.services.agentic_companion.ws_outbound_materialize import (
-    append_implicit_greeting_output_after_persist,
-    persist_implicit_greeting_ai_chat_history,
-)
 from app.services.agentic_companion.ws_channel_guard import (
     register_app_ws_channel,
     unregister_app_ws_channel,
@@ -300,7 +296,6 @@ async def _enqueue_companion_greeting_ws_turn_after_user_signed_on(
                 current_user=current_user,
                 subscription_svc=subscription_svc,
                 voice_svc=voice_svc,
-                companion_ws_foreground_pending=companion_ws.foreground_pending,
                 companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                 implicit_greeting_turn=True,
                 ws_outbound_queue=outbound_queue,
@@ -818,7 +813,6 @@ async def _agent_chat_ws_completions_impl(
     current_user: UserSchema,
     subscription_svc: SubscriptionService,
     voice_svc: VoiceService = default_voice_service,
-    companion_ws_foreground_pending: dict[str, dict[str, Any]] | None = None,
     companion_ws_inner_tick_ctx: dict[str, Any] | None = None,
     implicit_greeting_turn: bool = False,
     ws_outbound_queue: asyncio.Queue[WsOutboundPayload] | None = None,
@@ -830,7 +824,7 @@ async def _agent_chat_ws_completions_impl(
     HTTP-era extras (chat limit gate, legacy TTS, usage accounting, push read side-effects,
     surprise snap, in-frame memory prompts) stay on ``_agent_chat_completions_impl`` or other routes.
 
-    ``companion_ws_foreground_pending`` / ``companion_ws_inner_tick_ctx`` are mutable slices from
+    ``companion_ws_inner_tick_ctx`` is a mutable slice from the connection-level
     the connection-level :class:`~app.core.companion_harness.companion.websocket_coordinator.CompanionWebSocketCoordinator`
     (not the coordinator object). Connection handlers pass slices so this turn impl stays decoupled
     from coordinator lifecycle (greeting registration, sign-out clear).
@@ -1027,28 +1021,9 @@ async def _agent_chat_ws_completions_impl(
                         )
                     _ = companion_user_row_id
                 else:
-                    companion_preset_uid: str | None = None
-                    if companion_ws_foreground_pending is not None:
-                        companion_preset_uid = (
-                            _require_websocket_companion_message_id_uuid(
-                                request
-                            )
-                        )
-                        companion_ws_foreground_pending[
-                            companion_preset_uid
-                        ] = {
-                            "session_id": session_id,
-                            "agent_id": agent_id,
-                            "user_id": str(current_user.id),
-                            "chat_id": chat.id,
-                            "request": request,
-                            "effective_local_id": effective_local_id,
-                            "chat_voice_id": chat_settings.voice_id,
-                            "agent_voice_id": agent_data.get("voice_id"),
-                            "agent_gender": agent_data.get("gender"),
-                            "agent_settings": agent_data.get("settings"),
-                            "language": request.language,
-                        }
+                    companion_preset_uid = (
+                        _require_websocket_companion_message_id_uuid(request)
+                    )
                     try:
                         companion_implicit_bundle = ImplicitSignalBundle(
                             client_time=request.user_time_context,
@@ -1081,14 +1056,6 @@ async def _agent_chat_ws_completions_impl(
                                 agentic_output_queue=greeting_output_queue,
                                 user_message_batch=greeting_batch,
                             )
-                            if (
-                                companion_preset_uid is not None
-                                and companion_ws_foreground_pending is not None
-                                and not companion_turn.tool_background_started
-                            ):
-                                companion_ws_foreground_pending.pop(
-                                    companion_preset_uid, None
-                                )
                         else:
                             assert ws_outbound_queue is not None
                             assert ws_conn_id is not None
@@ -1167,17 +1134,9 @@ async def _agent_chat_ws_completions_impl(
                                 exc, "companion_tool_background_started", False
                             )
                         )
-                        if (
-                            companion_preset_uid is not None
-                            and companion_ws_foreground_pending is not None
-                            and not bg_started_on_exc
-                        ):
-                            companion_ws_foreground_pending.pop(
-                                companion_preset_uid, None
-                            )
                         if bg_started_on_exc:
                             try:
-                                bg_user_row_id = await _persist_companion_user_message_for_bg(
+                                await _persist_companion_user_message_for_bg(
                                     session_id=session_id,
                                     last_user_message=last_user_message,
                                     effective_local_id=effective_local_id,
@@ -1188,16 +1147,6 @@ async def _agent_chat_ws_completions_impl(
                                     "companion bg-survives-fg-fail user message persist failed: {}",
                                     persist_exc,
                                 )
-                                bg_user_row_id = None
-                            if (
-                                companion_preset_uid is not None
-                                and companion_ws_foreground_pending is not None
-                                and companion_preset_uid
-                                in companion_ws_foreground_pending
-                            ):
-                                companion_ws_foreground_pending[
-                                    companion_preset_uid
-                                ]["foreground_user_message_id"] = bg_user_row_id
                         raise
                     if implicit_greeting_ws:
                         companion_user_row_id = (
@@ -1208,64 +1157,17 @@ async def _agent_chat_ws_completions_impl(
                                 implicit_greeting_turn=implicit_greeting_ws,
                             )
                         )
-                        if (
-                            companion_preset_uid is not None
-                            and companion_ws_foreground_pending is not None
-                            and companion_preset_uid
-                            in companion_ws_foreground_pending
-                        ):
-                            companion_ws_foreground_pending[
-                                companion_preset_uid
-                            ][
-                                "foreground_user_message_id"
-                            ] = companion_user_row_id
                         greeting_text = str(
                             companion_turn.assistant_text or ""
                         ).strip()
-                        if not greeting_text:
+                        output_message_ids = companion_turn.output_message_ids
+                        if not greeting_text and not output_message_ids:
                             logger.error(
                                 f"Companion chat returned no content - agent_id={agent_id}, user_id={current_user.id}"
                             )
                             raise HTTPException(
                                 status_code=500,
                                 detail="Chat returned no content",
-                            )
-                        assert ws_outbound_queue is not None
-                        greeting_session_id = generate_session_id(
-                            greeting_scope.memory_store_chat_id()
-                        )
-                        await persist_implicit_greeting_ai_chat_history(
-                            session_id=greeting_session_id,
-                            agent_id=agent_id,
-                            text=greeting_text,
-                            companion_turn=companion_turn,
-                        )
-                        await append_implicit_greeting_output_after_persist(
-                            output_queue=greeting_output_queue,
-                            user_message_batch=greeting_batch,
-                            text=greeting_text,
-                            companion_turn=companion_turn,
-                        )
-                        # The scope output pump owns App-WS greeting delivery;
-                        # wait until it materializes the queued row for this connection.
-                        _greeting_wait_deadline = (
-                            asyncio.get_running_loop().time() + 5.0
-                        )
-                        while (
-                            ws_outbound_queue.empty()
-                            and asyncio.get_running_loop().time()
-                            < _greeting_wait_deadline
-                        ):
-                            await asyncio.sleep(0.02)
-                        if ws_outbound_queue.empty():
-                            logger.error(
-                                "greeting pump delivery timed out agent_id={} user_id={}",
-                                agent_id,
-                                current_user.id,
-                            )
-                            raise HTTPException(
-                                status_code=500,
-                                detail="greeting delivery failed",
                             )
                         if companion_ws_inner_tick_ctx is not None:
                             apply_companion_ws_inner_tick_coords(
@@ -1538,7 +1440,6 @@ async def chat_completions_websocket(
                         current_user=current_user,
                         subscription_svc=subscription_svc,
                         voice_svc=voice_svc,
-                        companion_ws_foreground_pending=companion_ws.foreground_pending,
                         companion_ws_inner_tick_ctx=companion_ws.inner_tick_context,
                         ws_outbound_queue=outbound_queue,
                         ws_conn_id=ws_conn_id,

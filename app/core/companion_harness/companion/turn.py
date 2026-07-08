@@ -243,14 +243,22 @@ async def _run_companion_turn_core(
         idle_wait_timeout_sec = float(
             llm_client.config.async_chat_front_timeout_sec
         )
-    # TODO(tool-bg-idle-starves-user-chat): Maintenance often ends with tool_background still running; — #3123
-    # the next turn waits on ``tool_bg_idle`` here while holding WS ``turn_lock``.
-    # https://github.com/NascentCore/inty/issues/3123
-    await _await_tool_background_idle_if_configured(
-        tool_bg_idle_event,
-        idle_wait_timeout_sec=idle_wait_timeout_sec,
-        scope_registry_key=store.scope.registry_key(),
-    )
+    # User/proactive turns skip idle wait so burst USER_CHAT is not starved (#3123 / #3113).
+    # Dreaming / LivingSphere curator still wait on ``tool_bg_idle`` before compact.
+    match track:
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+        ):
+            pass
+        case _:
+            await _await_tool_background_idle_if_configured(
+                tool_bg_idle_event,
+                idle_wait_timeout_sec=idle_wait_timeout_sec,
+                scope_registry_key=store.scope.registry_key(),
+            )
 
     loaded_state = load_companion_turn_state(
         store=store,
@@ -325,10 +333,11 @@ async def _run_companion_turn_core(
     skip_proactive_assistant_transcript_row = False
     significance_meta: dict[str, Any] | None = None
     turn_recall: str | None = None
-    bootstrap_skip_final_transcript_assistant_row = False
-    bootstrap_last_interim_assistant_msg_uuid: str | None = None
+    skip_final_transcript_assistant_row = False
+    last_interim_assistant_msg_uuid: str | None = None
     in_turn_sync_persisted_transcript = False
     output_message_ids: tuple[str, ...] = ()
+    tool_background_started = False
     t_loop = time.perf_counter()
 
     llm_runtime_bind_token: (
@@ -431,13 +440,14 @@ async def _run_companion_turn_core(
                 turn_recall = loop_out.turn_recall
                 langsmith_trace_acc = loop_out.langsmith_trace_id
                 langsmith_llm_run_acc = loop_out.langsmith_run_id
-                bootstrap_skip_final_transcript_assistant_row = (
+                skip_final_transcript_assistant_row = (
                     loop_out.skip_final_transcript_assistant_row
                 )
-                bootstrap_last_interim_assistant_msg_uuid = (
+                last_interim_assistant_msg_uuid = (
                     loop_out.last_interim_assistant_msg_uuid
                 )
                 output_message_ids = loop_out.output_message_ids
+                tool_background_started = loop_out.tool_background_started
                 if (
                     companion_turn_track_skips_empty_proactive_assistant_row(
                         track
@@ -476,8 +486,8 @@ async def _run_companion_turn_core(
         )
     )
     assistant_msg_uuid = (
-        bootstrap_last_interim_assistant_msg_uuid
-        if bootstrap_last_interim_assistant_msg_uuid is not None
+        last_interim_assistant_msg_uuid
+        if last_interim_assistant_msg_uuid is not None
         else str(uuid.uuid4())
     )
     if implicit_sign_on_turn:
@@ -507,13 +517,13 @@ async def _run_companion_turn_core(
             splice_plan=ai_private_splice_plan,
             user_msg_uuid=user_msg_uuid,
             assistant_text=last_text,
-            bootstrap_skip_final_transcript_assistant_row=(
-                bootstrap_skip_final_transcript_assistant_row
+            skip_final_transcript_assistant_row=(
+                skip_final_transcript_assistant_row
             ),
         )
     )
     if (
-        not bootstrap_skip_final_transcript_assistant_row
+        not skip_final_transcript_assistant_row
         and not skip_proactive_assistant_transcript_row
     ):
         append_transcript_assistant_row(
@@ -555,7 +565,7 @@ async def _run_companion_turn_core(
         trace_id=trace_id,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
-        tool_background_started=False,
+        tool_background_started=tool_background_started,
         assistant_source=runtime_flags.turn_type,
         inner_tick_activity=(
             route_inner_activity.value if inner_tick_turn else None

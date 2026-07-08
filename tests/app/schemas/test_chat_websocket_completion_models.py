@@ -82,9 +82,8 @@ TOOL_BG_META = {
     "significance_perception": {"importance_round": 5},
 }
 
-BOOTSTRAP_INTERIM_META = {
-    "source": "bootstrap_tool_round",
-    "bootstrapRoundIndex": 2,
+IN_TURN_INTERIM_META = {
+    "source": "chat",
     "user_msg_uuid": "550e8400-e29b-41d4-a716-446655440000",
     "assistant_msg_uuid": "33333333-3333-4333-8333-000000000002",
 }
@@ -103,7 +102,7 @@ INNER_TICK_META = {
     [
         FOREGROUND_CHAT_META,
         TOOL_BG_META,
-        BOOTSTRAP_INTERIM_META,
+        IN_TURN_INTERIM_META,
         INNER_TICK_META,
     ],
 )
@@ -243,6 +242,26 @@ def test_build_chat_ws_queued_success_frame_round_trip() -> None:
     assert round_trip.agent_id == "agent-uuid"
     assert round_trip.status_line == "Online"
     assert round_trip.data.id == completion.id
+
+
+def test_chat_websocket_response_typed_data_optional() -> None:
+    from app.schemas.chat_websocket import ChatWebSocketResponse
+
+    frame = ChatWebSocketResponse(
+        code=200,
+        message="success",
+        agent_id="agent-uuid",
+        data=None,
+    )
+    assert frame.data is None
+    typed = ChatWebSocketResponse(
+        code=200,
+        message="success",
+        agent_id="agent-uuid",
+        data=ChatWsCompletionData.model_validate(_base_completion_data(FOREGROUND_CHAT_META)),
+    )
+    assert typed.data is not None
+    assert typed.data.id == "chatcmpl-abc123def456"
 
 
 def test_chat_ws_queued_error_frame_round_trip() -> None:

@@ -34,9 +34,18 @@ class OutputMessageKind(StrEnum):
     TOOL_BACKGROUND = "tool_background"
     # Async tool_background loop produced user-visible assistant text.
 
-    BOOTSTRAP_INTERIM = "bootstrap_interim"
-    # One bootstrap sync tool-loop LLM round before USER_CHAT_BOOTSTRAP ends.
-    # TODO(!3402): Add USER_VISIBLE_CHUNK; retire BOOTSTRAP_INTERIM.
+
+class WireAssistantSource(StrEnum):
+    """WS ``meta_data.source`` for one queue-delivered assistant line."""
+
+    CHAT = "chat"
+    # Settled or bootstrap user-chat foreground reply.
+
+    GREETING = "greeting"
+    # Implicit sign-on greeting (``IMPLICIT_SIGN_ON_GREETING``).
+
+    TOOL_BG = "tool_bg"
+    # Async tool_background finish or follow-up bubble.
 
 
 class QueueStatus(StrEnum):

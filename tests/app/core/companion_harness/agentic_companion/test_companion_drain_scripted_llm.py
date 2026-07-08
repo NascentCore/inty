@@ -29,7 +29,12 @@ from app.core.companion_harness.agentic_companion.postgres_queue import (
 )
 from app.core.companion_harness.agentic_companion.types import (
     InboundWireMessage,
+    OutputMessageKind,
     QueueStatus,
+)
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.companion.scope_turn_lock import (
+    get_scope_tool_bg_idle,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
@@ -292,7 +297,7 @@ async def test_drain_user_chat_background_tool_round() -> None:
 
 
 @pytest.mark.asyncio
-async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
+async def test_drain_dual_llm_silent_fg_delivers_tool_background_on_finish() -> (
     None
 ):
     built = build_scripted_settled_user_chat_script(
@@ -303,7 +308,7 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
     scope = await create_guest_scope_for_test(
         channel=ChannelKind.APP_WS,
         nickname_prefix="drain_silent_fg",
-        meta_data={"test": "scripted_drain_skip_output"},
+        meta_data={"test": "scripted_drain_silent_fg_tool_bg"},
     )
     try:
         _seed_settled_store_for_drain(scope, injected)
@@ -335,8 +340,13 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
             await db.commit()
 
         assert result is not None
-        assert result.output_message_ids == ()
-        assert result.tool_background_started is False
+        assert result.tool_background_started is True
+
+        output_queue = get_output_queue_for_scope(scope)
+        ready = await output_queue.pull_ready_batch()
+        assert len(ready) == 1
+        assert ready[0].kind == OutputMessageKind.TOOL_BACKGROUND
+        assert ready[0].text == "Listing complete."
 
         async with AsyncSessionLocal() as db:
             input_rows = (
@@ -370,8 +380,109 @@ async def test_drain_skips_output_queue_when_tool_background_without_text() -> (
 
         assert len(input_rows) == 1
         assert input_rows[0].status == QueueStatus.DELIVERED.value
-        assert output_rows == []
+        assert len(output_rows) == 1
+        assert output_rows[0].kind == OutputMessageKind.TOOL_BACKGROUND.value
         assert fake.script_index == built.expected_step_count
+    finally:
+        await _cleanup_guest_scope_with_queues(scope)
+
+
+@pytest.mark.asyncio
+async def test_burst_user_messages_during_tool_bg() -> None:
+    """Back-to-back USER_CHAT drains complete while tool_bg_idle stays cleared (#3123)."""
+    tool_bg_script = build_scripted_settled_user_chat_script(
+        UserTurnLlmLoopMode.DUAL_LLM,
+        SettledUserChatScriptScenario.DUAL_LLM_TOOL_BACKGROUND,
+    )
+    follow_up_script = build_scripted_settled_user_chat_script(
+        UserTurnLlmLoopMode.DUAL_LLM,
+        SettledUserChatScriptScenario.NO_TOOLS,
+    )
+    injected, fake = build_scripted_injected_runtime(
+        tool_bg_script.steps + follow_up_script.steps
+    )
+    scope = await create_guest_scope_for_test(
+        channel=ChannelKind.APP_WS,
+        nickname_prefix="drain_burst",
+        meta_data={"test": "scripted_burst_tool_bg"},
+    )
+    try:
+        _seed_settled_store_for_drain(scope, injected)
+        now = datetime.now(UTC)
+        async with AsyncSessionLocal() as db:
+            input_repo = PostgresInputQueueRepository(db)
+            await input_repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=ChannelKind.APP_WS,
+                    wire_id="wire-burst-1",
+                    text="first",
+                    received_at_utc=now,
+                )
+            )
+            await db.commit()
+
+        companion_scope = CompanionScope(
+            scope.user_id,
+            scope.agent_id,
+            scope.memory_store_chat_id(),
+        )
+        idle = get_scope_tool_bg_idle(companion_scope)
+        idle.clear()
+
+        async with AsyncSessionLocal() as db:
+            companion = AgenticCompanion(
+                scope=scope,
+                input_repo=PostgresInputQueueRepository(db),
+            )
+            first = await companion.drain_once(
+                resolved_chat_model=DEEPSEEK_V3_2,
+                runtime_channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=_implicit_bundle(),
+                injected_runtime=injected,
+            )
+            await db.commit()
+
+        assert first is not None
+        assert not idle.is_set()
+
+        async with AsyncSessionLocal() as db:
+            input_repo = PostgresInputQueueRepository(db)
+            await input_repo.append_user_message(
+                InboundWireMessage(
+                    scope=scope,
+                    channel=ChannelKind.APP_WS,
+                    wire_id="wire-burst-2",
+                    text="second",
+                    received_at_utc=now,
+                )
+            )
+            await db.commit()
+
+        idle.clear()
+
+        async with AsyncSessionLocal() as db:
+            companion = AgenticCompanion(
+                scope=scope,
+                input_repo=PostgresInputQueueRepository(db),
+            )
+            second = await companion.drain_once(
+                resolved_chat_model=DEEPSEEK_V3_2,
+                runtime_channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=_implicit_bundle(),
+                injected_runtime=injected,
+            )
+            await db.commit()
+
+        assert second is not None
+        assert (
+            second.assistant_text.strip()
+            == follow_up_script.expected_foreground_reply
+        )
+        assert fake.script_index == (
+            tool_bg_script.expected_step_count
+            + follow_up_script.expected_step_count
+        )
     finally:
         await _cleanup_guest_scope_with_queues(scope)
 

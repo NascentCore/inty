@@ -63,7 +63,7 @@ class AiPrivateSplicePersistInput:
     splice_plan: AiPrivateSplicePlan
     user_msg_uuid: str
     assistant_text: str
-    bootstrap_skip_final_transcript_assistant_row: bool
+    skip_final_transcript_assistant_row: bool
 
 
 def track_uses_ai_private_splice(track: CompanionTurnTrack) -> bool:

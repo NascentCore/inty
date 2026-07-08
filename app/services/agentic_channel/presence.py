@@ -47,10 +47,6 @@ from app.services.agentic_channel.serving import enqueue_inbound_wire_message
 from app.services.companion_chat_service import (
     run_companion_implicit_sign_on_greeting_turn_for_api,
 )
-from app.services.agentic_companion.ws_outbound_materialize import (
-    append_implicit_greeting_output_after_persist,
-    persist_implicit_greeting_ai_chat_history,
-)
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.session import Coordinator, Session
 
@@ -230,22 +226,7 @@ class AgentChannelPresence:
                 user_message_batch=greeting_batch,
             )
         )
-        greeting_text = str(companion_turn.assistant_text or "").strip()
-        if greeting_text:
-            await persist_implicit_greeting_ai_chat_history(
-                session_id=generate_session_id(
-                    self._scope.memory_store_chat_id()
-                ),
-                agent_id=self._scope.agent_id,
-                text=greeting_text,
-                companion_turn=companion_turn,
-            )
-            await append_implicit_greeting_output_after_persist(
-                output_queue=output_queue,
-                user_message_batch=greeting_batch,
-                text=greeting_text,
-                companion_turn=companion_turn,
-            )
+        assert companion_turn is not None
 
     async def enqueue_app_ws_user_turn(
         self,

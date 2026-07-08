@@ -253,6 +253,12 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
             self.message_id = message_id
             self.text = text
             self.sequence = sequence
+            self.tool_background_started = False
+            self.generated_images = ()
+            self.trace_id = None
+            self.langsmith_trace_id = None
+            self.langsmith_run_id = None
+            self.turn_recall = None
 
     issue_url = "https://github.com/NascentCore/inty/issues/3652"
     monkeypatch.setattr(
