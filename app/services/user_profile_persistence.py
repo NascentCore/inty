@@ -15,6 +15,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.core.companion_harness.memory.user_md_identity import (
     USER_MD_REL,
     fill_user_md_identity_fields,
@@ -90,13 +93,13 @@ def seed_profile_collection_required_in_context(
     required: bool,
 ) -> None:
     """Persist profile-collection flag into session context after Telegram provision."""
-    rel = "context.json"
+    rel = CONTEXT_JSON_REL
     raw = store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
-        raise ValueError("ERROR: missing context.json")
+        raise ValueError(f"ERROR: missing {CONTEXT_JSON_REL}")
     data: dict[str, Any] = json.loads(str(raw))
     if not isinstance(data, dict):
-        raise ValueError("ERROR: context.json must be a JSON object")
+        raise ValueError(f"ERROR: {CONTEXT_JSON_REL} must be a JSON object")
     data["profile_collection_required"] = required
     store.write_document(
         rel,

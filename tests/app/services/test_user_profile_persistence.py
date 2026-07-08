@@ -8,6 +8,9 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.core.companion_harness.memory.user_md_identity import (
     USER_MD_REL,
     UserIdentityFieldLabel,
@@ -88,9 +91,9 @@ async def test_persist_user_profile_snapshot_dual_write(tmp_path) -> None:
 def test_seed_profile_collection_required_in_context(tmp_path) -> None:
     st = _store(tmp_path)
     st.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps({"context_mode": "unspecific"}, ensure_ascii=False) + "\n",
     )
     seed_profile_collection_required_in_context(st, required=True)
-    data = json.loads(st.read_document("context.json"))
+    data = json.loads(st.read_document(CONTEXT_JSON_REL))
     assert data["profile_collection_required"] is True
