@@ -18,8 +18,9 @@ Layout:
 - Proactive: collect WS downlinks and merge ``chat_history`` synthetic user rows;
   require ``--proactive-min-rounds`` (default 1) with ``--proactive-target-rounds`` (default 2,
   summary-only); fast local idle (10s + poll 3s); fail on legacy ``[SILENT]`` token in previews.
-- Dreaming: poll ``.companion_dreaming_state.json`` + ``MEMORY.md`` sequence after proactive
-  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.regression_tests``; ``--dreaming-wait-sec`` default 90).
+- Dreaming: poll ``.companion_dreaming_state.json`` checkpoint after proactive
+  (``dreaming_idle_seconds=10`` in ``devops/config.yaml.regression_tests``; ``--dreaming-wait-sec`` default 45).
+  Checkpoint without ``MEMORY.md`` change is a **warning** (exit 1), not a failure.
 - GitHub issue: USER_CHAT complaint → poll ``companion_user_feedback_jsonl`` →
   ``gh issue view`` → ``gh issue close`` cleanup.
 - Strict-mode DB verification: below ``_is_inner_tick_proactive``; when no
@@ -62,6 +63,9 @@ from typing import Any, TextIO
 import yaml
 
 _TAG = "[inty-repl-regression]"
+_EXIT_PASS = 0
+_EXIT_PASS_WITH_WARNINGS = 1
+_EXIT_FAIL = 2
 _DEFAULT_API_BASE = "http://127.0.0.1:8001"
 # Default regression YAML — separate from config.yaml.local (engineer REPL tuning).
 _DEFAULT_CONFIG = "devops/config.yaml.regression_tests"
@@ -250,6 +254,7 @@ class RegressionCheckStatus(StrEnum):
     PASS = "pass"
     FAIL = "fail"
     SKIPPED = "skipped"
+    WARNING = "warn"
 
 
 @dataclass(frozen=True)
@@ -292,7 +297,7 @@ class InfraPassGate:
     memdoc_errors: tuple[str, ...]
     # context_mode == roleplay after companion_set_experience_profile
     experience_profile_ok: bool
-    # scope-worker dreaming produced checkpoint + MEMORY.md change (infra only, not curator shape)
+    # scope-worker dreaming checkpoint saved (MEMORY.md update optional; no-op → warning)
     dreaming_ok: bool
     # settled turn produced a delivered, coherent reply
     settled_ok: bool
@@ -467,6 +472,7 @@ class DreamingConsolidationResult:
     memory_sequence_before: int
     memory_sequence_after: int
     error: str | None
+    warnings: tuple[str, ...]
     log_timing: DreamingLogTiming | None = None
     one_shot: DreamingOneShotVerifyResult | None = None
 
@@ -1826,6 +1832,7 @@ def _dreaming_result_with_log_timings(
         memory_sequence_before=result.memory_sequence_before,
         memory_sequence_after=result.memory_sequence_after,
         error=result.error,
+        warnings=result.warnings,
         log_timing=timing,
         one_shot=result.one_shot,
     )
@@ -2149,6 +2156,7 @@ def _attach_dreaming_one_shot_verify(
         memory_sequence_before=result.memory_sequence_before,
         memory_sequence_after=result.memory_sequence_after,
         error=error,
+        warnings=result.warnings,
         log_timing=result.log_timing,
         one_shot=one_shot,
     )
@@ -2163,6 +2171,7 @@ def _dreaming_report_fields(result: DreamingConsolidationResult) -> dict[str, An
         "memory_sequence_before": result.memory_sequence_before,
         "memory_sequence_after": result.memory_sequence_after,
         "error": result.error,
+        "warnings": list(result.warnings),
         "step_timings": [
             {"step": entry.step, "ms": entry.ms}
             for entry in (timing.step_timings if timing is not None else ())
@@ -2194,6 +2203,75 @@ def _summarize_dreaming_step_timings(
     return {entry.step: entry.ms for entry in step_timings}
 
 
+def _dreaming_memory_no_op_warning(
+    *,
+    memory_sequence_before: int,
+    memory_sequence_after: int,
+) -> str:
+    """Human-readable warning when curator saved checkpoint but skipped MEMORY.md."""
+    return (
+        "dreaming checkpoint saved but MEMORY.md unchanged "
+        f"(LLM content_changed=false no-op; sequence "
+        f"{memory_sequence_before}→{memory_sequence_after})"
+    )
+
+
+def _resolve_dreaming_poll_outcome(
+    *,
+    checkpoint_present: bool,
+    memory_updated: bool,
+    memory_sequence_before: int,
+    memory_sequence_after: int,
+    wait_sec: float,
+) -> tuple[str | None, tuple[str, ...]]:
+    """Classify dreaming poll result as pass, pass-with-warning, or hard failure."""
+    if checkpoint_present and memory_updated:
+        return None, ()
+    if checkpoint_present and not memory_updated:
+        return None, (
+            _dreaming_memory_no_op_warning(
+                memory_sequence_before=memory_sequence_before,
+                memory_sequence_after=memory_sequence_after,
+            ),
+        )
+    return (
+        (
+            f"no dreaming checkpoint within {wait_sec}s "
+            f"(checkpoint=false, memory_updated={memory_updated}, "
+            f"memory_sequence_before={memory_sequence_before}, "
+            f"memory_sequence_after={memory_sequence_after})"
+        ),
+        (),
+    )
+
+
+def _regression_exit_code(
+    *,
+    infra_gate: InfraPassGate,
+    warnings: tuple[str, ...],
+) -> int:
+    """0 pass, 1 pass with warnings for human review, 2 infra gate failure."""
+    if not infra_gate.passed():
+        return _EXIT_FAIL
+    if warnings:
+        return _EXIT_PASS_WITH_WARNINGS
+    return _EXIT_PASS
+
+
+def _aggregate_regression_warnings(
+    *,
+    memdoc_result: BootstrapMemDocResult,
+    dreaming_result: DreamingConsolidationResult,
+    extra_warnings: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Merge phase warnings into one tuple for exit code and JSON report."""
+    merged: list[str] = []
+    merged.extend(memdoc_result.warnings)
+    merged.extend(dreaming_result.warnings)
+    merged.extend(extra_warnings)
+    return tuple(merged)
+
+
 def _finalize_dreaming_poll_result(
     *,
     repo_root: Path,
@@ -2205,6 +2283,7 @@ def _finalize_dreaming_poll_result(
     memory_sequence_before: int,
     memory_sequence_after: int,
     error: str | None,
+    warnings: tuple[str, ...],
 ) -> DreamingConsolidationResult:
     """Build dreaming poll result, log timings, and LangSmith one-shot verify."""
     with_timings = _dreaming_result_with_log_timings(
@@ -2214,6 +2293,7 @@ def _finalize_dreaming_poll_result(
             memory_sequence_before=memory_sequence_before,
             memory_sequence_after=memory_sequence_after,
             error=error,
+            warnings=warnings,
         ),
         repo_root=repo_root,
         user_id=user_id,
@@ -2255,6 +2335,7 @@ def _wait_dreaming_consolidation(
             memory_sequence_before=memory_sequence_before,
             memory_sequence_after=memory_sequence_before,
             error=None,
+            warnings=(),
         )
     _ensure_import_path(repo_root)
     from app.core.companion_harness.memory.memory_store_scope import (
@@ -2264,6 +2345,7 @@ def _wait_dreaming_consolidation(
     memory_seed = load_template_seed_text("MEMORY.md").strip()
     deadline = time.monotonic() + wait_sec
     last_memory_seq = memory_sequence_before
+    last_memory_updated = False
     while time.monotonic() < deadline:
         checkpoint = _dreaming_checkpoint_present(
             repo_root, config_path, user_id=user_id, agent_id=agent_id
@@ -2281,6 +2363,7 @@ def _wait_dreaming_consolidation(
             memory_seq > memory_sequence_before
             or memory_doc.content.strip() != memory_seed
         )
+        last_memory_updated = memory_updated
         if checkpoint and memory_updated:
             print(
                 f"{_TAG} dreaming consolidation observed "
@@ -2297,27 +2380,55 @@ def _wait_dreaming_consolidation(
                 memory_sequence_before=memory_sequence_before,
                 memory_sequence_after=memory_seq,
                 error=None,
+                warnings=(),
+            )
+        if checkpoint and not memory_updated:
+            error, warnings = _resolve_dreaming_poll_outcome(
+                checkpoint_present=True,
+                memory_updated=False,
+                memory_sequence_before=memory_sequence_before,
+                memory_sequence_after=memory_seq,
+                wait_sec=wait_sec,
+            )
+            for warning in warnings:
+                print(f"{_TAG} WARNING dreaming: {warning}", file=stderr, flush=True)
+            return _finalize_dreaming_poll_result(
+                repo_root=repo_root,
+                config_path=config_path,
+                user_id=user_id,
+                agent_id=agent_id,
+                checkpoint_present=True,
+                memory_updated=False,
+                memory_sequence_before=memory_sequence_before,
+                memory_sequence_after=memory_seq,
+                error=error,
+                warnings=warnings,
             )
         time.sleep(_DREAMING_POLL_SEC)
     checkpoint_present = _dreaming_checkpoint_present(
         repo_root, config_path, user_id=user_id, agent_id=agent_id
     )
-    memory_updated = last_memory_seq > memory_sequence_before
+    error, warnings = _resolve_dreaming_poll_outcome(
+        checkpoint_present=checkpoint_present,
+        memory_updated=last_memory_updated,
+        memory_sequence_before=memory_sequence_before,
+        memory_sequence_after=last_memory_seq,
+        wait_sec=wait_sec,
+    )
+    if warnings:
+        for warning in warnings:
+            print(f"{_TAG} WARNING dreaming: {warning}", file=stderr, flush=True)
     return _finalize_dreaming_poll_result(
         repo_root=repo_root,
         config_path=config_path,
         user_id=user_id,
         agent_id=agent_id,
         checkpoint_present=checkpoint_present,
-        memory_updated=memory_updated,
+        memory_updated=last_memory_updated,
         memory_sequence_before=memory_sequence_before,
         memory_sequence_after=last_memory_seq,
-        error=(
-            f"no dreaming checkpoint within {wait_sec}s "
-            f"(checkpoint={checkpoint_present}, memory_updated={memory_updated}, "
-            f"memory_sequence_before={memory_sequence_before}, "
-            f"memory_sequence_after={last_memory_seq})"
-        ),
+        error=error,
+        warnings=warnings,
     )
 
 
@@ -3431,12 +3542,15 @@ def _build_regression_summary(
 ) -> tuple[dict[str, Any], InfraPassGate, EvalTelemetry]:
     """Compute JSON summary, infra pass gate, and L1 eval telemetry from phase results."""
     github_pipeline_ok = github_result.error is None and github_result.closed
+    dreaming_infra_ok = (
+        dreaming_result.error is None and dreaming_result.checkpoint_present
+    )
     infra_gate = InfraPassGate(
         bootstrap_done=bootstrap_done == "true",
         greeting_present=greeting_result.present,
         memdoc_errors=memdoc_result.errors,
         experience_profile_ok=experience_profile_ok,
-        dreaming_ok=dreaming_result.error is None,
+        dreaming_ok=dreaming_infra_ok,
         settled_ok=settled_ok,
         has_report_errors=bool(report_errors),
         input_all_delivered=in_all_delivered,
@@ -3474,9 +3588,13 @@ def _build_regression_summary(
         RegressionCheckStatus.SKIPPED.value
         if skip_db_checks
         else (
-            RegressionCheckStatus.PASS.value
-            if infra_gate.dreaming_ok
-            else RegressionCheckStatus.FAIL.value
+            RegressionCheckStatus.FAIL.value
+            if dreaming_result.error
+            else (
+                RegressionCheckStatus.WARNING.value
+                if dreaming_result.warnings
+                else RegressionCheckStatus.PASS.value
+            )
         )
     )
     input_delivery_status = (
@@ -3517,8 +3635,23 @@ def _build_regression_summary(
         dreaming_one_shot_eval = RegressionCheckStatus.PASS.value
     else:
         dreaming_one_shot_eval = RegressionCheckStatus.FAIL.value
+    all_warnings = _aggregate_regression_warnings(
+        memdoc_result=memdoc_result,
+        dreaming_result=dreaming_result,
+        extra_warnings=(),
+    )
     summary = {
         "target_scope": scope.value,
+        "result": (
+            "fail"
+            if not infra_gate.passed()
+            else (
+                "pass_with_warnings"
+                if all_warnings
+                else "pass"
+            )
+        ),
+        "warnings": list(all_warnings),
         "db_checks": (
             RegressionCheckStatus.SKIPPED.value
             if skip_db_checks
@@ -3631,6 +3764,7 @@ def run_regression(
         "turns": [],
         "proactive": [],
         "errors": [],
+        "warnings": [],
         "github_issue": {},
         "greeting": {},
         "bootstrap_memdocs": {},
@@ -3677,6 +3811,7 @@ def run_regression(
         memory_sequence_before=0,
         memory_sequence_after=0,
         error="skipped: regression did not reach dreaming phase",
+        warnings=(),
     )
     bridge.start(connect_timeout=45.0)
     try:
@@ -4216,6 +4351,11 @@ def run_regression(
                             f"trace_id={os_.trace_id}",
                             flush=True,
                         )
+                    if dreaming_result.warnings:
+                        report["warnings"].extend(
+                            {"phase": "dreaming", "message": warning}
+                            for warning in dreaming_result.warnings
+                        )
                     if dreaming_result.error:
                         report["errors"].append(
                             {"turn": "dreaming", "error": (408, dreaming_result.error)}
@@ -4389,8 +4529,16 @@ LIMIT 8;
         f"eval={json.dumps(summary.get('eval', {}), ensure_ascii=False)}",
         flush=True,
     )
+    all_warnings = tuple(summary.get("warnings") or ())
+    if all_warnings:
+        print(
+            f"{_TAG} WARNINGS ({len(all_warnings)}): pass with human review (exit={_EXIT_PASS_WITH_WARNINGS})",
+            flush=True,
+        )
+        for warning in all_warnings:
+            print(f"{_TAG}   - {warning}", flush=True)
 
-    return 0 if infra_gate.passed() else 1
+    return _regression_exit_code(infra_gate=infra_gate, warnings=all_warnings)
 
 
 def main(argv: list[str] | None = None) -> int:

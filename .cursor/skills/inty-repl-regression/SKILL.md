@@ -85,7 +85,7 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
 - Remote runs (`dev`, `prod`) skip direct Postgres per `devops/README.md`; skipped DB bits do not fail the pass gate.
 - Remote `--create-agent`: before POST create, driver **purges** owned agents whose `name` starts with `bootstrap-test-` via `GET /api/v1/ai/agents/me` + `DELETE /api/v1/ai/agents/{id}`. Delete cascades ACTIVE companion bond to `INACTIVE` on the server (requires deployed backend with bond deactivate on `delete_agent`). If a user's ACTIVE bond is on a **non**-`bootstrap-test-*` agent, purge will not clear it — delete that agent manually or resolve the bond before re-running.
 - **Deploy dependency:** dev/prod smoke for `--create-agent` needs the Ops image that includes `delete_agent` bond cascade; updating only the regression script against an older backend still leaves bonds ACTIVE after purge.
-- Exit **0** only when **infra gate** checks for the selected target/scope pass (`InfraPassGate.passed()`). L1 eval telemetry in `summary.eval` is report-only and does not block exit code (#3606).
+- Exit **0** when **infra gate** passes with no warnings; **1** when the gate passes but ``summary.warnings`` is non-empty (human partner review); **2** when the gate fails or CLI args are invalid. L1 eval telemetry in ``summary.eval`` is report-only (#3606).
 - **`github_issue_disclosed_in_chat`**, **`proactive_target_rounds`**, **`dreaming_one_shot`**, and **`github_tool_native`** live under `summary.eval` (telemetry). They are no longer exit-code gates.
 - GitHub issues created by the regression run are **closed automatically** in driver cleanup (`gh issue close`).
 - Local full run target wall-clock: **~3–4 minutes** (9+ live LLM turns dominate; proactive DB early-exit and settle quiet 8s reduce fixed waits).
@@ -193,7 +193,11 @@ For proactive:
 
 ## Pass Criteria
 
-### Infra gate（决定 exit 0）
+### Infra gate（决定 exit 0 / 1 / 2）
+
+- exit **0**：infra gate 全 pass 且 ``summary.warnings`` 为空
+- exit **1**：infra gate pass 但存在 warning（如 dreaming checkpoint 已写入、MEMORY.md LLM no-op）— 需 human partner 查阅
+- exit **2**：infra gate fail 或参数错误
 
 - `meta_data.source=greeting` on at least one implicit sign-on WS downlink after connect.
 - `context.json` latest agent-scope row has `workspace_bootstrap_user_interactive_completed = true`.
@@ -204,7 +208,7 @@ For proactive:
 - Settled user turn produces one coherent delivered reply.
 - **GitHub issue pipeline:** complaint turn produces feedback JSONL + issue created; `gh issue view` validates; issue closed in cleanup (`summary.github_issue_e2e: pass`). In-process tool fallback allowed.
 - Proactive **infra:** **≥1** synthetic `[SYSTEM PROACTIVE CHAT]` row in DB (`proactive_inner_tick: present`); no `[SILENT]` token leak (`proactive_no_silent_token: pass`).
-- **Dreaming consolidation:** `.companion_dreaming_state.json` checkpoint + `MEMORY.md` update (`summary.dreaming_consolidation: pass`).
+- **Dreaming consolidation:** `.companion_dreaming_state.json` checkpoint required; `MEMORY.md` update is **warn** (LLM `content_changed=false` no-op) not fail when checkpoint saved (`summary.dreaming_consolidation: warn`).
 
 ### Eval telemetry（`summary.eval`，report-only，不 block exit 0）
 
@@ -232,7 +236,8 @@ LangSmith run ids in REPL metadata match delivered OutputQueue rows where applic
 Reply with:
 
 - `agent_id`
-- **infra gate** (exit 0): bootstrap, greeting, memdocs, experience_profile, settled turn, queue delivery (`output_user_visible_delivered`), github pipeline, proactive infra, dreaming consolidation
+- **infra gate** (exit 0/1/2): bootstrap, greeting, memdocs, experience_profile, settled turn, queue delivery (`output_user_visible_delivered`), github pipeline, proactive infra, dreaming checkpoint (MEMORY no-op → warning)
+- **`summary.warnings`**: human-review items (dreaming MEMORY no-op, bootstrap memdoc drift, etc.)
 - **`summary.eval`**: github_tool_native, github_issue_disclosed_in_chat, proactive_target_rounds, dreaming_one_shot, proactive round counts
 - InputQueue / OutputQueue status counts
 - key LangSmith trace/run ids

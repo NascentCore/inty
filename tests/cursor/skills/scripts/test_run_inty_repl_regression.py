@@ -339,6 +339,160 @@ def test_regression_pass_gate_passed() -> None:
     assert gate_fail.passed() is False
 
 
+def test_resolve_dreaming_poll_outcome_checkpoint_no_memory_is_warning() -> None:
+    mod = _load_regression_module()
+    error, warnings = mod._resolve_dreaming_poll_outcome(
+        checkpoint_present=True,
+        memory_updated=False,
+        memory_sequence_before=733,
+        memory_sequence_after=733,
+        wait_sec=45.0,
+    )
+    assert error is None
+    assert len(warnings) == 1
+    assert "MEMORY.md unchanged" in warnings[0]
+
+
+def test_resolve_dreaming_poll_outcome_missing_checkpoint_is_failure() -> None:
+    mod = _load_regression_module()
+    error, warnings = mod._resolve_dreaming_poll_outcome(
+        checkpoint_present=False,
+        memory_updated=False,
+        memory_sequence_before=733,
+        memory_sequence_after=733,
+        wait_sec=45.0,
+    )
+    assert error is not None
+    assert "no dreaming checkpoint" in error
+    assert warnings == ()
+
+
+def test_regression_exit_code_pass_warn_fail() -> None:
+    mod = _load_regression_module()
+    gate_ok = mod.InfraPassGate(
+        bootstrap_done=True,
+        greeting_present=True,
+        memdoc_errors=(),
+        experience_profile_ok=True,
+        dreaming_ok=True,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=True,
+        output_user_visible_delivered=True,
+        github_pipeline_ok=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        scope=mod.RegressionScope.FULL,
+        skip_db_checks=False,
+        proactive_min_rounds=1,
+    )
+    assert mod._regression_exit_code(infra_gate=gate_ok, warnings=()) == 0
+    assert (
+        mod._regression_exit_code(infra_gate=gate_ok, warnings=("review me",))
+        == 1
+    )
+    gate_fail = mod.InfraPassGate(
+        bootstrap_done=False,
+        greeting_present=True,
+        memdoc_errors=(),
+        experience_profile_ok=True,
+        dreaming_ok=True,
+        settled_ok=True,
+        has_report_errors=False,
+        input_all_delivered=True,
+        output_user_visible_delivered=True,
+        github_pipeline_ok=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        scope=mod.RegressionScope.FULL,
+        skip_db_checks=False,
+        proactive_min_rounds=1,
+    )
+    assert mod._regression_exit_code(infra_gate=gate_fail, warnings=()) == 2
+
+
+def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> None:
+    mod = _load_regression_module()
+    github = mod.GithubIssueE2eResult(
+        "u1",
+        "https://github.com/nascentcore/inty/issues/1",
+        1,
+        True,
+        True,
+        True,
+        False,
+        None,
+    )
+    warning = (
+        "dreaming checkpoint saved but MEMORY.md unchanged "
+        "(LLM content_changed=false no-op; sequence 733→733)"
+    )
+    summary, infra_gate, _eval = mod._build_regression_summary(
+        bootstrap_done="true",
+        context_mode="roleplay",
+        greeting_result=mod.ImplicitSignOnGreetingResult(
+            present=True,
+            source_greeting=True,
+            text_preview="hi",
+            langsmith_trace_id="t",
+        ),
+        memdoc_result=mod.BootstrapMemDocResult(
+            user_customized=True,
+            identity_customized=True,
+            style_customized=True,
+            soul_unchanged=True,
+            memory_unchanged=True,
+            user_sequence_id=2,
+            identity_sequence_id=2,
+            style_sequence_id=2,
+            memory_sequence_id=1,
+            errors=(),
+            warnings=(),
+        ),
+        experience_profile_ok=True,
+        dreaming_result=mod.DreamingConsolidationResult(
+            checkpoint_present=True,
+            memory_updated=False,
+            memory_sequence_before=733,
+            memory_sequence_after=733,
+            error=None,
+            warnings=(warning,),
+        ),
+        github_result=github,
+        app_debug=True,
+        settled_ok=True,
+        report_errors=[],
+        proactive_summary={
+            "total": 1,
+            "visible": 1,
+            "silent": 0,
+            "silent_token_leaks": 0,
+        },
+        proactive_target_met=True,
+        proactive_present=True,
+        proactive_silent_ok=True,
+        in_q="delivered|1",
+        out_q="delivered|1",
+        in_all_delivered=True,
+        output_user_visible_delivered=True,
+        companion_bond_state="ACTIVE",
+        skip_db_checks=False,
+        scope=mod.RegressionScope.FULL,
+        proactive_min_rounds=1,
+    )
+    assert infra_gate.passed() is True
+    assert summary["dreaming_consolidation"] == mod.RegressionCheckStatus.WARNING.value
+    assert summary["result"] == "pass_with_warnings"
+    assert summary["warnings"] == [warning]
+    assert (
+        mod._regression_exit_code(
+            infra_gate=infra_gate,
+            warnings=tuple(summary["warnings"]),
+        )
+        == 1
+    )
+
+
 def test_infra_pass_gate_disclosure_eval_does_not_block() -> None:
     mod = _load_regression_module()
 
@@ -470,6 +624,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
             memory_sequence_before=1,
             memory_sequence_after=2,
             error=None,
+            warnings=(),
         ),
         github_result=github,
         app_debug=False,
@@ -536,6 +691,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
             memory_sequence_before=1,
             memory_sequence_after=2,
             error=None,
+            warnings=(),
         ),
         github_result=undisclosed,
         app_debug=False,
@@ -624,6 +780,7 @@ def _github_summary_fixture_kwargs(
             memory_sequence_before=1,
             memory_sequence_after=2,
             error=None,
+            warnings=(),
         ),
         "github_result": github_result,
         "app_debug": app_debug,
@@ -859,6 +1016,7 @@ def test_build_regression_summary_skip_db_checks() -> None:
             memory_sequence_before=0,
             memory_sequence_after=0,
             error="would fail",
+            warnings=(),
         ),
         github_result=github,
         app_debug=True,
@@ -966,6 +1124,7 @@ def test_dreaming_report_fields_includes_step_timings() -> None:
         memory_sequence_before=1,
         memory_sequence_after=2,
         error=None,
+        warnings=(),
         log_timing=mod.DreamingLogTiming(
             step_timings=(
                 mod.DreamingStepTiming("daily_gist_md:2026-07-02", 70826.0),
