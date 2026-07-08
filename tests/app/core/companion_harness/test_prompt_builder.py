@@ -6,7 +6,11 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+from app.core.companion_harness.companion.proactive_chat import (
+    BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
+)
 from app.core.companion_harness.companion.bootstrap import (
+    load_bootstrap_spec_text,
     load_bootstrap_telegram_profile_slice_text,
 )
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
@@ -664,3 +668,225 @@ def test_build_settled_user_chat_dual_llm_tool_prompt_plan_omits_disclosure_when
     )
     system_text = _system_text(plan.messages)
     assert "github_issue_url" not in system_text
+
+
+def _bootstrap_proactive_builder(*, user_md: str) -> PromptBuilder:
+    return PromptBuilder(
+        bundle=PromptBundle(
+            identity="identity",
+            soul="soul",
+            user_md=user_md,
+            memory_md="",
+        ),
+        context=ContextMeta(
+            workspace_bootstrap_user_interactive_completed=False,
+        ),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+
+
+def test_bootstrap_proactive_injects_bootstrap_spec(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-bootstrap-pro", "agent", tmp_path.name),
+        repository=None,
+    )
+    builder = _bootstrap_proactive_builder(user_md="user")
+    system_text = "\n".join(
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    )
+    assert load_bootstrap_spec_text() in system_text
+
+
+def test_bootstrap_proactive_injects_bootstrap_proactive_overlay(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-bootstrap-overlay", "agent", tmp_path.name),
+        repository=None,
+    )
+    builder = _bootstrap_proactive_builder(user_md="user")
+    system_text = "\n".join(
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    )
+    assert BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY in system_text
+
+
+def test_bootstrap_proactive_telegram_profile_collection(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-bootstrap-tg", "agent", tmp_path.name),
+        repository=None,
+    )
+    builder = PromptBuilder(
+        bundle=PromptBundle(
+            identity="identity",
+            soul="soul",
+            user_md=load_user_md_template_text(),
+            memory_md="",
+        ),
+        context=ContextMeta(
+            workspace_bootstrap_user_interactive_completed=False,
+            profile_collection_required=True,
+        ),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.TELEGRAM,
+            implicit_signal_bundle=None,
+        ),
+    )
+    system_text = "\n".join(
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    )
+    assert load_bootstrap_telegram_profile_slice_text() in system_text
+    assert "仍待自然了解" in system_text
+
+
+def test_settled_proactive_omits_bootstrap_spec(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-settled-pro", "agent", tmp_path.name),
+        repository=None,
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(workspace_bootstrap_user_interactive_completed=True),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    system_text = "\n".join(
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    )
+    assert load_bootstrap_spec_text() not in system_text
+
+
+def test_bootstrap_greeting_injects_bootstrap_spec_with_significance() -> None:
+    builder = PromptBuilder(
+        bundle=PromptBundle(
+            identity="identity",
+            soul="soul",
+            style_md="style",
+            user_md="user",
+            memory_md="",
+            significance_perception_md="# Significance\nslice",
+        ),
+        context=ContextMeta(workspace_bootstrap_user_interactive_completed=False),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    system_text = "\n".join(
+        str(row["content"])
+        for row in builder.greeting_system_dicts()
+        if row.get("role") == "system"
+    )
+    assert load_bootstrap_spec_text() in system_text
+    assert "# Significance\nslice" in system_text
+
+
+def test_proactive_life_currents_preserved(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-life", "agent", tmp_path.name),
+        repository=None,
+    )
+    life_currents = (
+        "# 我最近在做的事\n\n"
+        "## 当前主题（中期）\n"
+        "跟得上他在做的独立游戏圈\n\n"
+        "## 今天（当日兴致）\n"
+        "翻一翻他上次提到的那本《xxx》\n"
+    )
+    store.write_document("LIFE_CURRENTS.md", life_currents)
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    contents = [
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    ]
+    proactive_idx = next(
+        i for i, c in enumerate(contents) if c.startswith("本轮（陪伴主动聊天）")
+    )
+    life_block = contents[proactive_idx + 1]
+    life_lines = life_block.split("\n")
+    assert life_lines[0] == "## 你最近在做的事（仅供参考）"
+    assert "跟得上他在做的独立游戏圈" in life_block
+    assert "翻一翻他上次提到的那本《xxx》" in life_block
+    assert life_lines[-1].startswith("内在独白（ai_private）已在对话上下文中")
+
+
+def test_proactive_life_currents_omitted_when_missing(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-life-missing", "agent", tmp_path.name),
+        repository=None,
+    )
+    builder = PromptBuilder(
+        bundle=_bundle(),
+        context=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    )
+    contents = [
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    ]
+    assert any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
+    assert all("## 你最近在做的事" not in c for c in contents)
+
+
+def test_settled_greeting_proactive_slice_parity(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pb-parity", "agent", tmp_path.name),
+        repository=None,
+    )
+    bundle = PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+        significance_perception_md="# Significance\n",
+        tools_md="# Tools\nrules\n",
+    )
+    context = ContextMeta()
+    runtime_context = TurnRuntimeContext(
+        channel=ChannelKind.APP_WS,
+        implicit_signal_bundle=None,
+    )
+    builder = PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=runtime_context,
+    )
+    greeting_text = "\n".join(
+        str(row["content"])
+        for row in builder.greeting_system_dicts()
+        if row.get("role") == "system"
+    )
+    proactive_text = "\n".join(
+        str(row["content"])
+        for row in builder.proactive_system_dicts(store)
+        if row.get("role") == "system"
+    )
+    assert "# Axiom - 你存在的根本法则" in greeting_text
+    assert "# Significance\n" in greeting_text
+    assert load_bootstrap_spec_text() not in greeting_text
+    assert "本轮（陪伴主动聊天）" in proactive_text
+    assert load_bootstrap_spec_text() not in proactive_text

@@ -247,6 +247,31 @@ def build_companion_turn_prompt_plan(
                 context=loaded_state.context,
                 runtime_context=runtime_context,
             ).bootstrap_turn_system_dicts()
+        case (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            from app.core.companion_harness.prompting.track_composer import (
+                TrackPromptComposer,
+                TurnComposeContext,
+            )
+
+            assert tail_user_messages
+            turn_ctx = TurnComposeContext(
+                bundle=loaded_state.bundle,
+                context_meta=loaded_state.context,
+                runtime_context=runtime_context,
+                store=store,
+            )
+            system_messages = TrackPromptComposer().system_dicts_for_track(
+                track,
+                turn_ctx,
+            )
+            tools_for_turn = companion_tools_for_turn(
+                track=track,
+                implicit_user_signed_on_turn=implicit_sign_on_turn,
+            )
         case _:
             tools_for_turn, system_messages = (
                 companion_turn_tools_and_system_messages(

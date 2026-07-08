@@ -51,6 +51,13 @@ class Phase(StrEnum):
     BOOTSTRAP = "bootstrap"
 
 
+def resolve_compose_phase(context: ContextMeta) -> Phase:
+    """Map context.json bootstrap completion to compose phase."""
+    if not context.workspace_bootstrap_user_interactive_completed:
+        return Phase.BOOTSTRAP
+    return Phase.SETTLED
+
+
 def _require_settled_phase(phase: Phase) -> None:
     if phase != Phase.SETTLED:
         raise NotImplementedError(

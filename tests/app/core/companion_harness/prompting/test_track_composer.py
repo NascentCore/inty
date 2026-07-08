@@ -1,49 +1,93 @@
-"""Tests for TrackPromptComposer and projection pipeline wrappers."""
+"""Tests for ``TrackPromptComposer`` chat-only track routing."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.retrieval import (
-    RetrievalTier,
-    select_slices_for_turn,
-)
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.track_composer import (
     TrackPromptComposer,
+    TurnComposeContext,
 )
 
 
-def test_retrieval_tier_enum_values() -> None:
-    assert RetrievalTier.RESIDENT.value == "resident"
+def _bundle() -> PromptBundle:
+    return PromptBundle(
+        identity="identity",
+        soul="soul",
+        style_md="style",
+        user_md="user",
+        memory_md="",
+    )
 
 
-def test_select_slices_for_turn_returns_transcript_window(
-    tmp_path: Path,
-) -> None:
+def _turn_ctx(*, store: MemoryStore) -> TurnComposeContext:
+    return TurnComposeContext(
+        bundle=_bundle(),
+        context_meta=ContextMeta(),
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+        store=store,
+    )
+
+
+def test_system_dicts_for_track_greeting_matches_prompt_builder(tmp_path) -> None:
     store = MemoryStore(
-        scope=CompanionScope("compose", "a", tmp_path.name),
+        scope=CompanionScope("tc-greeting", "agent", tmp_path.name),
         repository=None,
     )
-    selection = select_slices_for_turn(
-        track=CompanionTurnTrack.USER_CHAT,
-        store=store,
-        bundle=PromptBundle(identity="", soul="", user_md="", memory_md=""),
+    turn_ctx = _turn_ctx(store=store)
+    builder = PromptBuilder(
+        bundle=turn_ctx.bundle,
+        context=turn_ctx.context_meta,
+        runtime_context=turn_ctx.runtime_context,
     )
-    assert selection.transcript_window_spec == "CHAT_HISTORY.md"
+    assert TrackPromptComposer().system_dicts_for_track(
+        CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        turn_ctx,
+    ) == builder.greeting_system_dicts()
 
 
-def test_track_composer_wraps_openai_messages() -> None:
-    composer = TrackPromptComposer()
-    plan = composer.compose_from_openai_messages(
-        [
-            {"role": "system", "content": "hello"},
-            {"role": "user", "content": "hi"},
-        ],
-        tools=(),
+def test_system_dicts_for_track_proactive_matches_prompt_builder(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("tc-proactive", "agent", tmp_path.name),
+        repository=None,
     )
-    assert len(plan.messages) == 2
-    assert plan.messages[-1].role.value == "user"
+    turn_ctx = _turn_ctx(store=store)
+    builder = PromptBuilder(
+        bundle=turn_ctx.bundle,
+        context=turn_ctx.context_meta,
+        runtime_context=turn_ctx.runtime_context,
+    )
+    assert TrackPromptComposer().system_dicts_for_track(
+        CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        turn_ctx,
+    ) == builder.proactive_system_dicts(store)
+
+
+def test_system_dicts_for_track_scheduled_matches_prompt_builder(tmp_path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("tc-scheduled", "agent", tmp_path.name),
+        repository=None,
+    )
+    turn_ctx = _turn_ctx(store=store)
+    builder = PromptBuilder(
+        bundle=turn_ctx.bundle,
+        context=turn_ctx.context_meta,
+        runtime_context=turn_ctx.runtime_context,
+    )
+    assert TrackPromptComposer().system_dicts_for_track(
+        CompanionTurnTrack.INNER_TICK_SCHEDULED,
+        turn_ctx,
+    ) == builder.scheduled_system_dicts()
