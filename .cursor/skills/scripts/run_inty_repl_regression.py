@@ -2259,6 +2259,17 @@ def _regression_exit_code(
     return _EXIT_PASS
 
 
+def _warnings_summary_exit_hint(exit_code: int) -> str:
+    """Stdout hint for WARNINGS block; must match ``_regression_exit_code`` (#3807)."""
+    match exit_code:
+        case code if code == _EXIT_PASS_WITH_WARNINGS:
+            return f"pass with human review (exit={_EXIT_PASS_WITH_WARNINGS})"
+        case code if code == _EXIT_FAIL:
+            return f"warnings present but infra gate failed (exit={_EXIT_FAIL})"
+        case _:
+            return f"exit={exit_code}"
+
+
 def _aggregate_regression_warnings(
     *,
     memdoc_result: BootstrapMemDocResult,
@@ -4536,15 +4547,17 @@ LIMIT 8;
         flush=True,
     )
     all_warnings = tuple(summary.get("warnings") or ())
+    exit_code = _regression_exit_code(infra_gate=infra_gate, warnings=all_warnings)
     if all_warnings:
         print(
-            f"{_TAG} WARNINGS ({len(all_warnings)}): pass with human review (exit={_EXIT_PASS_WITH_WARNINGS})",
+            f"{_TAG} WARNINGS ({len(all_warnings)}): "
+            f"{_warnings_summary_exit_hint(exit_code)}",
             flush=True,
         )
         for warning in all_warnings:
             print(f"{_TAG}   - {warning}", flush=True)
 
-    return _regression_exit_code(infra_gate=infra_gate, warnings=all_warnings)
+    return exit_code
 
 
 def main(argv: list[str] | None = None) -> int:
