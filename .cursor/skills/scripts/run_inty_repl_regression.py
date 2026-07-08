@@ -11,7 +11,7 @@ Layout:
 - Driver: ``run_regression`` / ``main`` for end-to-end WS and Postgres checks.
 - Greeting: require WS downlink with ``meta_data.source=greeting`` after connect.
 - Bootstrap MemDocs: USER/IDENTITY/STYLE customized; SOUL/MEMORY remain template seed.
-- Experience profile: ``companion_set_experience_profile`` → ``context_mode=roleplay``.
+- Experience profile: natural casual-chat user turn → ``companion_set_experience_profile(casual_chat)`` → ``context_mode=emotional_companion``.
 - Settled turn: wait for InputQueue idle after bootstrap-finish, match WS
   ``user_msg_uuid`` to the sent turn, wait for InputQueue ``delivered``, then
   run github_issue E2E phase, then start proactive multi-round wait, then poll dreaming.
@@ -35,11 +35,6 @@ Run with shell cwd = repository root (or any path under the repo).
 
 Config: default ``devops/config.yaml.regression_tests`` (real LLM/GitHub E2E gate).
 ``devops/config.yaml.local`` is for engineer REPL tuning; ``devops/config.yaml.test`` is pytest-only (faked externals).
-
-TODO(#3606, issues/3783): Add FakeOpenAI scripted companion_record_user_feedback once
-app.utils.github.issues has a fake (see GitHub issue for scripted github-feedback CI backfill).
-TODO: Extract phase drivers (greeting, bootstrap, github_issue) into sibling modules
-once ``run_regression`` stabilizes; keep shared settle/queue helpers here.
 """
 
 from __future__ import annotations
@@ -89,11 +84,9 @@ _DEFAULT_GITHUB_ISSUE_TURN = (
     "成功后再用一句话道歉。不要口头说已记录而不调用 tool。"
 )
 _DEFAULT_EXPERIENCE_PROFILE_TURN = (
-    "【系统回归】你必须先调用 companion_set_experience_profile("
-    'experience_intent="roleplay", note="regression")，'
-    "成功后再用一句话确认已切换到角色扮演模式。不要写 MemDoc 代替该 tool。"
+    "我希望我们轻松闲聊就好，像朋友一样你在旁边陪着就行，不用太正式。"
 )
-_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "roleplay"
+_DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE = "emotional_companion"
 _BOOTSTRAP_USER_NAME_MARKER = "大雄"
 _BOOTSTRAP_COMPANION_NAME_MARKER = "多啦"
 _DEFAULT_DREAMING_WAIT_SEC = 45.0
@@ -261,13 +254,29 @@ class RegressionCheckStatus(StrEnum):
 class PhaseSettleSpec:
     """WS quiet + optional Input/Output queue idle before the next regression phase."""
 
+    # Report/log turn key for settle failures (``report["errors"][].turn`` and ``_TAG`` lines).
+    # Scenario: distinguish pre-phase vs post-phase gates, e.g. ``pre-experience_profile``.
     label: str
+    # Minimum WS silence after the last downlink before ``_wait_ws_turn_settled`` succeeds.
+    # Scenario: trailing multi-round tool-loop frames must stop before the next USER_CHAT.
     ws_quiet_sec: float
+    # Wall-clock cap while draining interim WS frames in ``_wait_ws_turn_settled``.
+    # Scenario: bootstrap/experience_profile phases where a turn may run many LLM rounds.
     ws_max_sec: float
+    # Poll Postgres InputQueue until no pending/claimed/failed rows remain for the agent.
+    # Scenario: pre-phase gate after bootstrap when all prior turns must be fully ingested.
     wait_input_queue: bool
+    # Poll Postgres OutputQueue until no pending/claimed/failed user-visible rows remain.
+    # Scenario: post-phase gate after tool-background work before proactive/github_issue.
     wait_output_queue: bool
+    # Default idle timeout for queue polls when per-queue overrides are zero.
+    # Scenario: shared budget for OutputQueue-only post-phase settles.
     queue_timeout_sec: float
+    # InputQueue idle timeout; zero falls back to ``queue_timeout_sec`` via ``input_timeout()``.
+    # Scenario: pre-experience_profile when bootstrap backlog may need a longer InputQueue drain.
     input_queue_timeout_sec: float = 0.0
+    # OutputQueue idle timeout; zero falls back to ``queue_timeout_sec`` via ``output_timeout()``.
+    # Scenario: reserve for phases that need asymmetric queue budgets (unused today).
     output_queue_timeout_sec: float = 0.0
 
     def input_timeout(self) -> float:
@@ -295,7 +304,7 @@ class InfraPassGate:
     greeting_present: bool
     # MemDoc acceptance errors (USER/IDENTITY/STYLE customized, SOUL/MEMORY seed); empty == pass
     memdoc_errors: tuple[str, ...]
-    # context_mode == roleplay after companion_set_experience_profile
+    # context_mode == emotional_companion after companion_set_experience_profile (casual_chat intent)
     experience_profile_ok: bool
     # scope-worker dreaming checkpoint saved (MEMORY.md update optional; no-op → warning)
     dreaming_ok: bool
@@ -1304,6 +1313,11 @@ def _agent_scope_chat_id(user_id: str, agent_id: str) -> str:
     return f"agent-scope:{user_id}:{agent_id}"
 
 
+# --- implicit sign-on greeting (unit-tested; see tests/cursor/skills/scripts/) ---
+# TODO(regression-phase-module): Extract greeting phase driver into a sibling module once
+# ``run_regression`` stabilizes; keep shared settle/queue helpers in this file.
+
+
 def _is_implicit_sign_on_greeting(meta: dict[str, Any]) -> bool:
     source = str(meta.get("source") or "").strip()
     if source == "greeting":
@@ -1417,6 +1431,10 @@ LIMIT 1;
 """,
     )
     return raw.strip()
+
+
+# TODO(regression-phase-module): Extract bootstrap phase driver into a sibling module once
+# ``run_regression`` stabilizes; keep shared settle/queue helpers in this file.
 
 
 def _wait_bootstrap_complete_flag(
@@ -2674,6 +2692,8 @@ def _finalize_proactive_report(
 
 
 # --- github issue E2E (unit-tested; see tests/cursor/skills/scripts/) ---
+# TODO(regression-phase-module): Extract github_issue phase driver into a sibling module once
+# ``run_regression`` stabilizes; keep shared settle/queue helpers in this file.
 
 
 def _require_user_feedback_github_prereqs(stderr: TextIO) -> str | None:
@@ -2941,6 +2961,8 @@ def _github_issue_e2e_result_to_report(result: GithubIssueE2eResult) -> dict[str
     }
 
 
+# TODO(#3606, issues/3783): Add FakeOpenAI scripted companion_record_user_feedback once
+# app.utils.github.issues has a fake (see GitHub issue for scripted github-feedback CI backfill).
 def _invoke_user_feedback_tool_fallback(
     repo_root: Path,
     *,

@@ -77,6 +77,17 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 
 构念与 CRS 三轴同源：三轴定义见 [DESIGN.md](./DESIGN.md)，本文只给「轴 ← 哪些 construct / 用何方法测」的映射，不复述轴本身。
 
+## Data / Trace readiness
+
+Longitudinal companion evaluation needs one trace per user–companion bond across all channels. Two layers:
+
+- **Harness truth (authoritative)**: MemoryStore transcript JSONL (`transcript.jsonl`, inner-tick JSONL, etc.). All channels write here during turns. Source for rubric/judge and research replay.
+- **Analytics projection (ops read model)**: Postgres `chat_history`, keyed by `session_id = uuid5(NAMESPACE_DNS, memory_store_chat_id)` — same rule as `generate_session_id` in chat and user-analytics services.
+
+**App WebSocket** already dual-writes harness transcript and `chat_history` (via `ws_outbound_materialize`). **Telegram / Weixin** write harness transcript only; IM turns are projected into `chat_history` at the queue boundary by `EvalTraceProjector` (#3663) so `evaluation/` and `UserAnalyticsService` see the same user/agent rows as App WS.
+
+Per-turn `chat_history.meta_data` carries correlation: `runtime_channel`, `trace_id`, `user_msg_uuid`, optional `langsmith_trace_id`. Projection runs only after successful channel downlink for assistant lines; user rows are written before durable InputQueue enqueue.
+
 ## 次要：工程化落地（instrumentation layers）
 
 第一性原理要变成可在 CI / REPL 跑的检查，按「越底越可测、越顶越接近真价值」分四层；细节与状态在各 issue，不在本文展开。

@@ -272,6 +272,15 @@ class ChatWsCompanionWireMessageMetaData(BaseModel):
         validation_alias=AliasChoices("audioDuration", "audio_duration"),
         serialization_alias="audioDuration",
     )
+    runtime_channel: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("runtimeChannel", "runtime_channel"),
+        serialization_alias="runtimeChannel",
+        description=(
+            "Human-facing channel for this chat_history row when projected from "
+            "IM eval trace (#3663); matches ChannelKind wire value."
+        ),
+    )
 
 
 def build_inner_tick_wire_meta(

@@ -135,6 +135,74 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
 
 
 @pytest.mark.asyncio
+async def test_ready_message_carries_trace_fields_from_append_input() -> None:
+    scope = AgentScope(user_id="u-trace", agent_id="a-trace")
+    queue = OutputQueue(scope=scope)
+
+    class _FakeRecord(_FakePersistedOutputRecord):
+        pass
+
+    fake_record = _FakeRecord("msg-trace", "hello", 1)
+    fake_record.trace_id = "trace-abc"
+    fake_record.langsmith_trace_id = "ls-trace"
+    fake_record.langsmith_run_id = "ls-run"
+
+    with patch(
+        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+    ) as session_cls:
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        session_cls.return_value = session
+        repo = AsyncMock()
+        repo.append_agent_output = AsyncMock(return_value=fake_record)
+        with patch(
+            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            return_value=repo,
+        ):
+            ready = await queue.append_visible_message(
+                OutputQueueAppendInput(
+                    kind=OutputMessageKind.USER_REPLY,
+                    batch_id="batch-trace",
+                    text="hello",
+                    message_ids=("input-trace",),
+                    trace_id="trace-abc",
+                    langsmith_trace_id="ls-trace",
+                    langsmith_run_id="ls-run",
+                    turn_recall=None,
+                )
+            )
+
+    assert ready.trace_id == "trace-abc"
+    assert ready.langsmith_trace_id == "ls-trace"
+    assert ready.langsmith_run_id == "ls-run"
+
+
+@pytest.mark.asyncio
+async def test_ready_message_from_record_maps_trace_fields() -> None:
+    scope = AgentScope(user_id="u-rec", agent_id="a-rec")
+    queue = OutputQueue(scope=scope)
+    record = OutputQueueRecord(
+        message_id="msg-rec",
+        scope=scope,
+        sequence=3,
+        status=QueueStatus.PENDING,
+        batch_id="batch-rec",
+        kind=OutputMessageKind.USER_REPLY,
+        text="recovered",
+        created_at_utc=datetime.now(UTC),
+        message_ids=("input-rec",),
+        trace_id="trace-rec",
+        langsmith_trace_id="ls-rec",
+        langsmith_run_id="run-rec",
+    )
+    ready = queue._ready_message_from_record(record)
+    assert ready.trace_id == "trace-rec"
+    assert ready.langsmith_trace_id == "ls-rec"
+    assert ready.langsmith_run_id == "run-rec"
+
+
+@pytest.mark.asyncio
 async def test_multiple_appends_pulled_in_order() -> None:
     scope = AgentScope(user_id="u2", agent_id="a2")
     queue = OutputQueue(scope=scope)

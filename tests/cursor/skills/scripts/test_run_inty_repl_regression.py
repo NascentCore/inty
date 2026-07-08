@@ -360,7 +360,9 @@ def test_regression_pass_gate_passed() -> None:
     assert gate_fail.passed() is False
 
 
-def test_resolve_dreaming_poll_outcome_checkpoint_no_memory_is_warning() -> None:
+def test_resolve_dreaming_poll_outcome_checkpoint_no_memory_is_warning() -> (
+    None
+):
     mod = _load_regression_module()
     error, warnings = mod._resolve_dreaming_poll_outcome(
         checkpoint_present=True,
@@ -441,7 +443,9 @@ def test_warnings_summary_exit_hint_matches_exit_code() -> None:
     assert "exit=2" in mod._warnings_summary_exit_hint(2)
 
 
-def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> None:
+def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> (
+    None
+):
     mod = _load_regression_module()
     github = mod.GithubIssueE2eResult(
         "u1",
@@ -459,7 +463,7 @@ def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> Non
     )
     summary, infra_gate, _eval = mod._build_regression_summary(
         bootstrap_done="true",
-        context_mode="roleplay",
+        context_mode="emotional_companion",
         greeting_result=mod.ImplicitSignOnGreetingResult(
             present=True,
             source_greeting=True,
@@ -511,7 +515,10 @@ def test_dreaming_checkpoint_without_memory_passes_with_warning_summary() -> Non
         proactive_min_rounds=1,
     )
     assert infra_gate.passed() is True
-    assert summary["dreaming_consolidation"] == mod.RegressionCheckStatus.WARNING.value
+    assert (
+        summary["dreaming_consolidation"]
+        == mod.RegressionCheckStatus.WARNING.value
+    )
     assert summary["result"] == "pass_with_warnings"
     assert summary["warnings"] == [warning]
     assert (
@@ -627,7 +634,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
     )
     summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         bootstrap_done="true",
-        context_mode="roleplay",
+        context_mode="emotional_companion",
         greeting_result=mod.ImplicitSignOnGreetingResult(
             present=True,
             source_greeting=True,
@@ -694,7 +701,7 @@ def test_build_regression_summary_skips_disclosure_when_not_debug() -> None:
     )
     summary_skip, infra_gate_skip, eval_skip = mod._build_regression_summary(
         bootstrap_done="true",
-        context_mode="roleplay",
+        context_mode="emotional_companion",
         greeting_result=mod.ImplicitSignOnGreetingResult(
             present=True,
             source_greeting=True,
@@ -783,7 +790,7 @@ def _github_summary_fixture_kwargs(
 ) -> dict[str, object]:
     return {
         "bootstrap_done": "true",
-        "context_mode": "roleplay",
+        "context_mode": "emotional_companion",
         "greeting_result": mod.ImplicitSignOnGreetingResult(
             present=True,
             source_greeting=True,
@@ -1023,7 +1030,7 @@ def test_build_regression_summary_skip_db_checks() -> None:
     )
     summary, infra_gate, eval_telemetry = mod._build_regression_summary(
         bootstrap_done="true",
-        context_mode="roleplay",
+        context_mode="emotional_companion",
         greeting_result=mod.ImplicitSignOnGreetingResult(
             present=True,
             source_greeting=True,
@@ -1746,3 +1753,13 @@ def test_main_dev_create_agent_purges_before_create(
     assert (
         "deactivated prior ACTIVE companion bonds" not in stderr_buf.getvalue()
     )
+
+
+def test_default_experience_profile_constants() -> None:
+    mod = _load_regression_module()
+    assert mod._DEFAULT_EXPERIENCE_PROFILE_CONTEXT_MODE == "emotional_companion"
+    turn = mod._DEFAULT_EXPERIENCE_PROFILE_TURN
+    assert "【系统回归】" not in turn
+    assert "companion_set_experience_profile" not in turn
+    assert "roleplay" not in turn
+    assert "旁边有人就行" not in turn
