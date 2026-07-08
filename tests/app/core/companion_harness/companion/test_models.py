@@ -8,6 +8,9 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
@@ -69,6 +72,19 @@ def test_load_prompt_bundle_loads_harness_from_package_template(
     bundle = load_prompt_bundle(store, meta=ContextMeta())
     assert "Innate limits of the companion harness" in bundle.harness_md
     assert "only communicate in text" in bundle.harness_md
+
+
+def test_load_prompt_bundle_loads_about_from_package_template(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-about"),
+        repository=None,
+    )
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    expected = load_template_seed_text("ABOUT.md").strip()
+    assert bundle.about_md == expected
+    assert "Describe how a user should interact" in bundle.about_md
 
 
 def test_load_prompt_bundle_reads_companionship_from_memory_store(

@@ -48,6 +48,13 @@ class PromptBundle(BaseModel):
             "(package-static today; TODO #3506 — store-backed static prompt slice)."
         ),
     )
+    about_md: str = Field(
+        default="",
+        description=(
+            "Contextual operator guidance: ABOUT.md body for third-person "
+            "companion interaction guide (package-static; injected on user-message turns)."
+        ),
+    )
     companionship_md: str = Field(
         default="",
         description=(

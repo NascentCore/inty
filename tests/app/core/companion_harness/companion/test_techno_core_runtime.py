@@ -9,6 +9,9 @@ from app.core.companion_harness.companion.models import (
     load_context_meta,
     load_prompt_bundle,
 )
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
 )
@@ -51,7 +54,11 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
     bundle = load_prompt_bundle(session.store, meta=context)
     system_text = "\n".join(
         str(m.get("content") or "")
-        for m in build_system_messages(bundle, context)
+        for m in build_system_messages(
+            bundle,
+            context,
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        )
         if m.get("role") == "system"
     )
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in system_text

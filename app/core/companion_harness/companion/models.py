@@ -301,6 +301,7 @@ _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
 OUTPUT_FORMAT_IM_DM_MD = "OUTPUT_FORMAT_IM_DM.md"
 HARNESS_MD = "HARNESS.md"
+ABOUT_MD = "ABOUT.md"
 
 
 def _read_memory_document_optional(
@@ -325,7 +326,7 @@ def _read_memory_document_required(
 
 def _template_doc_truncated(relative_path: str, *, max_chars: int) -> str:
     # TODO(static-prompt-slice-memstore): Replace with MemoryStore reads for static prompt — #3506
-    # slices (HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). #3506
+    # slices (ABOUT, HARNESS, TOOLS, SIGNIFICANCE_PERCEPTION, OUTPUT_FORMAT_IM_DM). #3506
     text = load_template_seed_text(relative_path).strip()
     if max_chars > 0 and len(text) > max_chars:
         return text[: max_chars - 1] + "..."
@@ -448,6 +449,9 @@ def load_prompt_bundle(
         ),
         harness_md=_template_doc_truncated(
             HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
+        ),
+        about_md=_template_doc_truncated(
+            ABOUT_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
         companionship_md=_read_memory_document_required(

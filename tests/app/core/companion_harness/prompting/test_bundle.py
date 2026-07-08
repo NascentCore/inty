@@ -8,5 +8,6 @@ def test_prompt_bundle_defaults() -> None:
     assert b.style_md == ""
     assert b.channels_md == ""
     assert b.harness_md == ""
+    assert b.about_md == ""
     assert b.tools_md == ""
     assert b.memory_daily_today_md == ""

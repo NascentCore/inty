@@ -20,6 +20,9 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 )
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
+)
 from app.core.companion_harness.prompting.tracks import (
     Phase,
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -80,6 +83,7 @@ def test_settled_single_llm_matches_legacy_build_system_messages() -> None:
     legacy = build_system_messages(
         bundle,
         context,
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         enable_tools=True,
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MONOLOG,
@@ -99,6 +103,7 @@ def test_settled_dual_chat_leg_matches_legacy_build_system_messages() -> None:
     legacy = build_system_messages(
         bundle,
         context,
+        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
         enable_tools=True,
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MONOLOG,
