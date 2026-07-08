@@ -36,11 +36,47 @@ from app.core.companion_harness.companion.utc import (
 from app.db.session import AsyncSessionLocal
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
+from app.services.agentic_companion.eval_trace_projector import (
+    EvalTraceAssistantInput,
+    project_assistant_delivery,
+    should_project_channel,
+)
 
 DeliverReadyMessageFn = Callable[[ReadyOutputMessage], Awaitable[None]]
 DeliveryTargetResolver = Callable[[], tuple[ChannelKind | None, str | None]]
 
 _CHANNEL_OUTPUT_PUMP_POLL_SEC = 0.02
+
+
+async def _project_assistant_eval_trace_after_downlink(
+    *,
+    scope: AgentScope,
+    message: ReadyOutputMessage,
+    delivery_channel: ChannelKind | None,
+) -> None:
+    """Resolve IM channel context and mirror one delivered assistant line."""
+    runtime_channel = delivery_channel
+    primary_input = None
+    if message.message_ids:
+        async with AsyncSessionLocal() as db:
+            input_repo = PostgresInputQueueRepository(db)
+            input_records = await input_repo.get_records_by_ids(
+                scope,
+                message.message_ids,
+            )
+        if input_records:
+            primary_input = input_records[-1]
+            runtime_channel = primary_input.channel
+    if runtime_channel is None or not should_project_channel(runtime_channel):
+        return
+    await project_assistant_delivery(
+        EvalTraceAssistantInput(
+            scope=scope,
+            runtime_channel=runtime_channel,
+            ready_message=message,
+            primary_input=primary_input,
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -76,6 +112,7 @@ async def _deliver_ready_message(
     message: ReadyOutputMessage,
     deliver_message: DeliverReadyMessageFn,
     scope: AgentScope,
+    delivery_channel: ChannelKind | None = None,
 ) -> str | None:
     text = strip_leading_transcript_timestamp_prefixes(message.text.strip())
     if not text:
@@ -119,6 +156,19 @@ async def _deliver_ready_message(
             )
         )
         return None
+    try:
+        await _project_assistant_eval_trace_after_downlink(
+            scope=scope,
+            message=message,
+            delivery_channel=delivery_channel,
+        )
+    except Exception as exc:
+        logger.warning(
+            "eval trace projection failed scope={} message_id={} error={}",
+            scope.registry_key(),
+            message.message_id,
+            exc,
+        )
     output_queue = get_output_queue_for_scope(scope)
     await output_queue.ack_delivered(
         OutputDeliveryAck(
@@ -160,6 +210,7 @@ async def channel_output_pump(
                 message=message,
                 deliver_message=deliver_message,
                 scope=scope,
+                delivery_channel=channel,
             )
             if delivered is not None:
                 last_reply = delivered
@@ -173,6 +224,7 @@ async def channel_output_pump(
             message=message,
             deliver_message=deliver_message,
             scope=scope,
+            delivery_channel=channel,
         )
         if delivered is not None:
             last_reply = delivered

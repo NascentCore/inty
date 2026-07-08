@@ -47,6 +47,11 @@ from app.services.agentic_channel.serving import enqueue_inbound_wire_message
 from app.services.companion_chat_service import (
     run_companion_implicit_sign_on_greeting_turn_for_api,
 )
+from app.services.agentic_companion.eval_trace_projector import (
+    EvalTraceInboundInput,
+    project_inbound_user,
+    should_project_channel,
+)
 from app.services.chat_service import generate_session_id
 from app.services.agentic_companion.session import Coordinator, Session
 
@@ -313,13 +318,25 @@ class AgentChannelPresence:
                 )
             session_id = generate_session_id(synthetic_chat_id)
             wire_id = f"{runtime_channel.value}:{self._scope.registry_key()}"
+            client_message_id = str(uuid.uuid4())
+            chat_history_user_row_id: int | None = None
+            if should_project_channel(runtime_channel):
+                chat_history_user_row_id = await project_inbound_user(
+                    EvalTraceInboundInput(
+                        scope=self._scope,
+                        runtime_channel=runtime_channel,
+                        user_text=stripped,
+                        queue_message_id=client_message_id,
+                    )
+                )
             inbound = InboundWireMessage(
                 scope=self._scope,
                 channel=runtime_channel,
                 wire_id=wire_id,
                 text=stripped,
                 received_at_utc=datetime.now(timezone.utc),
-                client_message_id=None,
+                client_message_id=client_message_id,
+                chat_history_user_row_id=chat_history_user_row_id,
             )
             # TODO(!3411): Telegram Bot API has no device timezone; manual E2E smoke:
             # inference → update_user_md → USER.md → LangSmith foreground ## User's Local Time Context.

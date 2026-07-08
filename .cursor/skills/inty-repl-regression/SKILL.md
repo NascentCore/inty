@@ -20,7 +20,7 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 
 - implicit sign-on greeting (`IMPLICIT_SIGN_ON_GREETING`, `meta_data.source=greeting`)
 - bootstrap queue path + MemoryDoc writes (`USER.md` / `IDENTITY.md` / `STYLE.md`; SOUL/MEMORY stay seed)
-- `companion_set_experience_profile` → settled `context_mode` (default `roleplay`)
+- `companion_set_experience_profile` → settled `context_mode` (default `emotional_companion`, casual_chat intent)
 - settled `USER_CHAT`
 - user complaint → `companion_record_user_feedback` → real GitHub issue (then auto-closed)
 - proactive inner tick
@@ -204,7 +204,8 @@ For proactive:
 
 - `meta_data.source=greeting` on at least one implicit sign-on WS downlink after connect.
 - `context.json` latest agent-scope row has `workspace_bootstrap_user_interactive_completed = true`.
-- Latest `context_mode` is the expected settled mode after experience-profile phase (default **`roleplay`**).
+- Latest `context_mode` is the expected settled mode after experience-profile phase (default **`emotional_companion`**).
+- Experience-profile phase uses a **natural casual-chat user message** (no harness meta-instruction or explicit tool names). It validates the `companion_set_experience_profile` pipeline, not the roleplay-specific system clause (roleplay path covered by harness unit tests).
 - USER / IDENTITY / STYLE have non-template bootstrap content (`大雄` / `多啦` markers); SOUL / MEMORY remain template seed (`sequence_id=1`).
 - InputQueue rows for the run are all `delivered`.
 - OutputQueue **user-visible** rows are all `delivered` (`agent-initiated:inner_tick` **skipped** rows allowed; `summary.output_user_visible_delivered: pass`).
