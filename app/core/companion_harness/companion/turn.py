@@ -307,7 +307,6 @@ async def _run_companion_turn_core(
         # #3466 backup-only: direct (non-InputQueue) settled user chat so
         # AgenticLoop always has batch correlation; caller delivers from
         # ``CompanionTurnResult`` while the presence pump skips these rows.
-        # TODO(#3466): do not extend interim WS policy for this backup path.
         # TODO(#3460): replace the ``agent-initiated:`` batch-id prefix with
         # an explicit direct-turn marker once legacy non-InputQueue callers
         # are retired.
