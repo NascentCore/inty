@@ -92,7 +92,7 @@ cross-cutting guardrail: over-dependence / sycophancy / human-displacement (net-
 
 - 对照（succinct）：task agent（如 Terminal-Bench / Self-Harness, arXiv 2606.09498）有 deterministic verifier + i.i.d. task split，可单分数回归；companion **无 ground-truth verifier、path-dependent、n=1、信号慢**，故只能上文的纵向三角化。
 - 现状 vs 缺口（诚实）：
-  - 已具备：L0 scripted/infra gate、`evaluation/` 人评与分析台、`companion_record_user_feedback` 负反馈链路。
+- 已具备：L0 scripted/infra gate、`evaluation/` 人评与分析台、`companion_record_user_feedback` 负反馈链路；**live REPL driver**（`run_inty_repl_regression.py --target local`）已落实 #3606 **infra gate（exit 0）+ `summary.eval` telemetry（report-only）** 分层。
   - 缺口：L2 的 construct rubric 与 LLM-judge 判分**未系统落地**；L1 缺**可复现 scenario-replay**（冻结 agent 快照 + 模拟用户）以治 path-dependence；ESM/EMA 与 validated scales 尚未接入产品；#457 仍雏形。
 - 落地顺序（P/S）：
   - P1/S1：scenario-replay + frozen-snapshot 基建（无它 L1/L2 无法可复现）。

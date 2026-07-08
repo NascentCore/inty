@@ -8,8 +8,8 @@ Excluded (documented): autonomy (#3580), dreaming, proactive+tool (#3285),
 sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
 ``test_agentic_loop_output_queue.py``; not duplicated here.
 
-TODO(#3606): Add FakeOpenAI scripted github_issue / companion_record_user_feedback path
-so CI regression does not depend on live LLM tool compliance.
+TODO(#3606, issues/3783): Add FakeOpenAI scripted github_issue /
+companion_record_user_feedback path once app.utils.github.issues has a fake.
 """
 
 from __future__ import annotations
