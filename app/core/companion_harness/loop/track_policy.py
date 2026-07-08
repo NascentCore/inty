@@ -124,7 +124,7 @@ TRACK_POLICY: dict[CompanionTurnTrack, TrackPolicy] = {
     ),
     CompanionTurnTrack.INNER_TICK_MONOLOG: TrackPolicy(
         high_reasoning=False,
-        skip_foreground_envelope=True,
+        skip_foreground_envelope=False,
         write_allowlist=frozenset(),
         uses_in_turn_tool_loop=True,
         max_tool_rounds=_SYNC_TOOL_ROUNDS,
@@ -133,7 +133,7 @@ TRACK_POLICY: dict[CompanionTurnTrack, TrackPolicy] = {
     ),
     CompanionTurnTrack.INNER_TICK_AUTONOMY: TrackPolicy(
         high_reasoning=False,
-        skip_foreground_envelope=True,
+        skip_foreground_envelope=False,
         write_allowlist=_AUTONOMY_ALLOWLIST,
         uses_in_turn_tool_loop=True,
         max_tool_rounds=_SYNC_TOOL_ROUNDS,

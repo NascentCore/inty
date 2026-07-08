@@ -4,7 +4,7 @@ Settled ``USER_CHAT`` script shapes are centralized in
 ``build_scripted_settled_user_chat_script`` keyed on ``UserTurnLlmLoopMode``.
 
 Excluded from scripted coverage here (see orchestration/drain module docstrings):
-autonomy (#3580), dreaming, proactive+tool (#3285), sequential double-drain.
+dreaming, proactive+tool (#3285), sequential double-drain.
 """
 
 from __future__ import annotations
@@ -51,6 +51,8 @@ _DEFAULT_TOOL_CALL_ID = "call_list_paths"
 _DEFAULT_IMPORTANCE = 5
 _DEFAULT_MONOLOG_TEXT = "quiet worry about his silence"
 _DEFAULT_MONOLOG_TOOL_CALL_ID = "call_monolog_ai_private_1"
+_DEFAULT_AUTONOMY_LIFE_CURRENTS_BODY = "# Life currents\nQuiet evening sketch."
+_DEFAULT_AUTONOMY_TOOL_CALL_ID = "call_autonomy_life_currents_1"
 
 
 class SettledUserChatScriptScenario(StrEnum):
@@ -106,6 +108,34 @@ def build_scripted_monolog_inner_tick_script(
             "ai_private_append",
             json.dumps({"text": monolog_text}, ensure_ascii=False),
             tool_call_id=_DEFAULT_MONOLOG_TOOL_CALL_ID,
+        ),
+        fake_step_dual_llm_envelope(
+            user_facing_reply="",
+            output_to_user=False,
+            importance_round=_DEFAULT_IMPORTANCE,
+            importance_user_message=_DEFAULT_IMPORTANCE,
+            importance_assistant_message=_DEFAULT_IMPORTANCE,
+            turn_recall="",
+        ),
+    )
+
+
+def build_scripted_autonomy_inner_tick_script(
+    *,
+    life_currents_body: str = _DEFAULT_AUTONOMY_LIFE_CURRENTS_BODY,
+) -> tuple[FakeCompletionStep, ...]:
+    """Deterministic FakeOpenAI script for one ``INNER_TICK_AUTONOMY`` inline tool turn."""
+    return (
+        fake_step_tool_call(
+            "memory_store_write_document",
+            json.dumps(
+                {
+                    "relative_path": "LIFE_CURRENTS.md",
+                    "content": life_currents_body,
+                },
+                ensure_ascii=False,
+            ),
+            tool_call_id=_DEFAULT_AUTONOMY_TOOL_CALL_ID,
         ),
         fake_step_dual_llm_envelope(
             user_facing_reply="",

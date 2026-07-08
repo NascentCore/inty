@@ -31,16 +31,6 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
             "try_fire_scheduled_inner_tick",
             new_callable=AsyncMock,
         ) as scheduled,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_autonomy_inner_tick",
-            new_callable=AsyncMock,
-        ) as autonomy,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_monolog_inner_tick",
-            new_callable=AsyncMock,
-        ) as maintenance,
     ):
         await inner_tick_poll.run_inner_tick_poll(
             runtime_channel=ChannelKind.APP_WS,
@@ -51,8 +41,6 @@ async def test_run_inner_tick_poll_stops_after_first_fire() -> None:
 
     proactive.assert_awaited_once()
     scheduled.assert_not_awaited()
-    autonomy.assert_not_awaited()
-    maintenance.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -102,16 +90,6 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
             new_callable=AsyncMock,
             return_value=True,
         ) as scheduled,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_autonomy_inner_tick",
-            new_callable=AsyncMock,
-        ) as autonomy,
-        patch.object(
-            inner_tick_poll.inner_tick_fire,
-            "try_fire_monolog_inner_tick",
-            new_callable=AsyncMock,
-        ) as maintenance,
     ):
         await inner_tick_poll.run_inner_tick_poll(
             runtime_channel=ChannelKind.APP_WS,
@@ -122,8 +100,6 @@ async def test_run_inner_tick_poll_falls_through_to_scheduled_only() -> None:
 
     proactive.assert_awaited_once()
     scheduled.assert_awaited_once()
-    autonomy.assert_not_awaited()
-    maintenance.assert_not_awaited()
 
 
 @pytest.mark.asyncio

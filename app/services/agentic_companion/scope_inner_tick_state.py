@@ -1,9 +1,9 @@
-"""Process-local scope inner-tick throttle and tool_bg overlap state (#3255 slice 2)."""
+"""Process-local scope inner-tick throttle state (#3255 slice 2)."""
 
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.core.companion_harness.companion.scope import CompanionScope
 
@@ -13,18 +13,12 @@ _SCOPE_INNER_TICK_STATE: dict[str, ScopeInnerTickState] = {}
 
 @dataclass
 class ScopeInnerTickState:
-    """Per-scope monolog/autonomy throttle and tool_bg overlap (no presence required)."""
+    """Per-scope monolog/autonomy throttle (no presence required)."""
 
     monolog_fired_monotonic: float | None = None
     monolog_fired_line_count: int | None = None
     autonomy_fired_monotonic: float | None = None
     autonomy_fired_line_count: int | None = None
-    _monolog_tool_bg_idle: threading.Event | None = field(
-        default=None, repr=False
-    )
-    _autonomy_tool_bg_idle: threading.Event | None = field(
-        default=None, repr=False
-    )
 
     def last_monolog_inner_tick_monotonic(self) -> float | None:
         return self.monolog_fired_monotonic
@@ -40,18 +34,6 @@ class ScopeInnerTickState:
         self.monolog_fired_monotonic = monotonic_time
         self.monolog_fired_line_count = transcript_line_count
 
-    def bind_monolog_tool_bg_idle(self, ev: threading.Event | None) -> None:
-        self._monolog_tool_bg_idle = ev
-
-    def clear_monolog_tool_bg_idle_if_idle(self) -> None:
-        idle_ev = self._monolog_tool_bg_idle
-        if idle_ev is not None and idle_ev.is_set():
-            self._monolog_tool_bg_idle = None
-
-    def monolog_tool_bg_still_running(self) -> bool:
-        idle_ev = self._monolog_tool_bg_idle
-        return idle_ev is not None and (not idle_ev.is_set())
-
     def last_autonomy_inner_tick_monotonic(self) -> float | None:
         return self.autonomy_fired_monotonic
 
@@ -66,21 +48,9 @@ class ScopeInnerTickState:
         self.autonomy_fired_monotonic = monotonic_time
         self.autonomy_fired_line_count = transcript_line_count
 
-    def bind_autonomy_tool_bg_idle(self, ev: threading.Event | None) -> None:
-        self._autonomy_tool_bg_idle = ev
-
-    def clear_autonomy_tool_bg_idle_if_idle(self) -> None:
-        idle_ev = self._autonomy_tool_bg_idle
-        if idle_ev is not None and idle_ev.is_set():
-            self._autonomy_tool_bg_idle = None
-
-    def autonomy_tool_bg_still_running(self) -> bool:
-        idle_ev = self._autonomy_tool_bg_idle
-        return idle_ev is not None and (not idle_ev.is_set())
-
 
 # TODO(dreaming-completion-notify): #3744 — add per-scope dreaming checkpoint Event +
-# last_memory_sequence snapshot; mirror monolog/autonomy tool_bg Event pattern.
+# last_memory_sequence snapshot for scope worker dreaming completion.
 def get_scope_inner_tick_state(scope: CompanionScope) -> ScopeInnerTickState:
     """Return singleton inner-tick state for one companion scope."""
     key = scope.registry_key()

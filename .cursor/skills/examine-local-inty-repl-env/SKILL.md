@@ -49,6 +49,7 @@ python -c "import langsmith; print('langsmith package: ok')" 2>&1 || echo "langs
 ### B. 后端配置（`INTY_CONFIG_YAML`）
 
 ```bash
+# Always reset this explicitly in reused shells; do not inherit regression/pytest config.
 export INTY_CONFIG_YAML=devops/config.yaml.local
 test -f "${INTY_CONFIG_YAML}" && echo "config: ${INTY_CONFIG_YAML}" || echo "config: MISSING"
 ```
@@ -185,7 +186,7 @@ else:
    **`INTY_ACCESS_TOKEN`**：用 `cat .inty_ops_bearer_token` 填入；**若 `.env` 里已有且与文件相同，不要重复覆盖**。
 
 2. **后端未起**  
-   `export INTY_CONFIG_YAML=devops/config.yaml.local` → `backend/ops/start.sh --local`（见 launch skill）。
+   先显式重置 `export INTY_CONFIG_YAML=devops/config.yaml.local`（不要继承 `devops/config.yaml.regression_tests` 或 `devops/config.yaml.test`）→ `backend/ops/start.sh --local`（见 launch skill）。
 
 3. **有 trace id、无 url**  
    几乎总是 REPL 缺 `LANGCHAIN_API_KEY`；改 `.env` 后 **重启 REPL**。

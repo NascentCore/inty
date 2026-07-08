@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -178,6 +179,7 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         client=object(),
         chat_completion_sync=fake_sync,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        llm_round_timeout_sec=1.0,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.TELEGRAM,
             implicit_signal_bundle=None,
@@ -205,3 +207,141 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         continue_extra["metadata"]["inty_runtime_channel_source"]
         == "explicit_turn"
     )
+
+
+@pytest.mark.asyncio
+async def test_run_background_tool_loop_initial_round_timeout_returns(
+    tmp_path: Path,
+) -> None:
+    sync_calls = 0
+    events: list[object] = []
+
+    def slow_sync(
+        _client: object,
+        *,
+        model: str,
+        messages_payload: list[dict[str, Any]],
+        tools: list[Any] | None = None,
+        tool_choice: str | None = None,
+        response_format: object = None,
+        langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
+    ) -> MagicMock:
+        nonlocal sync_calls
+        sync_calls += 1
+        time.sleep(0.05)
+        return _envelope_response()
+
+    async def fake_execute_tool_call(
+        _store: MemoryStore,
+        _name: str,
+        _raw_arguments: str,
+        *,
+        write_allowlist: frozenset[str],
+        repository_only_store_text: bool,
+    ) -> tuple[str, str | None]:
+        return "OK", None
+
+    store = MemoryStore(
+        scope=CompanionScope("u", "a", str(tmp_path.resolve())),
+        repository=None,
+    )
+    store.write_document(CONTEXT_JSON_REL, "{}\n")
+    await run_tool_background_loop(
+        memory_store=store,
+        request_messages=[{"role": "user", "content": "hi"}],
+        tool_model=resolve_chat_text_model("m/tool"),
+        user_msg_uuid="uuid-bg-timeout",
+        trace_id="trace-bg-timeout",
+        tools=[],
+        on_event=events.append,
+        execute_tool_call_fn=fake_execute_tool_call,
+        client=object(),
+        chat_completion_sync=slow_sync,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        llm_round_timeout_sec=0.01,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+            TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            )
+        ),
+        force_tools_first_round=False,
+    )
+
+    assert sync_calls == 1
+    assert events == []
+
+
+@pytest.mark.asyncio
+async def test_run_background_tool_loop_continue_round_timeout_returns(
+    tmp_path: Path,
+) -> None:
+    sync_calls = 0
+    events: list[object] = []
+
+    def fake_sync(
+        _client: object,
+        *,
+        model: str,
+        messages_payload: list[dict[str, Any]],
+        tools: list[Any] | None = None,
+        tool_choice: str | None = None,
+        response_format: object = None,
+        langsmith_extra: dict[str, Any] | None = None,
+        high_reasoning: bool = False,
+    ) -> MagicMock:
+        nonlocal sync_calls
+        sync_calls += 1
+        if sync_calls == 1:
+            return _tool_call_response()
+        time.sleep(0.05)
+        return _envelope_response()
+
+    async def fake_execute_tool_call(
+        _store: MemoryStore,
+        _name: str,
+        _raw_arguments: str,
+        *,
+        write_allowlist: frozenset[str],
+        repository_only_store_text: bool,
+    ) -> tuple[str, str | None]:
+        return "OK", None
+
+    store = MemoryStore(
+        scope=CompanionScope("u", "a", str(tmp_path.resolve())),
+        repository=None,
+    )
+    store.write_document(CONTEXT_JSON_REL, "{}\n")
+    await run_tool_background_loop(
+        memory_store=store,
+        request_messages=[{"role": "user", "content": "hi"}],
+        tool_model=resolve_chat_text_model("m/tool"),
+        user_msg_uuid="uuid-bg-continue-timeout",
+        trace_id="trace-bg-continue-timeout",
+        tools=[],
+        on_event=events.append,
+        execute_tool_call_fn=fake_execute_tool_call,
+        client=object(),
+        chat_completion_sync=fake_sync,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        llm_round_timeout_sec=0.01,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+            TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            )
+        ),
+        force_tools_first_round=False,
+    )
+
+    assert sync_calls == 2
+    assert events == []

@@ -732,6 +732,7 @@ class AgenticLoop:
             suppress_user_delivery=execution.suppresses_user_delivery,
             skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
             activity_label=execution.tool_bg_activity_label,
+            llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
             runtime_context=context.runtime_context,
             langsmith_slice=context.langsmith.turn_slice,
             companion_turn_track=context.companion_turn_track,

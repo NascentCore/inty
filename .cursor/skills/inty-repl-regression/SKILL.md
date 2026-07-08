@@ -31,6 +31,7 @@ Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion
 ## Prereq
 
 - Repo root cwd.
+- **Reset config before this phase:** in any reused shell, run `export INTY_CONFIG_YAML=devops/config.yaml.regression_tests` immediately before starting Ops and before invoking the driver. Do not rely on a previous `INTY_CONFIG_YAML` from pytest/CI or local REPL work.
 - Postgres **`localhost:15432`** / db **`inty`** — 与 `devops/config.yaml.regression_tests` **`database`** 一致（**假定已配好，勿改密码**）。
 - Ops `:8001` running — see [`launch-inty-backend`](../launch-inty-backend/SKILL.md)（**回归专用** `INTY_CONFIG_YAML=devops/config.yaml.regression_tests`；`start.sh --local` **默认** `config.yaml.local`，回归前须 **export**；`start.sh` **自动 migrate**；勿单独 `alembic upgrade head`）。
   - Start: `export INTY_CONFIG_YAML=devops/config.yaml.regression_tests && ./backend/ops/start.sh --local --no-build-frontend`（仓库根、已激活 venv）。
@@ -59,6 +60,8 @@ python3 .cursor/skills/scripts/run_inty_repl_regression.py \
   --target local \
   --create-agent
 ```
+
+- After this phase, reset `INTY_CONFIG_YAML` before running other tests. Backend CI / pytest must run with `INTY_CONFIG_YAML=devops/config.yaml.test`; leaving `devops/config.yaml.regression_tests` in the shell can make unrelated tests fail on regression-only limits, Telegram bot config, or fake-GCS paths.
 
 Dev (full turn sequence; DB-dependent checks reported as `skipped`; GitHub issue verified via WS text + `gh` CLI):
 

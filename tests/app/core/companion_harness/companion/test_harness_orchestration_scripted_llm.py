@@ -2,9 +2,10 @@
 
 Covered: settled ``USER_CHAT`` (no-tools x ``dual_llm`` + ``in_turn_single_llm``;
 tool-bg ``dual_llm`` only), bootstrap, proactive single-shot and multi-round silent envelope,
-``INNER_TICK_MONOLOG`` tool-background (``ai_private_append`` only, no foreground LLM).
+``INNER_TICK_MONOLOG`` tool-background (``ai_private_append`` only, no foreground LLM),
+``INNER_TICK_AUTONOMY`` inline tool (``memory_store_write_document`` → ``LIFE_CURRENTS.md``).
 
-Excluded (documented): autonomy (#3580), dreaming, proactive+tool (#3285),
+Excluded (documented): dreaming, proactive+tool (#3285),
 sequential double-drain. ``IN_TURN_SINGLE_LLM`` tool-bg uses in-turn sync tools — see
 ``test_agentic_loop_output_queue.py``; not duplicated here.
 
@@ -71,8 +72,12 @@ from tests.app.services.agentic_channel.companion_test_fixtures import (
 from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
     mark_interactive_bootstrap_completed,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIFE_CURRENTS_MD_REL,
+)
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
+    build_scripted_autonomy_inner_tick_script,
     build_scripted_monolog_inner_tick_script,
     build_scripted_settled_user_chat_script,
     companion_llm_client_with_scripted_transport,
@@ -595,5 +600,47 @@ async def test_monolog_inner_tick_scripted_transport_skips_foreground_and_append
         assert len(inner_rows) >= 1
         assert inner_rows[0]["role"] == "user"
         assert inner_rows[0]["inner_tick_kind"] == "monolog"
+    finally:
+        await delete_guest_scope_for_test(scope)
+
+
+@pytest.mark.asyncio
+async def test_autonomy_inner_tick_scripted_inline_tool_writes_life_currents_no_visible_output() -> (
+    None
+):
+    """AUTONOMY inner tick: inline tool loop writes LIFE_CURRENTS; no OutputQueue delivery."""
+    life_currents_body = "# Life currents\nQuiet evening sketch."
+    script = build_scripted_autonomy_inner_tick_script(
+        life_currents_body=life_currents_body,
+    )
+    manager, session, fake, scope = await _build_scripted_manager(
+        script=script,
+        bootstrap_completed=True,
+    )
+    try:
+        seed_settled_scope_for_inner_tick(session.store)
+        main_transcript_before = scripted_transcript_rows(session.store)
+        output_queue = get_output_queue_for_scope(scope)
+
+        result = await manager.run_inner_tick_autonomy_turn(
+            session,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )
+
+        assert result.inner_tick_activity == InnerTickActivity.AUTONOMY.value
+        assert fake.script_index == len(script)
+        assert session.store.read_document(LIFE_CURRENTS_MD_REL) == (
+            life_currents_body
+        )
+        assert await output_queue.pull_ready_batch() == ()
+        assert scripted_transcript_rows(session.store) == main_transcript_before
+
+        inner_rows = scripted_inner_tick_transcript_rows(session.store)
+        assert len(inner_rows) >= 1
+        assert inner_rows[0]["role"] == "user"
+        assert inner_rows[0]["inner_tick_kind"] == "autonomy"
     finally:
         await delete_guest_scope_for_test(scope)

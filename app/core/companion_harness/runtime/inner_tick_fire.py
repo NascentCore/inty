@@ -256,10 +256,7 @@ async def kernel_fire_throttled(
                 )
             )
             reply_stripped = str(companion_turn.assistant_text or "").strip()
-            if (
-                not reply_stripped
-                and not companion_turn.tool_background_started
-            ):
+            if not reply_stripped:
                 logger.info("inner_tick_monolog kernel monolog_empty")
         case InnerTickKind.AUTONOMY:
             companion_turn = (

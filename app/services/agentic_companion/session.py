@@ -1,7 +1,7 @@
 """In-process agentic companion: coordinator state + session lifecycle across channels.
 
-``Coordinator`` holds inner-tick coordinates, foreground pending correlation, and overlap
-guards (channel-agnostic). ``Session`` binds a
+``Coordinator`` holds inner-tick signed-on coordinates and USER_CHAT queue
+``foreground_pending`` correlation (channel-agnostic). ``Session`` binds a
 :class:`~app.services.agentic_companion.downlink.ChannelDownlink` and runs the inner-tick
 poll worker skeleton; user-visible output routes through scope ``OutputQueue`` and channel
 adapters.
@@ -29,7 +29,6 @@ scheduled delivery when signed on.
 from __future__ import annotations
 
 import asyncio
-import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -76,39 +75,11 @@ def apply_inner_tick_coords(
     agent_id: str,
     chat_id: Any,
 ) -> None:
-    """Replace inner-tick coordinates while preserving same-session monolog throttle."""
-    prev_user = inner_tick_ctx.get("user_id")
-    prev_agent = inner_tick_ctx.get("agent_id")
-    prev_chat = inner_tick_ctx.get("chat_id")
-    prev_mono = inner_tick_ctx.get("_last_monolog_inner_tick_monotonic")
-    prev_line_count = inner_tick_ctx.get("_last_monolog_transcript_line_count")
-    prev_autonomy_mono = inner_tick_ctx.get(
-        "_last_autonomy_inner_tick_monotonic"
-    )
-    prev_autonomy_line_count = inner_tick_ctx.get(
-        "_last_autonomy_transcript_line_count"
-    )
+    """Replace inner-tick signed-on coordinates for the proactive/scheduled poll."""
     inner_tick_ctx.clear()
     inner_tick_ctx.update(
         {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
     )
-    same_coords = (
-        str(prev_user or "") == str(user_id or "")
-        and str(prev_agent or "") == str(agent_id or "")
-        and str(prev_chat or "") == str(chat_id or "")
-    )
-    if same_coords and prev_mono is not None:
-        inner_tick_ctx["_last_monolog_inner_tick_monotonic"] = prev_mono
-    if same_coords and prev_line_count is not None:
-        inner_tick_ctx["_last_monolog_transcript_line_count"] = prev_line_count
-    if same_coords and prev_autonomy_mono is not None:
-        inner_tick_ctx["_last_autonomy_inner_tick_monotonic"] = (
-            prev_autonomy_mono
-        )
-    if same_coords and prev_autonomy_line_count is not None:
-        inner_tick_ctx["_last_autonomy_transcript_line_count"] = (
-            prev_autonomy_line_count
-        )
 
 
 @dataclass
@@ -119,10 +90,8 @@ class Coordinator:
     the long-lived presence. Holds presence STATE, not IO machinery:
 
     - inner_tick_context: the signed-on (user, agent, chat) triple that gates the
-    proactive/scheduled poll (the poll no-ops when it is empty), plus monolog/autonomy
-    throttle markers.
-    - foreground_pending: correlation map for queue-serving user turns and inner-tick
-    tool-background delivery metadata.
+    proactive/scheduled poll (the poll no-ops when it is empty).
+    - foreground_pending: correlation map for queue-serving USER_CHAT turns.
 
     Distinct from ScopeQueueServing (owns the InputQueue drain + OutputQueue pump tasks) and
     from OutputQueue (durable user-visible output): Coordinator is presence state only.
@@ -133,14 +102,6 @@ class Coordinator:
     foreground_pending: dict[str, dict[str, Any]] = field(default_factory=dict)
     # TODO(data-type-abstraction): Change this to a dataclass.
     inner_tick_context: dict[str, Any] = field(default_factory=dict)
-    # TODO(#3314): Replace per-track lingering-work fields with one lifecycle-owned
-    # background work registry / structured-concurrency scope.
-    _inner_tick_proactive_tool_bg_idle: threading.Event | None = field(
-        default=None, repr=False
-    )
-    _inner_tick_autonomy_tool_bg_idle: threading.Event | None = field(
-        default=None, repr=False
-    )
     _implicit_greeting_turn_task: asyncio.Task[Any] | None = field(
         default=None, repr=False
     )
@@ -196,82 +157,6 @@ class Coordinator:
         if not user_id or not agent_id or chat_id is None:
             return None
         return {"user_id": user_id, "agent_id": agent_id, "chat_id": chat_id}
-
-    def last_monolog_inner_tick_monotonic(self) -> Any:
-        return self.inner_tick_context.get("_last_monolog_inner_tick_monotonic")
-
-    def last_monolog_transcript_line_count(self) -> int | None:
-        raw = self.inner_tick_context.get("_last_monolog_transcript_line_count")
-        if raw is None:
-            return None
-        return int(raw)
-
-    def mark_monolog_inner_tick_fired(
-        self,
-        monotonic_time: float,
-        transcript_line_count: int,
-    ) -> None:
-        self.inner_tick_context["_last_monolog_inner_tick_monotonic"] = (
-            monotonic_time
-        )
-        self.inner_tick_context["_last_monolog_transcript_line_count"] = (
-            transcript_line_count
-        )
-
-    def bind_inner_tick_proactive_tool_bg_idle(
-        self, ev: threading.Event | None
-    ) -> None:
-        """Track ``CompanionSession.tool_bg_idle`` after proactive inner-tick starts async tool_bg."""
-        self._inner_tick_proactive_tool_bg_idle = ev
-
-    def clear_inner_tick_proactive_tool_bg_idle_if_idle(self) -> None:
-        idle_ev = self._inner_tick_proactive_tool_bg_idle
-        if idle_ev is not None and idle_ev.is_set():
-            self._inner_tick_proactive_tool_bg_idle = None
-
-    def inner_tick_proactive_tool_bg_still_running(self) -> bool:
-        idle_ev = self._inner_tick_proactive_tool_bg_idle
-        return idle_ev is not None and (not idle_ev.is_set())
-
-    def bind_inner_tick_autonomy_tool_bg_idle(
-        self, ev: threading.Event | None
-    ) -> None:
-        """Track ``CompanionSession.tool_bg_idle`` after autonomy inner-tick starts async tool_bg."""
-        self._inner_tick_autonomy_tool_bg_idle = ev
-
-    def clear_inner_tick_autonomy_tool_bg_idle_if_idle(self) -> None:
-        idle_ev = self._inner_tick_autonomy_tool_bg_idle
-        if idle_ev is not None and idle_ev.is_set():
-            self._inner_tick_autonomy_tool_bg_idle = None
-
-    def inner_tick_autonomy_tool_bg_still_running(self) -> bool:
-        idle_ev = self._inner_tick_autonomy_tool_bg_idle
-        return idle_ev is not None and (not idle_ev.is_set())
-
-    def last_autonomy_inner_tick_monotonic(self) -> Any:
-        return self.inner_tick_context.get(
-            "_last_autonomy_inner_tick_monotonic"
-        )
-
-    def last_autonomy_transcript_line_count(self) -> int | None:
-        raw = self.inner_tick_context.get(
-            "_last_autonomy_transcript_line_count"
-        )
-        if raw is None:
-            return None
-        return int(raw)
-
-    def mark_autonomy_inner_tick_fired(
-        self,
-        monotonic_time: float,
-        transcript_line_count: int,
-    ) -> None:
-        self.inner_tick_context["_last_autonomy_inner_tick_monotonic"] = (
-            monotonic_time
-        )
-        self.inner_tick_context["_last_autonomy_transcript_line_count"] = (
-            transcript_line_count
-        )
 
     def register_implicit_greeting_turn(self, task: asyncio.Task[Any]) -> None:
         """Track the detached ``user_signed_on`` greeting task for user-chat preemption."""
@@ -398,9 +283,6 @@ class Session:
                         async with scope_lock:
                             if self._inner_tick_stop.is_set():
                                 break
-                            # TODO(#3314): Move opportunistic cleanup out of the poll loop;
-                            # completed background work should prune itself via registry callbacks.
-                            self.coordinator.clear_inner_tick_proactive_tool_bg_idle_if_idle()
                 if (
                     inner_tick_snapshot is None
                     or self._inner_tick_stop.is_set()
