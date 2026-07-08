@@ -41,7 +41,7 @@ from app.core.companion_harness.companion.dual_llm_message_stacks import (
 from app.core.companion_harness.companion.proactive_chat import (
     BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     _assemble_proactive_chat_life_currents_hint_prompt,
     _auxiliary_system_messages,
     _capability_system_messages,

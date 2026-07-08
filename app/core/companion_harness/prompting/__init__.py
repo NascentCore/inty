@@ -1,7 +1,9 @@
 """Companion Harness prompting layer: prompt bundles and track-composed assembly.
 
 Holds value objects consumed when building system-message stacks for LLM invocations.
-Turn orchestration and MemoryStore I/O live in sibling packages; they import from here.
+``system_messages.py`` is the system-prefix slice assembly entry (Doctrine through
+Contextual categories). Turn orchestration and MemoryStore I/O live in sibling
+packages; they import from here.
 
 Assembly design (content categories vs runtime organization): see
 ``docs/imate/companion_harness/DESIGN.md`` before changing stack order or adding slices.

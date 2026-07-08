@@ -25,7 +25,7 @@ from .models import (
 )
 
 from .proactive_chat import PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
-from .prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
 )

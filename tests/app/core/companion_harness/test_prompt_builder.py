@@ -14,7 +14,7 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
 )
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages,
     build_system_messages_for_tool_track,
 )

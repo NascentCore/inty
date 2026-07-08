@@ -18,7 +18,7 @@ from app.core.companion_harness.companion.bootstrap import (
     build_interactive_bootstrap_template_reference_parts,
     load_bootstrap_spec_text,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     _auxiliary_system_messages,
     _doctrine_system_messages,
     _dual_llm_chat_structured_output_contract_text,

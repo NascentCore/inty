@@ -7,7 +7,7 @@ from pathlib import Path
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (

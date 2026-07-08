@@ -9,7 +9,7 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.companion.prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages,
 )
 from app.core.companion_harness.companion.turn_pipeline import (

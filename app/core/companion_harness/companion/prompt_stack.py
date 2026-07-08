@@ -48,7 +48,7 @@ from .runtime_channel import (
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
-from .prompts.system_messages import (
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
 )
