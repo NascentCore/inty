@@ -241,3 +241,21 @@ Open PRs checked: #3785 (`cursor/repl-regression-speedup-fe95`) — no overlap w
 - [x] **HYGIENE-2026-76** #3413: `test_memory_store_scope.py` — canonical path constants for assertions + seed. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
 - [x] **HYGIENE-2026-77** #3413: `test_memory_store.py` — `TRANSCRIPT_JSONL_REL` for append/read. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
 - [x] **HYGIENE-2026-78** #3413: `test_experience_directives.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-f2d4` / pull/3786.
+
+## 2026-07-08 scan
+
+Source: open PR overlap check (none open); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests still seed/read MemDoc paths as string literals; F841 unused `batch` in `loop/test_agentic_loop_output_queue.py`.
+
+Open PRs checked: none — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-79** ruff F841: `loop/test_agentic_loop_output_queue.py` — remove unused `batch` locals (3 sites). Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-80** #3413: `test_memory_store_document_mapping.py` — roundtrip static paths from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-81** #3413: `test_turn_proactive_structured.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-82** #3413: `test_turn.py` — `CONTEXT_JSON_REL` + `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-83** #3413: `test_transcript_ai_private_hydrate.py` — `TRANSCRIPT_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-84** #3413: `test_living_sphere_runtime.py` — `CONTEXT_JSON_REL` + `LIVING_SPHERE_UPDATES_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-85** #3413: `test_implicit_sign_on_greeting_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-86** #3413: `test_harness_orchestration_scripted_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+- [x] **HYGIENE-2026-87** #3413: `test_companion_drain_scripted_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.

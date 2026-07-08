@@ -73,6 +73,7 @@ from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
     mark_interactive_bootstrap_completed,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
     LIFE_CURRENTS_MD_REL,
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
@@ -431,7 +432,7 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
         )
         assert "user" in scripted_transcript_roles(session.store)
         assert "assistant" in scripted_transcript_roles(session.store)
-        ctx_raw = session.store.read_document("context.json")
+        ctx_raw = session.store.read_document(CONTEXT_JSON_REL)
         ctx = json.loads(ctx_raw)
         assert (
             ctx.get("workspace_bootstrap_user_interactive_completed") is False

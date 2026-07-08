@@ -20,6 +20,10 @@ from app.core.companion_harness.agentic_companion.types import (
     synthetic_user_message_batch,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
@@ -125,7 +129,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
     rows = [
         json.loads(line)
-        for line in store.read_document("transcript.jsonl").strip().splitlines()
+        for line in store.read_document(TRANSCRIPT_JSONL_REL).strip().splitlines()
     ]
     assert rows[0]["role"] == "user"
     assert rows[0]["content"] == scheduled_text
@@ -135,7 +139,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -288,7 +292,7 @@ async def test_bootstrap_queue_turn_persists_single_user_row(
     )
     rows = [
         json.loads(line)
-        for line in store.read_document("transcript.jsonl").splitlines()
+        for line in store.read_document(TRANSCRIPT_JSONL_REL).splitlines()
         if line
     ]
     user_rows = [row for row in rows if row["role"] == "user"]

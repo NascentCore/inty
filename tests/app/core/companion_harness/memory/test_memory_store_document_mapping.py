@@ -9,6 +9,22 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
     parse_memory_store_relative_path,
     relative_path_for_kind,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
+    COMPANION_DREAMING_STATE_JSON_REL,
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+    COMPANION_RUNTIME_EVENTS_JSONL_REL,
+    COMPANION_USER_FEEDBACK_JSONL_REL,
+    COMPANIONSHIP_MD_REL,
+    GENERATED_IMAGES_INDEX_JSONL_REL,
+    LIFE_CURRENTS_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
+    TOOL_BACKGROUND_JSONL_REL,
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+)
 
 
 def test_parse_identity_and_daily() -> None:
@@ -22,20 +38,20 @@ def test_parse_identity_and_daily() -> None:
 
 def test_roundtrip_static_paths() -> None:
     for rel in (
-        "CHANNELS.md",
-        "COMPANIONSHIP.md",
-        "LIFE_CURRENTS.md",
-        "SOUL.md",
-        "STYLE.md",
-        "transcript.jsonl",
-        "transcript_inner_tick.jsonl",
-        "tool_background.jsonl",
-        ".companion_living_sphere_curator.json",
-        ".companion_runtime_events.jsonl",
-        ".companion_user_feedback.jsonl",
-        ".companion_dreaming_state.json",
-        "generated_images/index.jsonl",
-        "techno_core_events.jsonl",
+        CHANNELS_MD_REL,
+        COMPANIONSHIP_MD_REL,
+        LIFE_CURRENTS_MD_REL,
+        SOUL_MD_REL,
+        STYLE_MD_REL,
+        TRANSCRIPT_JSONL_REL,
+        TRANSCRIPT_INNER_TICK_JSONL_REL,
+        TOOL_BACKGROUND_JSONL_REL,
+        COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+        COMPANION_RUNTIME_EVENTS_JSONL_REL,
+        COMPANION_USER_FEEDBACK_JSONL_REL,
+        COMPANION_DREAMING_STATE_JSON_REL,
+        GENERATED_IMAGES_INDEX_JSONL_REL,
+        TECHNO_CORE_EVENTS_JSONL_REL,
     ):
         kind, cal = parse_memory_store_relative_path(rel)
         assert relative_path_for_kind(kind, cal) == rel

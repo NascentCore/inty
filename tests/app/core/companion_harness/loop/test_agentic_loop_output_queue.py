@@ -730,7 +730,6 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = _dual_llm_loop_context(
         output_queue=domain,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
@@ -794,7 +793,6 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         message_ids=("input-1",),
     )
     domain.append_visible_message = AsyncMock(side_effect=[ready_fg, ready_tool])  # type: ignore[method-assign]
-    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = _dual_llm_loop_context(
         output_queue=domain,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
@@ -861,7 +859,6 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
 
     domain = MagicMock(spec=OutputQueue)
     domain.append_visible_message = AsyncMock()
-    batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     context = _dual_llm_loop_context(
         output_queue=domain,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,

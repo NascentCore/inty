@@ -30,6 +30,9 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -127,7 +130,7 @@ def _seed_workspace(store: MemoryStore) -> None:
     store.write_document("USER.md", "user")
     store.write_document("MEMORY.md", "memory")
     store.write_document(
-        "context.json",
+        CONTEXT_JSON_REL,
         json.dumps({"context_mode": "intimate"}, indent=2) + "\n",
     )
 
