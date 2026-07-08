@@ -11,13 +11,9 @@ from typing import Any
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
-    InnerTickActivity,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
-)
-from app.core.companion_harness.companion.turn_tail_user import (
-    TurnTailUserMessage,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompt_builder import (
@@ -30,15 +26,15 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 
 @dataclass(frozen=True)
 class TurnComposeContext:
-    """Immutable per-turn inputs for prompt composition; built by turn prep."""
+    """Immutable per-turn inputs for chat-only track system-prefix composition."""
 
+    # Loaded MemDoc bundle for the active companion scope.
     bundle: PromptBundle
+    # Session metadata including bootstrap completion and experience profile.
     context_meta: ContextMeta
+    # Active gateway channel and implicit-signal payload for peripheral slices.
     runtime_context: TurnRuntimeContext
-    interactive_bootstrap_active: bool
-    tail_user: TurnTailUserMessage
-    inner_tick_activity: InnerTickActivity | None
-    # Proactive LIFE_CURRENTS reads; greeting/scheduled pass the same store for a uniform ctor.
+    # MemoryStore for proactive LIFE_CURRENTS reads; passed for all chat-only tracks.
     store: MemoryStore
 
 

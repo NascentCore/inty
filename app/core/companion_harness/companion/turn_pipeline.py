@@ -258,24 +258,10 @@ def build_companion_turn_prompt_plan(
             )
 
             assert tail_user_messages
-            inner_tick_activity: InnerTickActivity | None
-            match track:
-                case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-                    inner_tick_activity = None
-                case (
-                    CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-                    | CompanionTurnTrack.INNER_TICK_SCHEDULED
-                ):
-                    inner_tick_activity = InnerTickActivity.PROACTIVE_CHAT
             turn_ctx = TurnComposeContext(
                 bundle=loaded_state.bundle,
                 context_meta=loaded_state.context,
                 runtime_context=runtime_context,
-                interactive_bootstrap_active=(
-                    not loaded_state.context.workspace_bootstrap_user_interactive_completed
-                ),
-                tail_user=tail_user_messages[0],
-                inner_tick_activity=inner_tick_activity,
                 store=store,
             )
             system_messages = TrackPromptComposer().system_dicts_for_track(

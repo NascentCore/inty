@@ -895,8 +895,9 @@ def append_profile_collection_system_messages(
     profile_collection_required, and Telegram channel. All other sessions receive
     the input list unchanged.
 
-    TODO(bootstrap-cohort-overlays): Invoke only from bootstrap track compose (#3463 proactive
-    via same helper). Production path: PromptBuilder.bootstrap_turn_system_dicts — #3628.
+    TODO(bootstrap-cohort-overlays): Cohort overlay is wired via
+    ``PromptBuilder._append_track_peripheral_system_dicts`` for bootstrap user chat,
+    greeting, proactive, and scheduled tracks.
     """
     if not interactive_bootstrap_active:
         return system_messages

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from app.core.companion_harness.companion.bootstrap import (
     build_bootstrap_tool_call_section,
     load_bootstrap_spec_text,
@@ -393,3 +395,22 @@ def test_implicit_sign_on_system_messages_omit_reply_language_when_config_unset(
         not in system_text
     )
     assert "Use the same language as the user's message(s)" not in system_text
+
+
+def test_companion_system_messages_for_track_greeting_raises() -> None:
+    with pytest.raises(RuntimeError, match="TrackPromptComposer"):
+        companion_system_messages_for_track(
+            store=None,  # type: ignore[arg-type]
+            bundle=PromptBundle(
+                identity="identity",
+                soul="soul",
+                user_md="user",
+                memory_md="",
+            ),
+            context=ContextMeta(),
+            track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        )

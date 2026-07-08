@@ -2,10 +2,9 @@
 
 Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slices,
 transcript window, optional private-thought splice, time context, and tail user.
-Bootstrap and settled single-LLM user chat compose through this module; greeting,
-proactive, and scheduled chat-only tracks compose system prefixes here (#3463).
-Dual-LLM and monolog/autonomy inner-tick tracks still use legacy ``prompt_stack``
-entrypoints (#3398).
+Bootstrap, settled user chat, and chat-only tracks (greeting, proactive, scheduled)
+compose system prefixes through this module. Monolog, autonomy, and dual-LLM
+paths still use legacy ``prompt_stack`` / ``build_system_messages`` entrypoints (#3453).
 
 ``PromptPlan`` is the **output** of the memory projection stage (target pipeline:
 MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly
@@ -475,12 +474,35 @@ class PromptBuilder:
         )
         return out
 
+    def _settled_inner_tick_proactive_contextual_system_dicts(
+        self,
+        *,
+        proactive_life_currents_block: str | None,
+    ) -> list[dict[str, Any]]:
+        return _contextual_system_messages(
+            context=self.context,
+            inner_tick_turn=True,
+            tick_proactive=True,
+            tick_autonomy=False,
+            ai_private_text="",
+            proactive_life_currents_block=proactive_life_currents_block,
+            interactive_bootstrap_active=False,
+        )
+
+    def _finalize_chat_only_system_dicts(
+        self,
+        system_dicts: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Append peripheral gateway slices and configured reply-language clause."""
+        return append_configured_fixed_reply_language_system_messages(
+            self._append_track_peripheral_system_dicts(system_dicts)
+        )
+
     def greeting_system_dicts(self) -> list[dict[str, Any]]:
         """Chat-only implicit sign-on greeting system prefix."""
-        out = self._append_track_peripheral_system_dicts(
+        return self._finalize_chat_only_system_dicts(
             self._greeting_core_system_dicts()
         )
-        return append_configured_fixed_reply_language_system_messages(out)
 
     def proactive_system_dicts(self, store: MemoryStore) -> list[dict[str, Any]]:
         """Chat-only proactive inner-tick system prefix."""
@@ -499,21 +521,14 @@ class PromptBuilder:
             case Phase.SETTLED:
                 out = self._settled_inner_tick_chat_core_system_dicts()
                 out.extend(
-                    _contextual_system_messages(
-                        context=self.context,
-                        inner_tick_turn=True,
-                        tick_proactive=True,
-                        tick_autonomy=False,
-                        ai_private_text="",
+                    self._settled_inner_tick_proactive_contextual_system_dicts(
                         proactive_life_currents_block=life_currents_block,
-                        interactive_bootstrap_active=False,
                     )
                 )
         out.append(
             _system_message(_proactive_chat_structured_output_contract_text())
         )
-        out = self._append_track_peripheral_system_dicts(out)
-        return append_configured_fixed_reply_language_system_messages(out)
+        return self._finalize_chat_only_system_dicts(out)
 
     def scheduled_system_dicts(self) -> list[dict[str, Any]]:
         """Chat-only scheduled reminder inner-tick system prefix."""
@@ -524,21 +539,14 @@ class PromptBuilder:
             case Phase.SETTLED:
                 out = self._settled_inner_tick_chat_core_system_dicts()
                 out.extend(
-                    _contextual_system_messages(
-                        context=self.context,
-                        inner_tick_turn=True,
-                        tick_proactive=True,
-                        tick_autonomy=False,
-                        ai_private_text="",
+                    self._settled_inner_tick_proactive_contextual_system_dicts(
                         proactive_life_currents_block=None,
-                        interactive_bootstrap_active=False,
                     )
                 )
         out.append(
             _system_message(_scheduled_reminder_structured_output_contract_text())
         )
-        out = self._append_track_peripheral_system_dicts(out)
-        return append_configured_fixed_reply_language_system_messages(out)
+        return self._finalize_chat_only_system_dicts(out)
 
     def _compose_settled_single_llm_user_chat_prompt(
         self,
