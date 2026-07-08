@@ -27,6 +27,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.core.companion_harness.memory.memory_store_scope import (
     ensure_minimal_documents_in_store,
 )
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
 )
@@ -93,3 +94,126 @@ def test_bootstrap_prompt_plan_defers_message_assembly_to_plugin(
     assert plan.messages == []
     assert plan.transcript_compaction is None
     assert plan.tools_for_turn == build_openai_bootstrap_track_tools()
+
+
+def test_bootstrap_proactive_prompt_plan_system_messages_match_prompt_builder(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pipeline-proactive", "agent", tmp_path.name),
+        repository=None,
+    )
+    _seed_bootstrap_workspace(store)
+    runtime_context = TurnRuntimeContext(
+        channel=ChannelKind.APP_WS,
+        implicit_signal_bundle=None,
+    )
+    loaded_state = load_companion_turn_state(
+        store=store,
+        track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        transcript_llm_window_max_messages=None,
+    )
+    plan = build_companion_turn_prompt_plan(
+        store=store,
+        loaded_state=loaded_state,
+        tail_user_messages=_tail_user(),
+        track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+        tick_proactive=True,
+        implicit_sign_on_turn=False,
+        runtime_context=runtime_context,
+        transcript_compaction=None,
+        tail_splice_thoughts=[],
+    )
+    expected_system = PromptBuilder(
+        bundle=loaded_state.bundle,
+        context=loaded_state.context,
+        runtime_context=runtime_context,
+    ).proactive_system_dicts(store)
+    assert plan.system_messages == expected_system
+
+
+def test_greeting_prompt_plan_system_messages_match_prompt_builder_settled(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pipeline-greeting-settled", "agent", tmp_path.name),
+        repository=None,
+    )
+    store.write_document(
+        CONTEXT_JSON_REL,
+        json.dumps(
+            {
+                "context_mode": "unspecific",
+                "user_id": "u",
+                "companion_id": "a",
+                "chat_id": "c",
+                "workspace_bootstrap_user_interactive_completed": True,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+    ensure_minimal_documents_in_store(store)
+    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    runtime_context = TurnRuntimeContext(
+        channel=ChannelKind.APP_WS,
+        implicit_signal_bundle=None,
+    )
+    loaded_state = load_companion_turn_state(
+        store=store,
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        transcript_llm_window_max_messages=None,
+    )
+    plan = build_companion_turn_prompt_plan(
+        store=store,
+        loaded_state=loaded_state,
+        tail_user_messages=_tail_user(),
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        tick_proactive=False,
+        implicit_sign_on_turn=True,
+        runtime_context=runtime_context,
+        transcript_compaction=None,
+        tail_splice_thoughts=[],
+    )
+    expected_system = PromptBuilder(
+        bundle=loaded_state.bundle,
+        context=loaded_state.context,
+        runtime_context=runtime_context,
+    ).greeting_system_dicts()
+    assert plan.system_messages == expected_system
+
+
+def test_greeting_prompt_plan_system_messages_match_prompt_builder_bootstrap(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("pipeline-greeting-bootstrap", "agent", tmp_path.name),
+        repository=None,
+    )
+    _seed_bootstrap_workspace(store)
+    runtime_context = TurnRuntimeContext(
+        channel=ChannelKind.APP_WS,
+        implicit_signal_bundle=None,
+    )
+    loaded_state = load_companion_turn_state(
+        store=store,
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        transcript_llm_window_max_messages=None,
+    )
+    plan = build_companion_turn_prompt_plan(
+        store=store,
+        loaded_state=loaded_state,
+        tail_user_messages=_tail_user(),
+        track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+        tick_proactive=False,
+        implicit_sign_on_turn=True,
+        runtime_context=runtime_context,
+        transcript_compaction=None,
+        tail_splice_thoughts=[],
+    )
+    expected_system = PromptBuilder(
+        bundle=loaded_state.bundle,
+        context=loaded_state.context,
+        runtime_context=runtime_context,
+    ).greeting_system_dicts()
+    assert plan.system_messages == expected_system

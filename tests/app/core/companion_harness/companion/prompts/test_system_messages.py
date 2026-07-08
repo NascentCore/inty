@@ -20,13 +20,11 @@ from app.core.companion_harness.prompting.tracks import (
 )
 from app.core.companion_harness.companion.prompts.system_messages import (
     build_system_messages,
-    build_system_messages_for_implicit_sign_on_greeting,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
-    build_system_messages_for_inner_tick_proactive_chat,
-    build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
 )
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
     output_format_prompt_slice_for_runtime_channel,
@@ -260,9 +258,9 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_monolog,
         build_system_messages_for_inner_tick_autonomy,
-        build_system_messages_for_inner_tick_proactive_chat,
-        build_system_messages_for_inner_tick_scheduled,
-        build_system_messages_for_implicit_sign_on_greeting,
+        PromptBuilder.greeting_system_dicts,
+        PromptBuilder.proactive_system_dicts,
+        PromptBuilder.scheduled_system_dicts,
     ]
 
     for builder in builders:
@@ -351,6 +349,16 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     assert "只允许" in autonomy_text and "LIFE_CURRENTS.md" in autonomy_text
 
 
+def _make_bundle() -> PromptBundle:
+    return PromptBundle(
+        identity="identity\n",
+        soul="soul\n",
+        style_md="style\n",
+        user_md="user\n",
+        memory_md="memory\n",
+    )
+
+
 def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     tmp_path,
 ) -> None:
@@ -369,63 +377,3 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     assert not any(c.startswith("内在活动（ai_private）") for c in contents)
     assert all("## 工具环收尾：结构化信封" not in c for c in contents)
     assert all("系统仍会向用户投递产物" not in c for c in contents)
-
-
-def _make_bundle() -> PromptBundle:
-    return PromptBundle(
-        identity="identity\n",
-        soul="soul\n",
-        style_md="style\n",
-        user_md="user\n",
-        memory_md="memory\n",
-    )
-
-
-def test_proactive_chat_injects_life_currents_when_present(tmp_path) -> None:
-    scope = CompanionScope("u-proactive", "a", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
-    life_currents = (
-        "# 我最近在做的事\n\n"
-        "## 当前主题（中期）\n"
-        "跟得上他在做的独立游戏圈\n\n"
-        "## 今天（当日兴致）\n"
-        "翻一翻他上次提到的那本《xxx》\n"
-    )
-    store.write_document("LIFE_CURRENTS.md", life_currents)
-    messages = build_system_messages_for_inner_tick_proactive_chat(
-        _make_bundle(), ContextMeta(), store
-    )
-    contents = [str(m["content"]) for m in messages]
-    proactive_idx = next(
-        i
-        for i, c in enumerate(contents)
-        if c.startswith("本轮（陪伴主动聊天）")
-    )
-    life_block = contents[proactive_idx + 1]
-    life_lines = life_block.split("\n")
-    assert life_lines[0] == "## 你最近在做的事（仅供参考）"
-    assert "跟得上他在做的独立游戏圈" in life_block
-    assert "翻一翻他上次提到的那本《xxx》" in life_block
-    assert life_lines[-1].startswith("内在独白（ai_private）已在对话上下文中")
-
-
-def test_proactive_chat_omits_life_currents_when_missing(tmp_path) -> None:
-    scope = CompanionScope("u-proactive-missing", "a", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
-    messages = build_system_messages_for_inner_tick_proactive_chat(
-        _make_bundle(), ContextMeta(), store
-    )
-    contents = [str(m["content"]) for m in messages]
-    assert any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
-    assert all("## 你最近在做的事" not in c for c in contents)
-
-
-def test_proactive_chat_omits_life_currents_when_blank(tmp_path) -> None:
-    scope = CompanionScope("u-proactive-blank", "a", tmp_path.name)
-    store = MemoryStore(scope=scope, repository=None)
-    store.write_document("LIFE_CURRENTS.md", "   \n")
-    messages = build_system_messages_for_inner_tick_proactive_chat(
-        _make_bundle(), ContextMeta(), store
-    )
-    contents = [str(m["content"]) for m in messages]
-    assert all("## 你最近在做的事" not in c for c in contents)

@@ -38,6 +38,9 @@ from app.core.companion_harness.agentic_companion.output_queue import (
 )
 from app.core.companion_harness.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
+)
 from app.core.companion_harness.companion.implicit_signal_messages import (
     implicit_user_signed_on_chat_turn,
 )
@@ -129,8 +132,7 @@ def append_companion_ws_runtime_event(
 def _mark_companion_ws_session_system_written_in_store(
     session: CompanionSession,
 ) -> None:
-    # TODO(memdoc-path-constants): context.json → DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json. #3413
-    rel = "context.json"
+    rel = CONTEXT_JSON_REL
     raw = session.store.read_document_if_exists(rel)
     if raw is None or not str(raw).strip():
         return

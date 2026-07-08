@@ -67,12 +67,12 @@ _BOND_UNAVAILABLE = (
     "We couldn't reconnect your companion. "
     "Please try again later or contact support."
 )
-_STOP_CONFIRMATION = "You have been unsubscribed from SMS. Text START to reconnect."
-_EMPTY_CHAT_PROMPT = "Please send a message."
-_PROVISION_FAILED = (
-    "We couldn't set up your companion. Please try again later."
+_STOP_CONFIRMATION = (
+    "You have been unsubscribed from SMS. Text START to reconnect."
 )
-# TODO(sms-proactive-cap): Add daily cap + quiet hours before prod SMS proactive rollout.
+_EMPTY_CHAT_PROMPT = "Please send a message."
+_PROVISION_FAILED = "We couldn't set up your companion. Please try again later."
+# TODO(sms-proactive-cap): #3806 — daily cap + quiet hours before prod SMS proactive rollout (epic #3804).
 
 
 class SmsTransport:
@@ -226,7 +226,9 @@ class SmsTransport:
                     text=_IDENTITY_MISMATCH,
                 )
                 return
-            if not await self._gate_onboard_bond(scope=existing, inbound=inbound):
+            if not await self._gate_onboard_bond(
+                scope=existing, inbound=inbound
+            ):
                 return
             await self._resume_if_paused(scope=existing)
             await self._ensure_active(
@@ -312,6 +314,7 @@ class SmsTransport:
         )
         try:
             await presence.greet_on_sign_on(runtime_channel=ChannelKind.SMS)
+            # TODO(sms-sign-on-pump): #3805 — delete flush_sign_on_greeting_to_sms_downlink; greeting via OutputQueue pump (epic #3804).
             adapter = SmsChannelAdapter(
                 api=self._api,
                 from_number=self._from_number,

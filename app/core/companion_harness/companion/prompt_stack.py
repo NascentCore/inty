@@ -49,9 +49,6 @@ from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from .prompts.system_messages import (
-    build_system_messages_for_implicit_sign_on_greeting,
-    build_system_messages_for_inner_tick_proactive_chat,
-    build_system_messages_for_inner_tick_scheduled,
     build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
 )
@@ -169,23 +166,19 @@ def companion_system_messages_for_track(
     """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            out = build_system_messages_for_implicit_sign_on_greeting(
-                bundle,
-                context,
-                runtime_context.channel,
+            raise RuntimeError(
+                "IMPLICIT_SIGN_ON_GREETING system messages must be composed via "
+                "TrackPromptComposer.system_dicts_for_track (turn_pipeline)"
             )
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            # TODO(!3463): Compose proactive as overlay on base track prefix — during
-            # bootstrap use ``PromptBuilder.bootstrap_turn_system_dicts``, then append
-            # proactive-only slices; do not rely on ``interactive_bootstrap_active`` alone
-            # (``_persona_system_messages`` also requires ``not inner_tick_turn``).
-            # Peripheral cohort via bootstrap track compose (not gateway extras alone) — #3463.
-            out = build_system_messages_for_inner_tick_proactive_chat(
-                bundle, context, store
+            raise RuntimeError(
+                "INNER_TICK_PROACTIVE_CHAT system messages must be composed via "
+                "TrackPromptComposer.system_dicts_for_track (turn_pipeline)"
             )
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            out = build_system_messages_for_inner_tick_scheduled(
-                bundle, context
+            raise RuntimeError(
+                "INNER_TICK_SCHEDULED system messages must be composed via "
+                "TrackPromptComposer.system_dicts_for_track (turn_pipeline)"
             )
         case (
             CompanionTurnTrack.INNER_TICK_MONOLOG
@@ -207,8 +200,7 @@ def companion_system_messages_for_track(
                 bundle,
                 context,
             )
-    # TODO(track-compose-unify): Bootstrap/greeting tracks should use shared bootstrap_turn — #3398
-    # compose (peripheral gateway extras + cohort) — #3398.
+    # TODO(#3453): Migrate monolog/autonomy to TrackPromptComposer once slice builders land.
     out = append_runtime_output_format_system_message(
         system_messages=out,
         bundle=bundle,
