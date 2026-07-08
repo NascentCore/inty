@@ -75,6 +75,10 @@ agent:
       proactive_chat:
         base_idle_seconds: 10
         poll_seconds: 3
+    # Greeting uses chat_completion_with_retrial (default 12s/attempt); v4-flash often 14–15s on OpenRouter.
+    implicit_sign_on_greeting:
+      llm_timeout_sec: 25.0
+      llm_max_attempts: 2
     user_feedback_github:
       token: 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
   # 模型本地无法访问，IP 被限制
