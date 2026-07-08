@@ -23,7 +23,8 @@ description: >-
 - `./backend/ops/start.sh --local` 会初始化 `user-testing`、跑迁移，并把 JWT 写入仓库根 **[`.inty_ops_bearer_token`](../../../backend/ops/start.sh)**（可用 `INTY_OPS_BEARER_TOKEN_FILE` 改路径）。smoke 脚本会**自动读取**该文件，通常无需再 `export INTY_BEARER_TOKEN`。
 - 文件日志：脚本会先 `cd` 到仓库根（见 `backend/ops/start.sh`），默认 **`INTY_LOG_FILE`** 为 **`.inty/inty.log`**；`--workspace DIR` 时则为 **`DIR/inty.log`**（`DIR` 相对该 cwd）。排障见 [`inty-backend-inspect`](../inty-backend-inspect/SKILL.md)。
 - 默认监听 **`http://127.0.0.1:8001`**（环境变量 `PORT` 可覆盖）。前端构建较慢时可加 **`--no-build-frontend`**。
-- 流程示例：`./backend/ops/start.sh --local --no-build-frontend`（另开终端）→ `export INTY_API_BASE_URL=http://127.0.0.1:8001` → `python3 .cursor/skills/scripts/inty_backend_smoke_tests/test_chat_ws.py --create-agent`。
+- **每次 smoke 前显式重置 `INTY_CONFIG_YAML`**，不要继承当前 shell 旧值。Companion harness regression smoke 用 `devops/config.yaml.regression_tests`；普通本地 Ops smoke 用 `devops/config.yaml.local`；pytest/CI 后续要切回 `devops/config.yaml.test`。
+- 流程示例：`export INTY_CONFIG_YAML=devops/config.yaml.regression_tests && ./backend/ops/start.sh --local --no-build-frontend`（另开终端）→ `export INTY_API_BASE_URL=http://127.0.0.1:8001` → `python3 .cursor/skills/scripts/inty_backend_smoke_tests/test_chat_ws.py --create-agent`。
 
 若你只起了 **Inty 主后端**（`./backend/inty/start.sh ...`），则把 `INTY_API_BASE_URL` / `api_base_url` 设为 `http://127.0.0.1:8000` 并自行提供 token（或仍先用 Ops 写出 `.inty_ops_bearer_token` 仅当 token 来源，基址仍指向 8000 时需一致的有效 JWT；实践中**同源测 Ops 最省事**）。
 
@@ -59,6 +60,7 @@ description: >-
 
 ```bash
 # 终端 A：仓库根，已激活 venv（推荐 Ops，token 自动写入 .inty_ops_bearer_token）
+export INTY_CONFIG_YAML=devops/config.yaml.regression_tests
 ./backend/ops/start.sh --local --no-build-frontend
 
 # 终端 B：仓库根，已激活 venv

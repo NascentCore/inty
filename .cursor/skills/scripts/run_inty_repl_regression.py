@@ -696,6 +696,7 @@ def _record_trailing_downlink(
     report["turns"].append(
         {
             "kind": f"{label}_trailing",
+            "text": text,
             "text_preview": text[:120],
             "meta": meta,
         }
@@ -2979,6 +2980,7 @@ def _run_github_issue_e2e_phase(
                 ):
                     error = f"input not delivered: {user_msg_uuid}"
                     break
+                settle_turn_start = len(report["turns"])
                 if not _wait_ws_turn_settled(
                     bridge,
                     report,
@@ -2992,6 +2994,10 @@ def _run_github_issue_e2e_phase(
                         "feedback poll",
                         file=stderr,
                         flush=True,
+                    )
+                for turn in report["turns"][settle_turn_start:]:
+                    assistant_reply += str(
+                        turn.get("text") or turn.get("text_preview") or ""
                     )
                 snapshot_seen = _poll_feedback_snapshot_for_user_msg_uuid(
                     repo_root,

@@ -212,6 +212,27 @@ def test_assistant_reply_discloses_issue_url() -> None:
     assert not mod._assistant_reply_discloses_issue_url("", url, 3595)
 
 
+def test_record_trailing_downlink_keeps_full_text() -> None:
+    mod = _load_regression_module()
+    url = "https://github.com/NascentCore/inty/issues/3595"
+    text = f"你的反馈已经记录了：{url}"
+    report = {"turns": []}
+
+    mod._record_trailing_downlink(
+        report,
+        label="github_issue",
+        text=text,
+        meta={"source": "tool_bg"},
+    )
+
+    assert report["turns"][0]["text"] == text
+    assert mod._assistant_reply_discloses_issue_url(
+        report["turns"][0]["text"],
+        url,
+        3595,
+    )
+
+
 def test_load_app_debug_from_config(tmp_path) -> None:
     mod = _load_regression_module()
 
@@ -649,7 +670,9 @@ def _github_summary_fixture_kwargs(
     }
 
 
-def test_build_regression_summary_debug_disclosure_fails_without_chat_url() -> None:
+def test_build_regression_summary_debug_disclosure_fails_without_chat_url() -> (
+    None
+):
     mod = _load_regression_module()
     github = mod.GithubIssueE2eResult(
         "u1",
@@ -671,7 +694,9 @@ def test_build_regression_summary_debug_disclosure_fails_without_chat_url() -> N
     assert infra_gate.passed() is True
 
 
-def test_build_regression_summary_debug_disclosure_passes_when_disclosed() -> None:
+def test_build_regression_summary_debug_disclosure_passes_when_disclosed() -> (
+    None
+):
     mod = _load_regression_module()
     github = mod.GithubIssueE2eResult(
         "u1",

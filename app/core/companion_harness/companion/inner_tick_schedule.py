@@ -1,10 +1,10 @@
 """Monolog and REPL-prototype inner-tick wait helpers (poll chunk + min gap).
 
-``AUTONOMY`` reuses the same wait gate as monolog but throttles via coordinator
-``last_autonomy_*`` fields (see ``try_fire_autonomy_inner_tick``).
+``AUTONOMY`` reuses the same wait gate as monolog but throttles via
+``ScopeInnerTickState`` on the scope worker (#3255).
 
 WebSocket **proactive chat rhythm** lives in ``proactive_chat.py``;
-the unified WS worker fires proactive / scheduled / autonomy / monolog
+the unified WS worker fires proactive / scheduled
 on ``agent.companion_harness.inner_tick.proactive_chat.poll_seconds``.
 
 See ``docs/imate/companion_harness/DESIGN.md`` for scheduling semantics and transport boundaries.

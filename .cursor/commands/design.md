@@ -21,6 +21,11 @@ Avoid going into details of actual code changes, in order to avoid distractions.
 - Keep scope focused on the core problem
 - Only when the user explicitly requests configurability, use repo config mechanisms [`config.py`](/app/utils/config.py); cross-field moves see [move-config-entries skill](/.cursor/skills/move-config-entries/SKILL.md))
 
+## Preferred architecture patterns
+
+- Prefer composable architecture at each abstract layer
+- Prefer hierarchical, i.e., higher-layer is inherently more abstract of the immediate layer
+
 ## Procedure
 
 - If direction is not yet converged, run `/brainstorm` or `/grill-me` before proposing alternatives
@@ -46,7 +51,3 @@ When doing refactoring, follow the procedures below:
   only add configurability the user explicitly requested.
   - **Do not add enable/disable knob for new features**: just implement the features.
 - Shallow wrapper, eg: function of only 1 line of actual code
-
-## Companion harness prompt assemblage
-
-- Classify each slice by **content category** (Doctrine → Capability → Persona → Output → Contextual, or transcript) and **runtime ordering** (core / runtime / peripheral) per [DESIGN.md](/docs/imate/companion_harness/DESIGN.md); do not conflate the two axes.

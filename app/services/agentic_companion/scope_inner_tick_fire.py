@@ -240,15 +240,6 @@ async def try_fire_autonomy_for_scope(
         return False
 
     async with inner_tick_turn_scope(session=scope_session):
-        tick_state.clear_autonomy_tool_bg_idle_if_idle()
-        if tick_state.autonomy_tool_bg_still_running():
-            logger.debug(
-                "scope_autonomy_inner_tick skipped prev_autonomy_tool_bg poll_source={} user={} agent={}",
-                poll_source,
-                resolved.user_id,
-                resolved.agent_id,
-            )
-            return False
         try:
             kernel_result = await kernel_fire_throttled(
                 InnerTickKind.AUTONOMY,
@@ -264,19 +255,6 @@ async def try_fire_autonomy_for_scope(
             )
             raise
 
-        companion_turn = kernel_result.turn
-        if companion_turn.tool_background_started:
-            tick_state.bind_autonomy_tool_bg_idle(
-                companion_chat_service.companion_session_tool_bg_idle_event(
-                    user_id=resolved.user_id,
-                    agent_id=resolved.agent_id,
-                    chat_id=resolved.chat_row_id,
-                    resolved_chat_model=resolved.model_override,
-                )
-            )
-        else:
-            tick_state.bind_autonomy_tool_bg_idle(None)
-
         if (
             kernel_result.throttle_kind == InnerTickThrottleKind.AUTONOMY
             and kernel_result.throttle_line_count is not None
@@ -287,12 +265,11 @@ async def try_fire_autonomy_for_scope(
             )
 
     logger.info(
-        "scope_autonomy_inner_tick fired poll_source={} user={} agent={} chat_id={} tool_background_started={}",
+        "scope_autonomy_inner_tick fired poll_source={} user={} agent={} chat_id={}",
         poll_source,
         resolved.user_id,
         resolved.agent_id,
         resolved.chat_row_id,
-        companion_turn.tool_background_started,
     )
     return True
 
@@ -345,15 +322,6 @@ async def try_fire_monolog_for_scope(
         return False
 
     async with inner_tick_turn_scope(session=scope_session):
-        tick_state.clear_monolog_tool_bg_idle_if_idle()
-        if tick_state.monolog_tool_bg_still_running():
-            logger.debug(
-                "scope_monolog_inner_tick skipped prev_monolog_tool_bg poll_source={} user={} agent={}",
-                poll_source,
-                resolved.user_id,
-                resolved.agent_id,
-            )
-            return False
         try:
             kernel_result = await kernel_fire_throttled(
                 InnerTickKind.MONOLOG,
@@ -369,22 +337,6 @@ async def try_fire_monolog_for_scope(
             )
             raise
 
-        if kernel_result is None:
-            return False
-
-        companion_turn = kernel_result.turn
-        if companion_turn.tool_background_started:
-            tick_state.bind_monolog_tool_bg_idle(
-                companion_chat_service.companion_session_tool_bg_idle_event(
-                    user_id=resolved.user_id,
-                    agent_id=resolved.agent_id,
-                    chat_id=resolved.chat_row_id,
-                    resolved_chat_model=resolved.model_override,
-                )
-            )
-        else:
-            tick_state.bind_monolog_tool_bg_idle(None)
-
         if (
             kernel_result.throttle_kind == InnerTickThrottleKind.MONOLOG
             and kernel_result.throttle_line_count is not None
@@ -395,12 +347,11 @@ async def try_fire_monolog_for_scope(
             )
 
     logger.info(
-        "scope_monolog_inner_tick fired poll_source={} user={} agent={} chat_id={} tool_background_started={}",
+        "scope_monolog_inner_tick fired poll_source={} user={} agent={} chat_id={}",
         poll_source,
         resolved.user_id,
         resolved.agent_id,
         resolved.chat_row_id,
-        companion_turn.tool_background_started,
     )
     return True
 
