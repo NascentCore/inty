@@ -76,6 +76,7 @@ from app.core.companion_harness.loop.track_loop_plugin import (
 )
 from app.core.companion_harness.agentic_companion.types import (
     synthetic_user_message_batch,
+    user_message_batch_is_agent_initiated_synthetic,
 )
 from app.core.companion_harness.loop.config import (
     resolved_user_turn_batch_messages_llm_call_mode,
@@ -294,20 +295,22 @@ async def _run_companion_turn_core(
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
     user_msg_uuid = tail_user_messages[-1].message_id
-    if (
-        track
-        in (
-            CompanionTurnTrack.USER_CHAT,
-            CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        )
-        and user_message_batch is None
+    if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP and (
+        user_message_batch is None
+        or user_message_batch_is_agent_initiated_synthetic(user_message_batch)
     ):
-        # Fallback for direct (non-InputQueue) user chat so the AgenticLoop
-        # branch below always has a batch; the App-WS caller delivers from the
-        # turn result while the presence pump skips these rows.
-        # TODO(#3460): replace the ``agent-initiated:``
-        # batch-id prefix with an explicit direct-turn marker once legacy
-        # non-InputQueue user-chat callers are retired.
+        raise RuntimeError(
+            "USER_CHAT_BOOTSTRAP requires queue-serving InputQueue batch "
+            "correlation; direct synthetic batch is not supported (#3466)."
+        )
+    if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
+        # #3466 backup-only: direct (non-InputQueue) settled user chat so
+        # AgenticLoop always has batch correlation; caller delivers from
+        # ``CompanionTurnResult`` while the presence pump skips these rows.
+        # TODO(#3466): do not extend interim WS policy for this backup path.
+        # TODO(#3460): replace the ``agent-initiated:`` batch-id prefix with
+        # an explicit direct-turn marker once legacy non-InputQueue callers
+        # are retired.
         user_message_batch = synthetic_user_message_batch(
             user_msg_uuid=user_msg_uuid,
             track_label=track.value,

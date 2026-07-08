@@ -605,8 +605,9 @@ class AgenticLoop:
     TODO(#3470): Bootstrap outbound lines during tools should read like natural
     chat while working, not serial status broadcasts.
 
-        TODO(#3402): Replace bootstrap-named interim callback types with a neutral
-    per-round visible-text sink shared by queue and non-queue paths.
+    TODO(#3402): Replace bootstrap-named interim callback types with a neutral
+    per-round visible-text sink shared by queue and non-queue paths. Non-queue
+    bootstrap is not a target for this sink (#3466 backup-only).
     """
 
     def __init__(

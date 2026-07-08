@@ -90,6 +90,13 @@ class UserMessageBatch:
         assert self.message_ids
 
 
+def user_message_batch_is_agent_initiated_synthetic(
+    batch: UserMessageBatch,
+) -> bool:
+    """True when ``batch_id`` marks a backup-only direct or agent-initiated turn."""
+    return batch.batch_id.startswith(AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX)
+
+
 def synthetic_user_message_batch(
     *,
     user_msg_uuid: str,
