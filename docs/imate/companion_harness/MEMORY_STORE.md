@@ -14,7 +14,7 @@ MemDoc is human-redable with file-system-like semantic addressing.
 | 概念 | 职责 | 典型落点 |
 |------|------|----------|
 | **Memory doc** | **持久化**（Postgres `companion_memory_document_versions`）；人类可读，便于 REPL / SQL / LangSmith 检视；也是 LLM 经工具读写的正文 | `IDENTITY.md`、`COMPANIONSHIP.md`、`transcript.jsonl` 等 |
-| **Prompt slice** | **运行时效果**：组装进当轮 `role: system` 的文本块；决定模型此刻「看见什么」 | `system_messages.py` / `prompt_stack` 注入的各块 |
+| **Prompt slice** | **运行时效果**：组装进当轮 `role: system` 的文本块；决定模型此刻「看见什么」 | [`prompting/system_messages.py`](/app/core/companion_harness/prompting/system_messages.py) / `prompt_stack` 注入的各块 |
 
 约定：
 

@@ -33,6 +33,7 @@ Domain: [`companion/AGENTS.md`](../../../app/core/companion_harness/companion/AG
 uv run pytest \
   tests/app/core/companion_harness/companion/test_bootstrap.py \
   tests/app/core/companion_harness/companion/test_bootstrap_transcript_order.py \
+  tests/app/core/companion_harness/prompting/test_system_messages.py \
   tests/app/core/companion_harness/companion/test_system_messages.py \
   tests/app/core/companion_harness/tools/test_official_assistant_tool_loop.py \
   -q

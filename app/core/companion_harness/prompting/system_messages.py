@@ -113,7 +113,10 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
-from ..models import ContextMeta, InnerTickActivity
+from app.core.companion_harness.companion.models import (
+    ContextMeta,
+    InnerTickActivity,
+)
 
 
 def _inner_tick_proactive_chat(

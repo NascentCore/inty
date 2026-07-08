@@ -13,7 +13,7 @@ companion turn pipeline.
   ``importance_round`` / ``importance_user_message`` / ``importance_assistant_message``.
   The same envelope is used for async ``tool_background`` finish (see ``tool_bg_routing``).
   Operator guidance lives in ``prompts/SIGNIFICANCE_PERCEPTION.md`` (injected when
-  ``include_significance_perception_slice`` is on; see ``prompts/system_messages.py`` and
+  ``include_significance_perception_slice`` is on; see ``prompting/system_messages.py`` and
   ``prompt_stack.companion_turn_tools_and_system_messages``).
 - **Parsed / split**: ``split_dual_llm_chat_branch_message``
   returns ``DualLlmChatBranchSplit`` (visible text, optional significance metadata dict,
