@@ -75,6 +75,9 @@ async def activate_sms_scope(
     await ensure_presence(scope)
 
 
+# TODO(sms-restore-smoke): #3808 — document release smoke in sms-channel-restore-smoke skill; add debug bindings endpoint (epic #3804).
+
+
 async def restore_persisted_bindings(
     *,
     api: TwilioSmsApi,

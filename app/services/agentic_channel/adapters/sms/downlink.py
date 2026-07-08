@@ -1,4 +1,8 @@
-"""SMS channel downlink: materialize and send assistant text segments."""
+"""SMS channel downlink: materialize and send assistant text segments.
+
+TODO(sms-mms): #3810 — MMS inbound/outbound for image tool output (epic #3804).
+TODO(sms-proactive-cap): #3806 — enforce proactive daily cap and quiet hours here or in pump (epic #3804).
+"""
 
 from __future__ import annotations
 

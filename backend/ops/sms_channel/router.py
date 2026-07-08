@@ -19,6 +19,9 @@ from backend.ops.sms_channel.lifecycle import get_sms_transport
 
 router = APIRouter(prefix="/sms", tags=["sms"])
 
+# TODO(sms-onboard-page): #3809 — GET /sms product onboard page with long code + START/STOP copy (epic #3804).
+# TODO(sms-debug-bindings): #3808 — GET /sms/debug/bindings when app.debug (mirror telegram debug) (epic #3804).
+
 _TWILIO_INBOUND_PATH = "/api/v1/sms/twilio-inbound"
 
 
@@ -27,7 +30,9 @@ async def twilio_inbound(request: Request) -> Response:
     """Ack Twilio immediately and process inbound SMS asynchronously."""
     transport = get_sms_transport()
     if transport is None:
-        raise HTTPException(status_code=503, detail="SMS gateway is not configured")
+        raise HTTPException(
+            status_code=503, detail="SMS gateway is not configured"
+        )
     form = await request.form()
     params = {key: str(value) for key, value in form.items()}
     configured_url = resolved_sms_twilio_webhook_url(

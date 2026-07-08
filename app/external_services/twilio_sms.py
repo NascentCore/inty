@@ -1,6 +1,8 @@
 """Twilio Programmable SMS adapter for companion gateway transport.
 
 Generated entirely by Cursor agent.
+
+TODO(sms-mms): #3810 — parse NumMedia/MediaUrl on inbound; send MMS on outbound (epic #3804).
 """
 
 from __future__ import annotations
@@ -40,7 +42,9 @@ class TwilioInboundSmsForm(BaseModel):
 
     from_e164: str = Field(validation_alias="From", description="Sender E.164")
     to_e164: str = Field(validation_alias="To", description="Long code E.164")
-    body: str = Field(default="", validation_alias="Body", description="SMS body")
+    body: str = Field(
+        default="", validation_alias="Body", description="SMS body"
+    )
     message_sid: str = Field(
         validation_alias="MessageSid",
         description="Twilio message sid",
@@ -131,7 +135,7 @@ def parse_inbound_sms_form(params: dict[str, str]) -> TwilioInboundSms:
 
 def twilio_empty_response_body() -> str:
     """Return empty TwiML for async SMS webhook handling."""
-    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>"
+    return '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
 
 
 def form_body_for_tests(**fields: str) -> str:

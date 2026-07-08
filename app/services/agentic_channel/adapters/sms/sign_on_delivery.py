@@ -5,6 +5,8 @@ Generated entirely by Cursor agent.
 ``greet_on_sign_on`` enqueues with empty ``batch_id``; ``AgentChannelPresence`` only
 routes agent-initiated visible rows on IM channels (#3576). SMS flushes via channel
 downlink until harness uses ``agent-initiated:`` batch ids for all channels.
+
+TODO(sms-sign-on-pump): #3805 — route SMS sign-on greeting via OutputQueue pump; delete this module (epic #3804).
 """
 
 from __future__ import annotations
