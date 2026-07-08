@@ -79,10 +79,6 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     get_ai_private_jsonl_text_for_prompt,
 )
 from app.core.companion_harness.companion.bootstrap import (
-    build_bootstrap_tool_call_section,
-    build_interactive_bootstrap_template_reference_parts,
-    interactive_bootstrap_active,
-    load_bootstrap_spec_text,
     load_bootstrap_telegram_profile_slice_text,
     profile_collection_active,
 )
