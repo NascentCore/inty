@@ -140,6 +140,7 @@ class UserAgent:
             model=self._model,
             messages=messages,
             temperature=0.9,
+            max_tokens=256,
         )
         text = response.choices[0].message.content
         assert text is not None
