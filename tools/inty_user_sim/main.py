@@ -68,7 +68,9 @@ def run(
             repo_root=repo_root,
             api_base=preset.api_base,
             token_path=token_file,
+            config_path=repo_root / preset.config_path,
             stderr=stderr,
+            skip_db_checks=preset.skip_db_checks,
         )
     assert resolved_agent_id != "", "agent_id required (or pass --create-agent)"
     persona = load_persona_yaml(
