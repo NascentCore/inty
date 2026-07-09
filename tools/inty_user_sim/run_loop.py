@@ -121,7 +121,7 @@ class SimRunLoop:
             agent_id=cfg.agent_id,
         )
         bridge = BackendChatWsBridge(
-            ws_url,
+            ws_url=ws_url,
             bearer_token=cfg.bearer_token,
         )
         calendar = SimCalendar(
