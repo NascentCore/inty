@@ -259,3 +259,21 @@ Open PRs checked: none — no overlap with tasks below.
 - [x] **HYGIENE-2026-85** #3413: `test_implicit_sign_on_greeting_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
 - [x] **HYGIENE-2026-86** #3413: `test_harness_orchestration_scripted_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
 - [x] **HYGIENE-2026-87** #3413: `test_companion_drain_scripted_llm.py` — `CONTEXT_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-817f` / pull/3826.
+
+## 2026-07-09 scan
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe touches `system_messages.py` + `test_prompt_builder.py` — defer F401 there); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` on `app/core/companion_harness/` + tests; #3413 follow-up — harness tests still seed/read MemDoc `.md` paths as string literals.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [claimed] **HYGIENE-2026-88** #3413: `test_companion_user_feedback_tool.py` — `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
+- [claimed] **HYGIENE-2026-89** #3413: `test_memory_store.py` — `SOUL_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
+- [claimed] **HYGIENE-2026-90** #3413: `test_resolve_client_time.py` — `USER_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
+- [claimed] **HYGIENE-2026-91** #3413: `test_companion_record_user_profile_tool.py` — `USER_MD_REL` in write allowlist. Claimed `cursor/agent-maintenance-tasks-e2b6`.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused `experience_profile_system_clause`, `experience_directives_system_clause`, `default_runtime_context_for_compose` (defer until #3834 lands).
+- **HYGIENE-2026-93** ruff F401: `test_prompt_builder.py` — unused `PromptComposeTrigger` import (defer until #3834 lands).
