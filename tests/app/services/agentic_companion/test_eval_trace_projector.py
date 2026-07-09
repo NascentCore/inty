@@ -8,17 +8,17 @@ from datetime import UTC, datetime
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from app.services.agentic_companion import eval_trace_projector as projector_mod
 from app.services.agentic_companion.eval_trace_projector import (
     EvalTraceAssistantInput,

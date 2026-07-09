@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     get_output_queue_for_scope,
 )
 from app.core.companion_harness.companion.manager import CompanionSession

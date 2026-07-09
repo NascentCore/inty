@@ -9,7 +9,7 @@ from datetime import datetime, UTC
 import json
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgenticLoopInputBatch,
     InputQueueRecord,
     QueueStatus,

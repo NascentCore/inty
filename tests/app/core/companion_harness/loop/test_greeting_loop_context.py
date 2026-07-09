@@ -27,7 +27,7 @@ from app.core.companion_harness.prompting.track_composer import (
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     loop_execution_for_track,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     UserMessageBatch,
     synthetic_user_message_batch,
 )

@@ -12,12 +12,12 @@ from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from app.services.agentic_channel.scope_queue_serving import (
     ScopeDrainCompletion,
     ScopeQueueServing,
@@ -77,7 +77,7 @@ async def test_scope_serving_delivers_each_output_row_once() -> None:
         runtime_channel=ChannelKind.TELEGRAM,
     )
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -86,7 +86,7 @@ async def test_scope_serving_delivers_each_output_row_once() -> None:
         repo = AsyncMock()
         repo.mark_delivered = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             with patch(

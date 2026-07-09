@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueue,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgenticLoopInputBatch,
     UserMessageBatch,
 )

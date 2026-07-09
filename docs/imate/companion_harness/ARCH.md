@@ -25,11 +25,11 @@ Each line is tagged **`[importance · DESIGN conformity]`**:
 - **DESIGN conformity** — `good` (matches DESIGN.md target in active code paths), `partial` (right direction, named gaps vs target), `legacy` (still on a path being replaced), `unclear` (open design or working hypothesis not validated in code).
 
 - **`[peripheral · good]` Channel** — manifestation surface for one relationship; channel adapters live outside this tree (Ops services, WebSocket glue). Harness-side channel types and runtime context: [companion/runtime_channel.py](/app/core/companion_harness/companion/runtime_channel.py). Multi-medium scope keys: [agent_channel/](/app/core/companion_harness/agent_channel/).
-- **`[supporting · good]` InputQueue & OutputQueue** — durable per-scope message buffering between gateway and harness: [agentic_companion/](/app/core/companion_harness/agentic_companion/).
+- **`[supporting · good]` InputQueue & OutputQueue** — durable per-scope message buffering between gateway and harness: [agentic_companion/](/app/core/agentic_companion/).
 - **`[core · good]` Companion session & scope** — one MemoryStore per paired user scope, lifecycle and turn_lock: [companion/manager.py](/app/core/companion_harness/companion/manager.py).
 - **`[core · good]` Turn tracks** — `CompanionTurnTrack` routing to the turn executor: [companion/turn_track.py](/app/core/companion_harness/companion/turn_track.py), [companion/models.py](/app/core/companion_harness/companion/models.py). Track list and semantics: DESIGN.md § Turn tracks.
 - **`[core · good]` Turn execution (AwakeTurn)** — single-turn LLM loop, transcript append, tool rounds: [companion/turn.py](/app/core/companion_harness/companion/turn.py), [companion/turn_pipeline.py](/app/core/companion_harness/companion/turn_pipeline.py).
-- **`[core · good]` Agentic loop (queue-served user chat)** — drain InputQueue, run one user-facing turn, stream to OutputQueue: [loop/agentic_loop.py](/app/core/companion_harness/loop/agentic_loop.py) via [agentic_companion/companion.py](/app/core/companion_harness/agentic_companion/companion.py).
+- **`[core · good]` Agentic loop (queue-served user chat)** — drain InputQueue, run one user-facing turn, stream to OutputQueue: [loop/agentic_loop.py](/app/core/companion_harness/loop/agentic_loop.py) via [agentic_companion/companion.py](/app/core/agentic_companion/companion.py).
 - **`[core · partial]` Prompt assembly** — system-prefix slices and track-composed bundles; target projection pipeline in [prompting/projection/](/app/core/companion_harness/prompting/projection/) + [memory/retrieval.py](/app/core/companion_harness/memory/retrieval.py): DESIGN.md § Prompt content categories. Code: [prompting/](/app/core/companion_harness/prompting/) (including [system_messages.py](/app/core/companion_harness/prompting/system_messages.py)), [prompt_builder.py](/app/core/companion_harness/prompt_builder.py), [companion/prompt_stack.py](/app/core/companion_harness/companion/prompt_stack.py), [companion/prompts/](/app/core/companion_harness/companion/prompts/) (MD seeds). Bootstrap/settled user chat on `PromptBuilder`; greeting, proactive, scheduled, monolog still on `prompt_stack` / `build_system_messages` (#3463 migration).
 - **`[core · partial]` MemoryStore & MemDocs** — versioned workspace documents, transcript JSONL, consolidation: [memory/](/app/core/companion_harness/memory/). Detail: [MEMORY_STORE.md](/docs/imate/companion_harness/MEMORY_STORE.md). Relationship state is implicit in MemDocs today; explicit CRS model and memory hierarchy are open (DESIGN.md § CRS, § 记忆模型).
 - **`[core · good]` Tools** — schema, in-turn sync execution, async background tool threads: [tools/](/app/core/companion_harness/tools/).
@@ -49,9 +49,13 @@ Dependency direction: outer layers call inward; leaf packages do not import the 
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
-│  Serving                                                    │
-│  agentic_companion · loop · runtime                         │
-│  (queues, AgenticLoop, inner_tick_fire, dreaming_batch)     │
+│  Serving (app/core/agentic_companion)                       │
+│  queues · AgenticCompanion · turn seam                      │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│  Companion harness serving (loop · runtime)                 │
+│  AgenticLoop · inner_tick_fire · dreaming_batch             │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐

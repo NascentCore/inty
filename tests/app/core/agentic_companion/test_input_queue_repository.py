@@ -11,11 +11,11 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.postgres_queue import (
+from app.core.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
     PostgresOutputQueueRepository,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgentOutputMessage,
     InboundWireMessage,
     QueueAck,
@@ -30,7 +30,7 @@ from app.models.agentic_companion_queue import (
 )
 from app.models.companion_bond import CompanionBond
 from app.models.user import User
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from tests.app.services.agentic_channel.companion_test_fixtures import (
     create_guest_scope_for_test,
 )

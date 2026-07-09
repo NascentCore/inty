@@ -407,11 +407,11 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
     ):
         return False
     from app.core.companion_harness.agent_channel.scope import AgentScope
-    from app.core.companion_harness.agentic_companion.output_queue import (
+    from app.core.agentic_companion.output_queue import (
         OutputQueueAppendInput,
         get_output_queue_for_scope,
     )
-    from app.core.companion_harness.agentic_companion.types import (
+    from app.core.agentic_companion.types import (
         OutputMessageKind,
     )
 

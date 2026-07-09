@@ -25,10 +25,10 @@ from dataclasses import dataclass
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from .output_queue import (
     OutputQueue,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from .types import (
     AgenticLoopInputBatch,
     UserMessageBatch,
 )

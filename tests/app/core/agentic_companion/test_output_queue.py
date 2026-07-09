@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryAck,
     OutputDeliveryFailure,
     OutputDeliverySkip,
@@ -22,7 +22,7 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgentOutputMessage,
     OutputQueueRecord,
     QueueClaim,
@@ -32,7 +32,7 @@ from app.core.companion_harness.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 class _FakePersistedOutputRecord:
@@ -80,7 +80,7 @@ async def test_append_failed_db_produces_no_ready_marker() -> None:
     scope = AgentScope(user_id="u1", agent_id="a1")
     queue = OutputQueue(scope=scope)
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository.append_agent_output",
+        "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository.append_agent_output",
         new_callable=AsyncMock,
         side_effect=RuntimeError("db down"),
     ):
@@ -100,7 +100,7 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
         pass
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -111,7 +111,7 @@ async def test_append_agent_initiated_uses_synthetic_batch_id() -> None:
             return_value=_FakeRecord("msg-proactive", "hello", 1)
         )
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             ready = await queue.append_visible_message(
@@ -148,7 +148,7 @@ async def test_ready_message_carries_trace_fields_from_append_input() -> None:
     fake_record.langsmith_run_id = "ls-run"
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -157,7 +157,7 @@ async def test_ready_message_carries_trace_fields_from_append_input() -> None:
         repo = AsyncMock()
         repo.append_agent_output = AsyncMock(return_value=fake_record)
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             ready = await queue.append_visible_message(
@@ -211,7 +211,7 @@ async def test_multiple_appends_pulled_in_order() -> None:
         pass
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -225,7 +225,7 @@ async def test_multiple_appends_pulled_in_order() -> None:
             ]
         )
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             await queue.append_visible_message(
@@ -246,7 +246,7 @@ async def test_ack_delivered_and_mark_failed_call_repository() -> None:
     queue = OutputQueue(scope=scope)
     delivered_at = datetime.now(UTC)
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -254,7 +254,7 @@ async def test_ack_delivered_and_mark_failed_call_repository() -> None:
         session_cls.return_value = session
         repo = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             await queue.ack_delivered(
@@ -291,7 +291,7 @@ async def test_mark_failed_waits_for_repository_retry() -> None:
     queue._ready.append(ready)
     assert await queue.pull_ready_batch() == (ready,)
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -299,7 +299,7 @@ async def test_mark_failed_waits_for_repository_retry() -> None:
         session_cls.return_value = session
         repo = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             await queue.mark_delivery_failed(
@@ -326,7 +326,7 @@ async def test_skip_delivery_calls_mark_skipped_without_requeue() -> None:
     queue._ready.append(ready)
     assert await queue.pull_ready_batch() == (ready,)
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -334,7 +334,7 @@ async def test_skip_delivery_calls_mark_skipped_without_requeue() -> None:
         session_cls.return_value = session
         repo = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             await queue.skip_delivery(
@@ -374,7 +374,7 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
     )
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -383,7 +383,7 @@ async def test_pull_ready_batch_claims_persisted_pending_after_memory_loss() -> 
         repo = AsyncMock()
         repo.claim_pending_for_delivery = AsyncMock(return_value=(claim,))
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             batch = await queue.pull_ready_batch(
@@ -488,7 +488,7 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
             await asyncio.sleep(0)
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -498,7 +498,7 @@ async def test_concurrent_append_and_pull_deliver_every_message() -> None:
         repo.append_agent_output = AsyncMock(side_effect=_next_record)
         repo.mark_delivered = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             done = asyncio.Event()
@@ -536,7 +536,7 @@ def test_registry_returns_one_instance_under_concurrent_creation() -> None:
         return OutputQueue(scope=scope)
 
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.OutputQueue",
+        "app.core.agentic_companion.output_queue.OutputQueue",
         side_effect=_build_queue,
     ):
         results: list[OutputQueue] = []

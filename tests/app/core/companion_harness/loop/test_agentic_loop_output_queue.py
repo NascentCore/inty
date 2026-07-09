@@ -13,13 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
 )
-from app.core.companion_harness.agentic_companion.types import UserMessageBatch
+from app.core.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
@@ -63,7 +63,7 @@ from app.core.companion_harness.prompt_builder import (
     PromptMessageRole,
     PromptPlan,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 def _in_turn_interim(*, text: str) -> InTurnInterimOutput:

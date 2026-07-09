@@ -17,9 +17,8 @@ from app.models.agentic_companion_queue import (
     AgenticCompanionInputQueueRow,
     AgenticCompanionOutputQueueRow,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
-
 from .types import (
+    OutputMessageKind,
     AgentOutputMessage,
     AgenticCompanionInputBatch,
     GeneratedImageRef,

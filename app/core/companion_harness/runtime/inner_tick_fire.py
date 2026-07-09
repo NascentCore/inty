@@ -50,7 +50,7 @@ from app.core.companion_harness.companion.schedule_queue import (
     next_due_task_for_execution,
     scheduled_task_synthetic_user_text,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueue,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore

@@ -8,13 +8,13 @@ from urllib.error import HTTPError
 
 import pytest
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.services.agentic_channel.adapters.telegram import (
     TelegramChannelAdapter,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 def _ready_message(*, kind: OutputMessageKind, text: str) -> ReadyOutputMessage:

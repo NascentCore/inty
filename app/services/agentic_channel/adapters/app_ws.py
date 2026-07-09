@@ -5,20 +5,20 @@ from __future__ import annotations
 import asyncio
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
     ready_output_delivers_user_visible_text,
     ready_output_is_agent_initiated_visible,
 )
-from app.core.companion_harness.agentic_companion.postgres_queue import (
+from app.core.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from app.services.agentic_companion.downlink import ChannelDownlink
 from app.services.agentic_companion.ws_outbound_materialize import (
     materialize_agent_initiated_ws_payload,

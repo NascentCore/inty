@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import select
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.turn import (
+from app.core.agentic_companion.turn import (
     manager_and_session_for_scope,
 )
 from app.core.companion_harness.companion.manager import CompanionSession

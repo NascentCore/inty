@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.turn import (
+from app.core.agentic_companion.turn import (
     InjectedCompanionRuntime,
 )
 from app.core.companion_harness.companion.manager import (

@@ -5,11 +5,11 @@ from __future__ import annotations
 import pytest
 
 from app.external_services.twilio_sms import TwilioSmsSendResult
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.services.agentic_channel.adapters.sms.adapter import SmsChannelAdapter
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 class _FakeTwilioSmsApi:

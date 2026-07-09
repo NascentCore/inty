@@ -19,11 +19,11 @@ from loguru import logger
 
 from app.core.config import global_config_loaded_from_config_yaml
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
     GeneratedImageRef,
     OutputMessageKind,

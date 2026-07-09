@@ -11,7 +11,7 @@ import asyncio
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
     ready_output_delivers_user_visible_text,
 )
@@ -19,7 +19,7 @@ from app.external_services.twilio_sms import TwilioSmsApi
 from app.services.agentic_channel.adapters.sms.materialize import (
     materialize_sms_body,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 _SMS_TEXT_KINDS = frozenset(
     {
