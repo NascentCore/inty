@@ -268,10 +268,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-88** #3413: `test_companion_user_feedback_tool.py` — `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
-- [claimed] **HYGIENE-2026-89** #3413: `test_memory_store.py` — `SOUL_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
-- [claimed] **HYGIENE-2026-90** #3413: `test_resolve_client_time.py` — `USER_MD_REL`. Claimed `cursor/agent-maintenance-tasks-e2b6`.
-- [claimed] **HYGIENE-2026-91** #3413: `test_companion_record_user_profile_tool.py` — `USER_MD_REL` in write allowlist. Claimed `cursor/agent-maintenance-tasks-e2b6`.
+- [x] **HYGIENE-2026-88** #3413: `test_companion_user_feedback_tool.py` — `USER_MD_REL` + `MEMORY_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-e2b6` / pull/3838.
+- [x] **HYGIENE-2026-89** #3413: `test_memory_store.py` — `SOUL_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-e2b6` / pull/3838.
+- [x] **HYGIENE-2026-90** #3413: `test_resolve_client_time.py` — `USER_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-e2b6` / pull/3838.
+- [x] **HYGIENE-2026-91** #3413: `test_companion_record_user_profile_tool.py` — `USER_MD_REL` in write allowlist. Fixed in `cursor/agent-maintenance-tasks-e2b6` / pull/3838.
 
 ### Deferred (open PR overlap)
 

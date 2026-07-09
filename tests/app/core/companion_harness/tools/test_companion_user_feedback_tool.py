@@ -16,7 +16,9 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    MEMORY_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -69,7 +71,7 @@ def _sample_snapshot() -> HarnessSnapshot:
         context_mode="intimate",
         context_json='{"context_mode":"intimate"}\n',
         transcript_tail='{"role":"user","content":"why wrong timezone?"}\n',
-        memory_docs={"USER.md": "# USER\nTZ: US/Pacific"},
+        memory_docs={USER_MD_REL: "# USER\nTZ: US/Pacific"},
         runtime_events=[],
         vcs_revision="abc123",
     )
@@ -86,7 +88,7 @@ async def test_record_user_feedback_appends_snapshot_jsonl(
     store = MemoryStore(scope=scope, repository=None)
     store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
     store.write_document(TRANSCRIPT_JSONL_REL, '{"role":"user"}\n')
-    store.write_document("USER.md", "# USER\n")
+    store.write_document(USER_MD_REL, "# USER\n")
 
     bind = LlmRuntimeEventBind(
         memory_store=store,
@@ -513,7 +515,7 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
     rid = uuid.uuid4().hex[:8]
     scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document("MEMORY.md", "# MEM\ntest memory")
+    store.write_document(MEMORY_MD_REL, "# MEM\ntest memory")
     store.write_document(CONTEXT_JSON_REL, '{"context_mode":"public"}\n')
 
     snap = build_harness_snapshot(
@@ -524,7 +526,7 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
         ),
     )
     assert snap.context_mode == "public"
-    assert "MEMORY.md" in snap.memory_docs
+    assert MEMORY_MD_REL in snap.memory_docs
     assert snap.complaint_category == "tone"
 
 

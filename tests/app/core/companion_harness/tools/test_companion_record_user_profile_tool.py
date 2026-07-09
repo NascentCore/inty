@@ -59,7 +59,7 @@ async def test_companion_record_user_profile_dispatch_ok(tmp_path) -> None:
         st,
         "companion_record_user_profile",
         args,
-        write_allowlist=frozenset({"USER.md"}),
+        write_allowlist=frozenset({USER_MD_REL}),
     )
     assert out.startswith("OK recorded user profile")
 
