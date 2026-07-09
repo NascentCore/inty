@@ -4,9 +4,7 @@ import inspect
 
 from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_IM_DM_MD,
-    CompanionTurnTrack,
     ContextMeta,
-    InnerTickActivity,
 )
 from app.core.companion_harness.experience_profile.experience_directives import (
     ExperienceDirectiveTone,
@@ -15,13 +13,11 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_tool_track,
@@ -40,6 +36,20 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 
 
+def _settled_single_llm_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, object]]:
+    return PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    ).settled_single_llm_system_messages()
+
+
 def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
     bundle = PromptBundle(
         identity="identity\n",
@@ -48,10 +58,9 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages(
+    messages = _settled_single_llm_messages(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.USER_CHAT,
     )
     doctrine_lines = [
         str(messages[index]["content"]).split("\n")[0] for index in range(3)
@@ -170,15 +179,13 @@ def test_inner_tick_monolog_omits_infer_time_zone_slice() -> None:
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages(
+    messages = build_system_messages_for_inner_tick_monolog(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.INNER_TICK_MONOLOG,
-        enable_tools=True,
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        ai_private_text="private\n",
-        tool_side_compact=True,
+        MemoryStore(
+            scope=CompanionScope("sm", "a", "monolog-tz"),
+            repository=None,
+        ),
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"
@@ -224,13 +231,9 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
         memory_md="memory\n",
         output_format_im_dm_md=load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD),
     )
-    messages = build_system_messages(
+    messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.USER_CHAT,
-        enable_tools=True,
-        async_foreground_chat_stack=True,
-        include_significance_perception_slice=True,
     )
     messages = append_runtime_output_format_system_message(
         system_messages=messages,
@@ -261,7 +264,6 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
     None
 ):
     builders = [
-        build_system_messages,
         build_settled_user_turn_dual_chat_leg_system_messages,
         build_system_messages_for_tool_track,
         build_system_messages_for_inner_tick_monolog,
@@ -322,14 +324,13 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         user_md="user\n",
         memory_md="memory\n",
     )
-    messages = build_system_messages(
+    messages = build_system_messages_for_inner_tick_autonomy(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
-        enable_tools=True,
-        inner_tick_turn=True,
-        inner_tick_activity=InnerTickActivity.AUTONOMY,
-        tool_side_compact=True,
+        MemoryStore(
+            scope=CompanionScope("sm", "a", "autonomy-tick"),
+            repository=None,
+        ),
     )
     contents = [str(m["content"]) for m in messages]
     autonomy_blocks = [
@@ -413,10 +414,9 @@ def test_user_message_turn_includes_about_guidance_slice() -> None:
         memory_md="m\n",
         about_md=about_body,
     )
-    messages = build_system_messages(
+    messages = _settled_single_llm_messages(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.USER_CHAT,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"

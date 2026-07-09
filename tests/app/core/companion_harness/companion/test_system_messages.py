@@ -15,9 +15,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 )
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
-)
 from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
 )
@@ -29,6 +26,20 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
+
+
+def _settled_single_llm_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, object]]:
+    return PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    ).settled_single_llm_system_messages()
 
 
 def _system_contents(messages: list[dict[str, object]]) -> list[str]:
@@ -67,10 +78,9 @@ def test_capability_group_injects_harness_channels_tools_in_order() -> None:
         tools_md="# Tools\ntool contract",
     )
     contents = _system_contents(
-        build_system_messages(
+        _settled_single_llm_messages(
             bundle,
             ContextMeta(),
-            track=CompanionTurnTrack.USER_CHAT,
         )
     )
     harness_i = contents.index("# Harness\nharness contract")
@@ -136,13 +146,9 @@ def test_bootstrap_and_settled_tool_contract_require_interim_content() -> None:
     bootstrap_joined = "\n".join(
         _bootstrap_system_contents(bundle, ContextMeta(), ChannelKind.APP_WS)
     )
-    settled = build_system_messages(
+    settled = _settled_single_llm_messages(
         bundle,
         ContextMeta(),
-        track=CompanionTurnTrack.USER_CHAT,
-        interactive_bootstrap_active=False,
-        inner_tick_turn=False,
-        enable_tools=True,
     )
     settled_joined = "\n".join(_system_contents(settled))
     clause = "发起 tool_calls 时"
@@ -195,10 +201,9 @@ def test_persona_injects_companionship_after_bootstrap() -> None:
         companionship_md="# 我们的关系\n\n用户原话：朋友\n",
     )
     contents = _system_contents(
-        build_system_messages(
+        _settled_single_llm_messages(
             bundle,
             ContextMeta(workspace_bootstrap_user_interactive_completed=True),
-            track=CompanionTurnTrack.USER_CHAT,
         )
     )
     joined = "\n".join(contents)
@@ -243,12 +248,11 @@ def test_persona_injects_seed_companionship_after_bootstrap() -> None:
     )
     joined = "\n".join(
         _system_contents(
-            build_system_messages(
+            _settled_single_llm_messages(
                 bundle,
                 ContextMeta(
                     workspace_bootstrap_user_interactive_completed=True
                 ),
-                track=CompanionTurnTrack.USER_CHAT,
             )
         )
     )
@@ -269,11 +273,10 @@ def test_system_messages_omit_weixin_clawbot_alias_for_unknown_channel() -> (
 
     system_text = "\n".join(
         _system_contents(
-            build_system_messages(
-                bundle,
-                ContextMeta(),
-                track=CompanionTurnTrack.USER_CHAT,
-            )
+        _settled_single_llm_messages(
+            bundle,
+            ContextMeta(),
+        )
         )
     )
 

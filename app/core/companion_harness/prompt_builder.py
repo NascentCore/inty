@@ -4,7 +4,7 @@ Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slice
 transcript window, optional private-thought splice, time context, and tail user.
 Bootstrap, settled user chat, and chat-only tracks (greeting, proactive, scheduled)
 compose system prefixes through this module. Monolog, autonomy, and dual-LLM
-paths still use legacy ``prompt_stack`` / ``build_system_messages`` entrypoints (#3453).
+paths still use per-track ``build_system_messages_for_*`` entrypoints (#3453).
 
 ``PromptPlan`` is the **output** of the memory projection stage (target pipeline:
 MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly

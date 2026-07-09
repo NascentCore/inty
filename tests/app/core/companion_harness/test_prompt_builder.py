@@ -13,13 +13,11 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_spec_text,
     load_bootstrap_telegram_profile_slice_text,
 )
-from app.core.companion_harness.companion.models import (
-    ChatMessage,
-    CompanionTurnTrack,
-    ContextMeta,
+from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -45,6 +43,9 @@ from app.core.companion_harness.prompt_builder import (
     prompt_messages_to_openai_dicts,
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
+)
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.tools.companion_tool_runtime import (
@@ -475,12 +476,9 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
     context = ContextMeta()
     dual_foreground = "\n".join(
         str(m.get("content") or "")
-        for m in build_system_messages(
+        for m in build_settled_user_turn_dual_chat_leg_system_messages(
             bundle,
             context,
-            track=CompanionTurnTrack.USER_CHAT,
-            enable_tools=True,
-            async_foreground_chat_stack=True,
         )
     )
     single_llm = "\n".join(
