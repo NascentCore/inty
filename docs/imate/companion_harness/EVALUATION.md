@@ -134,3 +134,13 @@ Repo pointers：
 - [BRAINSTORM.md](./BRAINSTORM.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）；见 §「iMate智能体陪伴系统点子」。
 - `evaluation/` — 运营人评与行为分析台。
 - Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。
+
+## Bootstrap MemDoc policy eval（L1）
+
+Report-only harness comparing three `BootstrapMemDocPolicy` arms at fixed checkpoints (T0 complete, T1 first dream, T2 settled). Driver: [`.cursor/skills/scripts/run_bootstrap_memdoc_eval.py`](/.cursor/skills/scripts/run_bootstrap_memdoc_eval.py); scenarios: [`contracts/bootstrap_memdoc_eval/scenarios.yaml`](/contracts/bootstrap_memdoc_eval/scenarios.yaml). Config: `devops/config.yaml.bootstrap_memdoc_eval.yaml` — **restart Ops** per matrix cell when changing `bootstrap_memdoc_policy`.
+
+- **A `awake_write`** — current bootstrap MemDoc writes.
+- **B `dreaming_only`** — run **B_fast** (`dreaming_idle_seconds=10`) and **B_prod** (`7200`) separately.
+- **C `dreaming_inception`** — B plus one inception DreamingBatch after complete.
+
+Exit code always 0; does not gate CI. After eval, migrate production to a single policy and align L0 regression (`_verify_bootstrap_memdocs`) — see plan todos `migrate-winner`.

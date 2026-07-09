@@ -69,6 +69,7 @@ from .living_sphere_curator import compact_living_sphere_if_pending
 from .memory_store import MemoryStore
 from .memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -92,7 +93,7 @@ DREAMING_ONE_SHOT_LLM_ROLE = "dreaming_one_shot"
 
 _ONE_SHOT_CURATOR_PREAMBLE = """You are a dreaming memory curator. During sleeping-state dreaming you update multiple long-term MemoryDocs in one pass.
 
-Before emitting any tool calls, reason briefly (in your head, not in tool output) about what the updated daily gist(s) and MEMORY.md should become, then derive USER.md, STYLE.md, SOUL.md, and COMPANIONSHIP.md from that draft so documents stay mutually consistent.
+Before emitting any tool calls, reason briefly (in your head, not in tool output) about what the updated daily gist(s) and MEMORY.md should become, then derive USER.md, IDENTITY.md, STYLE.md, SOUL.md, and COMPANIONSHIP.md from that draft so documents stay mutually consistent.
 
 Emit exactly one ``update_dreaming_document`` tool call per required document path listed below.
 Set ``content_changed`` to true and include the full updated markdown body when that document should change.
@@ -106,6 +107,7 @@ class DreamingDocumentKind(StrEnum):
     DAILY_GIST = "daily_gist"
     MEMORY = "memory"
     USER = "user"
+    IDENTITY = "identity"
     STYLE = "style"
     SOUL = "soul"
     COMPANIONSHIP = "companionship"
@@ -216,6 +218,21 @@ Rules:
 - If the latest turn is purely small talk with no new durable user-facing facts or preferences, return the current USER.md unchanged (verbatim aside from trivial whitespace).
 - Output raw markdown only: no preamble, no code fences around the whole document.
 - Write in the same language as USER.md and the conversation (usually Chinese for Chinese content).
+"""
+
+_IDENTITY_CURATOR_SYSTEM = """You are an IDENTITY.md curator. IDENTITY.md records who the assistant is for this user: display name, self-reference, role framing, and durable persona anchors. It is injected into the system prompt as its own system message (raw IDENTITY.md body) on every turn.
+
+Given the current IDENTITY.md, the latest MEMORY.md (already updated this turn for consistency), and the latest user/assistant turn, output ONLY the full updated IDENTITY.md body (markdown).
+
+Rules:
+- Preserve the document's intended structure and section headings unless the file uses a simpler template.
+- Merge new stable persona facts (names, role, relationship stance toward the user) into appropriate sections; deduplicate; resolve contradictions in favor of the clearest, most recent mutually stable information.
+- Use MEMORY.md and USER.md context as supporting signal; do not paste raw chat—paraphrase into short durable lines.
+- Do **not** encode communication style (STYLE.md) or bond narrative (COMPANIONSHIP.md) here—IDENTITY is **who** the assistant is.
+- Stay concise (substantive content at most about 4000 characters unless the existing IDENTITY.md is already longer—then preserve length).
+- If the latest turn has no new durable persona signal, return the current IDENTITY.md unchanged (verbatim aside from trivial whitespace).
+- Output raw markdown only: no preamble, no code fences around the whole document.
+- Write in the same language as IDENTITY.md and the conversation (usually Chinese for Chinese content).
 """
 
 _STYLE_CURATOR_SYSTEM = """You are a STYLE.md curator. STYLE.md is the assistant's durable **communication style** (how to speak: tone, pacing, respect for user comfort). It is injected into the companion system prompt stack as plain STYLE.md body text on every turn (no injected markdown H2 title line before the body).
@@ -383,6 +400,28 @@ def _rewrite_user_md(
     store.write_document(USER_MD_REL, new_body.strip() + "\n")
 
 
+def _rewrite_identity_md(
+    store: MemoryStore,
+    *,
+    user_text: str,
+    assistant_text: str,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+) -> None:
+    identity_body = store.read_document(IDENTITY_MD_REL)
+    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
+    user_block = (
+        f"Current IDENTITY.md:\n\n{identity_body}\n\n---\n\n"
+        f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
+        f"Latest turn:\nUser:\n{user_text}\n\nAssistant:\n{assistant_text}\n"
+    )
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": _IDENTITY_CURATOR_SYSTEM},
+        {"role": "user", "content": user_block},
+    ]
+    new_body = complete_fn(messages, "identity")
+    store.write_document(IDENTITY_MD_REL, new_body.strip() + "\n")
+
+
 def _rewrite_style_md(
     store: MemoryStore,
     *,
@@ -492,6 +531,7 @@ def _build_dreaming_curator_input(
     required_paths = daily_paths + (
         MEMORY_MD_REL,
         USER_MD_REL,
+        IDENTITY_MD_REL,
         STYLE_MD_REL,
         SOUL_MD_REL,
         COMPANIONSHIP_MD_REL,
@@ -501,6 +541,7 @@ def _build_dreaming_curator_input(
     }
     current_bodies[MEMORY_MD_REL] = store.read_document(MEMORY_MD_REL)
     current_bodies[USER_MD_REL] = store.read_document(USER_MD_REL)
+    current_bodies[IDENTITY_MD_REL] = store.read_document(IDENTITY_MD_REL)
     current_bodies[STYLE_MD_REL] = store.read_document(STYLE_MD_REL)
     current_bodies[SOUL_MD_REL] = soul_curator_doc
     current_bodies[COMPANIONSHIP_MD_REL] = companionship_body
@@ -518,6 +559,7 @@ def _one_shot_system_message() -> str:
         f"## Rules for daily gist (memory/daily/<date>.md)\n\n{_DAY_SUMMARY_SYSTEM}",
         f"## Rules for {MEMORY_MD_REL}\n\n{_MEMORY_CURATOR_SYSTEM}",
         f"## Rules for {USER_MD_REL}\n\n{_USER_CURATOR_SYSTEM}",
+        f"## Rules for {IDENTITY_MD_REL}\n\n{_IDENTITY_CURATOR_SYSTEM}",
         f"## Rules for {STYLE_MD_REL}\n\n{_STYLE_CURATOR_SYSTEM}",
         f"## Rules for {SOUL_MD_REL}\n\n{_SOUL_CURATOR_SYSTEM}",
         f"## Rules for {COMPANIONSHIP_MD_REL}\n\n{_COMPANIONSHIP_CURATOR_SYSTEM}",
@@ -721,6 +763,7 @@ def _consolidate_memory_sequential(
     for step, rewrite_fn in (
         ("dreaming_memory_md", _rewrite_memory_md),
         ("dreaming_user_md", _rewrite_user_md),
+        ("dreaming_identity_md", _rewrite_identity_md),
         ("dreaming_style_md", _rewrite_style_md),
         ("dreaming_soul_md", _rewrite_soul_md),
         ("dreaming_companionship_md", _rewrite_companionship_md),

@@ -37,9 +37,12 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceSessionIntent,
     context_mode_for_session_intent,
 )
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    bootstrap_complete_tool_result_text,
+    resolve_bootstrap_memdoc_policy,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     BOOTSTRAP_WRITABLE_REL_PATHS,
-    CompanionToolName,
 )
 from app.models.user import Gender
 from app.schemas.user import UserAgeGroup, UserProfileSnapshot
@@ -75,33 +78,9 @@ _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
 # not separate USER.md + IDENTITY.md package seeds; runtime bootstrap still writes both paths. #3390
 
 # TODO(bootstrap-prompt-single-source): Bootstrap write/tool rules duplicated across — #3801
-# ``prompts/BOOTSTRAP.md``, ``build_bootstrap_tool_call_section``, and
-# ``_output_contract_text_interactive_bootstrap_tools``; derive all three from one typed
+# ``prompts/BOOTSTRAP.md`` and ``bootstrap_memdoc_policy.compose_*``; derive all from one typed
 # policy next to ``BOOTSTRAP_WRITABLE_REL_PATHS`` / ``BOOTSTRAP_TRACK_TOOL_NAMES``.
 # CRS bootstrap relationship seed — #3328; consolidate with ``TrackWritePolicy`` — #3367.
-
-
-def build_bootstrap_tool_call_section() -> str:
-    """工具调用 section rendered from typed tool names; accompanies BOOTSTRAP.md."""
-
-    docs = " / ".join(BOOTSTRAP_WRITABLE_REL_PATHS)
-    return "\n".join(
-        [
-            "## 工具调用",
-            "",
-            "- Bootstrap only done once",
-            f"- Call **{CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value}** to read persisted docs before updating",
-            f"- Call **{CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value}** to update **{docs}** (full markdown body per path)",
-            f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user clarifies what companionship experience they want "
-            f"(e.g. `casual_chat`, `deep_conversation`, `roleplay`, `remote_romance`); optional `tone` (`warm` / `playful` / `cool` / `direct`). "
-            "Bond narrative stays in COMPANIONSHIP.md — do not ask the user for harness `context_mode` ids",
-            f"- Call **{CompanionToolName.COMPANION_RECORD_USER_PROFILE.value}** optionally when the user confirms USER.md identity fields and DB analytics sync is desired (partial updates OK)",
-            f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
-            "- 尽快收尾：已有对话足以写初稿时，先 **memory_store_write_document** 写 IDENTITY / STYLE / USER，再 complete；禁止跳过写入直接 complete",
-            "- 即使用户配合度低，也基于已有对话写 best-effort 初稿；用户想进入日常相处或已连续多轮无新信息时可提前 complete（仍须先写初稿）",
-            "- 不向用户说「初始化完成」「已同步」等工程话术；用关系语境带过即可。",
-        ]
-    )
 
 
 def load_bootstrap_spec_text() -> str:
@@ -213,9 +192,8 @@ def tool_companion_bootstrap_user_interactive_complete(
         "companion_bootstrap_user_interactive_complete scope={}",
         st.scope.registry_key(),
     )
-    return (
-        "OK interactive bootstrap marked complete. IDENTITY / STYLE / USER / MEMORY / SOUL "
-        "may still be updated via memory_store_write_document where permitted on later turns."
+    return bootstrap_complete_tool_result_text(
+        resolve_bootstrap_memdoc_policy()
     )
 
 

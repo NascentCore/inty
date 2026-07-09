@@ -235,6 +235,7 @@ def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
         daily_path,
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -247,6 +248,8 @@ def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
             kind = "memory"
         elif rel == "USER.md":
             kind = "user"
+        elif rel == "IDENTITY.md":
+            kind = "identity"
         elif rel == "STYLE.md":
             kind = "style"
         elif rel == "SOUL.md":

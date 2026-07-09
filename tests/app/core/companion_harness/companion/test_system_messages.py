@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    BootstrapMemDocPolicy,
+    compose_bootstrap_tool_call_section,
+)
 from app.core.companion_harness.companion.bootstrap import (
-    build_bootstrap_tool_call_section,
     load_bootstrap_spec_text,
     load_bootstrap_telegram_profile_slice_text,
 )
@@ -95,7 +98,9 @@ def test_bootstrap_track_injects_typed_tool_call_section() -> None:
         ChannelKind.APP_WS,
     )
     bootstrap_spec = load_bootstrap_spec_text()
-    tool_section = build_bootstrap_tool_call_section()
+    tool_section = compose_bootstrap_tool_call_section(
+        BootstrapMemDocPolicy.AWAKE_WRITE
+    )
 
     assert bootstrap_spec in contents
     assert tool_section in contents

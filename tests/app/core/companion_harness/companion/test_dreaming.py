@@ -9,13 +9,18 @@ from app.core.companion_harness.companion.dreaming import (
     apply_dreaming_checkpoint_to_prompt_rows,
     dreaming_candidate_slice,
     dreaming_due,
+    inception_dream_due,
     load_dreaming_state,
     save_dreaming_state,
+)
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    BootstrapMemDocPolicy,
 )
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CONTEXT_JSON_REL,
     TRANSCRIPT_JSONL_REL,
 )
 
@@ -279,12 +284,8 @@ def test_dreaming_state_roundtrip_uses_datetime(tmp_path: Path) -> None:
         last_processed_main_line_count=2,
         last_processed_main_uuid="a",
         last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
-        last_processed_latest_user_ts=datetime(
-            2026, 1, 2, 9, 0, tzinfo=UTC
-        ),
-        last_processed_calendar_date=datetime(
-            2026, 1, 2, 0, 0, tzinfo=UTC
-        ),
+        last_processed_latest_user_ts=datetime(2026, 1, 2, 9, 0, tzinfo=UTC),
+        last_processed_calendar_date=datetime(2026, 1, 2, 0, 0, tzinfo=UTC),
     )
     save_dreaming_state(store, state)
     loaded = load_dreaming_state(store)
@@ -316,11 +317,116 @@ def test_apply_dreaming_checkpoint_to_prompt_rows() -> None:
         last_processed_main_line_count=2,
         last_processed_main_uuid="a1",
         last_processed_at=datetime(2026, 1, 2, 12, 0, tzinfo=UTC),
-        last_processed_latest_user_ts=datetime(
-            2026, 1, 2, 9, 0, tzinfo=UTC
-        ),
-        last_processed_calendar_date=datetime(
-            2026, 1, 2, 0, 0, tzinfo=UTC
-        ),
+        last_processed_latest_user_ts=datetime(2026, 1, 2, 9, 0, tzinfo=UTC),
+        last_processed_calendar_date=datetime(2026, 1, 2, 0, 0, tzinfo=UTC),
     )
     assert apply_dreaming_checkpoint_to_prompt_rows(rows, state) == rows[2:]
+
+
+def _write_bootstrap_complete_context(store: MemoryStore) -> None:
+    store.write_document(
+        CONTEXT_JSON_REL,
+        json.dumps(
+            {"workspace_bootstrap_user_interactive_completed": True},
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+
+
+def test_inception_dream_due_skips_when_idle_not_met_but_inception_policy(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    _write_bootstrap_complete_context(store)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "bootstrap done",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u",
+            },
+            {
+                "role": "assistant",
+                "content": "ok",
+                "ts": "2026-01-02T09:01:00+00:00",
+                "uuid": "a",
+            },
+        ],
+    )
+    now = datetime(2026, 1, 2, 9, 5, tzinfo=UTC)
+    assert dreaming_due(store, now=now, dreaming_idle_seconds=7200) is None
+    assert (
+        inception_dream_due(
+            store,
+            now=now,
+            policy=BootstrapMemDocPolicy.DREAMING_INCEPTION,
+        )
+        is not None
+    )
+
+
+def test_inception_dream_due_none_for_dreaming_only_policy(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    _write_bootstrap_complete_context(store)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "hi",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u",
+            },
+        ],
+    )
+    assert (
+        inception_dream_due(
+            store,
+            now=datetime(2026, 1, 2, 10, 0, tzinfo=UTC),
+            policy=BootstrapMemDocPolicy.DREAMING_ONLY,
+        )
+        is None
+    )
+
+
+def test_inception_dream_due_none_after_checkpoint(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    _write_bootstrap_complete_context(store)
+    _write_transcript(
+        store,
+        [
+            {
+                "role": "user",
+                "content": "hi",
+                "ts": "2026-01-02T09:00:00+00:00",
+                "uuid": "u",
+            },
+        ],
+    )
+    save_dreaming_state(
+        store,
+        DreamingState(
+            last_processed_main_line_count=1,
+            last_processed_main_uuid="u",
+            last_processed_at=datetime(2026, 1, 2, 10, 0, tzinfo=UTC),
+            last_processed_latest_user_ts=datetime(
+                2026, 1, 2, 9, 0, tzinfo=UTC
+            ),
+            last_processed_calendar_date=datetime(
+                2026, 1, 2, 10, 0, tzinfo=UTC
+            ),
+        ),
+    )
+    assert (
+        inception_dream_due(
+            store,
+            now=datetime(2026, 1, 2, 11, 0, tzinfo=UTC),
+            policy=BootstrapMemDocPolicy.DREAMING_INCEPTION,
+        )
+        is None
+    )

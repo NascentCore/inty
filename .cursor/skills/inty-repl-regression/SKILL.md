@@ -19,7 +19,7 @@ description: >-
 Verify a local Ops + `inty_v2_repl` session end-to-end enough to catch companion harness regressions across:
 
 - implicit sign-on greeting (`IMPLICIT_SIGN_ON_GREETING`, `meta_data.source=greeting`)
-- bootstrap queue path + MemoryDoc writes (`USER.md` / `IDENTITY.md` / `STYLE.md`; SOUL/MEMORY stay seed)
+- bootstrap queue path + MemoryDoc writes (`USER.md` / `IDENTITY.md` / `STYLE.md`; SOUL/MEMORY stay seed) when `bootstrap_memdoc_policy=awake_write` (production default); `dreaming_only` / `dreaming_inception` expect persona seeds at T0 and customization after dreaming (see `devops/config.yaml.regression_tests`)
 - `companion_set_experience_profile` → settled `context_mode` (default `emotional_companion`, casual_chat intent)
 - settled `USER_CHAT`
 - user complaint → `companion_record_user_feedback` → real GitHub issue (then auto-closed)

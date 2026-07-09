@@ -1,0 +1,155 @@
+# Bootstrap MemDoc L1 eval (run_bootstrap_memdoc_eval.py).
+# Restart Ops with INTY_CONFIG_YAML=devops/config.yaml.bootstrap_memdoc_eval.yaml
+# and set agent.companion_harness.bootstrap_memdoc_policy per matrix cell.
+# REPL / companion harness regression E2E (run_inty_repl_regression.py).
+# Calls real LLM, LangSmith, GitHub user-feedback, and other external services.
+# Separate from devops/config.yaml.local so engineers can tune local REPL without
+# breaking the automated regression gate. Database DSN matches config.yaml.local.
+# Launch Ops for regression: export INTY_CONFIG_YAML=devops/config.yaml.regression_tests
+# then ./backend/ops/start.sh --local --no-build-frontend (do not rely on --local default).
+# Unit tests that mock external services use devops/config.yaml.test instead.
+app:
+  debug: true
+  environment: local
+  gcp_service_account_key: ".secrets/inty-backend-key.json"
+  limits:
+    free_user_chat_24h_limit: 1
+    guest_user_chat_24h_limit: 1
+    free_user_voice_24h_limit: 1
+    guest_user_voice_24h_limit: 1
+    subscribed_user_voice_24h_limit: 2
+    # guest（游客）无法生图，必须登录，因此没有对应的设置
+    free_user_image_gen_24h_limit: 4
+    subscribed_user_image_gen_24h_limit: 8
+    free_user_agent_creation_24h_limit: 1
+    subscribed_user_agent_creation_24h_limit: 2
+
+sentry:
+  # dev-inty/default
+  dsn: "https://43877f17f1d13e7e2847d7fa994b5fd9@o4510350447411200.ingest.us.sentry.io/4510871322034176"
+  enabled: false
+  traces_sample_rate: 1.0  # 本地开发环境使用 100% 采样率以便调试
+
+security:
+  secret_key: "your-secret-key-here"
+  algorithm: "HS256"
+  # Local Ops JWT (init_admin_user); enforced minimum 2h lifetime in script.
+  access_token_expire_minutes: 10080
+
+database:
+  host: localhost
+  port: 15432
+  user: postgres
+  # Read-only replica: sxwl666A!
+  password: "sxwl666!"
+  db: "inty"
+
+google_oauth:
+  client_id: "1034291688895-0e5hq72pghd4nihhpmf989ptv0ag1542.apps.googleusercontent.com"
+  client_secret: "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"
+  redirect_uri: "http://localhost:8000/api/v1/auth/google/callback"
+
+gcs:
+  use_fake_gcs: true
+  bucket: "inty-static"
+
+verification:
+  code_expire_minutes: 5 
+
+logging:
+  level: INFO
+  colorize: true
+
+firebase:
+  service_account_path: ".secrets/firebase-service-account-key.json"
+
+agent:
+  # 测试用 API key，每周上限 $1，inty-testing API key，intellimate-dev project
+  api_key: "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"
+  # intellimate-dev project, inty-testing api key, personal access token
+  langchain_api_key: "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"
+  companion_harness:
+    # Local Telegram idle-pause smoke only (production default 960 min).
+    agent_scope_idle_timeout_minutes: 5
+    # Fast proactive + dreaming rhythm for REPL regression gate (defaults: idle 30s / 7200s).
+    # Min idle 10s (RootConfig validation); poll 3s → proactive + scope dreaming within ~90s wait.
+    dreaming_idle_seconds: 10
+    bootstrap_memdoc_policy: awake_write
+    inner_tick:
+      proactive_chat:
+        base_idle_seconds: 10
+        poll_seconds: 3
+    # Greeting uses chat_completion_with_retrial (default 12s/attempt); v4-flash often 14–15s on OpenRouter.
+    implicit_sign_on_greeting:
+      llm_timeout_sec: 25.0
+      llm_max_attempts: 2
+    user_feedback_github:
+      token: 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
+  # 模型本地无法访问，IP 被限制
+  # free_user_chat_model: "google/gemini-3.5-flash"
+  # sub_user_chat_model: "google/gemini-3.5-flash"
+  # free_user_chat_model: "inception/mercury-2"
+  # sub_user_chat_model: "inception/mercury-2"
+  # free_user_chat_model: "deepseek/deepseek-v3.2"
+  # sub_user_chat_model: "deepseek/deepseek-v3.2"
+  # flash toolcall is not reliable:
+  # https://smith.langchain.com/public/0e461185-249b-43ee-b39d-6b93fd31ead7/r
+  free_user_chat_model: "deepseek/deepseek-v4-flash"
+  sub_user_chat_model: "deepseek/deepseek-v4-flash"
+  # companion_tool_call_model: "deepseek/deepseek-v4-flash"
+  # 2026/05/08 openrouter agentic leaderboard https://openrouter.ai/rankings?benchmark=agentic
+  # 最好的可用模型，其他排名更高模型都无法在中国使用
+  companion_tool_call_model: "xiaomi/mimo-v2.5"
+  # v4 很不稳定，会出现没有输出的情况，可能是 provider 问题，也可能是模型自身问题：
+  # https://smith.langchain.com/public/93dc20b8-5bfe-48b8-8958-528f853f4146/r
+  # https://smith.langchain.com/public/b71416d1-9b03-4322-8f46-bf3deb134a44/r
+  # 工具调用不响应：
+  # https://github.com/NascentCore/inty/issues/3454
+  # free_user_chat_model: "deepseek/deepseek-v4-pro"
+  # sub_user_chat_model: "deepseek/deepseek-v4-pro"
+  # 消息生图模型配置：dev 环境免费用户使用 fal 模型（降低成本）
+  free_user_chat_image_model: "Z Image Turbo Image to Image"
+  sub_user_chat_image_model: "Z Image Turbo Image to Image"
+  langsmith_text_chat_sample_rate: 1.0
+  channels:
+    telegram:
+      # Yaxiong's personal telegram account's bot Fairy.
+      bot_token: "8613920909:AAFmhn0Ll7zR7ccw8DrCxF7wDBFoOrG_BzA"
+    sms:
+      from_number: ""
+      webhook_base_url: ""
+
+google_play:
+  package_name: "com.ai.intellimate"
+  webhook_secret: ""
+  enable_version_check: true
+  min_supported_version: 10
+  release_track: internal
+  fallback_tracks: [internal]
+
+elevenlabs:
+  api_key: "sk_1976538731e00d58493ed27e63165adfa8d513c4c327c68c"
+  model: "eleven_flash_v2_5"  # Flash v2.5 - 最快的实时模型，75ms延迟
+  voice_id: "EXAVITQu4vr4xnSDxMaL"  # Sarah - 温柔女声
+  output_format: "mp3_22050_32"  # 优化的移动端格式：更小文件，更快传输
+  enabled: true
+  max_text_length: 5000  # 最大文本长度限制
+
+cloudflare:
+  domain: "images.sxwl.dev"
+  enabled: true
+  fallback_to_original: true
+
+gemini_live:
+  enabled: true
+  project_id: "alien-paratext-461204-i9"
+  location: "us-central1"
+  # Live Chat 用量限制（本地开发环境使用较小限制以便测试）
+  free_user_agent_limit: 5  # 免费用户累计可聊天的 agent 数
+  sub_user_agent_limit: 20  # 订阅用户累计可聊天的 agent 数
+  free_user_max_session_duration: 60  # 免费用户单次会话最大时长（秒）
+  sub_user_max_session_duration: 120  # 订阅用户单次会话最大时长（秒）
+
+fal:
+  # inty-test API KEY, Fal.AI
+  api_key: 00390a52-cf59-46de-99c6-498f6b916807:a45acbb8f83ecd037a567ca952d557ef

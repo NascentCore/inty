@@ -23,6 +23,9 @@ from pydantic import (
 )
 
 from app.utils import models_catalog
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    BootstrapMemDocPolicy,
+)
 from app.core.companion_harness.experience_profile.context_mode import (
     normalize_experience_profile_id,
 )
@@ -516,6 +519,14 @@ class AgentConfig(BaseModel):
                 "DreamingBatch MemoryDoc curation: ``one_shot`` (single LLM with "
                 "parallel tool calls) or ``sequential`` (legacy per-doc chain). "
                 "Set ``sequential`` to roll back if one_shot quality regresses."
+            ),
+        )
+        bootstrap_memdoc_policy: BootstrapMemDocPolicy = Field(
+            default=BootstrapMemDocPolicy.AWAKE_WRITE,
+            description=(
+                "Bootstrap MemDoc write policy: awake_write (current), "
+                "dreaming_only, or dreaming_inception (eval arms). "
+                "Production default remains awake_write until L1 eval migration."
             ),
         )
         agent_scope_idle_timeout_minutes: int = Field(

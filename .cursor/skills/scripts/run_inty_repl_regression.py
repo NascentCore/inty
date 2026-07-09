@@ -1565,6 +1565,12 @@ def _verify_bootstrap_memdocs(
     soul_seed = load_template_seed_text("SOUL.md").strip()
     memory_seed = load_template_seed_text("MEMORY.md").strip()
     style_seed = load_template_seed_text("STYLE.md").strip()
+    from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+        BootstrapMemDocPolicy,
+        resolve_bootstrap_memdoc_policy,
+    )
+
+    policy = resolve_bootstrap_memdoc_policy()
     errors: list[str] = []
 
     user_doc = _query_latest_memdoc_version(
@@ -1624,16 +1630,27 @@ def _verify_bootstrap_memdocs(
     if user_doc is None:
         errors.append("USER.md missing")
     elif not user_customized:
-        errors.append(f"USER.md missing {_BOOTSTRAP_USER_NAME_MARKER!r}")
+        if policy is BootstrapMemDocPolicy.AWAKE_WRITE:
+            errors.append(f"USER.md missing {_BOOTSTRAP_USER_NAME_MARKER!r}")
     if identity_doc is None:
         errors.append("IDENTITY.md missing")
     elif not identity_customized:
-        errors.append(f"IDENTITY.md missing {_BOOTSTRAP_COMPANION_NAME_MARKER!r}")
+        if policy is BootstrapMemDocPolicy.AWAKE_WRITE:
+            errors.append(
+                f"IDENTITY.md missing {_BOOTSTRAP_COMPANION_NAME_MARKER!r}"
+            )
     if style_doc is None:
         errors.append("STYLE.md missing")
     elif not style_customized:
-        errors.append("STYLE.md still template seed")
+        if policy is BootstrapMemDocPolicy.AWAKE_WRITE:
+            errors.append("STYLE.md still template seed")
     warnings: list[str] = []
+    if policy is not BootstrapMemDocPolicy.AWAKE_WRITE:
+        if user_customized or identity_customized or style_customized:
+            warnings.append(
+                "persona memdocs customized at bootstrap T0 under "
+                f"{policy.value} policy (expected seed until dreaming)"
+            )
     if soul_doc is None:
         warnings.append("SOUL.md missing")
     elif not soul_unchanged:

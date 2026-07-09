@@ -55,6 +55,9 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    BootstrapMemDocPolicy,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -250,6 +253,30 @@ def dreaming_due(
     if idle.total_seconds() < dreaming_idle_seconds:
         return None
     return candidate
+
+
+def inception_dream_due(
+    store: MemoryStore,
+    *,
+    now: datetime,
+    policy: BootstrapMemDocPolicy,
+) -> DreamingCandidate | None:
+    """Return a candidate for the one-shot inception dream after bootstrap complete.
+
+    Only ``DREAMING_INCEPTION`` policy; skips idle and UTC daily cap; requires no
+    prior ``DreamingState`` checkpoint.
+    """
+
+    assert policy is not None
+    if policy is not BootstrapMemDocPolicy.DREAMING_INCEPTION:
+        return None
+    if not load_context_meta(
+        store=store
+    ).workspace_bootstrap_user_interactive_completed:
+        return None
+    if load_dreaming_state(store) is not None:
+        return None
+    return dreaming_candidate_slice(store, now=now)
 
 
 class DreamingTranscriptBoundaryMismatchError(RuntimeError):

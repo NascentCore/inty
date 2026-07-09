@@ -13,8 +13,12 @@ from enum import StrEnum
 from typing import Any
 
 from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    compose_bootstrap_procedure_overlay,
+    compose_bootstrap_tool_call_section,
+    resolve_bootstrap_memdoc_policy,
+)
 from app.core.companion_harness.companion.bootstrap import (
-    build_bootstrap_tool_call_section,
     build_interactive_bootstrap_template_reference_parts,
     load_bootstrap_spec_text,
 )
@@ -204,7 +208,11 @@ def _persona_bootstrap_user_turn_system_messages(
                 )
             )
     out.append(_system_message(load_bootstrap_spec_text()))
-    out.append(_system_message(build_bootstrap_tool_call_section()))
+    policy = resolve_bootstrap_memdoc_policy()
+    out.append(_system_message(compose_bootstrap_tool_call_section(policy)))
+    overlay = compose_bootstrap_procedure_overlay(policy)
+    if overlay:
+        out.append(_system_message(overlay))
     for block in build_interactive_bootstrap_template_reference_parts():
         out.append(_system_message(block))
     return out

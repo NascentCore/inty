@@ -15,10 +15,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    resolve_bootstrap_memdoc_policy,
+)
 from app.core.companion_harness.companion.dreaming import (
     DreamingCandidate,
     assert_dreaming_transcript_boundary_unchanged,
     dreaming_due,
+    inception_dream_due,
     dreaming_state_from_candidate,
     save_dreaming_state,
 )
@@ -67,11 +71,19 @@ def run_dreaming_batch_if_due(
     if not session.is_initialized:
         return DreamingBatchOutcome.NOT_DUE
 
-    candidate = dreaming_due(
+    now = datetime.now(UTC)
+    policy = resolve_bootstrap_memdoc_policy()
+    candidate = inception_dream_due(
         session.store,
-        now=datetime.now(UTC),
-        dreaming_idle_seconds=idle_seconds,
+        now=now,
+        policy=policy,
     )
+    if candidate is None:
+        candidate = dreaming_due(
+            session.store,
+            now=now,
+            dreaming_idle_seconds=idle_seconds,
+        )
     if candidate is None:
         return DreamingBatchOutcome.NOT_DUE
 

@@ -90,6 +90,8 @@ def _one_shot_kind_for_path(rel: str) -> str:
         return DreamingDocumentKind.MEMORY.value
     if rel == "USER.md":
         return DreamingDocumentKind.USER.value
+    if rel == "IDENTITY.md":
+        return DreamingDocumentKind.IDENTITY.value
     if rel == "STYLE.md":
         return DreamingDocumentKind.STYLE.value
     if rel == "SOUL.md":
@@ -166,6 +168,7 @@ def _seed_memory_docs(store: MemoryStore) -> None:
     for rel in (
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -219,6 +222,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         "dreaming_day_summary",
         "memory",
         "user",
+        "identity",
         "style",
         "soul",
         "companionship",
@@ -228,6 +232,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     assert store.read_document_if_exists("memory/2026-01-02.md") is None
     assert store.read_document("MEMORY.md") == "memory curated\n"
     assert store.read_document("USER.md") == "user curated\n"
+    assert store.read_document("IDENTITY.md") == "identity curated\n"
     assert store.read_document("STYLE.md") == "style curated\n"
     assert store.read_document("SOUL.md") == "soul curated\n"
     assert store.read_document("COMPANIONSHIP.md") == "companionship curated\n"
@@ -251,6 +256,7 @@ def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
         "memory/daily/2026-01-02.md",
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -339,6 +345,7 @@ def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
         "memory/daily/2026-01-02.md",
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -378,6 +385,7 @@ def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
         "memory/daily/2026-01-02.md",
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -426,6 +434,7 @@ def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
         "USER.md",
     )
     no_op_paths = (
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -486,6 +495,7 @@ def test_consolidate_memory_one_shot_preserves_soul_appearance(
         "memory/daily/2026-01-02.md",
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",
@@ -553,6 +563,7 @@ def test_consolidate_memory_one_shot_multi_day_daily_gists(
         "memory/daily/2026-01-03.md",
         "MEMORY.md",
         "USER.md",
+        "IDENTITY.md",
         "STYLE.md",
         "SOUL.md",
         "COMPANIONSHIP.md",

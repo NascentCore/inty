@@ -32,6 +32,10 @@ from app.core.companion_harness.tools.dispatchers.memory_store import (
 from app.core.companion_harness.companion.ai_private_prompt import (
     append_ai_private_thought,
 )
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    bootstrap_track_tool_names,
+    resolve_bootstrap_memdoc_policy,
+)
 from app.core.companion_harness.companion.bootstrap import (
     CompanionRecordUserProfileToolInput,
     CompanionSetExperienceProfileToolInput,
@@ -86,7 +90,6 @@ from .companion_tool_definitions import (
     AI_PRIVATE_APPEND_TOOL_NAME,
     COMPANION_LLM_TOOLS,
     COMPANION_LLM_TOOLS_BY_NAME,
-    BOOTSTRAP_TRACK_TOOL_NAMES,
     CompanionToolName,
     INNER_TICK_AUTONOMY_TOOL_NAMES,
     INNER_TICK_TOOL_NAMES,
@@ -534,10 +537,11 @@ def tool_schedule_task(
 
 
 def build_openai_bootstrap_track_tools() -> list[dict[str, Any]]:
-    """USER_CHAT_BOOTSTRAP track: MemoryStore read/write, experience profile, bootstrap complete."""
+    """USER_CHAT_BOOTSTRAP track tools; write tool omitted when MemDoc policy defers to dreaming."""
+    policy = resolve_bootstrap_memdoc_policy()
     return prepare_openai_tools_for_chat_completions(
         openai_tools_for_names(
-            BOOTSTRAP_TRACK_TOOL_NAMES,
+            bootstrap_track_tool_names(policy),
             description_overrides=REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
         )
     )

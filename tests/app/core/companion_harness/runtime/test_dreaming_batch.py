@@ -64,6 +64,10 @@ def test_run_dreaming_batch_if_due_skips_when_not_due() -> None:
 
     with (
         patch(
+            "app.core.companion_harness.runtime.dreaming_batch.inception_dream_due",
+            return_value=None,
+        ),
+        patch(
             "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=None,
         ) as dreaming_due,
@@ -103,6 +107,10 @@ def test_run_dreaming_batch_if_due_raises_on_boundary_mismatch() -> None:
     session = _session()
 
     with (
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.inception_dream_due",
+            return_value=None,
+        ),
         patch(
             "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=_dreaming_candidate(),
@@ -147,6 +155,10 @@ def test_run_dreaming_batch_if_due_saves_checkpoint_after_update() -> None:
 
     with (
         patch(
+            "app.core.companion_harness.runtime.dreaming_batch.inception_dream_due",
+            return_value=None,
+        ),
+        patch(
             "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=_dreaming_candidate(),
         ),
@@ -190,6 +202,10 @@ def test_run_dreaming_batch_if_due_skips_when_advisory_lock_busy() -> None:
 
     with (
         patch(
+            "app.core.companion_harness.runtime.dreaming_batch.inception_dream_due",
+            return_value=None,
+        ),
+        patch(
             "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
             return_value=_dreaming_candidate(),
         ),
@@ -217,3 +233,45 @@ def test_run_dreaming_batch_if_due_skips_when_advisory_lock_busy() -> None:
         record_obs.call_args.kwargs["outcome"]
         == DreamingBatchOutcome.ADVISORY_LOCK_BUSY
     )
+
+
+def test_run_dreaming_batch_if_due_runs_inception_without_scheduled_due() -> (
+    None
+):
+    session = _session()
+    candidate = _dreaming_candidate()
+
+    with (
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.inception_dream_due",
+            return_value=candidate,
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_due",
+        ) as dreaming_due,
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.dreaming_batch_langsmith_scope",
+            _noop_dreaming_observability,
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.record_dreaming_batch_observability"
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.consolidate_memory_during_dreaming"
+        ) as memory_update,
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.assert_dreaming_transcript_boundary_unchanged",
+        ),
+        patch(
+            "app.core.companion_harness.runtime.dreaming_batch.save_dreaming_state"
+        ),
+    ):
+        result = run_dreaming_batch_if_due(
+            session,
+            idle_seconds=7200,
+            curator_mode=DreamingCuratorMode.SEQUENTIAL,
+        )
+
+    assert result == DreamingBatchOutcome.CHECKPOINT_SAVED
+    dreaming_due.assert_not_called()
+    memory_update.assert_called_once()

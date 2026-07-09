@@ -18,6 +18,10 @@ from app.core.companion_harness.companion.inner_tick_kind import (
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
     BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
 )
+from app.core.companion_harness.companion.bootstrap_memdoc_policy import (
+    bootstrap_writable_rel_paths,
+    resolve_bootstrap_memdoc_policy,
+)
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.turn_pipeline import (
     CompanionTurnRuntimeFlags,
@@ -153,6 +157,11 @@ def build_loop_execution_policy(
 ) -> LoopExecutionPolicy:
     """Merge slim ``TRACK_POLICY`` row with runtime_flags / inner_tick_kind at build time."""
     row = TRACK_POLICY[track]
+    write_allowlist = row.write_allowlist
+    if track is CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+        write_allowlist = bootstrap_writable_rel_paths(
+            resolve_bootstrap_memdoc_policy()
+        )
     max_tool_call_rounds = (
         0
         if not row.uses_in_turn_tool_loop or not has_openai_tools
@@ -172,7 +181,7 @@ def build_loop_execution_policy(
     return LoopExecutionPolicy(
         high_reasoning=row.high_reasoning,
         skip_foreground_envelope=row.skip_foreground_envelope,
-        write_allowlist=row.write_allowlist,
+        write_allowlist=write_allowlist,
         suppresses_user_delivery=suppresses_user_delivery,
         max_tool_call_rounds=max_tool_call_rounds,
         llm_scene=row.llm_scene,
