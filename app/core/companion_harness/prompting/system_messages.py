@@ -47,8 +47,6 @@ TODO(#3515): Define human-preference output guidance for user-visible tracks
 (``user_turn``, ``proactive_chat``, ``scheduled_activity``, ``sign_on_greeting``)
 before replacing these prompt entrypoints with track-composed templates.
 
-``build_system_messages`` is the internal combiner; tests may call it directly.
-
 Post-transcript slices (e.g. ``## user-time-context`` in ``turn_pipeline``) are not built here.
 
 TODO(code-consistency): Remaining contracts should use ``PromptTemplate`` named slots — #3453
@@ -857,85 +855,6 @@ def _contextual_system_messages(
     return out
 
 
-# TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
-def build_system_messages(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    *,
-    compose_trigger: PromptComposeTrigger,
-    enable_tools: bool = False,
-    enable_user_profile_tool: bool = False,
-    inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity = InnerTickActivity.MONOLOG,
-    ai_private_text: str = "",
-    async_foreground_chat_stack: bool = False,
-    tool_side_compact: bool = False,
-    interactive_bootstrap_active: bool = False,
-    include_significance_perception_slice: bool = False,
-    proactive_life_currents_block: str | None = None,
-) -> list[dict[str, Any]]:
-    tick_proactive = _inner_tick_proactive_chat(
-        inner_tick_turn, inner_tick_activity
-    )
-    tick_autonomy = _inner_tick_autonomy(inner_tick_turn, inner_tick_activity)
-    tools_on = enable_tools or enable_user_profile_tool
-    # Dual-LLM foreground completion: tools exist in product, but this request omits OpenAI ``tools=``.
-    chat_branch_no_tool_api = (
-        tools_on and not inner_tick_turn and async_foreground_chat_stack
-    )
-    skip_memory_blocks = tool_side_compact and not inner_tick_turn
-
-    out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=tools_on,
-            chat_branch_no_tool_api=chat_branch_no_tool_api,
-            tool_side_compact=tool_side_compact,
-            inner_tick_turn=inner_tick_turn,
-            interactive_bootstrap_active=interactive_bootstrap_active,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=inner_tick_turn,
-            skip_memory_blocks=skip_memory_blocks,
-            include_significance_perception_slice=include_significance_perception_slice,
-            interactive_bootstrap_active=interactive_bootstrap_active,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=inner_tick_turn,
-            tick_proactive=tick_proactive,
-            tools_on=tools_on,
-            tool_side_compact=tool_side_compact,
-            async_foreground_chat_stack=async_foreground_chat_stack,
-            interactive_bootstrap_active=interactive_bootstrap_active,
-            include_significance_perception_slice=include_significance_perception_slice,
-            chat_branch_no_tool_api=chat_branch_no_tool_api,
-        )
-    )
-    out.extend(
-        _contextual_system_messages(
-            context=context,
-            bundle=bundle,
-            compose_trigger=compose_trigger,
-            inner_tick_turn=inner_tick_turn,
-            tick_proactive=tick_proactive,
-            tick_autonomy=tick_autonomy,
-            ai_private_text=ai_private_text,
-            proactive_life_currents_block=proactive_life_currents_block,
-            interactive_bootstrap_active=interactive_bootstrap_active,
-        )
-    )
-    return out
-
-
 def append_profile_collection_system_messages(
     system_messages: list[dict[str, Any]],
     *,
@@ -981,8 +900,8 @@ def build_system_messages_for_tool_track(
 
     The track is fully self-contained: doctrine → auxiliary → capability (tools on,
     tool-side compact) → persona (skip memory blocks) → output (tool-side compact)
-    → contextual (user-message turn). No call to ``build_system_messages`` so that
-    this assembly is the only source of truth for the tool-background track.
+    → contextual (user-message turn). This assembly is the source of truth for
+    the tool-background track.
     """
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
@@ -1044,8 +963,8 @@ def build_system_messages_for_inner_tick_monolog(
 
     The track is fully self-contained: doctrine → auxiliary → capability (tools on,
     tool-side compact) → persona → output (inner-tick, tool-side compact) → contextual
-    with ai_private and monolog slices. No call to ``build_system_messages`` so that
-    the monolog assembly is the only source of truth for this track.
+    with ai_private and monolog slices. This assembly is the source of truth for
+    this track.
     """
     ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
     out: list[dict[str, Any]] = []
@@ -1108,8 +1027,8 @@ def build_system_messages_for_inner_tick_autonomy(
 
     The track is fully self-contained: doctrine → capability (tools on, tool-side
     compact) → persona → output (inner-tick, tool-side compact) → contextual with
-    the dedicated autonomy slice. No call to ``build_system_messages`` so that the
-    autonomy assembly is the only source of truth for this track.
+    the dedicated autonomy slice. This assembly is the source of truth for
+    this track.
     """
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())

@@ -9,16 +9,15 @@ from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
 )
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
-)
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.companion.turn_pipeline import (
     resolve_turn_runtime_flags,
 )
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
-)
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
 from app.schemas.implicit_signals import ImplicitSignalBundle
 
 
@@ -64,7 +63,7 @@ def test_resolve_turn_runtime_flags_turn_type() -> None:
     )
 
 
-def test_build_system_messages_does_not_inject_user_time_context_system_slice() -> (
+def test_settled_system_messages_do_not_inject_user_time_context_system_slice() -> (
     None
 ):
     bundle = PromptBundle(
@@ -74,12 +73,14 @@ def test_build_system_messages_does_not_inject_user_time_context_system_slice() 
         memory_md="",
     )
     ctx = ContextMeta(context_mode="intimate")
-    msgs = build_system_messages(
-        bundle,
-        ctx,
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
-        enable_tools=False,
-    )
+    msgs = PromptBuilder(
+        bundle=bundle,
+        context=ctx,
+        runtime_context=TurnRuntimeContext(
+            channel=ChannelKind.APP_WS,
+            implicit_signal_bundle=None,
+        ),
+    ).settled_single_llm_system_messages()
     joined = "\n".join(
         m.get("content") or "" for m in msgs if m.get("role") == "system"
     )
