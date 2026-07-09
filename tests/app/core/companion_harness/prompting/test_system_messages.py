@@ -367,6 +367,23 @@ def _make_bundle() -> PromptBundle:
     )
 
 
+def test_build_system_messages_for_inner_tick_monolog_is_production_builder(
+    tmp_path,
+) -> None:
+    scope = CompanionScope("u-monolog-builder", "a", tmp_path.name)
+    store = MemoryStore(scope=scope, repository=None)
+    messages = build_system_messages_for_inner_tick_monolog(
+        _make_bundle(), ContextMeta(), store
+    )
+    contents = [str(m["content"]) for m in messages]
+    monolog_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
+    assert len(monolog_blocks) == 1
+    assert "ai_private_append" in monolog_blocks[0]
+    assert not any(c.startswith("本轮（AUTONOMY 自主活动）") for c in contents)
+    assert not any(c.startswith("本轮（陪伴主动聊天）") for c in contents)
+    assert any(c.startswith("内在活动（ai_private）") for c in contents)
+
+
 def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
     tmp_path,
 ) -> None:
