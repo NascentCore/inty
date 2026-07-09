@@ -58,6 +58,7 @@ def build_report(
     wall_clock_sec: float,
     checkpoint_written: bool,
     skip_db_checks: bool,
+    dreaming_memory_updated: str,
 ) -> SimReport:
     """Assemble final report from turn log and Postgres read model."""
     warnings: list[str] = []
@@ -126,7 +127,7 @@ def build_report(
         gottman_repair_met=repair_met,
         social_penetration_depth_signals=depth_signals,
         proactive_visible_rounds=proactive_visible,
-        dreaming_memory_updated="skipped",
+        dreaming_memory_updated=dreaming_memory_updated,
         guardrail_sycophancy_flag=sycophancy,
     )
     meta = SimRunMeta(

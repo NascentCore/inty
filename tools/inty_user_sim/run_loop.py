@@ -14,13 +14,16 @@ from tools.inty_v2_repl.backend_chat_ws import BackendChatWsBridge, http_base_to
 from tools.inty_v2_repl.sim_transport import (
     DEFAULT_USER_ID,
     TURN_REPLY_TIMEOUT_SEC,
+    dreaming_checkpoint_present,
     drain_until_quiet,
     ensure_import_path,
+    memory_doc_sequence_changed,
     query_bootstrap_complete,
+    query_latest_memdoc_version,
     send_and_drain,
     target_presets,
     wait_implicit_sign_on_greeting,
-    wait_downlink,
+    wait_proactive,
     RegressionTarget,
 )
 from tools.inty_user_sim.director import GrillDirector
@@ -41,6 +44,9 @@ from tools.inty_user_sim.user_agent import UserAgent
 SIM_TAG = "[inty-user-sim]"
 SESSION_TURNS_BUDGET = 3
 PROACTIVE_WAIT_SEC = 25.0
+DREAMING_POLL_SEC = 3.0
+DREAMING_WAIT_SEC = 45.0
+DREAMING_MILESTONE_INTERVAL = 7
 
 
 @dataclass
@@ -92,11 +98,19 @@ class SimRunLoop:
         preset = target_presets(config.target, config.repo_root)
         self._preset = preset
         self._config_path = config.repo_root / preset.config_path
-        self._run_id = str(uuid.uuid4())
-        self._store = SimRunStore(self._run_id, config.repo_root / "tmp")
         self._t0 = time.monotonic()
         self._transcript: list[tuple[str, str]] = []
         self._proactive_visible = 0
+        self._dreaming_memory_updated: str = "skipped"
+        self._run_id = str(uuid.uuid4())
+        if config.resume:
+            found = SimRunStore.find_checkpoint_for_agent(
+                config.repo_root / "tmp",
+                config.agent_id,
+            )
+            if found is not None:
+                self._run_id = found.run_id
+        self._store = SimRunStore(self._run_id, config.repo_root / "tmp")
 
     def run(self) -> int:
         """Execute the sim loop; return CLI exit code."""
@@ -148,7 +162,7 @@ class SimRunLoop:
                     if directive.phase == GrillPhase.DONE:
                         break
                     if directive.objective == GrillObjective.WAIT_PROACTIVE:
-                        text, meta, err = wait_downlink(
+                        text, meta, err = wait_proactive(
                             bridge,
                             timeout_sec=PROACTIVE_WAIT_SEC,
                             label="proactive",
@@ -239,6 +253,39 @@ class SimRunLoop:
                 calendar.advance_sim_days(gap_days)
                 director.mark_absence_done(sim_day)
                 director.phase = GrillPhase.RETURN_VISIT
+            if (
+                sim_day > 0
+                and sim_day % DREAMING_MILESTONE_INTERVAL == 0
+                and not self._preset.skip_db_checks
+            ):
+                memory_before = query_latest_memdoc_version(
+                    cfg.repo_root,
+                    self._config_path,
+                    user_id=DEFAULT_USER_ID,
+                    agent_id=cfg.agent_id,
+                    document_kind="MEMORY.md",
+                )
+                before_seq = memory_before.sequence_id if memory_before else 0
+                deadline = time.monotonic() + DREAMING_WAIT_SEC
+                while time.monotonic() < deadline:
+                    if dreaming_checkpoint_present(
+                        cfg.repo_root,
+                        self._config_path,
+                        user_id=DEFAULT_USER_ID,
+                        agent_id=cfg.agent_id,
+                    ):
+                        if memory_doc_sequence_changed(
+                            cfg.repo_root,
+                            self._config_path,
+                            user_id=DEFAULT_USER_ID,
+                            agent_id=cfg.agent_id,
+                            before_seq=before_seq,
+                        ):
+                            self._dreaming_memory_updated = "pass"
+                        else:
+                            self._dreaming_memory_updated = "fail"
+                        break
+                    time.sleep(DREAMING_POLL_SEC)
             checkpoint.sim_day = day_offset + 1
             checkpoint.phase = director.phase
             rupture_sent, absence_days = director.to_checkpoint_fields()
@@ -265,6 +312,7 @@ class SimRunLoop:
             wall_clock_sec=time.monotonic() - self._t0,
             checkpoint_written=True,
             skip_db_checks=self._preset.skip_db_checks,
+            dreaming_memory_updated=self._dreaming_memory_updated,
         )
         report_path = cfg.repo_root / "tmp" / f"user-sim-{cfg.agent_id}.json"
         write_report(report_path, report)

@@ -93,13 +93,22 @@ def build_user_agent_messages(
 class UserAgent:
     """Calls an OpenAI-compatible API to compose the next user turn."""
 
-    def __init__(self, model: str, api_key: str, base_url: str | None) -> None:
+    def __init__(
+        self,
+        model: str,
+        api_key: str,
+        base_url: str | None,
+        *,
+        client: Any | None = None,
+    ) -> None:
         assert model != ""
-        assert api_key != ""
-        kwargs: dict[str, Any] = {"api_key": api_key}
-        if base_url is not None and base_url != "":
-            kwargs["base_url"] = base_url
-        self._client = OpenAI(**kwargs)
+        if client is None:
+            assert api_key != ""
+            kwargs: dict[str, Any] = {"api_key": api_key}
+            if base_url is not None and base_url != "":
+                kwargs["base_url"] = base_url
+            client = OpenAI(**kwargs)
+        self._client = client
         self._model = model
 
     @classmethod
@@ -108,6 +117,11 @@ class UserAgent:
         assert api_key != ""
         base_url = os.environ.get("OPENAI_BASE_URL")
         return cls(model=model, api_key=api_key, base_url=base_url)
+
+    @classmethod
+    def with_client(cls, model: str, client: Any) -> UserAgent:
+        """Construct with an injected client (e.g. FakeOpenAI) for tests."""
+        return cls(model=model, api_key="fake-key", base_url=None, client=client)
 
     def compose_turn(
         self,

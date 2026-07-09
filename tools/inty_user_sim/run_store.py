@@ -68,3 +68,26 @@ class SimRunStore:
         return SimRunCheckpoint.model_validate_json(
             self._checkpoint_path.read_text(encoding="utf-8")
         )
+
+    @staticmethod
+    def find_checkpoint_for_agent(
+        base_dir: Path,
+        agent_id: str,
+    ) -> SimRunCheckpoint | None:
+        """Return the newest checkpoint for ``agent_id`` under ``base_dir``."""
+        assert agent_id != ""
+        if not base_dir.is_dir():
+            return None
+        matches: list[SimRunCheckpoint] = []
+        for path in sorted(base_dir.glob("user-sim-checkpoint-*.json")):
+            try:
+                cp = SimRunCheckpoint.model_validate_json(
+                    path.read_text(encoding="utf-8")
+                )
+            except Exception:
+                continue
+            if cp.agent_id == agent_id:
+                matches.append(cp)
+        if not matches:
+            return None
+        return max(matches, key=lambda c: c.turn_count)

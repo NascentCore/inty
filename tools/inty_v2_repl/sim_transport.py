@@ -726,3 +726,52 @@ def send_and_drain(
         memdoc_user_seq=memdoc_user_seq,
         error=None,
     )
+
+
+def wait_proactive(
+    bridge: Any,
+    *,
+    timeout_sec: float,
+    label: str,
+) -> tuple[str | None, dict[str, Any], tuple[int, str] | None]:
+    """Drain until one proactive downlink or timeout (no user turn sent)."""
+    return wait_downlink(bridge, timeout_sec=timeout_sec, label=label)
+
+
+def dreaming_checkpoint_present(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+) -> bool:
+    """True when companion_dreaming_state.json exists in MemoryStore."""
+    doc = query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="companion_dreaming_state_json",
+    )
+    return doc is not None and bool(doc.content.strip())
+
+
+def memory_doc_sequence_changed(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    before_seq: int,
+) -> bool:
+    """True when MEMORY.md sequence_id advanced beyond ``before_seq``."""
+    doc = query_latest_memdoc_version(
+        repo_root,
+        config_path,
+        user_id=user_id,
+        agent_id=agent_id,
+        document_kind="MEMORY.md",
+    )
+    if doc is None:
+        return False
+    return doc.sequence_id > before_seq
