@@ -7,11 +7,9 @@ from pathlib import Path
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
 )
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_tool_track,
-)
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
+from app.core.companion_harness.prompting.leg_kind import PromptLegKind
+from app.core.companion_harness.prompting.recipe import (
+    compose_system_prefix_for_user_chat_leg,
 )
 from app.core.companion_harness.companion.dual_llm_message_stacks import (
     dual_llm_system_message_variants,
@@ -117,8 +115,8 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
     )
     expected_tool = append_configured_fixed_reply_language_system_messages(
         append_runtime_output_format_system_message(
-            system_messages=build_system_messages_for_tool_track(
-                bundle, context
+            system_messages=compose_system_prefix_for_user_chat_leg(
+                bundle, context, PromptLegKind.TOOL_LEG
             ),
             bundle=bundle,
             runtime_context=runtime_context,
@@ -126,9 +124,10 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
     )
     expected_chat = append_configured_fixed_reply_language_system_messages(
         append_runtime_output_format_system_message(
-            system_messages=build_settled_user_turn_dual_chat_leg_system_messages(
+            system_messages=compose_system_prefix_for_user_chat_leg(
                 bundle,
                 context,
+                PromptLegKind.CHAT_LEG,
             ),
             bundle=bundle,
             runtime_context=runtime_context,

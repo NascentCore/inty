@@ -8,7 +8,7 @@ from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_IM_DM_MD,
 )
 from app.core.companion_harness.companion.prompt_stack import (
-    companion_system_messages_for_track,
+    companion_core_system_messages_for_track,
     output_format_prompt_slice_for_runtime_channel,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -52,7 +52,7 @@ def test_telegram_output_format_uses_im_dm_slice() -> None:
 
 def test_telegram_system_messages_exclude_weixin_alias() -> None:
     bundle = _bundle()
-    messages = companion_system_messages_for_track(
+    messages = companion_core_system_messages_for_track(
         store=None,  # type: ignore[arg-type]
         bundle=bundle,
         context=ContextMeta(),

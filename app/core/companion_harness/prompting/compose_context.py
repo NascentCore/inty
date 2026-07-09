@@ -171,7 +171,26 @@ def turn_compose_context_for_user_turn_chat_leg(
         store=empty_memory_store_for_compose(),
         track=CompanionTurnTrack.USER_CHAT,
         phase=phase,
-        leg_kind=PromptLegKind.SINGLE_LLM,
+        leg_kind=PromptLegKind.CHAT_LEG,
+        ai_private_text="",
+        proactive_life_currents_block=None,
+    )
+
+
+def turn_compose_context_for_user_turn_tool_leg(
+    *,
+    bundle: PromptBundle,
+    context_meta: ContextMeta,
+) -> TurnComposeContext:
+    """Dual-LLM tool leg; USER_CHAT track, SETTLED phase, no MemoryStore reads."""
+    return build_turn_compose_context(
+        bundle=bundle,
+        context_meta=context_meta,
+        runtime_context=default_runtime_context_for_compose(),
+        store=empty_memory_store_for_compose(),
+        track=CompanionTurnTrack.USER_CHAT,
+        phase=Phase.SETTLED,
+        leg_kind=PromptLegKind.TOOL_LEG,
         ai_private_text="",
         proactive_life_currents_block=None,
     )

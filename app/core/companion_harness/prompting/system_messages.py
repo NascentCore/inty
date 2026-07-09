@@ -35,10 +35,10 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scenario | Function |
 |----------|----------|
 | USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``PromptBuilder.bootstrap_turn_system_dicts`` / ``build_bootstrap_user_chat_prompt`` |
-| ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``prompting/tracks``) |
-| ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
-| ASYNC monolog inner tick plan + tool leg | ``build_system_messages_for_inner_tick_monolog`` |
-| ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
+| ASYNC user-round foreground + plan prefix | ``compose_system_prefix`` USER_CHAT × SETTLED × CHAT_LEG |
+| ASYNC user-round tool_background / refresh | ``compose_system_prefix`` USER_CHAT × SETTLED × TOOL_LEG |
+| ASYNC monolog inner tick plan + tool leg | ``compose_system_prefix`` INNER_TICK_MONOLOG × SETTLED × SINGLE_LLM |
+| ASYNC autonomy inner tick (silent self-directed work) | ``compose_system_prefix`` INNER_TICK_AUTONOMY × SETTLED × SINGLE_LLM |
 | Proactive inner tick (``PROACTIVE_CHAT``) | ``PromptBuilder.proactive_system_dicts`` via ``TrackPromptComposer`` |
 | Scheduled reminder inner tick | ``PromptBuilder.scheduled_system_dicts`` via ``TrackPromptComposer`` |
 | Implicit sign-on greeting | ``PromptBuilder.greeting_system_dicts`` via ``TrackPromptComposer`` |
@@ -86,9 +86,6 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     UPDATE_USER_MD,
 )
 
-from app.core.companion_harness.companion.ai_private_prompt import (
-    get_ai_private_jsonl_text_for_prompt,
-)
 from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
     profile_collection_active,
@@ -112,14 +109,10 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     default_runtime_context_for_compose,
-    empty_memory_store_for_compose,
-    extend_contextual_system_slices,
-    turn_compose_context_for_self_contained_track,
 )
 from app.core.companion_harness.prompting.compose_trigger import PromptComposeTrigger
 
 from app.core.companion_harness.companion.models import (
-    CompanionTurnTrack,
     ContextMeta,
 )
 
@@ -834,186 +827,4 @@ def append_profile_collection_system_messages(
     probe_hint = build_cohort_profile_probe_hint(user_md)
     if probe_hint:
         out.append(_system_message(probe_hint))
-    return out
-
-
-def build_system_messages_for_tool_track(
-    bundle: PromptBundle,
-    context: ContextMeta,
-) -> list[dict[str, Any]]:
-    """ASYNC user round: ``tool_background`` and refresh on the tool-model path.
-
-    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
-    tool-side compact) → persona (skip memory blocks) → output (tool-side compact)
-    → contextual (user-message turn). This assembly is the source of truth for
-    the tool-background track.
-    """
-    out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=True,
-            inner_tick_turn=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=False,
-            skip_memory_blocks=True,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=False,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=True,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
-    )
-    extend_contextual_system_slices(
-        out,
-        turn_compose_context_for_self_contained_track(
-            bundle=bundle,
-            context_meta=context,
-            store=empty_memory_store_for_compose(),
-            track=CompanionTurnTrack.USER_CHAT,
-            ai_private_text="",
-            proactive_life_currents_block=None,
-        ),
-    )
-    return out
-
-
-def build_system_messages_for_inner_tick_monolog(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    store: MemoryStore,
-) -> list[dict[str, Any]]:
-    """ASYNC monolog inner tick: plan prefix and tool leg (no foreground envelope).
-
-    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
-    tool-side compact) → persona → output (inner-tick, tool-side compact) → contextual
-    with ai_private and monolog slices. This assembly is the source of truth for
-    this track.
-    """
-    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
-    out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=True,
-            inner_tick_turn=True,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=True,
-            skip_memory_blocks=False,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=True,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=True,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
-    )
-    extend_contextual_system_slices(
-        out,
-        turn_compose_context_for_self_contained_track(
-            bundle=bundle,
-            context_meta=context,
-            store=store,
-            track=CompanionTurnTrack.INNER_TICK_MONOLOG,
-            ai_private_text=ai_private_text,
-            proactive_life_currents_block=None,
-        ),
-    )
-    return out
-
-
-def build_system_messages_for_inner_tick_autonomy(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    store: MemoryStore,
-) -> list[dict[str, Any]]:
-    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply).
-
-    The track is fully self-contained: doctrine → capability (tools on, tool-side
-    compact) → persona → output (inner-tick, tool-side compact) → contextual with
-    the dedicated autonomy slice. This assembly is the source of truth for
-    this track.
-    """
-    out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=True,
-            inner_tick_turn=True,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=True,
-            skip_memory_blocks=False,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=True,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=True,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
-    )
-    extend_contextual_system_slices(
-        out,
-        turn_compose_context_for_self_contained_track(
-            bundle=bundle,
-            context_meta=context,
-            store=store,
-            track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
-            ai_private_text="",
-            proactive_life_currents_block=None,
-        ),
-    )
     return out

@@ -5,7 +5,7 @@ exposed to channels. Debug GitHub disclosure is applied via ``PromptBuilder``.
 
 Reply-language Output slices (content category Output, runtime org runtime):
 ``append_configured_fixed_reply_language_system_messages`` for config-fixed language
-in ``PromptPlan`` system prefixes and ``companion_system_messages_for_track``;
+in ``PromptPlan`` system prefixes and ``companion_core_system_messages_for_track``;
 ``apply_agentic_loop_runtime_system_clauses`` for match-user-message language before
 the tail-user block when config is unset.
 """

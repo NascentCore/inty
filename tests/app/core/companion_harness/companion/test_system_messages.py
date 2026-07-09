@@ -16,7 +16,7 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompt_stack import (
-    companion_system_messages_for_track,
+    companion_core_system_messages_for_track,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -296,7 +296,7 @@ def test_system_messages_include_weixin_clawbot_alias_for_weixin_channel() -> (
 
     context = ContextMeta()
     contents = _system_contents(
-        companion_system_messages_for_track(
+        companion_core_system_messages_for_track(
             store=None,  # type: ignore[arg-type]
             bundle=bundle,
             context=context,
@@ -438,9 +438,9 @@ def test_implicit_sign_on_system_messages_omit_reply_language_when_config_unset(
     assert "Use the same language as the user's message(s)" not in system_text
 
 
-def test_companion_system_messages_for_track_greeting_raises() -> None:
+def test_companion_core_system_messages_for_track_greeting_raises() -> None:
     with pytest.raises(RuntimeError, match="TrackPromptComposer"):
-        companion_system_messages_for_track(
+        companion_core_system_messages_for_track(
             store=None,  # type: ignore[arg-type]
             bundle=PromptBundle(
                 identity="identity",

@@ -25,10 +25,6 @@ from .models import (
 )
 
 from .proactive_chat import PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_monolog,
-)
 
 PromptBuilder = Callable[
     [PromptBundle, ContextMeta, MemoryStore], list[dict[str, Any]]
@@ -58,7 +54,7 @@ INNER_TICK_KINDS: dict[InnerTickKind, InnerTickKindSpec] = {
         throttle_kind=InnerTickThrottleKind.MONOLOG,
         chat_history_marker=MONOLOG_INNER_TICK_CHAT_HISTORY_USER_MARKER,
         suppresses_user_delivery=False,
-        async_tool_prompt_builder=build_system_messages_for_inner_tick_monolog,
+        async_tool_prompt_builder=None,
     ),
     InnerTickKind.AUTONOMY: InnerTickKindSpec(
         activity=InnerTickActivity.AUTONOMY,
@@ -66,7 +62,7 @@ INNER_TICK_KINDS: dict[InnerTickKind, InnerTickKindSpec] = {
         throttle_kind=InnerTickThrottleKind.AUTONOMY,
         chat_history_marker="",
         suppresses_user_delivery=True,
-        async_tool_prompt_builder=build_system_messages_for_inner_tick_autonomy,
+        async_tool_prompt_builder=None,
     ),
     InnerTickKind.PROACTIVE_CHAT: InnerTickKindSpec(
         activity=InnerTickActivity.PROACTIVE_CHAT,

@@ -38,18 +38,19 @@ from .models import (
     load_context_meta,
     load_prompt_bundle,
 )
-from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
+from .inner_tick_kind import inner_tick_kind_for_track
 from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
     is_im_runtime_channel,
 )
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
+from app.core.companion_harness.prompting.leg_kind import PromptLegKind
+from app.core.companion_harness.prompting.recipe import (
+    compose_system_prefix_for_self_contained_track,
+    compose_system_prefix_for_user_chat_leg,
 )
 from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
 )
 from app.core.companion_harness.loop.runtime_system_clauses import (
@@ -65,12 +66,12 @@ def _async_tool_system_messages_for_track(
     store: MemoryStore,
 ) -> list[dict[str, Any]]:
     """Build async tool-path system messages for MONOLOG or AUTONOMY tracks."""
-    kind = inner_tick_kind_for_track(track)
-    assert kind is not None
-    spec = inner_tick_spec(kind)
-    builder = spec.async_tool_prompt_builder
-    assert builder is not None
-    return builder(bundle, context, store)
+    return compose_system_prefix_for_self_contained_track(
+        bundle,
+        context,
+        store,
+        track,
+    )
 
 
 def replace_leading_system_messages_inplace(
@@ -153,9 +154,26 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
+def append_peripheral_system_slices(
+    *,
+    system_messages: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Append peripheral gateway slices: output format, Weixin alias, reply-language."""
+    out = append_runtime_output_format_system_message(
+        system_messages=system_messages,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
+        out.append(weixin_clawbot_contact_alias_system_message())
+    return append_configured_fixed_reply_language_system_messages(out)
+
+
 # TODO(structural-simplicity): Dissolve this function, and let caller directly call the — #3516
 # track-denominated system messsages building API.
-def companion_system_messages_for_track(
+def companion_core_system_messages_for_track(
     *,
     store: MemoryStore,
     bundle: PromptBundle,
@@ -196,58 +214,16 @@ def companion_system_messages_for_track(
                 "PromptBuilder.bootstrap_turn_system_dicts (turn_pipeline)"
             )
         case CompanionTurnTrack.USER_CHAT:
-            out = build_settled_user_turn_dual_chat_leg_system_messages(
+            out = compose_system_prefix_for_user_chat_leg(
                 bundle,
                 context,
+                PromptLegKind.CHAT_LEG,
             )
-    # TODO(#3453): Migrate monolog/autonomy to TrackPromptComposer once slice builders land.
-    out = append_runtime_output_format_system_message(
+    return append_peripheral_system_slices(
         system_messages=out,
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
-        out.append(weixin_clawbot_contact_alias_system_message())
-    # Chat-only tracks (greeting, proactive, scheduled, …) and dual-LLM chat-leg
-    # prefixes; bootstrap/settled single-LLM use PromptBuilder instead.
-    return append_configured_fixed_reply_language_system_messages(out)
-
-
-def companion_turn_tools_and_system_messages(
-    *,
-    store: MemoryStore,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    track: CompanionTurnTrack,
-    implicit_user_signed_on_turn: bool = False,
-    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
-        implicit_signal_bundle=None,
-    ),
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """
-    Single source for companion chat-round tools list and system message stack.
-
-    ``USER_CHAT_BOOTSTRAP`` runs one in-turn tool loop so setup can persist
-    relationship seed docs via ``memory_store_write_document`` before completion.
-    Normal user chat and monolog inner tick require
-    the async foreground/tool-background route.  Proactive, scheduled, and
-    implicit sign-on greeting tracks are chat-only system stacks with no tools.
-    """
-    if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-        implicit_user_signed_on_turn = True
-    tools_for_turn = companion_tools_for_turn(
-        track=track,
-        implicit_user_signed_on_turn=implicit_user_signed_on_turn,
-    )
-    system_messages = companion_system_messages_for_track(
-        store=store,
-        bundle=bundle,
-        context=context,
-        track=track,
-        runtime_context=runtime_context,
-    )
-    return tools_for_turn, system_messages
 
 
 def refresh_companion_turn_prompt_stack(
@@ -294,9 +270,10 @@ def refresh_companion_turn_prompt_stack(
                 store=store,
             )
         case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(
+            refreshed = compose_system_prefix_for_user_chat_leg(
                 bundle,
                 context,
+                PromptLegKind.TOOL_LEG,
             )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
