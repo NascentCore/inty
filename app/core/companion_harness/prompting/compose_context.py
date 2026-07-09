@@ -48,7 +48,7 @@ class TurnComposeContext:
     track: CompanionTurnTrack
     # Bootstrap vs settled phase within the track.
     phase: Phase
-    # LLM leg variant; Phase 1 always SINGLE_LLM.
+    # LLM leg variant; dual-LLM USER_CHAT uses CHAT_LEG or TOOL_LEG; inner-tick uses SINGLE_LLM.
     leg_kind: PromptLegKind
     # MONOLOG contextual payload; empty when track is not monolog.
     ai_private_text: str

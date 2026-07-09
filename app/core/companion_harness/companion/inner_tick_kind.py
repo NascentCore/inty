@@ -44,6 +44,7 @@ class InnerTickKindSpec:
     throttle_kind: InnerTickThrottleKind | None
     chat_history_marker: str
     suppresses_user_delivery: bool
+    # Deprecated: MONOLOG/AUTONOMY core stacks live in ``prompting.recipe``; remove in #3453.
     async_tool_prompt_builder: PromptBuilder | None
 
 

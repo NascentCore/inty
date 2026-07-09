@@ -6,8 +6,9 @@ refreshes re-read MemoryStore and ``context.json`` so
 tool-side writes to persona/context documents become visible before the next
 model leg continues.
 
-Legacy imperative assembly for greeting, proactive, scheduled, monolog, and dual-LLM
-paths. Target memory projection lives in ``prompting.projection`` + ``PromptBuilder`` (#3521).
+Core stacks for monolog, autonomy, and dual-LLM legs use ``prompting.recipe``.
+Greeting, proactive, scheduled, and bootstrap paths use ``PromptBuilder`` /
+``TrackPromptComposer``. Target memory projection: ``prompting.projection`` (#3521).
 
 TODO(#3398): dual-LLM foreground envelope vs single-LLM in-turn sync for settled ``USER_CHAT``.
 
@@ -56,23 +57,6 @@ from app.core.companion_harness.prompting.system_messages import (
 from app.core.companion_harness.loop.runtime_system_clauses import (
     append_configured_fixed_reply_language_system_messages,
 )
-
-
-def _async_tool_system_messages_for_track(
-    *,
-    track: CompanionTurnTrack,
-    bundle: PromptBundle,
-    context: ContextMeta,
-    store: MemoryStore,
-) -> list[dict[str, Any]]:
-    """Build async tool-path system messages for MONOLOG or AUTONOMY tracks."""
-    return compose_system_prefix_for_self_contained_track(
-        bundle,
-        context,
-        store,
-        track,
-    )
-
 
 def replace_leading_system_messages_inplace(
     messages: list[dict[str, Any]],
@@ -154,6 +138,23 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
+def append_tool_refresh_peripheral_system_slices(
+    *,
+    system_messages: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Mid-turn tool refresh peripheral: output format and Weixin alias (no reply-language)."""
+    out = append_runtime_output_format_system_message(
+        system_messages=system_messages,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
+        out.append(weixin_clawbot_contact_alias_system_message())
+    return out
+
+
 def append_peripheral_system_slices(
     *,
     system_messages: list[dict[str, Any]],
@@ -202,11 +203,11 @@ def companion_core_system_messages_for_track(
             CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
-            out = _async_tool_system_messages_for_track(
-                track=track,
-                bundle=bundle,
-                context=context,
-                store=store,
+            out = compose_system_prefix_for_self_contained_track(
+                bundle,
+                context,
+                store,
+                track,
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             raise RuntimeError(
@@ -263,11 +264,11 @@ def refresh_companion_turn_prompt_stack(
             CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
-            refreshed = _async_tool_system_messages_for_track(
-                track=track,
-                bundle=bundle,
-                context=context,
-                store=store,
+            refreshed = compose_system_prefix_for_self_contained_track(
+                bundle,
+                context,
+                store,
+                track,
             )
         case CompanionTurnTrack.USER_CHAT:
             refreshed = compose_system_prefix_for_user_chat_leg(
@@ -284,12 +285,10 @@ def refresh_companion_turn_prompt_stack(
                 "refresh_companion_turn_prompt_stack unsupported track="
                 f"{track.value}"
             )
-    refreshed = append_runtime_output_format_system_message(
+    refreshed = append_tool_refresh_peripheral_system_slices(
         system_messages=refreshed,
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    if runtime_context.channel == ChannelKind.WECHAT_WEIXIN:
-        refreshed.append(weixin_clawbot_contact_alias_system_message())
     replace_leading_system_messages_inplace(messages, refreshed)
     return tools_for_turn

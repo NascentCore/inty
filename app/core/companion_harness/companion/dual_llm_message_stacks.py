@@ -18,8 +18,7 @@ from app.core.companion_harness.prompting.recipe import (
     compose_system_prefix_for_self_contained_track,
     compose_system_prefix_for_user_chat_leg,
 )
-from .models import ContextMeta, InnerTickActivity
-from .inner_tick_kind import InnerTickKind, inner_tick_spec
+from .models import CompanionTurnTrack, ContextMeta, InnerTickActivity
 from .prompt_stack import append_runtime_output_format_system_message
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
@@ -58,9 +57,9 @@ def dual_llm_system_message_variants(
     ):
         match route_inner_activity:
             case InnerTickActivity.MONOLOG:
-                spec = inner_tick_spec(InnerTickKind.MONOLOG)
+                inner_tick_track = CompanionTurnTrack.INNER_TICK_MONOLOG
             case InnerTickActivity.AUTONOMY:
-                spec = inner_tick_spec(InnerTickKind.AUTONOMY)
+                inner_tick_track = CompanionTurnTrack.INNER_TICK_AUTONOMY
             case _:
                 raise RuntimeError(
                     "unexpected inner-tick activity for async tool path: "
@@ -70,7 +69,7 @@ def dual_llm_system_message_variants(
             bundle,
             context,
             store,
-            spec.turn_track,
+            inner_tick_track,
         )
     else:
         tool_system_msgs = compose_system_prefix_for_user_chat_leg(

@@ -22,6 +22,9 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     TurnComposeContext,
+    build_turn_compose_context,
+    default_runtime_context_for_compose,
+    empty_memory_store_for_compose,
     extend_contextual_system_slices,
     turn_compose_context_for_self_contained_track,
     turn_compose_context_for_user_turn_chat_leg,
@@ -273,11 +276,6 @@ def compose_system_prefix_for_self_contained_track(
                 f"compose_system_prefix_for_self_contained_track unsupported "
                 f"track={unexpected!r}"
             )
-    from app.core.companion_harness.prompting.compose_context import (
-        build_turn_compose_context,
-        default_runtime_context_for_compose,
-    )
-
     ctx = build_turn_compose_context(
         bundle=bundle,
         context_meta=context,
@@ -299,28 +297,20 @@ def compose_system_prefix_for_user_chat_leg(
 ) -> list[dict[str, Any]]:
     """Settled USER_CHAT dual-LLM CHAT_LEG or TOOL_LEG; core only."""
     match leg_kind:
-        case PromptLegKind.CHAT_LEG | PromptLegKind.TOOL_LEG:
-            pass
+        case PromptLegKind.CHAT_LEG:
+            ctx = turn_compose_context_for_user_turn_chat_leg(
+                bundle=bundle,
+                context_meta=context,
+                phase=Phase.SETTLED,
+            )
+        case PromptLegKind.TOOL_LEG:
+            ctx = turn_compose_context_for_user_turn_tool_leg(
+                bundle=bundle,
+                context_meta=context,
+            )
         case _ as unexpected:
             raise AssertionError(
                 f"compose_system_prefix_for_user_chat_leg unsupported "
                 f"leg_kind={unexpected!r}"
             )
-    from app.core.companion_harness.prompting.compose_context import (
-        build_turn_compose_context,
-        default_runtime_context_for_compose,
-        empty_memory_store_for_compose,
-    )
-
-    ctx = build_turn_compose_context(
-        bundle=bundle,
-        context_meta=context,
-        runtime_context=default_runtime_context_for_compose(),
-        store=empty_memory_store_for_compose(),
-        track=CompanionTurnTrack.USER_CHAT,
-        phase=Phase.SETTLED,
-        leg_kind=leg_kind,
-        ai_private_text="",
-        proactive_life_currents_block=None,
-    )
     return compose_system_prefix(ctx)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
@@ -14,6 +16,7 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
+    TurnComposeContext,
     build_turn_compose_context,
     default_runtime_context_for_compose,
     empty_memory_store_for_compose,
@@ -30,6 +33,10 @@ GOLDEN_MONOLOG_LINE_COUNT = 12
 GOLDEN_AUTONOMY_LINE_COUNT = 10
 GOLDEN_CHAT_LINE_COUNT = 14
 GOLDEN_TOOL_LINE_COUNT = 15
+GOLDEN_MONOLOG_CONTENT_SHA256_PREFIX = "4b7353a7f5cabc59"
+GOLDEN_AUTONOMY_CONTENT_SHA256_PREFIX = "0acf7778375465e1"
+GOLDEN_CHAT_CONTENT_SHA256_PREFIX = "cc7d72684a310f98"
+GOLDEN_TOOL_CONTENT_SHA256_PREFIX = "14c06d0421d00c0b"
 
 
 def _store(tmp_path) -> MemoryStore:
@@ -53,6 +60,11 @@ def _system_contents(messages: list[dict]) -> list[str]:
     return [str(m["content"]) for m in messages if m["role"] == "system"]
 
 
+def _content_sha256_prefix(contents: list[str]) -> str:
+    joined = "\n---\n".join(contents)
+    return hashlib.sha256(joined.encode()).hexdigest()[:16]
+
+
 def _ctx(
     *,
     bundle: PromptBundle,
@@ -60,7 +72,7 @@ def _ctx(
     store: MemoryStore,
     track: CompanionTurnTrack,
     leg_kind: PromptLegKind,
-) -> object:
+) -> TurnComposeContext:
     return build_turn_compose_context(
         bundle=bundle,
         context_meta=context,
@@ -99,6 +111,7 @@ def test_monolog_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
     )
     assert from_ctx == from_helper
     assert len(from_ctx) == GOLDEN_MONOLOG_LINE_COUNT
+    assert _content_sha256_prefix(from_ctx) == GOLDEN_MONOLOG_CONTENT_SHA256_PREFIX
     assert from_ctx[0].startswith("# Axiom")
 
 
@@ -124,6 +137,7 @@ def test_autonomy_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
     )
     assert from_ctx == from_helper
     assert len(from_ctx) == GOLDEN_AUTONOMY_LINE_COUNT
+    assert _content_sha256_prefix(from_ctx) == GOLDEN_AUTONOMY_CONTENT_SHA256_PREFIX
 
 
 def test_dual_chat_leg_recipe_matches_helper_and_golden_line_count() -> None:
@@ -150,6 +164,7 @@ def test_dual_chat_leg_recipe_matches_helper_and_golden_line_count() -> None:
     )
     assert from_ctx == from_helper
     assert len(from_ctx) == GOLDEN_CHAT_LINE_COUNT
+    assert _content_sha256_prefix(from_ctx) == GOLDEN_CHAT_CONTENT_SHA256_PREFIX
 
 
 def test_dual_tool_leg_recipe_matches_helper_and_golden_line_count() -> None:
@@ -176,3 +191,4 @@ def test_dual_tool_leg_recipe_matches_helper_and_golden_line_count() -> None:
     )
     assert from_ctx == from_helper
     assert len(from_ctx) == GOLDEN_TOOL_LINE_COUNT
+    assert _content_sha256_prefix(from_ctx) == GOLDEN_TOOL_CONTENT_SHA256_PREFIX
