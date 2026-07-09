@@ -10,11 +10,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InputQueueRecord,
     QueueStatus,
 )
@@ -31,7 +31,7 @@ from app.services.agentic_channel.presence import (
     AgentChannelPresence,
     clear_presences_for_tests,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 @pytest.fixture(autouse=True)

@@ -17,17 +17,17 @@ from sqlalchemy import delete, select
 
 from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.companion import (
+from app.core.agentic_companion.companion import (
     AgenticCompanion,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.postgres_queue import (
+from app.core.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InboundWireMessage,
     OutputMessageKind,
     QueueStatus,

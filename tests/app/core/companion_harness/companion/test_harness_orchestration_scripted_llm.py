@@ -26,11 +26,11 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgenticLoopInputBatch,
     InputQueueRecord,
     QueueStatus,

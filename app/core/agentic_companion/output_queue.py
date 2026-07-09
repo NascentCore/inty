@@ -21,13 +21,10 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.db.session import AsyncSessionLocal
-from app.core.companion_harness.agentic_companion.types import (
-    OutputMessageKind,
-    WireAssistantSource,
-)
-
 from .postgres_queue import PostgresOutputQueueRepository
 from .types import (
+    OutputMessageKind,
+    WireAssistantSource,
     AgentOutputMessage,
     GeneratedImageRef,
     OutputQueueRecord,

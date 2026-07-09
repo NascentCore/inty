@@ -244,7 +244,7 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
     from unittest.mock import AsyncMock, patch
 
     from app.core.companion_harness.tools import companion_user_feedback as mod
-    from app.core.companion_harness.agentic_companion.types import (
+    from app.core.agentic_companion.types import (
         OutputMessageKind,
     )
 
@@ -267,7 +267,7 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
         lambda: UserFeedbackDisclosureMode.VISIBLE,
     )
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -278,7 +278,7 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
             return_value=_FakeRecord("msg-disclosure", issue_url, 3)
         )
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             appended = (
@@ -314,7 +314,7 @@ async def test_append_user_feedback_issue_disclosure_skipped_when_hidden(
         lambda: UserFeedbackDisclosureMode.HIDDEN,
     )
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session_cls.return_value = session

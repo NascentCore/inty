@@ -1030,14 +1030,14 @@ def _patch_companion_ws_queue_turn(
         stop_presence,
         _presences,
     )
-    from app.core.companion_harness.agentic_companion.output_queue import (
+    from app.core.agentic_companion.output_queue import (
         ReadyOutputMessage,
     )
-    from app.core.companion_harness.agentic_companion.types import (
+    from app.core.agentic_companion.types import (
         InputQueueRecord,
         QueueStatus,
     )
-    from app.core.companion_harness.agentic_companion.types import (
+    from app.core.agentic_companion.types import (
         OutputMessageKind,
     )
     from app.services.agentic_channel.serving import DrainScopeOnceResult
@@ -1080,11 +1080,11 @@ def _patch_companion_ws_queue_turn(
         return repo
 
     monkeypatch.setattr(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal",
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal",
         _OutputQueueDbSession,
     )
     monkeypatch.setattr(
-        "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+        "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
         _fake_output_repo,
     )
     monkeypatch.setattr(

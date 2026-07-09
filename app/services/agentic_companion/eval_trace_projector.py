@@ -8,11 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
     ready_output_delivers_user_visible_text,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InputQueueRecord,
     OutputMessageKind,
 )

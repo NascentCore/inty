@@ -11,7 +11,7 @@ from urllib.error import HTTPError
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
@@ -38,10 +38,10 @@ from app.services.agentic_channel.serving import (
     _deliver_ready_message,
     flush_scope_output_queue_ready,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueueAppendInput,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     OutputMessageKind,
     WireAssistantSource,
 )
@@ -329,7 +329,7 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
             side_effect=_fake_greeting_turn,
         ):
             with patch(
-                "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+                "app.core.agentic_companion.output_queue.AsyncSessionLocal"
             ) as session_cls:
                 session = AsyncMock()
                 session.__aenter__.return_value = session
@@ -338,7 +338,7 @@ async def test_greet_on_sign_on_end_to_end_delivers_to_telegram() -> None:
                 repo = AsyncMock()
                 repo.append_agent_output = AsyncMock(return_value=_FakeRecord())
                 with patch(
-                    "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+                    "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
                     return_value=repo,
                 ):
                     await presence.greet_on_sign_on(
@@ -377,7 +377,7 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
             side_effect=_silent_greeting_turn,
         ):
             with patch(
-                "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+                "app.core.agentic_companion.output_queue.AsyncSessionLocal"
             ) as session_cls:
                 session = AsyncMock()
                 session.__aenter__.return_value = session
@@ -386,7 +386,7 @@ async def test_greet_on_sign_on_silent_skips_output_queue() -> None:
                 repo = AsyncMock()
                 repo.append_agent_output = AsyncMock()
                 with patch(
-                    "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+                    "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
                     return_value=repo,
                 ):
                     await presence.greet_on_sign_on(

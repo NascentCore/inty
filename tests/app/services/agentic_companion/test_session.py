@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.services.agentic_companion.session import (

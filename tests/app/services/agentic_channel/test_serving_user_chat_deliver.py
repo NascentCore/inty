@@ -14,13 +14,13 @@ from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     OutputQueueRecord,
     QueueClaim,
     QueueStatus,
@@ -34,7 +34,7 @@ from app.services.agentic_channel.serving import (
     drain_and_deliver_user_chat_turn,
     flush_scope_output_queue_ready,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 @pytest.fixture(autouse=True)
@@ -98,7 +98,7 @@ async def test_concurrent_flush_and_pump_deliver_same_row_twice() -> None:
         wire_id=wire_id,
     )
     with patch(
-        "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+        "app.core.agentic_companion.output_queue.AsyncSessionLocal"
     ) as session_cls:
         session = AsyncMock()
         session.__aenter__.return_value = session
@@ -117,7 +117,7 @@ async def test_concurrent_flush_and_pump_deliver_same_row_twice() -> None:
         repo.claim_pending_for_delivery = AsyncMock(side_effect=fake_claim)
         repo.mark_delivered = AsyncMock()
         with patch(
-            "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+            "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
             return_value=repo,
         ):
             stop = asyncio.Event()

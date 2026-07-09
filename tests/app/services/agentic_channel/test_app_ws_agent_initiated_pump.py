@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
 from app.services.agentic_channel.adapters.app_ws import AppWsChannelAdapter
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 
 
 class _SessionContext:

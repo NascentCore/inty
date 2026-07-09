@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AgenticCompanionInputBatch,
     InboundWireMessage,
     InputQueueRecord,

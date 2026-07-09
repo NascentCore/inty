@@ -25,16 +25,16 @@ from app.services.agentic_channel.scope_queue_serving import (
     ScopeDrainCompletion,
     ScopeQueueServing,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryUnroutableError,
     ReadyOutputMessage,
     get_output_queue_for_scope,
     ready_output_is_agent_initiated_visible,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InboundWireMessage,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     synthetic_user_message_batch,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle

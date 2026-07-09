@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     UserMessageBatch,
     synthetic_user_message_batch,
 )

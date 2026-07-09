@@ -15,7 +15,7 @@ from app.core.companion_harness.llm.chat_completions import (
 from app.core.llms.client import (
     CompanionLLMConfig,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     AGENT_INITIATED_USER_MESSAGE_BATCH_PREFIX,
     synthetic_user_message_batch,
 )

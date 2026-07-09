@@ -13,10 +13,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueue,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     synthetic_user_message_batch,
 )
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
@@ -60,7 +60,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.llms.client import LLM_SCENE_CHAT, LLM_SCENE_INNER_TICK
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     OutputMessageKind,
     WireAssistantSource,
 )

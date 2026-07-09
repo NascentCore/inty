@@ -74,7 +74,7 @@ from app.core.companion_harness.loop.track_loop_input import (
 from app.core.companion_harness.loop.track_loop_plugin import (
     resolve_agentic_loop,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     synthetic_user_message_batch,
     user_message_batch_is_agent_initiated_synthetic,
 )

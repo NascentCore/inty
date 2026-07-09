@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
     ready_output_delivers_user_visible_text,
 )
@@ -15,7 +15,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.utc import (
     strip_leading_transcript_timestamp_prefixes,
 )
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from app.services.agentic_companion.downlink import ChannelDownlink
 
 WeixinAssistantTextSink = Callable[[str], Awaitable[None]]

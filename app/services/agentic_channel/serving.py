@@ -10,10 +10,10 @@ from datetime import datetime, timezone
 from loguru import logger
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.agentic_companion.companion import (
+from app.core.agentic_companion.companion import (
     AgenticCompanion,
 )
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputDeliveryAck,
     OutputDeliveryFailure,
     OutputDeliverySkip,
@@ -21,10 +21,10 @@ from app.core.companion_harness.agentic_companion.output_queue import (
     ReadyOutputMessage,
     get_output_queue_for_scope,
 )
-from app.core.companion_harness.agentic_companion.postgres_queue import (
+from app.core.agentic_companion.postgres_queue import (
     PostgresInputQueueRepository,
 )
-from app.core.companion_harness.agentic_companion.types import (
+from app.core.agentic_companion.types import (
     InboundWireMessage,
 )
 from app.core.companion_harness.companion.runtime_channel import (

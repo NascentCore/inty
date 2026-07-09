@@ -34,11 +34,11 @@ from app.services.agentic_channel.channel_runtime import (
     clear_registries_for_tests,
 )
 from app.services.agentic_channel.endpoints import resolve_scope
-from app.core.companion_harness.agentic_companion.output_queue import (
+from app.core.agentic_companion.output_queue import (
     OutputQueueAppendInput,
 )
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.agentic_companion.types import OutputMessageKind
+from app.core.agentic_companion.types import OutputMessageKind
 from app.services.agentic_channel.presence import (
     clear_presences_for_tests,
     get_presence,
@@ -557,7 +557,7 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
             side_effect=_fake_greeting_turn,
         ):
             with patch(
-                "app.core.companion_harness.agentic_companion.output_queue.AsyncSessionLocal"
+                "app.core.agentic_companion.output_queue.AsyncSessionLocal"
             ) as session_cls:
                 session = AsyncMock()
                 session.__aenter__.return_value = session
@@ -568,7 +568,7 @@ async def test_onboard_new_user_delivers_greeting_message() -> None:
                     return_value=_FakeOutputRecord()
                 )
                 with patch(
-                    "app.core.companion_harness.agentic_companion.output_queue.PostgresOutputQueueRepository",
+                    "app.core.agentic_companion.output_queue.PostgresOutputQueueRepository",
                     return_value=repo,
                 ):
                     inbound = TelegramIncomingMessage(
