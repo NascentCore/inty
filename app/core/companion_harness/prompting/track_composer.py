@@ -1,28 +1,17 @@
-"""Per-track PromptPlan assembly for AgenticLoop tracks (#3801).
-
-Generated entirely by Cursor agent.
-"""
+"""Per-track PromptPlan assembly for AgenticLoop tracks (#3801)."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
-from app.core.companion_harness.companion.models import (
-    CompanionTurnTrack,
-    ContextMeta,
-)
-from app.core.companion_harness.companion.runtime_channel import (
-    TurnRuntimeContext,
-)
-from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     PromptPlan,
     openai_dialogue_dicts_to_prompt_messages,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import TurnComposeContext
+
 
 class TrackPromptComposer:
     """Per-track prompt assembly; routes chat-only tracks to ``PromptBuilder``."""

@@ -6,6 +6,7 @@ from app.core.companion_harness.companion.manager import (
     CompanionManager,
 )
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     load_context_meta,
     load_prompt_bundle,
 )

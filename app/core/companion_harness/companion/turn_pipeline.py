@@ -258,7 +258,7 @@ def build_companion_turn_prompt_plan(
                 TrackPromptComposer,
             )
             from app.core.companion_harness.prompting.phase import (
-                resolve_compose_phase,
+                resolve_phase_for_compose,
             )
 
             assert tail_user_messages
@@ -268,7 +268,7 @@ def build_companion_turn_prompt_plan(
                 runtime_context=runtime_context,
                 store=store,
                 track=track,
-                phase=resolve_compose_phase(loaded_state.context),
+                phase=resolve_phase_for_compose(track, loaded_state.context),
                 leg_kind=PromptLegKind.SINGLE_LLM,
                 ai_private_text="",
                 proactive_life_currents_block=None,

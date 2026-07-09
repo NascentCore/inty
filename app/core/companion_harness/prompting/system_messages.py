@@ -877,6 +877,8 @@ def build_system_messages(
             chat_branch_no_tool_api=chat_branch_no_tool_api,
         )
     )
+    # TODO(#3453): Lift lazy import after contextual slice builders move out of
+    # system_messages (breaks contextual ↔ system_messages import cycle).
     from app.core.companion_harness.prompting.contextual import (
         assemble_contextual_slices,
     )
@@ -1027,6 +1029,8 @@ def build_system_messages_for_inner_tick_autonomy(
             chat_branch_no_tool_api=False,
         )
     )
+    # TODO(#3453): Lift lazy import after contextual slice builders move out of
+    # system_messages (breaks contextual ↔ system_messages import cycle).
     from app.core.companion_harness.prompting.contextual import (
         assemble_contextual_slices,
     )

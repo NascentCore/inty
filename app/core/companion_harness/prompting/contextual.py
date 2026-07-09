@@ -1,6 +1,8 @@
 """Sole contextual-category orchestrator for companion system-prefix assembly.
 
-Generated entirely by Cursor agent.
+Gates experience profile, directives, timezone, proactive clauses, and ABOUT.md
+by ``TurnComposeContext.track`` and ``phase``. Atomic slice text builders remain
+in ``system_messages`` until Phase 2 ``TrackSystemRecipe`` (#3453).
 """
 
 from __future__ import annotations

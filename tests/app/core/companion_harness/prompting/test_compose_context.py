@@ -22,7 +22,7 @@ from app.core.companion_harness.prompting.compose_trigger import (
     compose_trigger_for_track,
 )
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.phase import Phase, resolve_phase_for_compose
 
 
 def _store(tmp_path) -> MemoryStore:
@@ -93,3 +93,17 @@ def test_inner_tick_activity_derived_from_track(tmp_path) -> None:
         proactive_life_currents_block=None,
     )
     assert user_ctx.inner_tick_activity is None
+
+
+def test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap() -> None:
+    """``USER_CHAT_BOOTSTRAP`` track always composes bootstrap contextual slices."""
+    settled_context = ContextMeta(
+        workspace_bootstrap_user_interactive_completed=True,
+    )
+    assert (
+        resolve_phase_for_compose(
+            CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            settled_context,
+        )
+        == Phase.BOOTSTRAP
+    )

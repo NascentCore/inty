@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     load_context_meta,
     load_prompt_bundle,
 )

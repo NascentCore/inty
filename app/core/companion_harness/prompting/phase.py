@@ -1,13 +1,13 @@
-"""Compose phase within a companion turn track (bootstrap vs settled).
-
-Generated entirely by Cursor agent.
-"""
+"""Compose phase within a companion turn track (bootstrap vs settled)."""
 
 from __future__ import annotations
 
 from enum import StrEnum
 
-from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
 
 
 class Phase(StrEnum):
@@ -22,3 +22,15 @@ def resolve_compose_phase(context: ContextMeta) -> Phase:
     if not context.workspace_bootstrap_user_interactive_completed:
         return Phase.BOOTSTRAP
     return Phase.SETTLED
+
+
+def resolve_phase_for_compose(
+    track: CompanionTurnTrack,
+    context_meta: ContextMeta,
+) -> Phase:
+    """Derive compose phase from track plus context when track does not pin phase."""
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            return Phase.BOOTSTRAP
+        case _:
+            return resolve_compose_phase(context_meta)

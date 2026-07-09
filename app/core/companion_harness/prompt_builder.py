@@ -40,12 +40,17 @@ from app.core.companion_harness.companion.dual_llm_message_stacks import (
     replace_leading_system_messages_multi,
 )
 from app.core.companion_harness.prompting.compose_context import (
+    TurnComposeContext,
     build_turn_compose_context,
     empty_memory_store_for_compose,
 )
 from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.phase import Phase, resolve_compose_phase
+from app.core.companion_harness.prompting.phase import (
+    Phase,
+    resolve_compose_phase,
+    resolve_phase_for_compose,
+)
 from app.core.companion_harness.prompting.system_messages import (
     _assemble_proactive_chat_life_currents_hint_prompt,
     _auxiliary_system_messages,
@@ -233,7 +238,7 @@ class PromptBuilder:
         store: MemoryStore,
         ai_private_text: str,
         proactive_life_currents_block: str | None,
-    ) -> object:
+    ) -> TurnComposeContext:
         life_currents = proactive_life_currents_block
         if (
             track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
@@ -248,7 +253,7 @@ class PromptBuilder:
             runtime_context=self.runtime_context,
             store=store,
             track=track,
-            phase=self._compose_phase(),
+            phase=resolve_phase_for_compose(track, self.context),
             leg_kind=PromptLegKind.SINGLE_LLM,
             ai_private_text=ai_private_text,
             proactive_life_currents_block=life_currents,
