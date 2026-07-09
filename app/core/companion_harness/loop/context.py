@@ -150,22 +150,6 @@ class AgenticLoopOutput:
     output_message_ids: tuple[str, ...] = ()
 
 
-def prompt_plan_from_openai_messages(
-    messages: list[dict[str, Any]],
-    *,
-    tools: tuple[dict[str, Any], ...],
-) -> PromptPlan:
-    """Deprecated: use ``TrackPromptComposer.compose_from_openai_messages``."""
-    from app.core.companion_harness.prompting.track_composer import (
-        TrackPromptComposer,
-    )
-
-    return TrackPromptComposer().compose_from_openai_messages(
-        messages,
-        tools=tools,
-    )
-
-
 def build_implicit_sign_on_greeting_loop_context(
     *,
     messages: list[dict[str, Any]],

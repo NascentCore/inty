@@ -20,7 +20,9 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
-    prompt_plan_from_openai_messages,
+)
+from app.core.companion_harness.prompting.track_composer import (
+    TrackPromptComposer,
 )
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     loop_execution_for_track,
@@ -31,12 +33,12 @@ from app.core.companion_harness.agentic_companion.types import (
 )
 
 
-def test_prompt_plan_from_openai_messages_wraps_dialogue() -> None:
+def test_compose_from_openai_messages_wraps_dialogue() -> None:
     messages = [
         {"role": "system", "content": "You are Inty."},
         {"role": "user", "content": "hello"},
     ]
-    plan = prompt_plan_from_openai_messages(messages, tools=())
+    plan = TrackPromptComposer().compose_from_openai_messages(messages, tools=())
     assert len(plan.messages) == 2
     assert plan.tools == ()
     assert plan.tool_choice is None
@@ -66,7 +68,7 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
             received_at_utc=ts,
         ),
     )
-    plan = prompt_plan_from_openai_messages(
+    plan = TrackPromptComposer().compose_from_openai_messages(
         [{"role": "system", "content": "greet"}],
         tools=(),
     )
