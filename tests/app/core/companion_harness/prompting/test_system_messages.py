@@ -4,6 +4,7 @@ import inspect
 
 from app.core.companion_harness.companion.models import (
     OUTPUT_FORMAT_IM_DM_MD,
+    CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
 )
@@ -14,9 +15,7 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
-)
+
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
@@ -52,7 +51,7 @@ def test_doctrine_system_prefix_excludes_subconscious_prompt() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        track=CompanionTurnTrack.USER_CHAT,
     )
     doctrine_lines = [
         str(messages[index]["content"]).split("\n")[0] for index in range(3)
@@ -174,7 +173,7 @@ def test_inner_tick_monolog_omits_infer_time_zone_slice() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
-        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
+        track=CompanionTurnTrack.INNER_TICK_MONOLOG,
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MONOLOG,
@@ -228,7 +227,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        track=CompanionTurnTrack.USER_CHAT,
         enable_tools=True,
         async_foreground_chat_stack=True,
         include_significance_perception_slice=True,
@@ -326,7 +325,7 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
     messages = build_system_messages(
         bundle,
         ContextMeta(),
-        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
+        track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.AUTONOMY,
@@ -400,7 +399,7 @@ def test_user_message_turn_includes_about_guidance_slice() -> None:
     messages = build_system_messages(
         bundle,
         ContextMeta(),
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+        track=CompanionTurnTrack.USER_CHAT,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"

@@ -22,21 +22,7 @@ from app.core.companion_harness.prompt_builder import (
     openai_dialogue_dicts_to_prompt_messages,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-
-
-@dataclass(frozen=True)
-class TurnComposeContext:
-    """Immutable per-turn inputs for chat-only track system-prefix composition."""
-
-    # Loaded MemDoc bundle for the active companion scope.
-    bundle: PromptBundle
-    # Session metadata including bootstrap completion and experience profile.
-    context_meta: ContextMeta
-    # Active gateway channel and implicit-signal payload for peripheral slices.
-    runtime_context: TurnRuntimeContext
-    # MemoryStore for proactive LIFE_CURRENTS reads; passed for all chat-only tracks.
-    store: MemoryStore
-
+from app.core.companion_harness.prompting.compose_context import TurnComposeContext
 
 class TrackPromptComposer:
     """Per-track prompt assembly; routes chat-only tracks to ``PromptBuilder``."""
@@ -58,7 +44,7 @@ class TrackPromptComposer:
             case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
                 return builder.proactive_system_dicts(turn_ctx.store)
             case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-                return builder.scheduled_system_dicts()
+                return builder.scheduled_system_dicts(turn_ctx.store)
             case _ as unexpected:
                 raise AssertionError(
                     f"TrackPromptComposer.system_dicts_for_track unsupported "

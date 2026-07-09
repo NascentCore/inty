@@ -250,17 +250,28 @@ def build_companion_turn_prompt_plan(
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
         ):
+            from app.core.companion_harness.prompting.compose_context import (
+                build_turn_compose_context,
+            )
+            from app.core.companion_harness.prompting.leg_kind import PromptLegKind
             from app.core.companion_harness.prompting.track_composer import (
                 TrackPromptComposer,
-                TurnComposeContext,
+            )
+            from app.core.companion_harness.prompting.phase import (
+                resolve_compose_phase,
             )
 
             assert tail_user_messages
-            turn_ctx = TurnComposeContext(
+            turn_ctx = build_turn_compose_context(
                 bundle=loaded_state.bundle,
                 context_meta=loaded_state.context,
                 runtime_context=runtime_context,
                 store=store,
+                track=track,
+                phase=resolve_compose_phase(loaded_state.context),
+                leg_kind=PromptLegKind.SINGLE_LLM,
+                ai_private_text="",
+                proactive_life_currents_block=None,
             )
             system_messages = TrackPromptComposer().system_dicts_for_track(
                 track,

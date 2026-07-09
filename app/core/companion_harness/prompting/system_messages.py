@@ -22,7 +22,7 @@ non-mutable MemoryStore kinds (#3506). Mutable channel contract remains ``CHANNE
 
 **Output (content category; runtime org runtime):** turn output contracts.
 
-**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, ABOUT.md on user-message turns, etc.).
+**Contextual (content category; runtime org runtime):** turn overlays (directives, time, significance, ABOUT.md on user-message turns, etc.). Assembled solely by ``assemble_contextual_slices`` in ``prompting/contextual.py``.
 
 **Track-attached (peripheral runtime org, after stack at track compose):** channel output format,
 Weixin alias (via ``prompt_builder``), Telegram cohort profile collection
@@ -112,11 +112,15 @@ from app.core.companion_harness.memory.memory_taxonomy import (
 from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
+from app.core.companion_harness.prompting.compose_context import (
+    default_runtime_context_for_compose,
+    empty_memory_store_for_compose,
+    turn_compose_context_from_legacy_flags,
 )
+from app.core.companion_harness.prompting.compose_trigger import PromptComposeTrigger
 
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     ContextMeta,
     InnerTickActivity,
 )
@@ -810,59 +814,12 @@ def _output_system_messages(
     return out
 
 
-# TODO(structual-simplicity): Dissolve this function, the caller calls the body based on the provided arguments. — #3516
-def _contextual_system_messages(
-    *,
-    context: ContextMeta,
-    bundle: PromptBundle,
-    compose_trigger: PromptComposeTrigger,
-    inner_tick_turn: bool,
-    tick_proactive: bool,
-    tick_autonomy: bool,
-    ai_private_text: str,
-    proactive_life_currents_block: str | None,
-    interactive_bootstrap_active: bool,
-) -> list[dict[str, Any]]:
-    # TODO(experience-profile): collapse harness context_mode user-facing clause into — #3343
-    # experience_directives when intent is set (#3343).
-    out: list[dict[str, Any]] = []
-    if not interactive_bootstrap_active:
-        out.append(
-            _system_message(
-                experience_profile_system_clause(context.context_mode)
-            )
-        )
-    directive_clause = experience_directives_system_clause(
-        context.experience_directives
-    )
-    if directive_clause is not None:
-        out.append(_system_message(directive_clause))
-    if not inner_tick_turn:
-        out.append(_system_message(_infer_time_zone_prompt_slice()))
-    if tick_proactive:
-        out.append(_system_message(_proactive_chat_clause()))
-        if proactive_life_currents_block is not None:
-            out.append(_system_message(proactive_life_currents_block))
-    if inner_tick_turn and not tick_proactive:
-        if tick_autonomy:
-            out.append(_system_message(_get_inner_tick_autonomy_prompt_slice()))
-        else:
-            out.append(
-                _system_message(_inner_tick_ai_private_section(ai_private_text))
-            )
-            out.append(_system_message(_inner_tick_turn_section()))
-    out.extend(
-        _about_operator_guidance_system_messages(bundle, compose_trigger)
-    )
-    return out
-
-
 # TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
 def build_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
     *,
-    compose_trigger: PromptComposeTrigger,
+    track: CompanionTurnTrack,
     enable_tools: bool = False,
     enable_user_profile_tool: bool = False,
     inner_tick_turn: bool = False,
@@ -920,17 +877,24 @@ def build_system_messages(
             chat_branch_no_tool_api=chat_branch_no_tool_api,
         )
     )
+    from app.core.companion_harness.prompting.contextual import (
+        assemble_contextual_slices,
+    )
+
     out.extend(
-        _contextual_system_messages(
-            context=context,
-            bundle=bundle,
-            compose_trigger=compose_trigger,
-            inner_tick_turn=inner_tick_turn,
-            tick_proactive=tick_proactive,
-            tick_autonomy=tick_autonomy,
-            ai_private_text=ai_private_text,
-            proactive_life_currents_block=proactive_life_currents_block,
-            interactive_bootstrap_active=interactive_bootstrap_active,
+        assemble_contextual_slices(
+            turn_compose_context_from_legacy_flags(
+                bundle=bundle,
+                context_meta=context,
+                runtime_context=default_runtime_context_for_compose(),
+                store=empty_memory_store_for_compose(),
+                track=track,
+                inner_tick_turn=inner_tick_turn,
+                inner_tick_activity=inner_tick_activity,
+                ai_private_text=ai_private_text,
+                proactive_life_currents_block=proactive_life_currents_block,
+                interactive_bootstrap_active=interactive_bootstrap_active,
+            )
         )
     )
     return out
@@ -985,6 +949,7 @@ def build_system_messages_for_tool_track(
     return build_system_messages(
         bundle,
         context,
+        track=CompanionTurnTrack.USER_CHAT,
         enable_tools=True,
         inner_tick_turn=False,
         inner_tick_activity=InnerTickActivity.MONOLOG,
@@ -992,7 +957,6 @@ def build_system_messages_for_tool_track(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
     )
 
 
@@ -1006,6 +970,7 @@ def build_system_messages_for_inner_tick_monolog(
     return build_system_messages(
         bundle,
         context,
+        track=CompanionTurnTrack.INNER_TICK_MONOLOG,
         enable_tools=True,
         inner_tick_turn=True,
         inner_tick_activity=InnerTickActivity.MONOLOG,
@@ -1013,7 +978,6 @@ def build_system_messages_for_inner_tick_monolog(
         tool_side_compact=True,
         interactive_bootstrap_active=False,
         include_significance_perception_slice=False,
-        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
     )
 
 
@@ -1063,17 +1027,24 @@ def build_system_messages_for_inner_tick_autonomy(
             chat_branch_no_tool_api=False,
         )
     )
+    from app.core.companion_harness.prompting.contextual import (
+        assemble_contextual_slices,
+    )
+
     out.extend(
-        _contextual_system_messages(
-            context=context,
-            bundle=bundle,
-            compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
-            inner_tick_turn=True,
-            tick_proactive=False,
-            tick_autonomy=True,
-            ai_private_text="",
-            proactive_life_currents_block=None,
-            interactive_bootstrap_active=False,
+        assemble_contextual_slices(
+            turn_compose_context_from_legacy_flags(
+                bundle=bundle,
+                context_meta=context,
+                runtime_context=default_runtime_context_for_compose(),
+                store=store,
+                track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
+                inner_tick_turn=True,
+                inner_tick_activity=InnerTickActivity.AUTONOMY,
+                ai_private_text="",
+                proactive_life_currents_block=None,
+                interactive_bootstrap_active=False,
+            )
         )
     )
     return out

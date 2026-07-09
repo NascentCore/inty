@@ -26,6 +26,7 @@ from typing import Any
 
 from app.core.companion_harness.companion.models import (
     ChatMessage,
+    CompanionTurnTrack,
     ContextMeta,
     load_context_meta,
     load_prompt_bundle,
@@ -38,19 +39,21 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.companion.dual_llm_message_stacks import (
     replace_leading_system_messages_multi,
 )
-from app.core.companion_harness.companion.proactive_chat import (
-    BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
+from app.core.companion_harness.prompting.compose_context import (
+    build_turn_compose_context,
+    empty_memory_store_for_compose,
 )
+from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
+from app.core.companion_harness.prompting.leg_kind import PromptLegKind
+from app.core.companion_harness.prompting.phase import Phase, resolve_compose_phase
 from app.core.companion_harness.prompting.system_messages import (
     _assemble_proactive_chat_life_currents_hint_prompt,
     _auxiliary_system_messages,
     _capability_system_messages,
-    _contextual_system_messages,
     _doctrine_system_messages,
     _output_contract_text,
     _output_system_messages,
     _persona_system_messages,
-    _proactive_chat_clause,
     _proactive_chat_structured_output_contract_text,
     _scheduled_reminder_structured_output_contract_text,
     _system_message,
@@ -58,19 +61,12 @@ from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
-    Phase,
     _capability_bootstrap_single_llm_system_messages,
     _capability_settled_single_llm_system_messages,
-    _contextual_bootstrap_user_turn_system_messages,
-    _contextual_settled_user_turn_system_messages,
     _output_bootstrap_single_llm_system_messages,
     _output_settled_single_llm_system_messages,
     _persona_bootstrap_user_turn_system_messages,
     _persona_settled_user_turn_system_messages,
-    resolve_compose_phase,
-)
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -230,6 +226,34 @@ class PromptBuilder:
     context: ContextMeta
     runtime_context: TurnRuntimeContext
 
+    def _turn_compose_context(
+        self,
+        *,
+        track: CompanionTurnTrack,
+        store: MemoryStore,
+        ai_private_text: str,
+        proactive_life_currents_block: str | None,
+    ) -> object:
+        life_currents = proactive_life_currents_block
+        if (
+            track == CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            and life_currents is None
+        ):
+            life_currents = _assemble_proactive_chat_life_currents_hint_prompt(
+                store
+            )
+        return build_turn_compose_context(
+            bundle=self.bundle,
+            context_meta=self.context,
+            runtime_context=self.runtime_context,
+            store=store,
+            track=track,
+            phase=self._compose_phase(),
+            leg_kind=PromptLegKind.SINGLE_LLM,
+            ai_private_text=ai_private_text,
+            proactive_life_currents_block=life_currents,
+        )
+
     def settled_single_llm_system_messages(self) -> list[dict[str, Any]]:
         """Settled ``user_turn`` single-LLM in-turn tools system prefix."""
         # TODO(#3629): Fold fixed reply-language into one PromptPlan Output assembly site.
@@ -246,10 +270,13 @@ class PromptBuilder:
         )
         out.extend(_output_settled_single_llm_system_messages())
         out.extend(
-            _contextual_settled_user_turn_system_messages(
-                self.context,
-                self.bundle,
-                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            assemble_contextual_slices(
+                self._turn_compose_context(
+                    track=CompanionTurnTrack.USER_CHAT,
+                    store=empty_memory_store_for_compose(),
+                    ai_private_text="",
+                    proactive_life_currents_block=None,
+                )
             )
         )
         return append_configured_fixed_reply_language_system_messages(out)
@@ -268,10 +295,13 @@ class PromptBuilder:
         )
         out.extend(_output_bootstrap_single_llm_system_messages())
         out.extend(
-            _contextual_bootstrap_user_turn_system_messages(
-                self.context,
-                self.bundle,
-                compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            assemble_contextual_slices(
+                self._turn_compose_context(
+                    track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+                    store=empty_memory_store_for_compose(),
+                    ai_private_text="",
+                    proactive_life_currents_block=None,
+                )
             )
         )
         return append_configured_fixed_reply_language_system_messages(out)
@@ -410,13 +440,6 @@ class PromptBuilder:
                         )
                     )
                 out.append(_system_message(_output_contract_text()))
-                out.extend(
-                    _contextual_bootstrap_user_turn_system_messages(
-                        self.context,
-                        self.bundle,
-                        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
-                    )
-                )
             case Phase.SETTLED:
                 out.extend(
                     _capability_settled_single_llm_system_messages(self.bundle)
@@ -429,13 +452,16 @@ class PromptBuilder:
                     )
                 )
                 out.append(_system_message(_output_contract_text()))
-                out.extend(
-                    _contextual_settled_user_turn_system_messages(
-                        self.context,
-                        self.bundle,
-                        compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
-                    )
+        out.extend(
+            assemble_contextual_slices(
+                self._turn_compose_context(
+                    track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+                    store=empty_memory_store_for_compose(),
+                    ai_private_text="",
+                    proactive_life_currents_block=None,
                 )
+            )
+        )
         return out
 
     def _settled_inner_tick_chat_core_system_dicts(
@@ -492,31 +518,7 @@ class PromptBuilder:
             )
         )
         out.append(_system_message(_output_contract_text()))
-        out.extend(
-            _contextual_bootstrap_user_turn_system_messages(
-                self.context,
-                self.bundle,
-                compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
-            )
-        )
         return out
-
-    def _settled_inner_tick_proactive_contextual_system_dicts(
-        self,
-        *,
-        proactive_life_currents_block: str | None,
-    ) -> list[dict[str, Any]]:
-        return _contextual_system_messages(
-            context=self.context,
-            bundle=self.bundle,
-            compose_trigger=PromptComposeTrigger.SYSTEM_INITIATED,
-            inner_tick_turn=True,
-            tick_proactive=True,
-            tick_autonomy=False,
-            ai_private_text="",
-            proactive_life_currents_block=proactive_life_currents_block,
-            interactive_bootstrap_active=False,
-        )
 
     def _finalize_chat_only_system_dicts(
         self,
@@ -543,37 +545,42 @@ class PromptBuilder:
         match self._compose_phase():
             case Phase.BOOTSTRAP:
                 out = self._bootstrap_inner_tick_chat_core_system_dicts()
-                out.append(_system_message(_proactive_chat_clause()))
-                out.append(
-                    _system_message(BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY)
-                )
-                if life_currents_block is not None:
-                    out.append(_system_message(life_currents_block))
             case Phase.SETTLED:
                 out = self._settled_inner_tick_chat_core_system_dicts()
-                out.extend(
-                    self._settled_inner_tick_proactive_contextual_system_dicts(
-                        proactive_life_currents_block=life_currents_block,
-                    )
+        out.extend(
+            assemble_contextual_slices(
+                self._turn_compose_context(
+                    track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
+                    store=store,
+                    ai_private_text="",
+                    proactive_life_currents_block=life_currents_block,
                 )
+            )
+        )
         out.append(
             _system_message(_proactive_chat_structured_output_contract_text())
         )
         return self._finalize_chat_only_system_dicts(out)
 
-    def scheduled_system_dicts(self) -> list[dict[str, Any]]:
+    def scheduled_system_dicts(
+        self, store: MemoryStore
+    ) -> list[dict[str, Any]]:
         """Chat-only scheduled reminder inner-tick system prefix."""
         match self._compose_phase():
             case Phase.BOOTSTRAP:
                 out = self._bootstrap_inner_tick_chat_core_system_dicts()
-                out.append(_system_message(_proactive_chat_clause()))
             case Phase.SETTLED:
                 out = self._settled_inner_tick_chat_core_system_dicts()
-                out.extend(
-                    self._settled_inner_tick_proactive_contextual_system_dicts(
-                        proactive_life_currents_block=None,
-                    )
+        out.extend(
+            assemble_contextual_slices(
+                self._turn_compose_context(
+                    track=CompanionTurnTrack.INNER_TICK_SCHEDULED,
+                    store=store,
+                    ai_private_text="",
+                    proactive_life_currents_block=None,
                 )
+            )
+        )
         out.append(
             _system_message(
                 _scheduled_reminder_structured_output_contract_text()

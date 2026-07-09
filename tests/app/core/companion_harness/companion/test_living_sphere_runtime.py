@@ -22,9 +22,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
 )
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
-)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
@@ -73,7 +70,7 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         for m in build_system_messages(
             bundle,
             context,
-            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            track=CompanionTurnTrack.USER_CHAT,
         )
         if m.get("role") == "system"
     )
@@ -157,7 +154,7 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
         for m in build_system_messages(
             bundle,
             context,
-            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            track=CompanionTurnTrack.USER_CHAT,
         )
         if m.get("role") == "system"
     )
