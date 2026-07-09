@@ -14,7 +14,9 @@ rupture-repair, disclosure, complaint).
   calendar, L1/L2 report-only JSON; **not** a CI gate and **not** imported by regression.
 
 Shared transport lives in `tools/inty_v2_repl/sim_transport.py` (extracted from regression).
-Changes there must keep regression unit tests green (`tests/cursor/skills/scripts/test_run_inty_repl_regression.py`).
+After changing transport or regression driver, run regression unit tests locally
+(`pytest tests/cursor/skills/scripts/test_run_inty_repl_regression.py`); they are
+not part of CI selective pytest.
 
 ## Prerequisites
 

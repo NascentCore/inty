@@ -35,10 +35,6 @@ FULL_SUITE_GLOB_PATTERNS = (
     ".github/workflows/ci_backend.yaml",
     ".cursor/skills/scripts/check_*.py",
 )
-# ``run_inty_repl_regression`` loads via file path; AST graph misses its reverse-deps.
-REPL_REGRESSION_TEST_DIR = "tests/cursor/skills/scripts"
-REPL_REGRESSION_DRIVER_PATH = ".cursor/skills/scripts/run_inty_repl_regression.py"
-SIM_TRANSPORT_PACKAGE = "tools.inty_v2_repl"
 
 
 @dataclass
@@ -255,24 +251,6 @@ def git_changed_files(repo_root: Path, base_ref: str, head_ref: str) -> tuple[st
     return tuple(line.replace("\\", "/") for line in result.stdout.splitlines() if line)
 
 
-def _coupled_regression_test_dirs(
-    changed_files: tuple[str, ...],
-    changed_packages: set[str],
-) -> set[str]:
-    """Include REPL regression unit tests when shared transport or driver changes."""
-    sim_transport_touched = SIM_TRANSPORT_PACKAGE in changed_packages or any(
-        path.replace("\\", "/").startswith("tools/inty_v2_repl/")
-        for path in changed_files
-    )
-    regression_driver_touched = any(
-        path.replace("\\", "/") == REPL_REGRESSION_DRIVER_PATH
-        for path in changed_files
-    )
-    if sim_transport_touched or regression_driver_touched:
-        return {REPL_REGRESSION_TEST_DIR}
-    return set()
-
-
 def select_affected_tests(
     repo_root: Path,
     changed_files: tuple[str, ...],
@@ -328,12 +306,9 @@ def select_affected_tests(
             ratio,
         )
 
-    test_dirs = _pytest_paths(test_packages, repo_root)
-    coupled_dirs = _coupled_regression_test_dirs(changed_files, changed_packages)
-    merged_dirs = tuple(sorted(set(test_dirs) | coupled_dirs))
     return AffectedTestPlan(
         False,
-        merged_dirs,
+        _pytest_paths(test_packages, repo_root),
         tuple(sorted(changed_packages)),
         tuple(sorted(test_packages)),
         None,
