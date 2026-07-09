@@ -14,8 +14,10 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
 )
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
 from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -474,12 +476,9 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
     context = ContextMeta()
     dual_foreground = "\n".join(
         str(m.get("content") or "")
-        for m in build_system_messages(
+        for m in build_settled_user_turn_dual_chat_leg_system_messages(
             bundle,
             context,
-            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
-            enable_tools=True,
-            async_foreground_chat_stack=True,
         )
     )
     single_llm = "\n".join(

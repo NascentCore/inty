@@ -8,9 +8,7 @@ from app.core.companion_harness.companion.models import (
     load_context_meta,
     load_prompt_bundle,
 )
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages,
-)
+from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.memory.dreaming_consolidation import (
@@ -22,8 +20,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
 )
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_repl_tools,
@@ -70,11 +69,14 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
     bundle = load_prompt_bundle(store, meta=context)
     system_text = "\n".join(
         str(m.get("content") or "")
-        for m in build_system_messages(
-            bundle,
-            context,
-            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
-        )
+        for m in PromptBuilder(
+            bundle=bundle,
+            context=context,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        ).settled_single_llm_system_messages()
         if m.get("role") == "system"
     )
     assert "世界：TechnoCore" in system_text
@@ -154,11 +156,14 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
     bundle = load_prompt_bundle(store, meta=context)
     system_text = "\n".join(
         str(m.get("content") or "")
-        for m in build_system_messages(
-            bundle,
-            context,
-            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
-        )
+        for m in PromptBuilder(
+            bundle=bundle,
+            context=context,
+            runtime_context=TurnRuntimeContext(
+                channel=ChannelKind.APP_WS,
+                implicit_signal_bundle=None,
+            ),
+        ).settled_single_llm_system_messages()
         if m.get("role") == "system"
     )
     assert "落地灯旁更暖" in system_text
