@@ -48,6 +48,7 @@ class GrillDirector:
     sim_days: int
     rupture_sent: bool = False
     absence_done_days: list[int] = field(default_factory=list)
+    depth_done_days: list[int] = field(default_factory=list)
 
     def next_directive(
         self,
@@ -82,18 +83,20 @@ class GrillDirector:
                     )
                 if sim_day in rupture_schedule(self.sim_days):
                     if not self.rupture_sent:
-                        self.phase = GrillPhase.RUPTURE
+                        self.rupture_sent = True
                         return GrillDirective(
                             phase=GrillPhase.RUPTURE,
                             objective=GrillObjective.RUPTURE,
                         )
-                    self.phase = GrillPhase.REPAIR
                     return GrillDirective(
                         phase=GrillPhase.REPAIR,
                         objective=GrillObjective.REPAIR,
                     )
-                if sim_day in depth_schedule(self.sim_days):
-                    self.phase = GrillPhase.DEEP_DISCLOSURE
+                if (
+                    sim_day in depth_schedule(self.sim_days)
+                    and sim_day not in self.depth_done_days
+                ):
+                    self.depth_done_days.append(sim_day)
                     return GrillDirective(
                         phase=GrillPhase.DEEP_DISCLOSURE,
                         objective=GrillObjective.DEEP_DISCLOSURE,
@@ -123,11 +126,10 @@ class GrillDirector:
                     objective=GrillObjective.RETURN_AFTER_ABSENCE,
                 )
             case GrillPhase.RUPTURE:
-                self.rupture_sent = True
                 self.phase = GrillPhase.DAILY_CHAT
                 return GrillDirective(
-                    phase=GrillPhase.RUPTURE,
-                    objective=GrillObjective.RUPTURE,
+                    phase=GrillPhase.REPAIR,
+                    objective=GrillObjective.REPAIR,
                 )
             case GrillPhase.REPAIR:
                 self.phase = GrillPhase.DAILY_CHAT
@@ -138,8 +140,8 @@ class GrillDirector:
             case GrillPhase.DEEP_DISCLOSURE:
                 self.phase = GrillPhase.DAILY_CHAT
                 return GrillDirective(
-                    phase=GrillPhase.DEEP_DISCLOSURE,
-                    objective=GrillObjective.DEEP_DISCLOSURE,
+                    phase=GrillPhase.DAILY_CHAT,
+                    objective=GrillObjective.CASUAL_CHAT,
                 )
             case GrillPhase.DONE:
                 return GrillDirective(

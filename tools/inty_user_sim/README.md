@@ -8,8 +8,9 @@ rupture-repair, disclosure, complaint).
 
 ## Role vs REPL regression (testing)
 
-- **`run_inty_repl_regression.py`** — **testing** infra gate: fixed script, minute-scale,
-  CI-oriented phases (bootstrap, settled turn, GitHub issue, proactive, dreaming).
+- **`run_inty_repl_regression.py`** — **testing** gate: fixed script, minute-scale phases
+  (bootstrap, settled turn, GitHub issue, proactive, dreaming). Run manually via
+  `inty-repl-regression` skill; regression unit tests are local-only (not CI selective).
 - **`inty_user_sim`** — **evaluation** only: free-form LLM user, compressed multi-week
   calendar, L1/L2 report-only JSON; **not** a CI gate and **not** imported by regression.
 

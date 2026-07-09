@@ -124,13 +124,16 @@ class SimRunLoop:
             ws_url=ws_url,
             bearer_token=cfg.bearer_token,
         )
+        from datetime import timedelta
+
+        checkpoint = self._load_or_init_checkpoint(cfg)
+        start_day = checkpoint.sim_day
         calendar = SimCalendar(
             sim_start=date.today(),
-            sim_now=date.today(),
+            sim_now=date.today() + timedelta(days=start_day),
             minutes_per_sim_day=cfg.minutes_per_sim_day,
             iana_timezone="Asia/Shanghai",
         )
-        checkpoint = self._load_or_init_checkpoint(cfg)
         director = GrillDirector(
             phase=checkpoint.phase,
             director_seed=cfg.director_seed,
@@ -138,11 +141,7 @@ class SimRunLoop:
             rupture_sent=checkpoint.rupture_sent,
             absence_done_days=list(checkpoint.absence_done_days),
         )
-        from datetime import timedelta
-
-        start_day = checkpoint.sim_day
         for day_offset in range(start_day, cfg.sim_days):
-            calendar.sim_now = calendar.sim_start + timedelta(days=day_offset)
             sim_day = day_offset
             wait_greeting = day_offset == start_day and checkpoint.turn_count == 0
             with sim_session(bridge, agent_id=cfg.agent_id, wait_greeting=wait_greeting):
@@ -243,6 +242,7 @@ class SimRunLoop:
                         quiet_sec=2.0,
                         max_sec=10.0,
                     )
+            absence_handled = False
             if director.phase == GrillPhase.ABSENCE:
                 gap_days = cfg.wall_gap.sample_gap_sim_days(cfg.director_seed + sim_day)
                 print(
@@ -251,6 +251,7 @@ class SimRunLoop:
                 )
                 cfg.wall_gap.sleep_for_gap(gap_days)
                 calendar.advance_sim_days(gap_days)
+                absence_handled = True
                 director.mark_absence_done(sim_day)
                 director.phase = GrillPhase.RETURN_VISIT
             if (
@@ -286,6 +287,8 @@ class SimRunLoop:
                             self._dreaming_memory_updated = "fail"
                         break
                     time.sleep(DREAMING_POLL_SEC)
+            if not absence_handled:
+                calendar.advance_sim_days(1)
             checkpoint.sim_day = day_offset + 1
             checkpoint.phase = director.phase
             rupture_sent, absence_days = director.to_checkpoint_fields()

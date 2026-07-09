@@ -686,7 +686,7 @@ def send_and_drain(
         quiet_sec=TURN_TRAILING_QUIET_SEC,
         max_sec=turn_timeout_sec,
     )
-    wait_input_queue_idle(
+    input_idle = wait_input_queue_idle(
         repo_root,
         config_path,
         agent_id=agent_id,
@@ -695,7 +695,16 @@ def send_and_drain(
         stderr=stderr,
         skip_db_checks=skip_db_checks,
     )
-    wait_output_queue_idle(
+    if not input_idle:
+        return TurnDrainResult(
+            user_msg_uuid=user_msg_uuid,
+            assistant_text=assistant_text,
+            meta=meta,
+            input_queue_status="",
+            memdoc_user_seq=None,
+            error=(408, f"{label} input queue idle timeout"),
+        )
+    output_idle = wait_output_queue_idle(
         repo_root,
         config_path,
         agent_id=agent_id,
@@ -704,6 +713,15 @@ def send_and_drain(
         stderr=stderr,
         skip_db_checks=skip_db_checks,
     )
+    if not output_idle:
+        return TurnDrainResult(
+            user_msg_uuid=user_msg_uuid,
+            assistant_text=assistant_text,
+            meta=meta,
+            input_queue_status="",
+            memdoc_user_seq=None,
+            error=(408, f"{label} output queue idle timeout"),
+        )
     input_status = ""
     if not skip_db_checks:
         input_status = query_input_status_for_client_message_id(

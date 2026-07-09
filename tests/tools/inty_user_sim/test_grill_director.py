@@ -62,3 +62,18 @@ def test_absence_directive_on_scheduled_day() -> None:
     d = director.next_directive(7, _checkpoint(GrillPhase.DAILY_CHAT), bootstrap_complete=True)
     assert d.phase == GrillPhase.ABSENCE
     assert d.objective == GrillObjective.WAIT_PROACTIVE
+
+
+def test_rupture_day_emits_rupture_then_repair_only() -> None:
+    director = GrillDirector(
+        phase=GrillPhase.DAILY_CHAT,
+        director_seed=1,
+        sim_days=42,
+    )
+    cp = _checkpoint(GrillPhase.DAILY_CHAT)
+    d1 = director.next_directive(14, cp, bootstrap_complete=True)
+    assert d1.objective == GrillObjective.RUPTURE
+    d2 = director.next_directive(14, cp, bootstrap_complete=True)
+    assert d2.objective == GrillObjective.REPAIR
+    d3 = director.next_directive(14, cp, bootstrap_complete=True)
+    assert d3.objective == GrillObjective.REPAIR
