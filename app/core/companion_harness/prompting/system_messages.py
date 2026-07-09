@@ -953,7 +953,7 @@ def append_profile_collection_system_messages(
     profile_collection_required, and Telegram channel. All other sessions receive
     the input list unchanged.
 
-    TODO(bootstrap-cohort-overlays): Cohort overlay is wired via
+    Cohort overlay is wired via
     ``PromptBuilder._append_track_peripheral_system_dicts`` for bootstrap user chat,
     greeting, proactive, and scheduled tracks.
     """
