@@ -973,27 +973,66 @@ def append_profile_collection_system_messages(
     return out
 
 
-# TODO(#3453): Dual-LLM tool-background leg still uses ``build_system_messages_for_tool_track``;
-# migrate to track-composed slices in a follow-up PR.
-
-
 def build_system_messages_for_tool_track(
     bundle: PromptBundle,
     context: ContextMeta,
 ) -> list[dict[str, Any]]:
-    """ASYNC user round: ``tool_background`` and refresh on the tool-model path."""
-    return build_system_messages(
-        bundle,
-        context,
-        enable_tools=True,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        ai_private_text="",
-        tool_side_compact=True,
-        interactive_bootstrap_active=False,
-        include_significance_perception_slice=False,
-        compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+    """ASYNC user round: ``tool_background`` and refresh on the tool-model path.
+
+    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
+    tool-side compact) → persona (skip memory blocks) → output (tool-side compact)
+    → contextual (user-message turn). No call to ``build_system_messages`` so that
+    this assembly is the only source of truth for the tool-background track.
+    """
+    out: list[dict[str, Any]] = []
+    out.extend(_doctrine_system_messages())
+    out.extend(_auxiliary_system_messages())
+    out.extend(
+        _capability_system_messages(
+            bundle=bundle,
+            tools_on=True,
+            chat_branch_no_tool_api=False,
+            tool_side_compact=True,
+            inner_tick_turn=False,
+            interactive_bootstrap_active=False,
+        )
     )
+    out.extend(
+        _persona_system_messages(
+            bundle=bundle,
+            context=context,
+            inner_tick_turn=False,
+            skip_memory_blocks=True,
+            include_significance_perception_slice=False,
+            interactive_bootstrap_active=False,
+        )
+    )
+    out.extend(
+        _output_system_messages(
+            inner_tick_turn=False,
+            tick_proactive=False,
+            tools_on=True,
+            tool_side_compact=True,
+            async_foreground_chat_stack=False,
+            interactive_bootstrap_active=False,
+            include_significance_perception_slice=False,
+            chat_branch_no_tool_api=False,
+        )
+    )
+    out.extend(
+        _contextual_system_messages(
+            context=context,
+            bundle=bundle,
+            compose_trigger=PromptComposeTrigger.USER_MESSAGE,
+            inner_tick_turn=False,
+            tick_proactive=False,
+            tick_autonomy=False,
+            ai_private_text="",
+            proactive_life_currents_block=None,
+            interactive_bootstrap_active=False,
+        )
+    )
+    return out
 
 
 def build_system_messages_for_inner_tick_monolog(
