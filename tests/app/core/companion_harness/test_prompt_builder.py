@@ -14,9 +14,12 @@ from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_telegram_profile_slice_text,
 )
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
-from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.recipe import (
-    compose_system_prefix_for_user_chat_leg,
+from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -474,10 +477,10 @@ def test_single_llm_user_chat_system_messages_differ_from_dual_foreground() -> (
     context = ContextMeta()
     dual_foreground = "\n".join(
         str(m.get("content") or "")
-        for m in compose_system_prefix_for_user_chat_leg(
+        for m in build_settled_user_turn_dual_chat_leg_system_messages(
             bundle,
             context,
-            PromptLegKind.CHAT_LEG,
+            phase=Phase.SETTLED,
         )
     )
     single_llm = "\n".join(
@@ -523,10 +526,9 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
     )
-    compact_prefix = compose_system_prefix_for_user_chat_leg(
+    compact_prefix = build_system_messages_for_tool_track(
         _bundle(),
         ContextMeta(),
-        PromptLegKind.TOOL_LEG,
     )
     compact_joined = "\n".join(
         str(m.get("content") or "") for m in compact_prefix

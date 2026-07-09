@@ -46,13 +46,15 @@ from .runtime_channel import (
     TurnRuntimeContext,
     is_im_runtime_channel,
 )
-from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.recipe import (
-    compose_system_prefix_for_self_contained_track,
-    compose_system_prefix_for_user_chat_leg,
-)
+from app.core.companion_harness.prompting.phase import Phase
 from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_inner_tick_autonomy,
+    build_system_messages_for_inner_tick_monolog,
+    build_system_messages_for_tool_track,
     weixin_clawbot_contact_alias_system_message,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.loop.runtime_system_clauses import (
     append_configured_fixed_reply_language_system_messages,
@@ -199,15 +201,17 @@ def companion_core_system_messages_for_track(
                 "INNER_TICK_SCHEDULED system messages must be composed via "
                 "TrackPromptComposer.system_dicts_for_track (turn_pipeline)"
             )
-        case (
-            CompanionTurnTrack.INNER_TICK_MONOLOG
-            | CompanionTurnTrack.INNER_TICK_AUTONOMY
-        ):
-            out = compose_system_prefix_for_self_contained_track(
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
+            out = build_system_messages_for_inner_tick_monolog(
                 bundle,
                 context,
                 store,
-                track,
+            )
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            out = build_system_messages_for_inner_tick_autonomy(
+                bundle,
+                context,
+                store,
             )
         case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
             raise RuntimeError(
@@ -215,10 +219,10 @@ def companion_core_system_messages_for_track(
                 "PromptBuilder.bootstrap_turn_system_dicts (turn_pipeline)"
             )
         case CompanionTurnTrack.USER_CHAT:
-            out = compose_system_prefix_for_user_chat_leg(
+            out = build_settled_user_turn_dual_chat_leg_system_messages(
                 bundle,
                 context,
-                PromptLegKind.CHAT_LEG,
+                phase=Phase.SETTLED,
             )
     return append_peripheral_system_slices(
         system_messages=out,
@@ -260,21 +264,22 @@ def refresh_companion_turn_prompt_stack(
                 "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
                 "refresh_single_llm_bootstrap_chat_prompt_prefix"
             )
-        case (
-            CompanionTurnTrack.INNER_TICK_MONOLOG
-            | CompanionTurnTrack.INNER_TICK_AUTONOMY
-        ):
-            refreshed = compose_system_prefix_for_self_contained_track(
+        case CompanionTurnTrack.INNER_TICK_MONOLOG:
+            refreshed = build_system_messages_for_inner_tick_monolog(
                 bundle,
                 context,
                 store,
-                track,
             )
-        case CompanionTurnTrack.USER_CHAT:
-            refreshed = compose_system_prefix_for_user_chat_leg(
+        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
+            refreshed = build_system_messages_for_inner_tick_autonomy(
                 bundle,
                 context,
-                PromptLegKind.TOOL_LEG,
+                store,
+            )
+        case CompanionTurnTrack.USER_CHAT:
+            refreshed = build_system_messages_for_tool_track(
+                bundle,
+                context,
             )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING

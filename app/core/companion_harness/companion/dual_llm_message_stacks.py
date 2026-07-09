@@ -13,12 +13,16 @@ from app.core.companion_harness.loop.runtime_system_clauses import (
     append_configured_fixed_reply_language_system_messages,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.recipe import (
-    compose_system_prefix_for_self_contained_track,
-    compose_system_prefix_for_user_chat_leg,
+from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_inner_tick_autonomy,
+    build_system_messages_for_inner_tick_monolog,
+    build_system_messages_for_tool_track,
 )
-from .models import CompanionTurnTrack, ContextMeta, InnerTickActivity
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
+from .models import ContextMeta, InnerTickActivity
 from .prompt_stack import append_runtime_output_format_system_message
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
@@ -57,30 +61,31 @@ def dual_llm_system_message_variants(
     ):
         match route_inner_activity:
             case InnerTickActivity.MONOLOG:
-                inner_tick_track = CompanionTurnTrack.INNER_TICK_MONOLOG
+                tool_system_msgs = build_system_messages_for_inner_tick_monolog(
+                    bundle,
+                    context,
+                    store,
+                )
             case InnerTickActivity.AUTONOMY:
-                inner_tick_track = CompanionTurnTrack.INNER_TICK_AUTONOMY
+                tool_system_msgs = build_system_messages_for_inner_tick_autonomy(
+                    bundle,
+                    context,
+                    store,
+                )
             case _:
                 raise RuntimeError(
                     "unexpected inner-tick activity for async tool path: "
                     f"{route_inner_activity.value}"
                 )
-        tool_system_msgs = compose_system_prefix_for_self_contained_track(
-            bundle,
-            context,
-            store,
-            inner_tick_track,
-        )
     else:
-        tool_system_msgs = compose_system_prefix_for_user_chat_leg(
+        tool_system_msgs = build_system_messages_for_tool_track(
             bundle,
             context,
-            PromptLegKind.TOOL_LEG,
         )
-    chat_system_msgs = compose_system_prefix_for_user_chat_leg(
+    chat_system_msgs = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         context,
-        PromptLegKind.CHAT_LEG,
+        phase=Phase.SETTLED,
     )
     tool_system_msgs = append_runtime_output_format_system_message(
         system_messages=tool_system_msgs,

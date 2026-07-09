@@ -64,8 +64,9 @@ from app.core.companion_harness.prompting.system_messages import (
     _system_message,
     append_profile_collection_system_messages,
 )
-from app.core.companion_harness.prompting.recipe import (
-    compose_system_prefix_for_user_chat_leg,
+from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
     _capability_bootstrap_single_llm_system_messages,
@@ -317,10 +318,9 @@ class PromptBuilder:
         """Tool-leg system prefix for settled USER_CHAT dual-LLM (not inner-tick)."""
         return append_configured_fixed_reply_language_system_messages(
             _append_runtime_channel_system_extras(
-                system_dicts=compose_system_prefix_for_user_chat_leg(
+                system_dicts=build_system_messages_for_tool_track(
                     self.bundle,
                     self.context,
-                    PromptLegKind.TOOL_LEG,
                 ),
                 bundle=self.bundle,
                 runtime_context=self.runtime_context,

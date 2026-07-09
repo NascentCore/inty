@@ -13,10 +13,7 @@ from typing import Any
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    ContextMeta,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import TurnComposeContext
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
 from app.core.companion_harness.prompting.phase import Phase
@@ -109,56 +106,4 @@ def compose_system_prefix(ctx: TurnComposeContext) -> list[dict[str, Any]]:
         case _ as unexpected:
             raise AssertionError(
                 f"compose_system_prefix unsupported recipe key={unexpected!r}"
-            )
-
-
-def compose_system_prefix_for_self_contained_track(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    store: MemoryStore,
-    track: CompanionTurnTrack,
-) -> list[dict[str, Any]]:
-    """MONOLOG or AUTONOMY async tool path; core stack only."""
-    match track:
-        case CompanionTurnTrack.INNER_TICK_MONOLOG:
-            return build_system_messages_for_inner_tick_monolog(
-                bundle,
-                context,
-                store,
-            )
-        case CompanionTurnTrack.INNER_TICK_AUTONOMY:
-            return build_system_messages_for_inner_tick_autonomy(
-                bundle,
-                context,
-                store,
-            )
-        case _ as unexpected:
-            raise AssertionError(
-                f"compose_system_prefix_for_self_contained_track unsupported "
-                f"track={unexpected!r}"
-            )
-
-
-def compose_system_prefix_for_user_chat_leg(
-    bundle: PromptBundle,
-    context: ContextMeta,
-    leg_kind: PromptLegKind,
-) -> list[dict[str, Any]]:
-    """Settled USER_CHAT dual-LLM CHAT_LEG or TOOL_LEG; core only."""
-    match leg_kind:
-        case PromptLegKind.CHAT_LEG:
-            return build_settled_user_turn_dual_chat_leg_system_messages(
-                bundle,
-                context,
-                phase=Phase.SETTLED,
-            )
-        case PromptLegKind.TOOL_LEG:
-            return build_system_messages_for_tool_track(
-                bundle,
-                context,
-            )
-        case _ as unexpected:
-            raise AssertionError(
-                f"compose_system_prefix_for_user_chat_leg unsupported "
-                f"leg_kind={unexpected!r}"
             )

@@ -23,10 +23,14 @@ from app.core.companion_harness.prompting.compose_context import (
 )
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
 from app.core.companion_harness.prompting.phase import Phase
-from app.core.companion_harness.prompting.recipe import (
-    compose_system_prefix,
-    compose_system_prefix_for_self_contained_track,
-    compose_system_prefix_for_user_chat_leg,
+from app.core.companion_harness.prompting.recipe import compose_system_prefix
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_inner_tick_autonomy,
+    build_system_messages_for_inner_tick_monolog,
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 
 GOLDEN_MONOLOG_LINE_COUNT = 12
@@ -89,7 +93,7 @@ def _ctx(
     )
 
 
-def test_monolog_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
+def test_monolog_recipe_matches_builder_and_golden_line_count(tmp_path) -> None:
     bundle = _bundle()
     context = ContextMeta()
     store = _store(tmp_path)
@@ -101,21 +105,20 @@ def test_monolog_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
         leg_kind=PromptLegKind.SINGLE_LLM,
     )
     from_ctx = _system_contents(compose_system_prefix(ctx))
-    from_helper = _system_contents(
-        compose_system_prefix_for_self_contained_track(
+    from_builder = _system_contents(
+        build_system_messages_for_inner_tick_monolog(
             bundle,
             context,
             store,
-            CompanionTurnTrack.INNER_TICK_MONOLOG,
         )
     )
-    assert from_ctx == from_helper
+    assert from_ctx == from_builder
     assert len(from_ctx) == GOLDEN_MONOLOG_LINE_COUNT
     assert _content_sha256_prefix(from_ctx) == GOLDEN_MONOLOG_CONTENT_SHA256_PREFIX
     assert from_ctx[0].startswith("# Axiom")
 
 
-def test_autonomy_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
+def test_autonomy_recipe_matches_builder_and_golden_line_count(tmp_path) -> None:
     bundle = _bundle()
     context = ContextMeta()
     store = _store(tmp_path)
@@ -127,20 +130,19 @@ def test_autonomy_recipe_matches_helper_and_golden_line_count(tmp_path) -> None:
         leg_kind=PromptLegKind.SINGLE_LLM,
     )
     from_ctx = _system_contents(compose_system_prefix(ctx))
-    from_helper = _system_contents(
-        compose_system_prefix_for_self_contained_track(
+    from_builder = _system_contents(
+        build_system_messages_for_inner_tick_autonomy(
             bundle,
             context,
             store,
-            CompanionTurnTrack.INNER_TICK_AUTONOMY,
         )
     )
-    assert from_ctx == from_helper
+    assert from_ctx == from_builder
     assert len(from_ctx) == GOLDEN_AUTONOMY_LINE_COUNT
     assert _content_sha256_prefix(from_ctx) == GOLDEN_AUTONOMY_CONTENT_SHA256_PREFIX
 
 
-def test_dual_chat_leg_recipe_matches_helper_and_golden_line_count() -> None:
+def test_dual_chat_leg_recipe_matches_builder_and_golden_line_count() -> None:
     bundle = _bundle()
     context = ContextMeta(context_mode="intimate")
     ctx = build_turn_compose_context(
@@ -155,19 +157,19 @@ def test_dual_chat_leg_recipe_matches_helper_and_golden_line_count() -> None:
         proactive_life_currents_block=None,
     )
     from_ctx = _system_contents(compose_system_prefix(ctx))
-    from_helper = _system_contents(
-        compose_system_prefix_for_user_chat_leg(
+    from_builder = _system_contents(
+        build_settled_user_turn_dual_chat_leg_system_messages(
             bundle,
             context,
-            PromptLegKind.CHAT_LEG,
+            phase=Phase.SETTLED,
         )
     )
-    assert from_ctx == from_helper
+    assert from_ctx == from_builder
     assert len(from_ctx) == GOLDEN_CHAT_LINE_COUNT
     assert _content_sha256_prefix(from_ctx) == GOLDEN_CHAT_CONTENT_SHA256_PREFIX
 
 
-def test_dual_tool_leg_recipe_matches_helper_and_golden_line_count() -> None:
+def test_dual_tool_leg_recipe_matches_builder_and_golden_line_count() -> None:
     bundle = _bundle()
     context = ContextMeta()
     ctx = build_turn_compose_context(
@@ -182,13 +184,12 @@ def test_dual_tool_leg_recipe_matches_helper_and_golden_line_count() -> None:
         proactive_life_currents_block=None,
     )
     from_ctx = _system_contents(compose_system_prefix(ctx))
-    from_helper = _system_contents(
-        compose_system_prefix_for_user_chat_leg(
+    from_builder = _system_contents(
+        build_system_messages_for_tool_track(
             bundle,
             context,
-            PromptLegKind.TOOL_LEG,
         )
     )
-    assert from_ctx == from_helper
+    assert from_ctx == from_builder
     assert len(from_ctx) == GOLDEN_TOOL_LINE_COUNT
     assert _content_sha256_prefix(from_ctx) == GOLDEN_TOOL_CONTENT_SHA256_PREFIX
