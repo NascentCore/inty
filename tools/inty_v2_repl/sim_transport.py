@@ -1,7 +1,9 @@
 """Shared WebSocket transport, Postgres queue helpers, and target presets for REPL drivers.
 
-Extracted from ``run_inty_repl_regression.py`` so ``inty_user_sim`` and regression share
-the same app-ws turn/drain/queue primitives without importing ``.cursor/skills/scripts/``.
+Extracted from ``run_inty_repl_regression.py`` so ``inty_user_sim`` (evaluation) and
+regression (testing gate) share the same app-ws turn/drain/queue primitives without
+duplicating logic. Regression keeps its own driver and patchable DB helpers; it does
+not import ``inty_user_sim``.
 """
 
 from __future__ import annotations

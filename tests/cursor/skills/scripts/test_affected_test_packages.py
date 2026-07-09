@@ -10,8 +10,10 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from affected_test_packages import (  # noqa: E402
     ImportGraph,
+    REPL_REGRESSION_TEST_DIR,
     build_import_graph,
     select_affected_tests,
+    _coupled_regression_test_dirs,
     _mirror_test_package,
     _pytest_paths,
     _reverse_index,
@@ -151,3 +153,34 @@ def test_pytest_paths_prune_parent_when_child_selected(tmp_path: Path) -> None:
     assert "tests/app/child" in paths
     assert "tests/app" not in paths
     assert "tests/app/root_case.py" in paths
+
+
+def test_sim_transport_change_couples_repl_regression_tests(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    _seed_mini_repo(repo_root)
+    _write(
+        repo_root / "tools" / "inty_v2_repl" / "sim_transport.py",
+        "VALUE = 1\n",
+    )
+    _write(
+        repo_root / "tests" / "tools" / "inty_v2_repl" / "test_sim_transport.py",
+        "from tools.inty_v2_repl import sim_transport\n",
+    )
+    graph = build_import_graph(repo_root)
+    changed = ("tools/inty_v2_repl/sim_transport.py",)
+    plan = select_affected_tests(
+        repo_root,
+        changed,
+        graph,
+        _reverse_index(graph),
+    )
+    assert plan.run_all is False
+    assert REPL_REGRESSION_TEST_DIR in plan.test_dirs
+
+
+def test_regression_driver_change_couples_repl_regression_tests(tmp_path: Path) -> None:
+    coupled = _coupled_regression_test_dirs(
+        (".cursor/skills/scripts/run_inty_repl_regression.py",),
+        set(),
+    )
+    assert coupled == {REPL_REGRESSION_TEST_DIR}

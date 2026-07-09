@@ -6,6 +6,16 @@ Text-only app-ws client that simulates a free-form human user over a compressed
 simulated calendar to grill the companion harness (bootstrap, absence-return,
 rupture-repair, disclosure, complaint).
 
+## Role vs REPL regression (testing)
+
+- **`run_inty_repl_regression.py`** — **testing** infra gate: fixed script, minute-scale,
+  CI-oriented phases (bootstrap, settled turn, GitHub issue, proactive, dreaming).
+- **`inty_user_sim`** — **evaluation** only: free-form LLM user, compressed multi-week
+  calendar, L1/L2 report-only JSON; **not** a CI gate and **not** imported by regression.
+
+Shared transport lives in `tools/inty_v2_repl/sim_transport.py` (extracted from regression).
+Changes there must keep regression unit tests green (`tests/cursor/skills/scripts/test_run_inty_repl_regression.py`).
+
 ## Prerequisites
 
 - Local Ops on `:8001` with `INTY_CONFIG_YAML=devops/config.yaml.regression_tests`
