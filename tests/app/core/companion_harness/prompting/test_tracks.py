@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from app.core.companion_harness.companion.models import ContextMeta
-from app.core.companion_harness.prompting.tracks import (
-    Phase,
-    resolve_compose_phase,
-)
+from app.core.companion_harness.prompting.phase import Phase, resolve_compose_phase
 
 
 def test_resolve_compose_phase_bootstrap_when_incomplete() -> None:
