@@ -35,6 +35,10 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.compose_context import (
+    turn_compose_context_for_user_turn_chat_leg,
+)
+from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
 from app.core.companion_harness.prompting.phase import Phase
 
 
@@ -160,3 +164,36 @@ def _output_bootstrap_single_llm_system_messages() -> list[dict[str, Any]]:
     return [
         _system_message(_output_contract_text_interactive_bootstrap_tools())
     ]
+
+
+def _require_settled_phase(phase: Phase) -> None:
+    assert phase == Phase.SETTLED
+
+
+def build_settled_user_turn_dual_chat_leg_system_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    *,
+    phase: Phase,
+) -> list[dict[str, Any]]:
+    """Settled ``user_turn`` dual-LLM foreground chat leg system prefix."""
+    _require_settled_phase(phase)
+    out: list[dict[str, Any]] = []
+    out.extend(_doctrine_system_messages())
+    out.extend(_auxiliary_system_messages())
+    out.extend(_capability_settled_dual_chat_leg_system_messages())
+    out.extend(
+        _persona_settled_user_turn_system_messages(
+            bundle=bundle,
+            context=context,
+            include_significance_perception_slice=True,
+        )
+    )
+    out.extend(_output_settled_dual_chat_leg_system_messages())
+    ctx = turn_compose_context_for_user_turn_chat_leg(
+        bundle=bundle,
+        context_meta=context,
+        phase=phase,
+    )
+    out.extend(assemble_contextual_slices(ctx))
+    return out
