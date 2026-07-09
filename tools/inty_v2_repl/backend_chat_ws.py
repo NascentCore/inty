@@ -216,6 +216,7 @@ def _ws_chat_turn_send_payload(
     message_id: str | None,
     *,
     companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
+    user_time_context: UserTimeContext | None = None,
 ) -> tuple[str, str]:
     mid = (
         normalize_websocket_companion_message_id_uuid(message_id)
@@ -228,7 +229,7 @@ def _ws_chat_turn_send_payload(
             messages=[ChatMessage(role="user", content=user_text)],
             message_id=mid,
             message_type=companion_turn_message_type,
-            user_time_context=build_ws_user_time_context_now(),
+            user_time_context=user_time_context or build_ws_user_time_context_now(),
         ),
     )
     return mid, req.model_dump_json(by_alias=True)
@@ -830,6 +831,7 @@ class BackendChatWsBridge:
         deadline_monotonic: float,
         message_id: str | None = None,
         companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
+        user_time_context: UserTimeContext | None = None,
     ) -> str:
         """Send one user chat JSON frame; return normalized ``message_id``. No recv."""
         last_transport: Exception | None = None
@@ -847,6 +849,7 @@ class BackendChatWsBridge:
                     user_text,
                     message_id,
                     companion_turn_message_type=companion_turn_message_type,
+                    user_time_context=user_time_context,
                 )
                 await self._ws.send(payload)
                 return mid
@@ -871,6 +874,7 @@ class BackendChatWsBridge:
         message_id: str | None = None,
         *,
         companion_turn_message_type: CompanionChatTurnMessageType = CompanionChatTurnMessageType.USER_MESSAGE,
+        user_time_context: UserTimeContext | None = None,
     ) -> str:
         """Send one turn on the wire and return the normalized ``message_id`` (no wait for assistant)."""
         if not self._loop:
@@ -883,6 +887,7 @@ class BackendChatWsBridge:
             deadline_monotonic=deadline,
             message_id=message_id,
             companion_turn_message_type=companion_turn_message_type,
+            user_time_context=user_time_context,
         )
         fut = asyncio.run_coroutine_threadsafe(coro, self._loop)
         thread_timeout = max(120.0, send_budget, default_post_turn_thread_timeout_sec())
