@@ -51,7 +51,9 @@ from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
     build_inner_tick_chat_only_loop_context,
     build_inner_tick_tool_loop_context,
-    prompt_plan_from_openai_messages,
+)
+from app.core.companion_harness.prompting.track_composer import (
+    TrackPromptComposer,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
@@ -144,7 +146,9 @@ def _common_context_kwargs(store: MemoryStore) -> dict:
                 received_at_utc=datetime(2026, 1, 1, tzinfo=UTC),
             ),
         ),
-        prompt_plan=prompt_plan_from_openai_messages(_messages(), tools=()),
+        prompt_plan=TrackPromptComposer().compose_from_openai_messages(
+            _messages(), tools=()
+        ),
     )
 
 
@@ -311,7 +315,7 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
     kwargs = _common_context_kwargs(store)
     kwargs["output_queue"] = queue
     tools = [{"type": "function", "function": {"name": "noop"}}]
-    kwargs["prompt_plan"] = prompt_plan_from_openai_messages(
+    kwargs["prompt_plan"] = TrackPromptComposer().compose_from_openai_messages(
         _messages(), tools=tuple(tools)
     )
     context = build_inner_tick_tool_loop_context(
