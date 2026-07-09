@@ -115,6 +115,8 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     default_runtime_context_for_compose,
     empty_memory_store_for_compose,
+    extend_contextual_system_slices,
+    turn_compose_context_for_self_contained_track,
     turn_compose_context_from_legacy_flags,
 )
 from app.core.companion_harness.prompting.compose_trigger import PromptComposeTrigger
@@ -877,27 +879,20 @@ def build_system_messages(
             chat_branch_no_tool_api=chat_branch_no_tool_api,
         )
     )
-    # TODO(#3453): Lift lazy import after contextual slice builders move out of
-    # system_messages (breaks contextual ↔ system_messages import cycle).
-    from app.core.companion_harness.prompting.contextual import (
-        assemble_contextual_slices,
-    )
-
-    out.extend(
-        assemble_contextual_slices(
-            turn_compose_context_from_legacy_flags(
-                bundle=bundle,
-                context_meta=context,
-                runtime_context=default_runtime_context_for_compose(),
-                store=empty_memory_store_for_compose(),
-                track=track,
-                inner_tick_turn=inner_tick_turn,
-                inner_tick_activity=inner_tick_activity,
-                ai_private_text=ai_private_text,
-                proactive_life_currents_block=proactive_life_currents_block,
-                interactive_bootstrap_active=interactive_bootstrap_active,
-            )
-        )
+    extend_contextual_system_slices(
+        out,
+        turn_compose_context_from_legacy_flags(
+            bundle=bundle,
+            context_meta=context,
+            runtime_context=default_runtime_context_for_compose(),
+            store=empty_memory_store_for_compose(),
+            track=track,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            ai_private_text=ai_private_text,
+            proactive_life_currents_block=proactive_life_currents_block,
+            interactive_bootstrap_active=interactive_bootstrap_active,
+        ),
     )
     return out
 
@@ -985,27 +980,16 @@ def build_system_messages_for_tool_track(
             chat_branch_no_tool_api=False,
         )
     )
-    # TODO(#3453): Lift lazy import after contextual slice builders move out of
-    # system_messages (breaks contextual ↔ system_messages import cycle).
-    from app.core.companion_harness.prompting.contextual import (
-        assemble_contextual_slices,
-    )
-
-    out.extend(
-        assemble_contextual_slices(
-            turn_compose_context_from_legacy_flags(
-                bundle=bundle,
-                context_meta=context,
-                runtime_context=default_runtime_context_for_compose(),
-                store=empty_memory_store_for_compose(),
-                track=CompanionTurnTrack.USER_CHAT,
-                inner_tick_turn=False,
-                inner_tick_activity=InnerTickActivity.MONOLOG,
-                ai_private_text="",
-                proactive_life_currents_block=None,
-                interactive_bootstrap_active=False,
-            )
-        )
+    extend_contextual_system_slices(
+        out,
+        turn_compose_context_for_self_contained_track(
+            bundle=bundle,
+            context_meta=context,
+            store=empty_memory_store_for_compose(),
+            track=CompanionTurnTrack.USER_CHAT,
+            ai_private_text="",
+            proactive_life_currents_block=None,
+        ),
     )
     return out
 
@@ -1058,27 +1042,16 @@ def build_system_messages_for_inner_tick_monolog(
             chat_branch_no_tool_api=False,
         )
     )
-    # TODO(#3453): Lift lazy import after contextual slice builders move out of
-    # system_messages (breaks contextual ↔ system_messages import cycle).
-    from app.core.companion_harness.prompting.contextual import (
-        assemble_contextual_slices,
-    )
-
-    out.extend(
-        assemble_contextual_slices(
-            turn_compose_context_from_legacy_flags(
-                bundle=bundle,
-                context_meta=context,
-                runtime_context=default_runtime_context_for_compose(),
-                store=store,
-                track=CompanionTurnTrack.INNER_TICK_MONOLOG,
-                inner_tick_turn=True,
-                inner_tick_activity=InnerTickActivity.MONOLOG,
-                ai_private_text=ai_private_text,
-                proactive_life_currents_block=None,
-                interactive_bootstrap_active=False,
-            )
-        )
+    extend_contextual_system_slices(
+        out,
+        turn_compose_context_for_self_contained_track(
+            bundle=bundle,
+            context_meta=context,
+            store=store,
+            track=CompanionTurnTrack.INNER_TICK_MONOLOG,
+            ai_private_text=ai_private_text,
+            proactive_life_currents_block=None,
+        ),
     )
     return out
 
@@ -1129,26 +1102,15 @@ def build_system_messages_for_inner_tick_autonomy(
             chat_branch_no_tool_api=False,
         )
     )
-    # TODO(#3453): Lift lazy import after contextual slice builders move out of
-    # system_messages (breaks contextual ↔ system_messages import cycle).
-    from app.core.companion_harness.prompting.contextual import (
-        assemble_contextual_slices,
-    )
-
-    out.extend(
-        assemble_contextual_slices(
-            turn_compose_context_from_legacy_flags(
-                bundle=bundle,
-                context_meta=context,
-                runtime_context=default_runtime_context_for_compose(),
-                store=store,
-                track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
-                inner_tick_turn=True,
-                inner_tick_activity=InnerTickActivity.AUTONOMY,
-                ai_private_text="",
-                proactive_life_currents_block=None,
-                interactive_bootstrap_active=False,
-            )
-        )
+    extend_contextual_system_slices(
+        out,
+        turn_compose_context_for_self_contained_track(
+            bundle=bundle,
+            context_meta=context,
+            store=store,
+            track=CompanionTurnTrack.INNER_TICK_AUTONOMY,
+            ai_private_text="",
+            proactive_life_currents_block=None,
+        ),
     )
     return out

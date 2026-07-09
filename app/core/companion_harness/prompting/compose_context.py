@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -25,7 +26,10 @@ from app.core.companion_harness.prompting.compose_trigger import (
     compose_trigger_for_track,
 )
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.phase import (
+    Phase,
+    resolve_phase_for_compose,
+)
 
 
 @dataclass(frozen=True)
@@ -117,6 +121,42 @@ def default_runtime_context_for_compose() -> TurnRuntimeContext:
     )
 
 
+def extend_contextual_system_slices(
+    out: list[dict[str, Any]],
+    ctx: TurnComposeContext,
+) -> None:
+    """Append contextual category slices; lazy-imports contextual to break cycle."""
+    # TODO(#3453): Inline after slice builders move out of system_messages.
+    from app.core.companion_harness.prompting.contextual import (
+        assemble_contextual_slices,
+    )
+
+    out.extend(assemble_contextual_slices(ctx))
+
+
+def turn_compose_context_for_self_contained_track(
+    *,
+    bundle: PromptBundle,
+    context_meta: ContextMeta,
+    store: MemoryStore,
+    track: CompanionTurnTrack,
+    ai_private_text: str,
+    proactive_life_currents_block: str | None,
+) -> TurnComposeContext:
+    """Construct ctx for inlined per-track builders (tool / monolog / autonomy)."""
+    return build_turn_compose_context(
+        bundle=bundle,
+        context_meta=context_meta,
+        runtime_context=default_runtime_context_for_compose(),
+        store=store,
+        track=track,
+        phase=resolve_phase_for_compose(track, context_meta),
+        leg_kind=PromptLegKind.SINGLE_LLM,
+        ai_private_text=ai_private_text,
+        proactive_life_currents_block=proactive_life_currents_block,
+    )
+
+
 def turn_compose_context_for_user_turn_chat_leg(
     *,
     bundle: PromptBundle,
@@ -151,9 +191,10 @@ def turn_compose_context_from_legacy_flags(
     interactive_bootstrap_active: bool,
 ) -> TurnComposeContext:
     """Bridge ``build_system_messages`` bool flags to ``TurnComposeContext``."""
-    phase = (
-        Phase.BOOTSTRAP if interactive_bootstrap_active else Phase.SETTLED
-    )
+    if interactive_bootstrap_active:
+        phase = Phase.BOOTSTRAP
+    else:
+        phase = resolve_phase_for_compose(track, context_meta)
     derived_activity = _derive_inner_tick_activity(track)
     if derived_activity is None:
         assert not inner_tick_turn
