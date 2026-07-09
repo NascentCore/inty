@@ -151,7 +151,7 @@ jobs:
 
       - name: Deploy ops to ${{ steps.prep.outputs.environment }}
         uses: appleboy/ssh-action@v1.2.5
-        timeout-minutes: 30
+        timeout-minutes: 3
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -175,7 +175,7 @@ jobs:
               ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
             echo "Waiting for HTTP readiness on 127.0.0.1:${{ vars.OPS_SERVICE_PORT_ON_HOST }} ..."
             n=0
-            max_wait=600
+            max_wait=180
             while ! curl -sfS --max-time 3 "http://127.0.0.1:${{ vars.OPS_SERVICE_PORT_ON_HOST }}/health" >/dev/null
             do
               n=$((n + 1))
