@@ -11,6 +11,7 @@ from app.core.companion_harness.memory.memory_store import (
     normalize_memory_store_relative_path,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    SOUL_MD_REL,
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -118,8 +119,8 @@ def test_memory_store_uses_repository_without_scope_disk_predicate(
 
 def test_memory_store_no_disk_files(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
-    store.write_document("SOUL.md", "# soul\n")
-    assert store.read_document("SOUL.md") == "# soul\n"
+    store.write_document(SOUL_MD_REL, "# soul\n")
+    assert store.read_document(SOUL_MD_REL) == "# soul\n"
 
 
 def test_memory_store_iter_stored_relative_paths_in_memory(tmp_path) -> None:
