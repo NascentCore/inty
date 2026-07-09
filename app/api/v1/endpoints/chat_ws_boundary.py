@@ -1,10 +1,11 @@
 """Import boundary invariants for companion WebSocket ``/api/v1/chat/ws``.
 
 ``chat_ws.py`` and ``chat_ws_companion_support.py`` orchestrate HTTP/WS glue;
-agentic intelligence must flow through ``companion_harness`` (and transitively
-``living_sphere`` / ``techno_core``), not maintenance-mode ``app.core.agent`` or
-``chat.py`` REST completions. Commercial glue (subscription, voice, chat_history)
-in ``chat_ws.py`` is allowed; this module only blocks maintenance-mode agent stacks.
+agentic intelligence must flow through ``companion_harness`` and the serving-layer
+``agentic_companion`` package (queues, wire types), not maintenance-mode
+``app.core.agent`` or ``chat.py`` REST completions. Commercial glue (subscription,
+voice, chat_history) in ``chat_ws.py`` is allowed; this module only blocks
+maintenance-mode agent stacks.
 
 Production companion surfaces must not **read or write** legacy ``readable_id``
 (maintenance-mode HTTP APIs may still touch it for old clients).
@@ -29,6 +30,7 @@ CHAT_WS_REQUIRED_APP_CORE_PREFIX: Final[str] = "app.core.companion_harness"
 
 CHAT_WS_ALLOWED_APP_CORE_PREFIXES: Final[tuple[str, ...]] = (
     CHAT_WS_REQUIRED_APP_CORE_PREFIX,
+    "app.core.agentic_companion",
     "app.core.config",
     "app.core.model_selection",
 )
@@ -42,6 +44,7 @@ CHAT_WS_FORBIDDEN_IMPORT_MODULES: Final[frozenset[str]] = frozenset(
 
 # Trees scanned for legacy ``readable_id`` identifier use (companion + agent-channel production).
 COMPANION_NO_READABLE_ID_SCAN_ROOTS: Final[tuple[str, ...]] = (
+    "app/core/agentic_companion",
     "app/core/companion_harness",
     "app/services/agentic_companion",
     "app/services/agentic_channel",
