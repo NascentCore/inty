@@ -52,6 +52,9 @@ jobs:
       - name: Backup inty-dev and inty
         run: devops/scripts/backup_local_postgres.sh
 
+      - name: Renew VM TLS certificates
+        run: sudo devops/scripts/renew_vm_tls_certificates.sh
+
   verify:
     runs-on: inty-prod-server-gcp
     needs: backup

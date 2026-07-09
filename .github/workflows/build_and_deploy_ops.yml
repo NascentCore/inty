@@ -23,6 +23,7 @@ on:
       - "evaluation/index.html"
       - "evaluation/build.sh"
       - "devops/docker/Dockerfile.ops"
+      - "devops/scripts/renew_vm_tls_certificates.sh"
       - ".github/workflows/build_and_deploy_ops.yml"
 
   workflow_dispatch:
@@ -71,15 +72,26 @@ jobs:
           case "${{ steps.prep.outputs.environment }}" in
             dev)
               echo "config_file=devops/config.yaml.dev" >> $GITHUB_OUTPUT
+              echo "logical_db=inty-dev" >> $GITHUB_OUTPUT
               ;;
             prod)
               echo "config_file=devops/config.yaml.prod" >> $GITHUB_OUTPUT
+              echo "logical_db=inty" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Unsupported environment: ${{ steps.prep.outputs.environment }}"
               exit 1
               ;;
           esac
+
+      - name: Assert baked config targets VM inty-pg
+        run: |
+          set -euo pipefail
+          cfg="${{ steps.map.outputs.config_file }}"
+          grep -q 'host: "host.docker.internal"' "${cfg}"
+          grep -q 'port: 5432' "${cfg}"
+          db="$(grep -A12 '^database:' "${cfg}" | grep '^  db:' | head -1 | sed -E 's/.*db:[[:space:]]*"?([^"#]*)"?.*/\1/')"
+          test "${db}" = "${{ steps.map.outputs.logical_db }}"
 
       - uses: actions/checkout@v4
         with:
@@ -110,8 +122,8 @@ jobs:
             INTY_BUILD_TIME=${{ steps.prep.outputs.build_time }}
 
       - name: Pull deployment image
-        uses: appleboy/ssh-action@master
-        timeout-minutes: 5
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 15
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -120,9 +132,26 @@ jobs:
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
             sudo docker pull ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
 
+      - name: Ensure inty-pg before deploy
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 10
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO_DIR="${INTY_REPO_DIR:-$HOME/inty}"
+            cd "${REPO_DIR}"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+            devops/scripts/ensure_inty_dev_postgres_container.sh
+            devops/scripts/probe_inty_pg_logical_database.sh ${{ steps.map.outputs.logical_db }}
+
       - name: Deploy ops to ${{ steps.prep.outputs.environment }}
-        uses: appleboy/ssh-action@master
-        timeout-minutes: 5
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 30
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
@@ -144,17 +173,33 @@ jobs:
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-backend-key.json:/inty-backend-key.json \
               --volume /opt/inty-${{ steps.prep.outputs.environment }}/inty-firebase-key.json:/inty-firebase-key.json \
               ${{ env.INTY_OPS_IMAGE }}@${{ steps.build-docker-image.outputs.digest }}
-            echo "Waiting for application startup..."
-            while ! sudo docker logs inty-ops-${{ steps.prep.outputs.environment }} 2>&1 | grep -q "Application startup complete"
+            echo "Waiting for HTTP readiness on 127.0.0.1:${{ vars.OPS_SERVICE_PORT_ON_HOST }} ..."
+            n=0
+            max_wait=600
+            while ! curl -sfS --max-time 3 "http://127.0.0.1:${{ vars.OPS_SERVICE_PORT_ON_HOST }}/health" >/dev/null
             do
+              n=$((n + 1))
+              if [ "$n" -ge "$max_wait" ]; then
+                echo "Timeout after ${max_wait}s waiting for GET /health on published port"
+                sudo docker logs inty-ops-${{ steps.prep.outputs.environment }} 2>&1 | tail -n 120
+                exit 1
+              fi
               sleep 1
             done
-            if [ $? -eq 0 ]; then
-              echo "Application startup complete detected!"
-            else
-              echo "Timeout waiting for application startup"
-              exit 1
-            fi
+            echo "Ops responded on localhost; startup complete."
+
+      - name: Renew VM TLS certificates before public sanity check
+        uses: appleboy/ssh-action@v1.2.5
+        timeout-minutes: 10
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO_DIR="${INTY_REPO_DIR:-$HOME/inty}"
+            cd "${REPO_DIR}"
+            sudo devops/scripts/renew_vm_tls_certificates.sh
 
       - name: Sanity check
         env:

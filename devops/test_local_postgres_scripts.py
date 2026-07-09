@@ -159,6 +159,10 @@ WORKFLOW_PATH = Path(__file__).parents[1] / ".github" / "workflows" / "local_pos
 BACKEND_DEPLOY_WORKFLOW_PATH = (
     Path(__file__).parents[1] / ".github" / "workflows" / "build_and_deploy_backend.yml"
 )
+OPS_DEPLOY_WORKFLOW_PATH = (
+    Path(__file__).parents[1] / ".github" / "workflows" / "build_and_deploy_ops.yml"
+)
+RENEW_TLS_PATH = Path(__file__).parent / "scripts" / "renew_vm_tls_certificates.sh"
 PROBE_PATH = Path(__file__).parent / "scripts" / "probe_inty_pg_logical_database.sh"
 
 
@@ -180,6 +184,25 @@ def test_backend_deploy_workflow_ensures_inty_pg_and_host_gateway():
     assert "ensure_inty_dev_postgres_container.sh" in text
     assert "probe_inty_pg_logical_database.sh" in text
     assert "host.docker.internal:host-gateway" in text
+
+
+def test_ops_deploy_workflow_ensures_inty_pg_http_readiness_and_tls_renewal():
+    text = OPS_DEPLOY_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "logical_db=inty-dev" in text
+    assert "Assert baked config targets VM inty-pg" in text
+    assert "Ensure inty-pg before deploy" in text
+    assert "probe_inty_pg_logical_database.sh" in text
+    assert "GET /health on published port" in text
+    assert "Renew VM TLS certificates before public sanity check" in text
+    assert "renew_vm_tls_certificates.sh" in text
+    assert "Application startup complete" not in text
+    assert "appleboy/ssh-action@v1.2.5" in text
+
+
+def test_renew_tls_script_requires_certbot():
+    text = RENEW_TLS_PATH.read_text(encoding="utf-8")
+    assert "certbot renew" in text
+    assert "systemctl reload nginx" in text
 
 
 def test_probe_script_delegates_to_lib():
