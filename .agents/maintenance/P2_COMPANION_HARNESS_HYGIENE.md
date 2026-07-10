@@ -287,3 +287,16 @@ Open PRs checked: #3834 (`system_messages.py` recipe refactor — HYGIENE-2026-9
 ### Open tasks
 
 - [x] **HYGIENE-2026-94** #3401: remove stale `append_tail_user_transcript_rows` (pre-#3401 tail-user transcript writer, no track/`inner_tick_kind`); superseded by `append_turn_track_tail_user_transcript_rows`; all production callers migrated, only its own test referenced it. Deleted function + orphaned `test_turn_tail_user.py::test_append_tail_user_transcript_rows_persists_each_user_message` and now-unused imports.
+
+## 2026-07-10 scan (cron)
+
+Source: open PR overlap check; ruff F401 (4 hits deferred in #3834 files); #3413 follow-up — harness tests still seed/read MemDoc `.md` paths as string literals in four files.
+
+Open PRs checked: #3834 (`system_messages.py` + `test_prompt_builder.py` — HYGIENE-2026-92/93 stay deferred), #3837 (long-term user simulator — no overlap).
+
+### Open tasks
+
+- [ ] **HYGIENE-2026-95** #3413: `tools/test_tools.py` — `USER_MD_REL` (+ `CHANNELS_MD_REL`, `LIFE_CURRENTS_MD_REL`). **claimed** `cursor/agent-maintenance-tasks-df99`.
+- [ ] **HYGIENE-2026-96** #3413: `memory/test_memory_pipeline_living_sphere.py` — canonical path constants in `_seed_store`. **claimed** `cursor/agent-maintenance-tasks-df99`.
+- [ ] **HYGIENE-2026-97** #3413: `memory/test_dreaming_consolidation.py` — canonical path constants for seed/read/assert. **claimed** `cursor/agent-maintenance-tasks-df99`.
+- [ ] **HYGIENE-2026-98** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — remaining `IDENTITY`/`SOUL`/`USER`/`MEMORY`/`STYLE`/`COMPANIONSHIP` path literals. **claimed** `cursor/agent-maintenance-tasks-df99`.
