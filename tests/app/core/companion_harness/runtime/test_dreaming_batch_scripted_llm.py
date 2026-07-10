@@ -24,8 +24,14 @@ from app.core.companion_harness.companion.manager import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
@@ -73,7 +79,7 @@ def _seed_settled_scope_with_checkpoint(
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
         store.write_document(rel, f"# {rel}\n")
 
     store.write_document(
@@ -146,7 +152,7 @@ def test_run_dreaming_batch_if_due_skips_without_llm_when_no_user_messages_since
     """DreamingBatch must not call LLM when no real user rows exist after checkpoint."""
     store = _memory_store(tmp_path)
     checkpoint = _seed_settled_scope_with_checkpoint(store)
-    memory_before = store.read_document("MEMORY.md")
+    memory_before = store.read_document(MEMORY_MD_REL)
 
     llm_config = scripted_harness_llm_config()
     client, fake = companion_llm_client_with_scripted_transport(
@@ -164,7 +170,7 @@ def test_run_dreaming_batch_if_due_skips_without_llm_when_no_user_messages_since
 
     assert outcome == DreamingBatchOutcome.NOT_DUE
     assert fake.script_index == 0
-    assert store.read_document("MEMORY.md") == memory_before
+    assert store.read_document(MEMORY_MD_REL) == memory_before
     assert load_dreaming_state(store) == checkpoint
 
 
@@ -191,12 +197,12 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
         + "\n",
     )
     for rel in (
-        "IDENTITY.md",
-        "SOUL.md",
-        "USER.md",
-        "MEMORY.md",
-        "STYLE.md",
-        "COMPANIONSHIP.md",
+        IDENTITY_MD_REL,
+        SOUL_MD_REL,
+        USER_MD_REL,
+        MEMORY_MD_REL,
+        STYLE_MD_REL,
+        COMPANIONSHIP_MD_REL,
     ):
         store.write_document(rel, f"# {rel}\n")
 
@@ -233,23 +239,23 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
 def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
     paths = (
         daily_path,
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     calls: list[tuple[str, str, str]] = []
     for rel in paths:
         if rel.startswith("memory/daily/"):
             kind = "daily_gist"
-        elif rel == "MEMORY.md":
+        elif rel == MEMORY_MD_REL:
             kind = "memory"
-        elif rel == "USER.md":
+        elif rel == USER_MD_REL:
             kind = "user"
-        elif rel == "STYLE.md":
+        elif rel == STYLE_MD_REL:
             kind = "style"
-        elif rel == "SOUL.md":
+        elif rel == SOUL_MD_REL:
             kind = "soul"
         else:
             kind = "companionship"
@@ -293,5 +299,5 @@ def test_run_dreaming_batch_if_due_one_shot_uses_single_llm_and_saves_checkpoint
     assert outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
     assert fake.script_index == 1
     assert store.read_document(daily_path) == f"{daily_path} scripted\n"
-    assert store.read_document("MEMORY.md") == "MEMORY.md scripted\n"
+    assert store.read_document(MEMORY_MD_REL) == f"{MEMORY_MD_REL} scripted\n"
     assert load_dreaming_state(store) is not None
