@@ -296,7 +296,7 @@ Open PRs checked: #3834 (`system_messages.py` + `test_prompt_builder.py` — HYG
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-95** #3413: `tools/test_tools.py` — `USER_MD_REL` (+ `CHANNELS_MD_REL`, `LIFE_CURRENTS_MD_REL`). **claimed** `cursor/agent-maintenance-tasks-df99`.
-- [ ] **HYGIENE-2026-96** #3413: `memory/test_memory_pipeline_living_sphere.py` — canonical path constants in `_seed_store`. **claimed** `cursor/agent-maintenance-tasks-df99`.
-- [ ] **HYGIENE-2026-97** #3413: `memory/test_dreaming_consolidation.py` — canonical path constants for seed/read/assert. **claimed** `cursor/agent-maintenance-tasks-df99`.
-- [ ] **HYGIENE-2026-98** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — remaining `IDENTITY`/`SOUL`/`USER`/`MEMORY`/`STYLE`/`COMPANIONSHIP` path literals. **claimed** `cursor/agent-maintenance-tasks-df99`.
+- [x] **HYGIENE-2026-95** #3413: `tools/test_tools.py` — `USER_MD_REL` (+ `CHANNELS_MD_REL`, `LIFE_CURRENTS_MD_REL`). Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
+- [x] **HYGIENE-2026-96** #3413: `memory/test_memory_pipeline_living_sphere.py` — canonical path constants in `_seed_store`. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
+- [x] **HYGIENE-2026-97** #3413: `memory/test_dreaming_consolidation.py` — canonical path constants for seed/read/assert. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
+- [x] **HYGIENE-2026-98** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — remaining `IDENTITY`/`SOUL`/`USER`/`MEMORY`/`STYLE`/`COMPANIONSHIP` path literals. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
