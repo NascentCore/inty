@@ -15,7 +15,13 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
 )
 from app.living_sphere.models import LivingSphereUpdate
 from app.living_sphere.seeding import seed_living_sphere_markdown
@@ -33,12 +39,12 @@ def _idle_tool_bg() -> threading.Event:
 
 def _seed_store(store: MemoryStore) -> None:
     for name, body in (
-        ("IDENTITY.md", "id\n"),
-        ("SOUL.md", "soul\n"),
-        ("STYLE.md", "style\n"),
-        ("USER.md", "u\n"),
-        ("MEMORY.md", "m\n"),
-        ("COMPANIONSHIP.md", "companionship\n"),
+        (IDENTITY_MD_REL, "id\n"),
+        (SOUL_MD_REL, "soul\n"),
+        (STYLE_MD_REL, "style\n"),
+        (USER_MD_REL, "u\n"),
+        (MEMORY_MD_REL, "m\n"),
+        (COMPANIONSHIP_MD_REL, "companionship\n"),
     ):
         store.write_document(name, body)
     store.write_document(LIVING_SPHERE_MD_REL, seed_living_sphere_markdown())
