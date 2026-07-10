@@ -6,7 +6,6 @@ Generated entirely by Cursor agent.
 from __future__ import annotations
 
 from datetime import datetime, UTC
-import json
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.agentic_companion.types import (
@@ -17,7 +16,6 @@ from app.core.agentic_companion.types import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
 import pytest
 
 from app.core.companion_harness.companion.implicit_signal_messages import (
@@ -26,16 +24,11 @@ from app.core.companion_harness.companion.implicit_signal_messages import (
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
     append_tail_user_messages_for_llm,
-    append_tail_user_transcript_rows,
     resolve_turn_tail_user_messages,
     tail_user_message_contents_for_llm,
 )
 from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
-)
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
 )
 
 
@@ -210,30 +203,3 @@ def test_implicit_sign_on_single_batch_tail_yields_one_llm_content() -> None:
     )
     assert len(contents) == 1
     assert USER_SIGNED_ON_TRIGGER_USER_TEXT in contents[0]
-
-
-def test_append_tail_user_transcript_rows_persists_each_user_message() -> None:
-    ts1 = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
-    ts2 = datetime(2026, 1, 1, 0, 1, tzinfo=UTC)
-    store = MemoryStore(
-        scope=CompanionScope("user-1", "agent-1", "chat-1"),
-        repository=None,
-    )
-
-    append_tail_user_transcript_rows(
-        store,
-        TRANSCRIPT_JSONL_REL,
-        tail_user_messages=(
-            TurnTailUserMessage("m1", "first", ts1),
-            TurnTailUserMessage("m2", "second", ts2),
-        ),
-        trace_id="trace-1",
-    )
-
-    raw = store.read_document_if_exists(TRANSCRIPT_JSONL_REL)
-    assert raw is not None
-    rows = [json.loads(line) for line in raw.splitlines()]
-    assert [(row["uuid"], row["content"], row["ts"]) for row in rows] == [
-        ("m1", "first", ts1.isoformat()),
-        ("m2", "second", ts2.isoformat()),
-    ]

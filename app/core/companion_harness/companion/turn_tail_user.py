@@ -145,31 +145,6 @@ def append_tail_user_messages_for_llm(
         messages.append({"role": "user", "content": content})
 
 
-def append_tail_user_transcript_rows(
-    store: MemoryStore,
-    transcript_relative_path: str,
-    *,
-    tail_user_messages: tuple[TurnTailUserMessage, ...],
-    trace_id: str,
-) -> None:
-    """Persist this turn's tail user rows in the same order the LLM sees them."""
-    assert transcript_relative_path != ""
-    assert tail_user_messages
-    assert trace_id != ""
-    for message in tail_user_messages:
-        append_transcript_user_row(
-            store,
-            transcript_relative_path,
-            TranscriptUserRowBuildInput(
-                content=message.text,
-                uuid=message.message_id,
-                trace_id=trace_id,
-                inner_tick_kind=None,
-            ),
-            ts=message.received_at_utc.isoformat(),
-        )
-
-
 def append_turn_track_tail_user_transcript_rows(
     store: MemoryStore,
     transcript_relative_path: str,
