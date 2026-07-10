@@ -6,6 +6,11 @@ from datetime import date
 from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+    USER_MD_REL,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
@@ -37,14 +42,14 @@ def test_tool_memory_store_list_paths(tmp_path: Path) -> None:
         scope=CompanionScope("tools", "a", tmp_path.name),
         repository=None,
     )
-    st.write_document("USER.md", "u")
+    st.write_document(USER_MD_REL, "u")
     st.write_document("memory/daily/2099-01-01.md", "d")
     out = _run_tool(
         st,
         "memory_store_list_paths",
         json.dumps({"relative_path": "."}),
     )
-    assert "USER.md" in out
+    assert USER_MD_REL in out
     assert "memory/" in out
     out_mem = _run_tool(
         st,
@@ -62,14 +67,14 @@ def test_tool_memory_store_read_write(tmp_path: Path) -> None:
     w = _run_tool(
         st,
         "memory_store_write_document",
-        json.dumps({"relative_path": "USER.md", "content": "full text"}),
+        json.dumps({"relative_path": USER_MD_REL, "content": "full text"}),
         write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     )
     assert w.startswith("OK ")
     r = _run_tool(
         st,
         "memory_store_read_document",
-        json.dumps({"relative_path": "USER.md"}),
+        json.dumps({"relative_path": USER_MD_REL}),
     )
     assert r == "full text"
 
@@ -84,7 +89,7 @@ def test_tool_memory_store_write_user_rejected_under_autonomy_allowlist(
     out = _run_tool(
         st,
         "memory_store_write_document",
-        json.dumps({"relative_path": "USER.md", "content": "nope"}),
+        json.dumps({"relative_path": USER_MD_REL, "content": "nope"}),
         write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
     )
     assert out.startswith("ERROR:")
@@ -94,7 +99,7 @@ def test_tool_memory_store_write_user_rejected_under_autonomy_allowlist(
         "memory_store_write_document",
         json.dumps(
             {
-                "relative_path": "LIFE_CURRENTS.md",
+                "relative_path": LIFE_CURRENTS_MD_REL,
                 "content": "# 我最近在做的事\n",
             }
         ),
@@ -125,15 +130,15 @@ def test_tool_memory_store_write_channels_not_mutable_during_chat(
         scope=CompanionScope("tools", "a", f"{tmp_path.name}-channels"),
         repository=None,
     )
-    st.write_document("CHANNELS.md", "seed\n")
+    st.write_document(CHANNELS_MD_REL, "seed\n")
     out = _run_tool(
         st,
         "memory_store_write_document",
-        json.dumps({"relative_path": "CHANNELS.md", "content": "mutated"}),
+        json.dumps({"relative_path": CHANNELS_MD_REL, "content": "mutated"}),
         write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
     )
     assert out.startswith("ERROR:")
-    assert st.read_document("CHANNELS.md") == "seed\n"
+    assert st.read_document(CHANNELS_MD_REL) == "seed\n"
 
 
 def test_tool_update_user_md_appends_custom_label(tmp_path: Path) -> None:
@@ -141,7 +146,7 @@ def test_tool_update_user_md_appends_custom_label(tmp_path: Path) -> None:
         scope=CompanionScope("tools", "a", f"{tmp_path.name}-user-md"),
         repository=None,
     )
-    st.write_document("USER.md", "# USER.md - 关于你的用户\n\n## 身份信息\n\n")
+    st.write_document(USER_MD_REL, "# USER.md - 关于你的用户\n\n## 身份信息\n\n")
     out = _run_tool(
         st,
         "update_user_md",
@@ -150,8 +155,8 @@ def test_tool_update_user_md_appends_custom_label(tmp_path: Path) -> None:
             ensure_ascii=False,
         ),
     )
-    assert out == "OK appended 1 line(s) in USER.md"
-    user_md_lines = st.read_document("USER.md").split("\n")
+    assert out == f"OK appended 1 line(s) in {USER_MD_REL}"
+    user_md_lines = st.read_document(USER_MD_REL).split("\n")
     assert user_md_lines == [
         "# USER.md - 关于你的用户",
         "",
@@ -174,7 +179,7 @@ def test_tool_update_user_md_inline_fills_identity_template(
         scope=CompanionScope("tools", "a", f"{tmp_path.name}-inline"),
         repository=None,
     )
-    st.write_document("USER.md", load_user_md_template_text())
+    st.write_document(USER_MD_REL, load_user_md_template_text())
     out = _run_tool(
         st,
         "update_user_md",
@@ -190,8 +195,8 @@ def test_tool_update_user_md_inline_fills_identity_template(
             ensure_ascii=False,
         ),
     )
-    assert out == "OK filled 1 template slot(s) in USER.md"
+    assert out == f"OK filled 1 template slot(s) in {USER_MD_REL}"
     assert (
         f"- {UserIdentityFieldLabel.GENDER}：男"
-        in st.read_document("USER.md").splitlines()
+        in st.read_document(USER_MD_REL).splitlines()
     )
