@@ -277,3 +277,13 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 - **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused `experience_profile_system_clause`, `experience_directives_system_clause`, `default_runtime_context_for_compose` (defer until #3834 lands).
 - **HYGIENE-2026-93** ruff F401: `test_prompt_builder.py` — unused `PromptComposeTrigger` import (defer until #3834 lands).
+
+## 2026-07-10 scan (stale code review)
+
+Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean; 60% hits all false positives (Pydantic `model_config`, StrEnum values, invariant-check helpers, test/service refs). One superseded legacy function found kept alive only by its own test.
+
+Open PRs checked: #3834 (`system_messages.py` recipe refactor — HYGIENE-2026-92/93 stay deferred, no overlap), #3837 (long-term user simulator — no overlap).
+
+### Open tasks
+
+- [x] **HYGIENE-2026-94** #3401: remove stale `append_tail_user_transcript_rows` (pre-#3401 tail-user transcript writer, no track/`inner_tick_kind`); superseded by `append_turn_track_tail_user_transcript_rows`; all production callers migrated, only its own test referenced it. Deleted function + orphaned `test_turn_tail_user.py::test_append_tail_user_transcript_rows_persists_each_user_message` and now-unused imports.
