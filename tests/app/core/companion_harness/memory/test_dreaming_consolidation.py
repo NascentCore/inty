@@ -17,6 +17,13 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
+)
 from app.utils.config import DreamingCuratorMode
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     UnusedLlmClient,
@@ -86,15 +93,15 @@ def _tool_call(name: str, payload: dict[str, object]) -> _FakeToolCall:
 def _one_shot_kind_for_path(rel: str) -> str:
     if rel.startswith("memory/daily/"):
         return DreamingDocumentKind.DAILY_GIST.value
-    if rel == "MEMORY.md":
+    if rel == MEMORY_MD_REL:
         return DreamingDocumentKind.MEMORY.value
-    if rel == "USER.md":
+    if rel == USER_MD_REL:
         return DreamingDocumentKind.USER.value
-    if rel == "STYLE.md":
+    if rel == STYLE_MD_REL:
         return DreamingDocumentKind.STYLE.value
-    if rel == "SOUL.md":
+    if rel == SOUL_MD_REL:
         return DreamingDocumentKind.SOUL.value
-    if rel == "COMPANIONSHIP.md":
+    if rel == COMPANIONSHIP_MD_REL:
         return DreamingDocumentKind.COMPANIONSHIP.value
     return DreamingDocumentKind.MEMORY.value
 
@@ -164,11 +171,11 @@ def _one_shot_response_mixed(
 
 def _seed_memory_docs(store: MemoryStore) -> None:
     for rel in (
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     ):
         store.write_document(rel, f"{rel} seed\n")
 
@@ -226,11 +233,11 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     daily = store.read_document("memory/daily/2026-01-02.md")
     assert daily == "dreaming_day_summary curated\n"
     assert store.read_document_if_exists("memory/2026-01-02.md") is None
-    assert store.read_document("MEMORY.md") == "memory curated\n"
-    assert store.read_document("USER.md") == "user curated\n"
-    assert store.read_document("STYLE.md") == "style curated\n"
-    assert store.read_document("SOUL.md") == "soul curated\n"
-    assert store.read_document("COMPANIONSHIP.md") == "companionship curated\n"
+    assert store.read_document(MEMORY_MD_REL) == "memory curated\n"
+    assert store.read_document(USER_MD_REL) == "user curated\n"
+    assert store.read_document(STYLE_MD_REL) == "style curated\n"
+    assert store.read_document(SOUL_MD_REL) == "soul curated\n"
+    assert store.read_document(COMPANIONSHIP_MD_REL) == "companionship curated\n"
 
 
 def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
@@ -249,11 +256,11 @@ def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
     ]
     required_paths = (
         "memory/daily/2026-01-02.md",
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     response = _one_shot_response_for_paths(required_paths)
 
@@ -275,12 +282,12 @@ def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
         store.read_document("memory/daily/2026-01-02.md")
         == "memory/daily/2026-01-02.md curated\n"
     )
-    assert store.read_document("MEMORY.md") == "MEMORY.md curated\n"
-    assert store.read_document("USER.md") == "USER.md curated\n"
-    assert store.read_document("STYLE.md") == "STYLE.md curated\n"
-    assert store.read_document("SOUL.md") == "SOUL.md curated\n"
+    assert store.read_document(MEMORY_MD_REL) == "MEMORY.md curated\n"
+    assert store.read_document(USER_MD_REL) == "USER.md curated\n"
+    assert store.read_document(STYLE_MD_REL) == "STYLE.md curated\n"
+    assert store.read_document(SOUL_MD_REL) == "SOUL.md curated\n"
     assert (
-        store.read_document("COMPANIONSHIP.md") == "COMPANIONSHIP.md curated\n"
+        store.read_document(COMPANIONSHIP_MD_REL) == "COMPANIONSHIP.md curated\n"
     )
 
 
@@ -300,7 +307,7 @@ def test_consolidate_memory_one_shot_missing_tool_call_raises(
             uuid="u",
         ),
     ]
-    response = _one_shot_response_for_paths(("MEMORY.md",))
+    response = _one_shot_response_for_paths((MEMORY_MD_REL,))
 
     tool_bg_idle = Event()
     tool_bg_idle.set()
@@ -316,7 +323,7 @@ def test_consolidate_memory_one_shot_missing_tool_call_raises(
             langsmith_extra={},
             tool_bg_idle_event=tool_bg_idle,
         )
-    assert store.read_document("MEMORY.md") == "MEMORY.md seed\n"
+    assert store.read_document(MEMORY_MD_REL) == "MEMORY.md seed\n"
 
 
 def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
@@ -337,13 +344,13 @@ def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
     ]
     required_paths = (
         "memory/daily/2026-01-02.md",
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
-    response = _one_shot_response_for_paths(required_paths + ("MEMORY.md",))
+    response = _one_shot_response_for_paths(required_paths + (MEMORY_MD_REL,))
 
     tool_bg_idle = Event()
     tool_bg_idle.set()
@@ -357,7 +364,7 @@ def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
             langsmith_extra={},
             tool_bg_idle_event=tool_bg_idle,
         )
-    assert store.read_document("MEMORY.md") == "MEMORY.md seed\n"
+    assert store.read_document(MEMORY_MD_REL) == "MEMORY.md seed\n"
 
 
 def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
@@ -376,11 +383,11 @@ def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
     ]
     required_paths = (
         "memory/daily/2026-01-02.md",
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     response = _one_shot_response_for_paths(
         required_paths,
@@ -401,7 +408,7 @@ def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
             langsmith_extra={},
             tool_bg_idle_event=tool_bg_idle,
         )
-    assert store.read_document("MEMORY.md") == "MEMORY.md seed\n"
+    assert store.read_document(MEMORY_MD_REL) == "MEMORY.md seed\n"
 
 
 def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
@@ -422,13 +429,13 @@ def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
     ]
     changed_paths = (
         "memory/daily/2026-01-02.md",
-        "MEMORY.md",
-        "USER.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
     )
     no_op_paths = (
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     response = _one_shot_response_mixed(changed_paths, no_op_paths)
 
@@ -450,11 +457,11 @@ def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
         store.read_document("memory/daily/2026-01-02.md")
         == "memory/daily/2026-01-02.md curated\n"
     )
-    assert store.read_document("MEMORY.md") == "MEMORY.md curated\n"
-    assert store.read_document("USER.md") == "USER.md curated\n"
-    assert store.read_document("STYLE.md") == "STYLE.md seed\n"
-    assert store.read_document("SOUL.md") == "SOUL.md seed\n"
-    assert store.read_document("COMPANIONSHIP.md") == "COMPANIONSHIP.md seed\n"
+    assert store.read_document(MEMORY_MD_REL) == "MEMORY.md curated\n"
+    assert store.read_document(USER_MD_REL) == "USER.md curated\n"
+    assert store.read_document(STYLE_MD_REL) == "STYLE.md seed\n"
+    assert store.read_document(SOUL_MD_REL) == "SOUL.md seed\n"
+    assert store.read_document(COMPANIONSHIP_MD_REL) == "COMPANIONSHIP.md seed\n"
 
 
 def test_consolidate_memory_one_shot_preserves_soul_appearance(
@@ -466,7 +473,7 @@ def test_consolidate_memory_one_shot_preserves_soul_appearance(
     )
     _seed_memory_docs(store)
     store.write_document(
-        "SOUL.md",
+        SOUL_MD_REL,
         "# soul\n\n## 形象\n\nblue hair\n\n## 底线\n\nseed\n",
     )
     rows = [
@@ -484,15 +491,15 @@ def test_consolidate_memory_one_shot_preserves_soul_appearance(
     )
     required_paths = (
         "memory/daily/2026-01-02.md",
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     calls: list[_FakeToolCall] = []
     for rel in required_paths:
-        body = soul_body if rel == "SOUL.md" else f"{rel} ok"
+        body = soul_body if rel == SOUL_MD_REL else f"{rel} ok"
         calls.append(
             _tool_call(
                 _DREAMING_DOCUMENT_UPDATE_TOOL_NAME,
@@ -520,7 +527,7 @@ def test_consolidate_memory_one_shot_preserves_soul_appearance(
         langsmith_extra={},
         tool_bg_idle_event=tool_bg_idle,
     )
-    soul = store.read_document("SOUL.md")
+    soul = store.read_document(SOUL_MD_REL)
     assert "## 形象" in soul
     assert "blue hair" in soul
     assert "updated limit" in soul
@@ -551,11 +558,11 @@ def test_consolidate_memory_one_shot_multi_day_daily_gists(
     required_paths = (
         "memory/daily/2026-01-02.md",
         "memory/daily/2026-01-03.md",
-        "MEMORY.md",
-        "USER.md",
-        "STYLE.md",
-        "SOUL.md",
-        "COMPANIONSHIP.md",
+        MEMORY_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        SOUL_MD_REL,
+        COMPANIONSHIP_MD_REL,
     )
     response = _one_shot_response_for_paths(required_paths)
 
@@ -594,8 +601,8 @@ def test_rewrite_companionship_md_uses_template_seed_when_missing(
         ),
         repository=None,
     )
-    store.write_document("MEMORY.md", "memory seed\n")
-    template_seed = load_template_seed_text("COMPANIONSHIP.md")
+    store.write_document(MEMORY_MD_REL, "memory seed\n")
+    template_seed = load_template_seed_text(COMPANIONSHIP_MD_REL)
     captured_user_blocks: list[str] = []
 
     def complete_fn(messages: list[dict[str, object]], role: str) -> str:
@@ -612,6 +619,6 @@ def test_rewrite_companionship_md_uses_template_seed_when_missing(
     assert captured_user_blocks
     assert template_seed.strip() in captured_user_blocks[0]
     assert (
-        store.read_document("COMPANIONSHIP.md")
+        store.read_document(COMPANIONSHIP_MD_REL)
         == "companionship curated from template\n"
     )
