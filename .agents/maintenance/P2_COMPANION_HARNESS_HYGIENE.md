@@ -309,11 +309,11 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-99** #3413: `test_turn_proactive_structured.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
-- [claimed] **HYGIENE-2026-100** #3413: `test_turn.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
-- [claimed] **HYGIENE-2026-101** #3413: `test_turn_tracks.py` — seed tuple from canonical path constants. Claimed `cursor/agent-maintenance-tasks-4a6a`.
-- [claimed] **HYGIENE-2026-102** #3413: `test_implicit_sign_on_greeting_llm.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
-- [claimed] **HYGIENE-2026-103** #3413: `test_memory_store_scope.py` — property assertions + `ensure_minimal` read paths from canonical constants. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+- [x] **HYGIENE-2026-99** #3413: `test_turn_proactive_structured.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-4a6a` / pull/3842.
+- [x] **HYGIENE-2026-100** #3413: `test_turn.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-4a6a` / pull/3842.
+- [x] **HYGIENE-2026-101** #3413: `test_turn_tracks.py` — seed tuple from canonical path constants. Fixed in `cursor/agent-maintenance-tasks-4a6a` / pull/3842.
+- [x] **HYGIENE-2026-102** #3413: `test_implicit_sign_on_greeting_llm.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-4a6a` / pull/3842.
+- [x] **HYGIENE-2026-103** #3413: `test_memory_store_scope.py` — property assertions + `ensure_minimal` read paths from canonical constants. Fixed in `cursor/agent-maintenance-tasks-4a6a` / pull/3842.
 
 ### Deferred (open PR overlap)
 

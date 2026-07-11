@@ -4,10 +4,22 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
+    COMPANION_DREAMING_STATE_JSON_REL,
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+    COMPANION_SCHEDULE_TASKS_JSON_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
+    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
+    INTY_V2_SCHEDULE_TASKS_JSON_REL,
+    LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_MD_REL,
+    TOOLS_MD_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
@@ -21,40 +33,40 @@ from app.core.companion_harness.companion.scope import CompanionScope
 
 def test_memory_store_scope_paths_properties() -> None:
     p = MemoryStoreScopePaths()
-    assert p.identity == "IDENTITY.md"
-    assert p.soul == "SOUL.md"
-    assert p.style_md == "STYLE.md"
-    assert p.user_md == "USER.md"
-    assert p.memory_md == "MEMORY.md"
-    assert p.channels_md == "CHANNELS.md"
-    assert p.companionship_md == "COMPANIONSHIP.md"
-    assert p.techno_core_md == "TECHNO_CORE.md"
-    assert p.living_sphere_md == "LIVING_SPHERE.md"
-    assert p.tools_md == "TOOLS.md"
+    assert p.identity == IDENTITY_MD_REL
+    assert p.soul == SOUL_MD_REL
+    assert p.style_md == STYLE_MD_REL
+    assert p.user_md == USER_MD_REL
+    assert p.memory_md == MEMORY_MD_REL
+    assert p.channels_md == CHANNELS_MD_REL
+    assert p.companionship_md == COMPANIONSHIP_MD_REL
+    assert p.techno_core_md == TECHNO_CORE_MD_REL
+    assert p.living_sphere_md == LIVING_SPHERE_MD_REL
+    assert p.tools_md == TOOLS_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
     assert p.context_json == CONTEXT_JSON_REL
     assert p.memory_daily_gist("2026-04-05") == "memory/daily/2026-04-05.md"
     assert (
         p.living_sphere_curator_state_json
-        == ".companion_living_sphere_curator.json"
+        == COMPANION_LIVING_SPHERE_CURATOR_JSON_REL
     )
     assert (
         p.context_compaction_state_json
-        == ".companion_context_compaction_state.json"
+        == COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL
     )
-    assert p.schedule_queue_json == ".companion_schedule_tasks.json"
-    assert p.dreaming_state_json == ".companion_dreaming_state.json"
+    assert p.schedule_queue_json == COMPANION_SCHEDULE_TASKS_JSON_REL
+    assert p.dreaming_state_json == COMPANION_DREAMING_STATE_JSON_REL
 
 
 def test_memory_store_scope_paths_custom_state_file_prefix() -> None:
     p = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
     assert (
         p.living_sphere_curator_state_json
-        == ".inty_v2_living_sphere_curator.json"
+        == INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL
     )
-    assert p.schedule_queue_json == ".inty_v2_schedule_tasks.json"
+    assert p.schedule_queue_json == INTY_V2_SCHEDULE_TASKS_JSON_REL
     assert p.dreaming_state_json == ".inty_v2_dreaming_state.json"
-    assert p.identity == "IDENTITY.md"
+    assert p.identity == IDENTITY_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
 
 
@@ -86,12 +98,12 @@ def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:
     assert is_scope_initialized_in_store(store) is False
     ensure_minimal_documents_in_store(store)
     assert is_scope_initialized_in_store(store) is True
-    memory = store.read_document("MEMORY.md")
+    memory = store.read_document(MEMORY_MD_REL)
     assert "记忆库" in memory
     assert "42" not in memory
-    assert "待对话填充" in store.read_document("USER.md")
-    assert "沟通风格" in store.read_document("STYLE.md")
-    assert "我们的关系" in store.read_document("COMPANIONSHIP.md")
-    assert "Channels are medium" in store.read_document("CHANNELS.md")
+    assert "待对话填充" in store.read_document(USER_MD_REL)
+    assert "沟通风格" in store.read_document(STYLE_MD_REL)
+    assert "我们的关系" in store.read_document(COMPANIONSHIP_MD_REL)
+    assert "Channels are medium" in store.read_document(CHANNELS_MD_REL)
     ensure_minimal_documents_in_store(store)
     assert is_scope_initialized_in_store(store) is True
