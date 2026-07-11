@@ -16,6 +16,10 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn import (
@@ -72,7 +76,7 @@ async def test_user_chat_track_passes_non_inner_tick_flags(tmp_path) -> None:
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
         st.write_document(rel, f"{rel}\n")
     stub = CompanionTurnResult(
         trace_id="t",
@@ -115,7 +119,7 @@ async def test_user_chat_turn_selects_bootstrap_track_when_incomplete(
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
         st.write_document(rel, f"{rel}\n")
     stub = CompanionTurnResult(
         trace_id="t",
@@ -158,7 +162,7 @@ async def test_user_chat_turn_plumbs_agentic_output_queue_for_bootstrap(
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
         st.write_document(rel, f"{rel}\n")
     from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
         bootstrap_queue_turn_deps,

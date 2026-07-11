@@ -22,7 +22,11 @@ from app.core.agentic_companion.types import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -90,10 +94,10 @@ class _FakeLLMClient:
 
 
 def _seed_workspace(store: MemoryStore) -> None:
-    store.write_document("IDENTITY.md", "identity")
-    store.write_document("SOUL.md", "soul")
-    store.write_document("USER.md", "user")
-    store.write_document("MEMORY.md", "memory")
+    store.write_document(IDENTITY_MD_REL, "identity")
+    store.write_document(SOUL_MD_REL, "soul")
+    store.write_document(USER_MD_REL, "user")
+    store.write_document(MEMORY_MD_REL, "memory")
 
 
 def test_run_turn_inner_tick_scheduled_semantics(

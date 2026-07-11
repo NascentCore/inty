@@ -30,7 +30,11 @@ from app.core.companion_harness.llm.chat_completions import (
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -73,10 +77,10 @@ class _FakeProactiveLLMClient:
 
 
 def _seed_workspace(store: MemoryStore) -> None:
-    store.write_document("IDENTITY.md", "identity")
-    store.write_document("SOUL.md", "soul")
-    store.write_document("USER.md", "user")
-    store.write_document("MEMORY.md", "memory")
+    store.write_document(IDENTITY_MD_REL, "identity")
+    store.write_document(SOUL_MD_REL, "soul")
+    store.write_document(USER_MD_REL, "user")
+    store.write_document(MEMORY_MD_REL, "memory")
 
 
 def _default_deps(
