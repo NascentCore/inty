@@ -300,3 +300,22 @@ Open PRs checked: #3834 (`system_messages.py` + `test_prompt_builder.py` — HYG
 - [x] **HYGIENE-2026-96** #3413: `memory/test_memory_pipeline_living_sphere.py` — canonical path constants in `_seed_store`. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
 - [x] **HYGIENE-2026-97** #3413: `memory/test_dreaming_consolidation.py` — canonical path constants for seed/read/assert. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
 - [x] **HYGIENE-2026-98** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — remaining `IDENTITY`/`SOUL`/`USER`/`MEMORY`/`STYLE`/`COMPANIONSHIP` path literals. Fixed in `cursor/agent-maintenance-tasks-df99` / pull/3840.
+
+## 2026-07-11 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/93 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — harness tests still seed/read MemDoc `.md` paths as string literals in five files.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [claimed] **HYGIENE-2026-99** #3413: `test_turn_proactive_structured.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+- [claimed] **HYGIENE-2026-100** #3413: `test_turn.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+- [claimed] **HYGIENE-2026-101** #3413: `test_turn_tracks.py` — seed tuple from canonical path constants. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+- [claimed] **HYGIENE-2026-102** #3413: `test_implicit_sign_on_greeting_llm.py` — `IDENTITY_MD_REL` + `SOUL_MD_REL` + `USER_MD_REL` + `MEMORY_MD_REL`. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+- [claimed] **HYGIENE-2026-103** #3413: `test_memory_store_scope.py` — property assertions + `ensure_minimal` read paths from canonical constants. Claimed `cursor/agent-maintenance-tasks-4a6a`.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-93** ruff F401: `test_prompt_builder.py` — unused `PromptComposeTrigger` import (defer until #3834 lands).
