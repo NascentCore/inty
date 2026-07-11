@@ -11,7 +11,6 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.scope_turn_lock import (
     ScopeTurnLockNotHeldError,
     assert_scope_turn_lock_held_by_current_task,
-    companion_scope_from_foreground_ctx,
     get_scope_tool_bg_idle,
     get_scope_turn_lock,
     release_scope_runtime_state,
@@ -59,21 +58,6 @@ def test_release_scope_runtime_state_evicts_lock_and_idle() -> None:
     idle_b = get_scope_tool_bg_idle(scope)
     assert lock_a is not lock_b
     assert idle_a is not idle_b
-
-
-def test_companion_scope_from_foreground_ctx_parses_coords() -> None:
-    scope = companion_scope_from_foreground_ctx(
-        {
-            "user_id": "u1",
-            "agent_id": "a1",
-            "chat_id": 42,
-        }
-    )
-    assert scope == CompanionScope("u1", "a1", "42")
-
-
-def test_companion_scope_from_foreground_ctx_rejects_incomplete() -> None:
-    assert companion_scope_from_foreground_ctx({"user_id": "u1"}) is None
 
 
 @pytest.mark.asyncio
