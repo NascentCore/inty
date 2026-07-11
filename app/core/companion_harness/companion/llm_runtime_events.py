@@ -44,38 +44,6 @@ companion_llm_runtime_event_bind_ctx: contextvars.ContextVar[
 ] = contextvars.ContextVar("companion_llm_runtime_event_bind_ctx", default=None)
 
 
-def _is_openrouter_invalid_json_error(exc: BaseException) -> bool:
-    """Avoid importing ``OpenRouterInvalidJsonError`` from ``llm.chat_completions`` (cycle-safe)."""
-    t = type(exc)
-    return t.__name__ == "OpenRouterInvalidJsonError" and t.__module__ in (
-        "app.core.companion_harness.llm.chat_completions",
-    )
-
-
-def exc_chain_includes_llm_inference_failure_root_causes(
-    exc: BaseException,
-) -> bool:
-    """True if ``exc`` or ``__cause__`` / ``__context__`` chain carries kernel inference errors."""
-    seen: set[int] = set()
-    stack: list[BaseException] = [exc]
-    while stack:
-        cur = stack.pop()
-        if id(cur) in seen:
-            continue
-        seen.add(id(cur))
-        if isinstance(cur, CompanionLLMInferenceBackendError):
-            return True
-        if _is_openrouter_invalid_json_error(cur):
-            return True
-        cause = cur.__cause__
-        ctx = cur.__context__
-        if cause is not None:
-            stack.append(cause)
-        if ctx is not None and ctx is not cause:
-            stack.append(ctx)
-    return False
-
-
 def record_llm_inference_failure(
     *,
     model: str,
