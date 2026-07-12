@@ -44,9 +44,6 @@ from app.core.companion_harness.prompt_builder import (
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
 )
-from app.core.companion_harness.prompting.compose_trigger import (
-    PromptComposeTrigger,
-)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
