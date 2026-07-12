@@ -328,10 +328,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-104** #3413: `test_memory_pipeline_living_sphere.py` — `LIVING_SPHERE_UPDATES_JSONL_REL` (2 sites). Claimed `cursor/agent-maintenance-tasks-b253`.
-- [claimed] **HYGIENE-2026-105** #3413: `test_living_sphere_curator.py` — `LIVING_SPHERE_UPDATES_JSONL_REL`. Claimed `cursor/agent-maintenance-tasks-b253`.
-- [claimed] **HYGIENE-2026-106** #3413: `test_memory_pipeline_living_sphere.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON_REL` (2 sites). Claimed `cursor/agent-maintenance-tasks-b253`.
-- [claimed] **HYGIENE-2026-107** #3413: `test_transcript_compaction.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL`. Claimed `cursor/agent-maintenance-tasks-b253`.
+- [x] **HYGIENE-2026-104** #3413: `test_memory_pipeline_living_sphere.py` — `LIVING_SPHERE_UPDATES_JSONL_REL` (2 sites). Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-105** #3413: `test_living_sphere_curator.py` — `LIVING_SPHERE_UPDATES_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-106** #3413: `test_memory_pipeline_living_sphere.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON_REL` (2 sites). Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-107** #3413: `test_transcript_compaction.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
 
 ### Deferred (open PR overlap)
 

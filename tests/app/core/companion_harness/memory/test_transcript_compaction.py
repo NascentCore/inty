@@ -3,6 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.transcript_compaction import (
     COMPACTION_SYSTEM_TAG,
@@ -103,7 +106,7 @@ def test_compaction_state_roundtrip_via_memory_store(tmp_path: Path) -> None:
         scope=CompanionScope("tc", "a", tmp_path.name),
         repository=None,
     )
-    rel = ".companion_context_compaction_state.json"
+    rel = COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL
     state = CompactionState(
         running_summary="a",
         episodic_memory=[],

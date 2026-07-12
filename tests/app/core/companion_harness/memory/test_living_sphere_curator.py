@@ -13,6 +13,7 @@ from app.core.companion_harness.memory.living_sphere_curator import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
 )
 from app.living_sphere.models import (
     LivingSphereUpdate,
@@ -38,7 +39,7 @@ def test_compact_waits_for_tool_background_idle(tmp_path: Path) -> None:
         time.sleep(0.15)
         u = LivingSphereUpdate(change_request="后台追加")
         store.append_jsonl_record(
-            "living_sphere_updates.jsonl",
+            LIVING_SPHERE_UPDATES_JSONL_REL,
             u.model_dump(mode="json"),
         )
         appended.append(u.update_id)
