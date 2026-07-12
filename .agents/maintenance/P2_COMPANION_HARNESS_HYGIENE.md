@@ -318,4 +318,21 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 ### Deferred (open PR overlap)
 
 - **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
-- **HYGIENE-2026-93** ruff F401: `test_prompt_builder.py` — unused `PromptComposeTrigger` import (defer until #3834 lands).
+- [x] **HYGIENE-2026-93** ruff F401: `test_prompt_builder.py` — unused `PromptComposeTrigger` import. Fixed in pull/3843.
+
+## 2026-07-12 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — harness tests still seed/read JSONL/state JSON paths as string literals.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-104** #3413: `test_memory_pipeline_living_sphere.py` — `LIVING_SPHERE_UPDATES_JSONL_REL` (2 sites). Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-105** #3413: `test_living_sphere_curator.py` — `LIVING_SPHERE_UPDATES_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-106** #3413: `test_memory_pipeline_living_sphere.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON_REL` (2 sites). Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+- [x] **HYGIENE-2026-107** #3413: `test_transcript_compaction.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL`. Fixed in `cursor/agent-maintenance-tasks-b253` / pull/3844.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).

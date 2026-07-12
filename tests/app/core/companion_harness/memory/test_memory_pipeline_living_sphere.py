@@ -16,8 +16,10 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
+    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -83,7 +85,7 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
     _seed_store(store)
     update = LivingSphereUpdate(change_request="窗边加绿植")
     store.append_jsonl_record(
-        "living_sphere_updates.jsonl",
+        LIVING_SPHERE_UPDATES_JSONL_REL,
         update.model_dump(mode="json"),
     )
     roles: list[str] = []
@@ -109,7 +111,7 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
     assert "memory" in roles
     assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
     state = json.loads(
-        store.read_document(".companion_living_sphere_curator.json")
+        store.read_document(COMPANION_LIVING_SPHERE_CURATOR_JSON_REL)
     )
     assert state["living_sphere_curated_through_update_id"] == update.update_id
 
@@ -154,7 +156,7 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
     _seed_store(store)
     update = LivingSphereUpdate(change_request="tool_background 已写入")
     store.append_jsonl_record(
-        "living_sphere_updates.jsonl",
+        LIVING_SPHERE_UPDATES_JSONL_REL,
         update.model_dump(mode="json"),
     )
     ev = threading.Event()
@@ -185,7 +187,7 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
         tool_bg_idle_event=ev,
     )
     state = json.loads(
-        store.read_document(".companion_living_sphere_curator.json")
+        store.read_document(COMPANION_LIVING_SPHERE_CURATOR_JSON_REL)
     )
     assert state["living_sphere_curated_through_update_id"] == update.update_id
     assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
