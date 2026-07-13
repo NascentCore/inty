@@ -336,3 +336,21 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 ### Deferred (open PR overlap)
 
 - **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+
+## 2026-07-13 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — harness tests still seed/read MemDoc `.md` paths as string literals.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [claimed] **HYGIENE-2026-108** #3413: `test_living_sphere_runtime.py` — canonical path constants for seed tuples. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+- [claimed] **HYGIENE-2026-109** #3413: `test_bootstrap_transcript_order.py` — `IDENTITY_MD_REL` + seed tuple. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+- [claimed] **HYGIENE-2026-110** #3413: `test_ai_private_manifest_persist.py` — canonical path constants for seed loop. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+- [claimed] **HYGIENE-2026-111** #3413: `companion_scripted_llm.py` — `LIFE_CURRENTS_MD_REL` + seed tuple. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+- [claimed] **HYGIENE-2026-112** #3413: `test_models.py` — `CHANNELS_MD_REL` + `COMPANIONSHIP_MD_REL`. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
