@@ -19,7 +19,11 @@ from app.core.companion_harness.companion.turn import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
@@ -52,7 +56,7 @@ def _seed_bootstrap_workspace(store: MemoryStore) -> None:
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
         store.write_document(rel, f"{rel}\n")
     store.write_document(TRANSCRIPT_JSONL_REL, "")
 
@@ -107,7 +111,7 @@ async def test_bootstrap_multi_round_transcript_user_before_all_assistants(
                 name="memory_store_write_document",
                 arguments=json.dumps(
                     {
-                        "relative_path": "IDENTITY.md",
+                        "relative_path": IDENTITY_MD_REL,
                         "content": "孔明\n",
                     },
                     ensure_ascii=False,

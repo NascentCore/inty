@@ -345,11 +345,11 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-108** #3413: `test_living_sphere_runtime.py` — canonical path constants for seed tuples. Claimed `cursor/agent-maintenance-tasks-b0ef`.
-- [claimed] **HYGIENE-2026-109** #3413: `test_bootstrap_transcript_order.py` — `IDENTITY_MD_REL` + seed tuple. Claimed `cursor/agent-maintenance-tasks-b0ef`.
-- [claimed] **HYGIENE-2026-110** #3413: `test_ai_private_manifest_persist.py` — canonical path constants for seed loop. Claimed `cursor/agent-maintenance-tasks-b0ef`.
-- [claimed] **HYGIENE-2026-111** #3413: `companion_scripted_llm.py` — `LIFE_CURRENTS_MD_REL` + seed tuple. Claimed `cursor/agent-maintenance-tasks-b0ef`.
-- [claimed] **HYGIENE-2026-112** #3413: `test_models.py` — `CHANNELS_MD_REL` + `COMPANIONSHIP_MD_REL`. Claimed `cursor/agent-maintenance-tasks-b0ef`.
+- [x] **HYGIENE-2026-108** #3413: `test_living_sphere_runtime.py` — canonical path constants for seed tuples. Fixed in `cursor/agent-maintenance-tasks-b0ef` / pull/3846.
+- [x] **HYGIENE-2026-109** #3413: `test_bootstrap_transcript_order.py` — `IDENTITY_MD_REL` + seed tuple. Fixed in `cursor/agent-maintenance-tasks-b0ef` / pull/3846.
+- [x] **HYGIENE-2026-110** #3413: `test_ai_private_manifest_persist.py` — canonical path constants for seed loop. Fixed in `cursor/agent-maintenance-tasks-b0ef` / pull/3846.
+- [x] **HYGIENE-2026-111** #3413: `companion_scripted_llm.py` — `LIFE_CURRENTS_MD_REL` + seed tuple. Fixed in `cursor/agent-maintenance-tasks-b0ef` / pull/3846.
+- [x] **HYGIENE-2026-112** #3413: `test_models.py` — `CHANNELS_MD_REL` + `COMPANIONSHIP_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-b0ef` / pull/3846.
 
 ### Deferred (open PR overlap)
 
