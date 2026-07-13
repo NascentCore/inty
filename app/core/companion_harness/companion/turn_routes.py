@@ -1,19 +1,11 @@
-"""In-turn interim output sinks for AgenticLoop tool rounds.
+"""In-turn interim output payload for AgenticLoop tool rounds.
 
-Typed callbacks for delivering in-turn assistant text before a turn completes.
+Typed assistant text delivered to the client before a turn completes.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
-
 from pydantic import BaseModel, ConfigDict
-
-if TYPE_CHECKING:
-    from app.core.companion_harness.tools.tool_background import ToolOutputEvent
-
-BackgroundToolEventSink = Callable[["ToolOutputEvent"], None]
 
 
 # TODO(#3402): Replace with channel-agnostic ``UserVisibleChunk`` + ``UserVisibleChunkSink``.
@@ -30,6 +22,3 @@ class InTurnInterimOutput(BaseModel):
     round_index: int
     had_tool_calls: bool
     assistant_msg_uuid: str
-
-
-InTurnInterimOutputSink = Callable[[InTurnInterimOutput], Awaitable[None]]
