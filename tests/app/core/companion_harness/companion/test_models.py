@@ -6,6 +6,8 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
+    COMPANIONSHIP_MD_REL,
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -57,7 +59,7 @@ def test_load_prompt_bundle_reads_channels_from_memory_store(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-channels"),
         repository=None,
     )
-    store.write_document("CHANNELS.md", "# Channels\ncustom channel contract\n")
+    store.write_document(CHANNELS_MD_REL, "# Channels\ncustom channel contract\n")
     bundle = load_prompt_bundle(store, meta=ContextMeta())
     assert bundle.channels_md == "# Channels\ncustom channel contract\n"
 
@@ -95,7 +97,7 @@ def test_load_prompt_bundle_reads_companionship_from_memory_store(
         repository=None,
     )
     store.write_document(
-        "COMPANIONSHIP.md",
+        COMPANIONSHIP_MD_REL,
         "# 我们的关系\n\n用户原话：异地恋人\n",
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())

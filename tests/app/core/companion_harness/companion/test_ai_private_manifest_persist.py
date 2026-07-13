@@ -23,8 +23,14 @@ from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHANNELS_MD_REL,
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
@@ -44,12 +50,12 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         repository=None,
     )
     for rel in (
-        "IDENTITY.md",
-        "SOUL.md",
-        "STYLE.md",
-        "USER.md",
-        "MEMORY.md",
-        "CHANNELS.md",
+        IDENTITY_MD_REL,
+        SOUL_MD_REL,
+        STYLE_MD_REL,
+        USER_MD_REL,
+        MEMORY_MD_REL,
+        CHANNELS_MD_REL,
     ):
         store.write_document(rel, f"{rel}\n")
     store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')

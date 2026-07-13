@@ -16,9 +16,16 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -47,12 +54,12 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         repository=None,
     )
     for name, body in (
-        ("IDENTITY.md", "id\n"),
-        ("SOUL.md", "soul\n"),
-        ("STYLE.md", "style\n"),
-        ("USER.md", "user\n"),
-        ("MEMORY.md", "mem\n"),
-        ("COMPANIONSHIP.md", "companionship\n"),
+        (IDENTITY_MD_REL, "id\n"),
+        (SOUL_MD_REL, "soul\n"),
+        (STYLE_MD_REL, "style\n"),
+        (USER_MD_REL, "user\n"),
+        (MEMORY_MD_REL, "mem\n"),
+        (COMPANIONSHIP_MD_REL, "companionship\n"),
         (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
@@ -105,12 +112,12 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
         repository=None,
     )
     for name, body in (
-        ("IDENTITY.md", "id\n"),
-        ("SOUL.md", "soul\n"),
-        ("STYLE.md", "style\n"),
-        ("USER.md", "user\n"),
-        ("MEMORY.md", "mem\n"),
-        ("TECHNO_CORE.md", "tc\n"),
+        (IDENTITY_MD_REL, "id\n"),
+        (SOUL_MD_REL, "soul\n"),
+        (STYLE_MD_REL, "style\n"),
+        (USER_MD_REL, "user\n"),
+        (MEMORY_MD_REL, "mem\n"),
+        (TECHNO_CORE_MD_REL, "tc\n"),
         (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)

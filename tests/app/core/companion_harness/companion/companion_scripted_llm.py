@@ -27,9 +27,15 @@ from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.llms.client import CompanionLLMConfig, LlmClient
@@ -130,7 +136,7 @@ def build_scripted_autonomy_inner_tick_script(
             "memory_store_write_document",
             json.dumps(
                 {
-                    "relative_path": "LIFE_CURRENTS.md",
+                    "relative_path": LIFE_CURRENTS_MD_REL,
                     "content": life_currents_body,
                 },
                 ensure_ascii=False,
@@ -164,7 +170,7 @@ def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
         )
         + "\n",
     )
-    for rel in ("IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md", "STYLE.md"):
+    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL, STYLE_MD_REL):
         store.write_document(rel, f"# {rel}\n")
     store.write_document(
         TRANSCRIPT_JSONL_REL,
