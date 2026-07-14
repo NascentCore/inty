@@ -17,6 +17,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANION_USER_FEEDBACK_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     GENERATED_IMAGES_INDEX_JSONL_REL,
+    IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -28,7 +29,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 
 
 def test_parse_identity_and_daily() -> None:
-    k, d = parse_memory_store_relative_path("IDENTITY.md")
+    k, d = parse_memory_store_relative_path(IDENTITY_MD_REL)
     assert k == CompanionMemoryDocumentKind.IDENTITY
     assert d is None
     k2, d2 = parse_memory_store_relative_path("memory/daily/2026-03-01.md")
@@ -38,6 +39,7 @@ def test_parse_identity_and_daily() -> None:
 
 def test_roundtrip_static_paths() -> None:
     for rel in (
+        IDENTITY_MD_REL,
         CHANNELS_MD_REL,
         COMPANIONSHIP_MD_REL,
         LIFE_CURRENTS_MD_REL,
