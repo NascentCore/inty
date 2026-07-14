@@ -363,9 +363,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-113** #3413: `test_bootstrap.py` — canonical path constants for bootstrap write/read/seed tests. `cursor/agent-maintenance-tasks-2ffe`.
-- [claimed] **HYGIENE-2026-114** #3413: `test_inner_tick_autonomy_tool_names.py` — `LIFE_CURRENTS_MD_REL`. `cursor/agent-maintenance-tasks-2ffe`.
-- [claimed] **HYGIENE-2026-115** #3413: `test_memory_store_document_mapping.py` — `IDENTITY_MD_REL` in parse roundtrip. `cursor/agent-maintenance-tasks-2ffe`.
+- [x] **HYGIENE-2026-113** #3413: `test_bootstrap.py` — canonical path constants for bootstrap write/read/seed tests. Fixed in `cursor/agent-maintenance-tasks-2ffe` / pull/3847.
+- [x] **HYGIENE-2026-114** #3413: `test_inner_tick_autonomy_tool_names.py` — `LIFE_CURRENTS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2ffe` / pull/3847.
+- [x] **HYGIENE-2026-115** #3413: `test_memory_store_document_mapping.py` — `IDENTITY_MD_REL` in parse roundtrip. Fixed in `cursor/agent-maintenance-tasks-2ffe` / pull/3847.
 
 ### Deferred (open PR overlap)
 
