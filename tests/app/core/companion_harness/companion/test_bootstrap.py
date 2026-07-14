@@ -21,6 +21,11 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -225,14 +230,14 @@ def test_bootstrap_write_identity_ok(tmp_path: Path) -> None:
             st,
             "memory_store_write_document",
             json.dumps(
-                {"relative_path": "IDENTITY.md", "content": "# id\n"},
+                {"relative_path": IDENTITY_MD_REL, "content": "# id\n"},
                 ensure_ascii=False,
             ),
             write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         )
     )
     assert r.startswith("OK ")
-    assert st.read_document("IDENTITY.md") == "# id\n"
+    assert st.read_document(IDENTITY_MD_REL) == "# id\n"
 
 
 def test_bootstrap_write_soul_rejected(tmp_path: Path) -> None:
@@ -243,32 +248,32 @@ def test_bootstrap_write_soul_rejected(tmp_path: Path) -> None:
             st,
             "memory_store_write_document",
             json.dumps(
-                {"relative_path": "SOUL.md", "content": "new soul"},
+                {"relative_path": SOUL_MD_REL, "content": "new soul"},
                 ensure_ascii=False,
             ),
             write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         )
     )
     assert r.startswith("ERROR: memory_store_write_document only allows:")
-    assert "SOUL.md" in r
-    assert st.read_document_if_exists("SOUL.md") is None
+    assert SOUL_MD_REL in r
+    assert st.read_document_if_exists(SOUL_MD_REL) is None
 
 
 def test_bootstrap_end_state_seeds(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
-    soul_seed = load_template_seed_text("SOUL.md")
-    memory_seed = load_template_seed_text("MEMORY.md")
+    soul_seed = load_template_seed_text(SOUL_MD_REL)
+    memory_seed = load_template_seed_text(MEMORY_MD_REL)
     load_prompt_bundle(st)
-    assert st.read_document("SOUL.md") == soul_seed
-    assert st.read_document("MEMORY.md") == memory_seed
+    assert st.read_document(SOUL_MD_REL) == soul_seed
+    assert st.read_document(MEMORY_MD_REL) == memory_seed
     asyncio.run(
         execute_tool_call(
             st,
             "memory_store_write_document",
             json.dumps(
                 {
-                    "relative_path": "IDENTITY.md",
+                    "relative_path": IDENTITY_MD_REL,
                     "content": "# custom identity\n",
                 },
                 ensure_ascii=False,
@@ -281,7 +286,7 @@ def test_bootstrap_end_state_seeds(tmp_path: Path) -> None:
             st,
             "memory_store_write_document",
             json.dumps(
-                {"relative_path": "STYLE.md", "content": "# style\n"},
+                {"relative_path": STYLE_MD_REL, "content": "# style\n"},
                 ensure_ascii=False,
             ),
             write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
@@ -292,15 +297,15 @@ def test_bootstrap_end_state_seeds(tmp_path: Path) -> None:
             st,
             "memory_store_write_document",
             json.dumps(
-                {"relative_path": "USER.md", "content": "# user\n"},
+                {"relative_path": USER_MD_REL, "content": "# user\n"},
                 ensure_ascii=False,
             ),
             write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         )
     )
-    assert st.read_document("SOUL.md") == soul_seed
-    assert st.read_document("MEMORY.md") == memory_seed
-    assert st.read_document("IDENTITY.md") == "# custom identity\n"
+    assert st.read_document(SOUL_MD_REL) == soul_seed
+    assert st.read_document(MEMORY_MD_REL) == memory_seed
+    assert st.read_document(IDENTITY_MD_REL) == "# custom identity\n"
 
 
 def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
@@ -392,20 +397,20 @@ def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
         )
         + "\n",
     )
-    st.write_document("USER.md", "old")
+    st.write_document(USER_MD_REL, "old")
     r1 = asyncio.run(
         execute_tool_call(
             st,
             "memory_store_write_document",
             json.dumps(
-                {"relative_path": "USER.md", "content": "new user"},
+                {"relative_path": USER_MD_REL, "content": "new user"},
                 ensure_ascii=False,
             ),
             write_allowlist=MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
         )
     )
     assert r1.startswith("OK ")
-    assert st.read_document("USER.md") == "new user"
+    assert st.read_document(USER_MD_REL) == "new user"
     r2 = asyncio.run(
         execute_tool_call(
             st,
@@ -427,7 +432,7 @@ def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
 ) -> None:
     root = tmp_path
     st = _store(root)
-    st.write_document("SOUL.md", "seed")
+    st.write_document(SOUL_MD_REL, "seed")
     st.write_document(
         CONTEXT_JSON_REL,
         json.dumps(
@@ -438,9 +443,9 @@ def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
         )
         + "\n",
     )
-    ok = tool_memory_store_write_document(st, "SOUL.md", "updated via store")
+    ok = tool_memory_store_write_document(st, SOUL_MD_REL, "updated via store")
     assert ok.startswith("OK ")
-    assert st.read_document("SOUL.md") == "updated via store"
+    assert st.read_document(SOUL_MD_REL) == "updated via store"
 
 
 def test_bootstrap_tool_schema_write_description_names_bootstrap_paths_only() -> (
@@ -451,7 +456,7 @@ def test_bootstrap_tool_schema_write_description_names_bootstrap_paths_only() ->
         CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT
     ]
     assert f"Only writable paths via this tool: {bootstrap_csv}" in write_desc
-    assert "SOUL.md" in write_desc
+    assert SOUL_MD_REL in write_desc
     from app.core.companion_harness.tools.companion_tool_runtime import (
         build_openai_bootstrap_track_tools,
     )
