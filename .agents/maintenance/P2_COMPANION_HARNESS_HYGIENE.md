@@ -379,9 +379,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-116** #3413: add `ABOUT_MD_REL` to `memory_store_path_constants`; wire `models.py` + `memory_store_scope.py`. **claimed** `cursor/agent-maintenance-tasks-9cf0`.
-- [ ] **HYGIENE-2026-117** #3413: `prompting/test_contextual.py` — `load_template_seed_text(ABOUT_MD_REL)`. **claimed** `cursor/agent-maintenance-tasks-9cf0`.
-- [ ] **HYGIENE-2026-118** #3413: `companion/test_models.py` — `load_template_seed_text(ABOUT_MD_REL)`. **claimed** `cursor/agent-maintenance-tasks-9cf0`.
+- [x] **HYGIENE-2026-116** #3413: add `ABOUT_MD_REL` to `memory_store_path_constants`; wire `models.py` + `memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-9cf0`.
+- [x] **HYGIENE-2026-117** #3413: `prompting/test_contextual.py` — `load_template_seed_text(ABOUT_MD_REL)`. Fixed in `cursor/agent-maintenance-tasks-9cf0`.
+- [x] **HYGIENE-2026-118** #3413: `companion/test_models.py` — `load_template_seed_text(ABOUT_MD_REL)`. Fixed in `cursor/agent-maintenance-tasks-9cf0`.
 
 ### Deferred (open PR overlap)
 
