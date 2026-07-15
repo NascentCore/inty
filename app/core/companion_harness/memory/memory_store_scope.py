@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Final
 
 from .memory_store_path_constants import (
+    ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
     COMPANION_DREAMING_STATE_JSON_REL,
@@ -37,7 +38,7 @@ _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
 _PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
 _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
-        "ABOUT.md",
+        ABOUT_MD_REL,
         "AXIOM.md",
         "BOOTSTRAP.md",
         CHANNELS_MD_REL,
