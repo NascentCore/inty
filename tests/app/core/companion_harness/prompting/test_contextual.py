@@ -17,6 +17,9 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    ABOUT_MD_REL,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     build_turn_compose_context,
@@ -62,7 +65,7 @@ def _joined(messages: list[dict]) -> str:
 
 
 def test_settled_user_turn_contextual(tmp_path) -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(context_mode="intimate"),
@@ -80,7 +83,7 @@ def test_settled_user_turn_contextual(tmp_path) -> None:
 
 
 def test_bootstrap_user_turn_contextual_greeting_no_about(tmp_path) -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(),
@@ -98,7 +101,7 @@ def test_bootstrap_user_turn_contextual_greeting_no_about(tmp_path) -> None:
 
 
 def test_monolog_contextual(tmp_path) -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(),

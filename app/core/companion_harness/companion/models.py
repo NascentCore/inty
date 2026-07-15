@@ -33,6 +33,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
@@ -301,7 +302,6 @@ _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
 OUTPUT_FORMAT_IM_DM_MD = "OUTPUT_FORMAT_IM_DM.md"
 HARNESS_MD = "HARNESS.md"
-ABOUT_MD = "ABOUT.md"
 
 
 def _read_memory_document_optional(
@@ -451,7 +451,7 @@ def load_prompt_bundle(
             HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         about_md=_template_doc_truncated(
-            ABOUT_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
         companionship_md=_read_memory_document_required(

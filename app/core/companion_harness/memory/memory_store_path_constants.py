@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Final
 
 IDENTITY_MD_REL: Final[str] = "IDENTITY.md"
+ABOUT_MD_REL: Final[str] = "ABOUT.md"
 SOUL_MD_REL: Final[str] = "SOUL.md"
 STYLE_MD_REL: Final[str] = "STYLE.md"
 USER_MD_REL: Final[str] = "USER.md"

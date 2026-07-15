@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     TRANSCRIPT_JSONL_REL,
@@ -84,7 +85,7 @@ def test_load_prompt_bundle_loads_about_from_package_template(
         repository=None,
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
-    expected = load_template_seed_text("ABOUT.md").strip()
+    expected = load_template_seed_text(ABOUT_MD_REL).strip()
     assert bundle.about_md == expected
     assert "Describe how a user should interact" in bundle.about_md
 
