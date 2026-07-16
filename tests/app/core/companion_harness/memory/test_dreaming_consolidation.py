@@ -24,10 +24,16 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     STYLE_MD_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.utils.config import DreamingCuratorMode
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     UnusedLlmClient,
 )
+
+_DAILY_2026_01_02 = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist("2026-01-02")
+_DAILY_2026_01_03 = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist("2026-01-03")
 
 
 def _one_shot_llm_client(response: _FakeResponse) -> Any:
@@ -230,7 +236,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
         "soul",
         "companionship",
     ]
-    daily = store.read_document("memory/daily/2026-01-02.md")
+    daily = store.read_document(_DAILY_2026_01_02)
     assert daily == "dreaming_day_summary curated\n"
     assert store.read_document_if_exists("memory/2026-01-02.md") is None
     assert store.read_document(MEMORY_MD_REL) == "memory curated\n"
@@ -255,7 +261,7 @@ def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
         ),
     ]
     required_paths = (
-        "memory/daily/2026-01-02.md",
+        _DAILY_2026_01_02,
         MEMORY_MD_REL,
         USER_MD_REL,
         STYLE_MD_REL,
@@ -279,8 +285,8 @@ def test_consolidate_memory_one_shot_writes_all_docs(tmp_path: Path) -> None:
         is True
     )
     assert (
-        store.read_document("memory/daily/2026-01-02.md")
-        == "memory/daily/2026-01-02.md curated\n"
+        store.read_document(_DAILY_2026_01_02)
+        == f"{_DAILY_2026_01_02} curated\n"
     )
     assert store.read_document(MEMORY_MD_REL) == "MEMORY.md curated\n"
     assert store.read_document(USER_MD_REL) == "USER.md curated\n"
@@ -343,7 +349,7 @@ def test_consolidate_memory_one_shot_duplicate_tool_call_raises(
         ),
     ]
     required_paths = (
-        "memory/daily/2026-01-02.md",
+        _DAILY_2026_01_02,
         MEMORY_MD_REL,
         USER_MD_REL,
         STYLE_MD_REL,
@@ -382,7 +388,7 @@ def test_consolidate_memory_one_shot_all_no_op_raises(tmp_path: Path) -> None:
         ),
     ]
     required_paths = (
-        "memory/daily/2026-01-02.md",
+        _DAILY_2026_01_02,
         MEMORY_MD_REL,
         USER_MD_REL,
         STYLE_MD_REL,
@@ -428,7 +434,7 @@ def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
         ),
     ]
     changed_paths = (
-        "memory/daily/2026-01-02.md",
+        _DAILY_2026_01_02,
         MEMORY_MD_REL,
         USER_MD_REL,
     )
@@ -454,8 +460,8 @@ def test_consolidate_memory_one_shot_explicit_no_op_skips_unchanged_docs(
         is True
     )
     assert (
-        store.read_document("memory/daily/2026-01-02.md")
-        == "memory/daily/2026-01-02.md curated\n"
+        store.read_document(_DAILY_2026_01_02)
+        == f"{_DAILY_2026_01_02} curated\n"
     )
     assert store.read_document(MEMORY_MD_REL) == "MEMORY.md curated\n"
     assert store.read_document(USER_MD_REL) == "USER.md curated\n"
@@ -490,7 +496,7 @@ def test_consolidate_memory_one_shot_preserves_soul_appearance(
         "## 底线\n\nupdated limit\n"
     )
     required_paths = (
-        "memory/daily/2026-01-02.md",
+        _DAILY_2026_01_02,
         MEMORY_MD_REL,
         USER_MD_REL,
         STYLE_MD_REL,
@@ -556,8 +562,8 @@ def test_consolidate_memory_one_shot_multi_day_daily_gists(
         ),
     ]
     required_paths = (
-        "memory/daily/2026-01-02.md",
-        "memory/daily/2026-01-03.md",
+        _DAILY_2026_01_02,
+        _DAILY_2026_01_03,
         MEMORY_MD_REL,
         USER_MD_REL,
         STYLE_MD_REL,
@@ -578,10 +584,10 @@ def test_consolidate_memory_one_shot_multi_day_daily_gists(
         tool_bg_idle_event=tool_bg_idle,
     )
     assert (
-        store.read_document_if_exists("memory/daily/2026-01-02.md") is not None
+        store.read_document_if_exists(_DAILY_2026_01_02) is not None
     )
     assert (
-        store.read_document_if_exists("memory/daily/2026-01-03.md") is not None
+        store.read_document_if_exists(_DAILY_2026_01_03) is not None
     )
 
 
