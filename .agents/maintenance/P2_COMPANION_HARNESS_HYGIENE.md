@@ -395,9 +395,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-119** #3413: `tools/test_tools.py` — `memory_daily_gist("2099-01-01")` for daily seed path. **claimed** `cursor/agent-maintenance-tasks-9067`.
-- [ ] **HYGIENE-2026-120** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — `memory_daily_gist(day_iso)` in `_seed_scope_due_for_one_shot_dreaming`. **claimed** `cursor/agent-maintenance-tasks-9067`.
-- [ ] **HYGIENE-2026-121** #3413: `memory/test_dreaming_consolidation.py` — `memory_daily_gist` for fixed test dates (`2026-01-02`, `2026-01-03`). **claimed** `cursor/agent-maintenance-tasks-9067`.
+- [x] **HYGIENE-2026-119** #3413: `tools/test_tools.py` — `memory_daily_gist("2099-01-01")` for daily seed path. Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
+- [x] **HYGIENE-2026-120** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — `memory_daily_gist(day_iso)` in `_seed_scope_due_for_one_shot_dreaming`. Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
+- [x] **HYGIENE-2026-121** #3413: `memory/test_dreaming_consolidation.py` — `memory_daily_gist` for fixed test dates (`2026-01-02`, `2026-01-03`). Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
 
 ### Deferred (open PR overlap)
 
