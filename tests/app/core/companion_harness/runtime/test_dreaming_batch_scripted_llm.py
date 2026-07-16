@@ -33,6 +33,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
 )
@@ -180,7 +183,7 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
     user_ts = now - timedelta(hours=3)
     assistant_ts = user_ts + timedelta(minutes=1)
     day_iso = user_ts.date().isoformat()
-    daily_path = f"memory/daily/{day_iso}.md"
+    daily_path = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day_iso)
 
     store.write_document(
         CONTEXT_JSON_REL,

@@ -386,3 +386,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 ### Deferred (open PR overlap)
 
 - **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+
+## 2026-07-16 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92 + #3413 MemDoc literals in `test_prompt_builder.py` / `test_system_messages.py` stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — harness tests still hardcode `memory/daily/<date>.md` instead of `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-119** #3413: `tools/test_tools.py` — `memory_daily_gist("2099-01-01")` for daily seed path. Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
+- [x] **HYGIENE-2026-120** #3413: `runtime/test_dreaming_batch_scripted_llm.py` — `memory_daily_gist(day_iso)` in `_seed_scope_due_for_one_shot_dreaming`. Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
+- [x] **HYGIENE-2026-121** #3413: `memory/test_dreaming_consolidation.py` — `memory_daily_gist` for fixed test dates (`2026-01-02`, `2026-01-03`). Fixed in `cursor/agent-maintenance-tasks-9067` / pull/3849.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).

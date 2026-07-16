@@ -11,6 +11,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     LIFE_CURRENTS_MD_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST,
@@ -43,7 +46,9 @@ def test_tool_memory_store_list_paths(tmp_path: Path) -> None:
         repository=None,
     )
     st.write_document(USER_MD_REL, "u")
-    st.write_document("memory/daily/2099-01-01.md", "d")
+    st.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist("2099-01-01"), "d"
+    )
     out = _run_tool(
         st,
         "memory_store_list_paths",
