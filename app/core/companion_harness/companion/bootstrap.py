@@ -46,6 +46,8 @@ from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    BOOTSTRAP_MD_REL,
+    BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CONTEXT_JSON_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
@@ -56,9 +58,9 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 _PKG_DIR = Path(__file__).resolve().parent
-_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / "BOOTSTRAP.md"
+_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / BOOTSTRAP_MD_REL
 _BOOTSTRAP_TELEGRAM_PROFILE_PATH = (
-    _PKG_DIR / "prompts" / "BOOTSTRAP_TELEGRAM_PROFILE.md"
+    _PKG_DIR / "prompts" / BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
 )
 
 # Seed-only rels from canonical MemDoc path constants (canonical path constants).

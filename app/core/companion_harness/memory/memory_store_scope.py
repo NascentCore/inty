@@ -9,6 +9,8 @@ from typing import Final
 
 from .memory_store_path_constants import (
     ABOUT_MD_REL,
+    AXIOM_MD_REL,
+    BOOTSTRAP_MD_REL,
     CHANNELS_MD_REL,
     COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
     COMPANION_DREAMING_STATE_JSON_REL,
@@ -16,12 +18,16 @@ from .memory_store_path_constants import (
     COMPANION_SCHEDULE_TASKS_JSON_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    HARNESS_MD_REL,
     IDENTITY_MD_REL,
+    INTY_MD_REL,
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
+    OUTPUT_FORMAT_IM_DM_MD_REL,
+    SAFETY_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -39,13 +45,13 @@ _PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
 _PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
     {
         ABOUT_MD_REL,
-        "AXIOM.md",
-        "BOOTSTRAP.md",
+        AXIOM_MD_REL,
+        BOOTSTRAP_MD_REL,
         CHANNELS_MD_REL,
-        "HARNESS.md",
-        "INTY.md",
-        "OUTPUT_FORMAT_IM_DM.md",
-        "SAFETY.md",
+        HARNESS_MD_REL,
+        INTY_MD_REL,
+        OUTPUT_FORMAT_IM_DM_MD_REL,
+        SAFETY_MD_REL,
         TOOLS_MD_REL,
         SIGNIFICANCE_PERCEPTION_MD_REL,
     }
@@ -73,19 +79,19 @@ def load_template_seed_text(filename: str) -> str:
 @lru_cache(maxsize=1)
 def get_imate_axiom_system_text() -> str:
     """Product axiom from prompts/AXIOM.md; first system slice for iMate."""
-    return load_template_seed_text("AXIOM.md").strip()
+    return load_template_seed_text(AXIOM_MD_REL).strip()
 
 
 @lru_cache(maxsize=1)
 def get_inty_facts_system_text() -> str:
     """Inty ontology and philosophy from prompts/INTY.md; fixed system slice after AXIOM."""
-    return load_template_seed_text("INTY.md").strip()
+    return load_template_seed_text(INTY_MD_REL).strip()
 
 
 @lru_cache(maxsize=1)
 def get_safety_system_text() -> str:
     """Interaction safety from prompts/SAFETY.md; final doctrine system slice."""
-    return load_template_seed_text("SAFETY.md").strip()
+    return load_template_seed_text(SAFETY_MD_REL).strip()
 
 
 @dataclass(frozen=True)

@@ -405,3 +405,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-17 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — prompt seed filenames still string literals in `memory_store_scope.py` and `bootstrap.py`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-125** #3413: add `AXIOM_MD_REL`, `BOOTSTRAP_MD_REL`, `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`, `HARNESS_MD_REL`, `INTY_MD_REL`, `SAFETY_MD_REL`, `OUTPUT_FORMAT_IM_DM_MD_REL` to `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
+- [x] **HYGIENE-2026-126** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` + `get_*_system_text` from canonical constants. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
+- [x] **HYGIENE-2026-127** #3413: `bootstrap.py` — spec paths from `BOOTSTRAP_MD_REL` / `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
