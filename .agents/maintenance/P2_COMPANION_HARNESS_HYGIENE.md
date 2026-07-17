@@ -414,9 +414,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed:cursor/agent-maintenance-tasks-55f0] **HYGIENE-2026-125** #3413: add `AXIOM_MD_REL`, `BOOTSTRAP_MD_REL`, `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`, `HARNESS_MD_REL`, `INTY_MD_REL`, `SAFETY_MD_REL`, `OUTPUT_FORMAT_IM_DM_MD_REL` to `memory_store_path_constants`.
-- [claimed:cursor/agent-maintenance-tasks-55f0] **HYGIENE-2026-126** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` + `get_*_system_text` from canonical constants.
-- [claimed:cursor/agent-maintenance-tasks-55f0] **HYGIENE-2026-127** #3413: `bootstrap.py` — spec paths from `BOOTSTRAP_MD_REL` / `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`.
+- [x] **HYGIENE-2026-125** #3413: add `AXIOM_MD_REL`, `BOOTSTRAP_MD_REL`, `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`, `HARNESS_MD_REL`, `INTY_MD_REL`, `SAFETY_MD_REL`, `OUTPUT_FORMAT_IM_DM_MD_REL` to `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
+- [x] **HYGIENE-2026-126** #3413: `memory_store_scope.py` — `_PACKAGE_PROMPT_SEED_FILES` + `get_*_system_text` from canonical constants. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
+- [x] **HYGIENE-2026-127** #3413: `bootstrap.py` — spec paths from `BOOTSTRAP_MD_REL` / `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-55f0` / pull/3850.
 
 ### Deferred (open PR overlap)
 
