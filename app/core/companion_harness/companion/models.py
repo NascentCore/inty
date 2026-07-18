@@ -29,6 +29,7 @@ from app.core.companion_harness.prompting.bundle import PromptBundle
 
 from .utc import local_date_str
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     ensure_template_seeded_core_documents_in_store,
     load_template_seed_text,
 )
@@ -37,9 +38,11 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    HARNESS_MD_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
+    OUTPUT_FORMAT_IM_DM_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -300,8 +303,7 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
-OUTPUT_FORMAT_IM_DM_MD = "OUTPUT_FORMAT_IM_DM.md"
-HARNESS_MD = "HARNESS.md"
+OUTPUT_FORMAT_IM_DM_MD = OUTPUT_FORMAT_IM_DM_MD_REL
 
 
 def _read_memory_document_optional(
@@ -426,7 +428,7 @@ def load_prompt_bundle(
     if inject_private:
         daily_md = _read_memory_document_optional(
             store,
-            f"memory/daily/{day}.md",
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
             max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
         )
     else:
@@ -448,7 +450,7 @@ def load_prompt_bundle(
             TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         harness_md=_template_doc_truncated(
-            HARNESS_MD, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            HARNESS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         about_md=_template_doc_truncated(
             ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
@@ -461,7 +463,7 @@ def load_prompt_bundle(
             SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         output_format_im_dm_md=_template_doc_truncated(
-            OUTPUT_FORMAT_IM_DM_MD,
+            OUTPUT_FORMAT_IM_DM_MD_REL,
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         memory_daily_today_md=daily_md,
