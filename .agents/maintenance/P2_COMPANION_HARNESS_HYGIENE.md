@@ -433,9 +433,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-128** #3413: `models.py` — `HARNESS_MD` → `HARNESS_MD_REL`. claimed `cursor/agent-maintenance-tasks-35b6`.
-- [ ] **HYGIENE-2026-129** #3413: `models.py` — `OUTPUT_FORMAT_IM_DM_MD` → `OUTPUT_FORMAT_IM_DM_MD_REL` (re-export alias for test imports). claimed `cursor/agent-maintenance-tasks-35b6`.
-- [ ] **HYGIENE-2026-130** #3413: `models.py` — `memory_daily_gist(day)` instead of `f"memory/daily/{day}.md"`. claimed `cursor/agent-maintenance-tasks-35b6`.
+- [x] **HYGIENE-2026-128** #3413: `models.py` — `HARNESS_MD` → `HARNESS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-35b6` / pull/3851.
+- [x] **HYGIENE-2026-129** #3413: `models.py` — `OUTPUT_FORMAT_IM_DM_MD` → `OUTPUT_FORMAT_IM_DM_MD_REL` (re-export alias for test imports). Fixed in `cursor/agent-maintenance-tasks-35b6` / pull/3851.
+- [x] **HYGIENE-2026-130** #3413: `models.py` — `memory_daily_gist(day)` instead of `f"memory/daily/{day}.md"`. Fixed in `cursor/agent-maintenance-tasks-35b6` / pull/3851.
 
 ### Deferred (open PR overlap)
 
