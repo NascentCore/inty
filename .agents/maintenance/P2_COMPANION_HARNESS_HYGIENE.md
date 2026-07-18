@@ -424,3 +424,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-18 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — `models.py` still duplicates `HARNESS_MD` / `OUTPUT_FORMAT_IM_DM_MD` and inline `memory/daily/{day}.md`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [ ] **HYGIENE-2026-128** #3413: `models.py` — `HARNESS_MD` → `HARNESS_MD_REL`. claimed `cursor/agent-maintenance-tasks-35b6`.
+- [ ] **HYGIENE-2026-129** #3413: `models.py` — `OUTPUT_FORMAT_IM_DM_MD` → `OUTPUT_FORMAT_IM_DM_MD_REL` (re-export alias for test imports). claimed `cursor/agent-maintenance-tasks-35b6`.
+- [ ] **HYGIENE-2026-130** #3413: `models.py` — `memory_daily_gist(day)` instead of `f"memory/daily/{day}.md"`. claimed `cursor/agent-maintenance-tasks-35b6`.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
