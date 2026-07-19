@@ -22,6 +22,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOLS_MD_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+    memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     MemoryStoreScopePaths,
@@ -45,7 +46,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.tools_md == TOOLS_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
     assert p.context_json == CONTEXT_JSON_REL
-    assert p.memory_daily_gist("2026-04-05") == "memory/daily/2026-04-05.md"
+    assert p.memory_daily_gist("2026-04-05") == memory_daily_gist_rel("2026-04-05")
     assert (
         p.living_sphere_curator_state_json
         == COMPANION_LIVING_SPHERE_CURATOR_JSON_REL

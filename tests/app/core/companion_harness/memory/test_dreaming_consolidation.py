@@ -19,6 +19,7 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
+    MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -97,7 +98,7 @@ def _tool_call(name: str, payload: dict[str, object]) -> _FakeToolCall:
 
 
 def _one_shot_kind_for_path(rel: str) -> str:
-    if rel.startswith("memory/daily/"):
+    if rel.startswith(f"{MEMORY_DAILY_GIST_DIR_REL}/"):
         return DreamingDocumentKind.DAILY_GIST.value
     if rel == MEMORY_MD_REL:
         return DreamingDocumentKind.MEMORY.value

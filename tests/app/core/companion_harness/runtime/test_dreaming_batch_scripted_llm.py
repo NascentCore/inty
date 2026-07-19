@@ -27,6 +27,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
+    MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -250,7 +251,7 @@ def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
     )
     calls: list[tuple[str, str, str]] = []
     for rel in paths:
-        if rel.startswith("memory/daily/"):
+        if rel.startswith(f"{MEMORY_DAILY_GIST_DIR_REL}/"):
             kind = "daily_gist"
         elif rel == MEMORY_MD_REL:
             kind = "memory"
