@@ -27,6 +27,7 @@ from .memory_store_path_constants import (
     LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
+    MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
@@ -38,10 +39,12 @@ from .memory_store_path_constants import (
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+    memory_daily_gist_rel,
 )
 
 _MEMORY_DAILY_RE: Final[re.Pattern[str]] = re.compile(
-    r"^memory/daily/(\d{4}-\d{2}-\d{2})\.md$", re.IGNORECASE
+    rf"^{re.escape(MEMORY_DAILY_GIST_DIR_REL)}/(\d{{4}}-\d{{2}}-\d{{2}})\.md$",
+    re.IGNORECASE,
 )
 
 
@@ -202,7 +205,7 @@ def relative_path_for_kind(
     if kind == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW:
         if calendar_date is None:
             raise ValueError(f"calendar_date required for {kind}")
-        return f"memory/daily/{calendar_date.isoformat()}.md"
+        return memory_daily_gist_rel(calendar_date.isoformat())
     if calendar_date is not None:
         raise ValueError(f"calendar_date must be null for {kind}")
     for rel, (k, cd) in _REL_TO_KIND.items():

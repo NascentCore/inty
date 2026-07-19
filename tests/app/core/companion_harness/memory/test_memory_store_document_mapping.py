@@ -25,6 +25,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
+    memory_daily_gist_rel,
 )
 
 
@@ -32,7 +33,7 @@ def test_parse_identity_and_daily() -> None:
     k, d = parse_memory_store_relative_path(IDENTITY_MD_REL)
     assert k == CompanionMemoryDocumentKind.IDENTITY
     assert d is None
-    k2, d2 = parse_memory_store_relative_path("memory/daily/2026-03-01.md")
+    k2, d2 = parse_memory_store_relative_path(memory_daily_gist_rel("2026-03-01"))
     assert k2 == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW
     assert d2 == datetime.date(2026, 3, 1)
 

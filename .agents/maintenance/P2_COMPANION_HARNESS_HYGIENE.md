@@ -452,10 +452,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-131** #3413: add `memory_daily_gist_rel` to `memory_store_path_constants`; wire `memory_store_scope` + `memory_store_document_mapping`. Claimed `cursor/agent-maintenance-tasks-1bb1`.
-- [claimed] **HYGIENE-2026-132** #3413: `test_memory_store_document_mapping.py` — `memory_daily_gist_rel` for daily parse roundtrip. Claimed `cursor/agent-maintenance-tasks-1bb1`.
-- [claimed] **HYGIENE-2026-133** #3413: `test_memory_store_scope.py` — `memory_daily_gist_rel` in property assertion. Claimed `cursor/agent-maintenance-tasks-1bb1`.
-- [claimed] **HYGIENE-2026-134** #3413: `test_dreaming_consolidation.py` + `test_dreaming_batch_scripted_llm.py` — daily gist prefix via `MEMORY_DAILY_GIST_DIR_REL`. Claimed `cursor/agent-maintenance-tasks-1bb1`.
+- [x] **HYGIENE-2026-131** #3413: add `memory_daily_gist_rel` to `memory_store_path_constants`; wire `memory_store_scope` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-1bb1` / pull/3852.
+- [x] **HYGIENE-2026-132** #3413: `test_memory_store_document_mapping.py` — `memory_daily_gist_rel` for daily parse roundtrip. Fixed in `cursor/agent-maintenance-tasks-1bb1` / pull/3852.
+- [x] **HYGIENE-2026-133** #3413: `test_memory_store_scope.py` — `memory_daily_gist_rel` in property assertion. Fixed in `cursor/agent-maintenance-tasks-1bb1` / pull/3852.
+- [x] **HYGIENE-2026-134** #3413: `test_dreaming_consolidation.py` + `test_dreaming_batch_scripted_llm.py` — daily gist prefix via `MEMORY_DAILY_GIST_DIR_REL`. Fixed in `cursor/agent-maintenance-tasks-1bb1` / pull/3852.
 
 ### Deferred (open PR overlap)
 

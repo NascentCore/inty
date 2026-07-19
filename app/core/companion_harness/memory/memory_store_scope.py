@@ -36,6 +36,7 @@ from .memory_store_path_constants import (
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+    memory_daily_gist_rel,
 )
 from .memory_store import MemoryStore
 
@@ -160,7 +161,7 @@ class MemoryStoreScopePaths:
 
     def memory_daily_gist(self, day: str) -> str:
         """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""
-        return f"memory/daily/{day}.md"
+        return memory_daily_gist_rel(day)
 
     @property
     def living_sphere_curator_state_json(self) -> str:
