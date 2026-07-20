@@ -22,6 +22,7 @@ from .memory_store_path_constants import (
     GENERATED_IMAGES_INDEX_JSONL_REL,
     IDENTITY_MD_REL,
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+    INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIFE_CURRENTS_MD_REL,
@@ -98,6 +99,7 @@ class CompanionMemoryDocumentKind(str, Enum):
         "inty_v2_context_compaction_state_json"
     )
     INTY_V2_SCHEDULE_TASKS_JSON = "inty_v2_schedule_tasks_json"
+    INTY_V2_DREAMING_STATE_JSON = "inty_v2_dreaming_state_json"
 
 
 _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
@@ -179,6 +181,10 @@ _REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
     ),
     INTY_V2_SCHEDULE_TASKS_JSON_REL: (
         CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON,
+        None,
+    ),
+    INTY_V2_DREAMING_STATE_JSON_REL: (
+        CompanionMemoryDocumentKind.INTY_V2_DREAMING_STATE_JSON,
         None,
     ),
 }

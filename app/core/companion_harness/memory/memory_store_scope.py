@@ -22,6 +22,7 @@ from .memory_store_path_constants import (
     IDENTITY_MD_REL,
     INTY_MD_REL,
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+    INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
@@ -198,6 +199,8 @@ class MemoryStoreScopePaths:
         match self.state_file_prefix:
             case ".companion":
                 return COMPANION_DREAMING_STATE_JSON_REL
+            case ".inty_v2":
+                return INTY_V2_DREAMING_STATE_JSON_REL
             case _:
                 return f"{self.state_file_prefix}_dreaming_state.json"
 
