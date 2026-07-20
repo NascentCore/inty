@@ -463,3 +463,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-20 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — `.inty_v2` state JSON paths still use f-string fallback / string literals outside `memory_store_path_constants`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-135** #3413: add `INTY_V2_DREAMING_STATE_JSON_REL`; wire `memory_store_scope` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
+- [x] **HYGIENE-2026-136** #3413: `test_memory_store_scope.py` — `INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL` for `.inty_v2` prefix. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
+- [x] **HYGIENE-2026-137** #3413: `test_memory_store_document_mapping.py` — roundtrip `INTY_V2_*` + companion state JSON paths. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).

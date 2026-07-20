@@ -12,6 +12,8 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANION_SCHEDULE_TASKS_JSON_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
+    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+    INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
@@ -65,8 +67,12 @@ def test_memory_store_scope_paths_custom_state_file_prefix() -> None:
         p.living_sphere_curator_state_json
         == INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL
     )
+    assert (
+        p.context_compaction_state_json
+        == INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL
+    )
     assert p.schedule_queue_json == INTY_V2_SCHEDULE_TASKS_JSON_REL
-    assert p.dreaming_state_json == ".inty_v2_dreaming_state.json"
+    assert p.dreaming_state_json == INTY_V2_DREAMING_STATE_JSON_REL
     assert p.identity == IDENTITY_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
 

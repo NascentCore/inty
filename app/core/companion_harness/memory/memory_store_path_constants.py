@@ -56,6 +56,7 @@ INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL: Final[str] = (
     ".inty_v2_context_compaction_state.json"
 )
 INTY_V2_SCHEDULE_TASKS_JSON_REL: Final[str] = ".inty_v2_schedule_tasks.json"
+INTY_V2_DREAMING_STATE_JSON_REL: Final[str] = ".inty_v2_dreaming_state.json"
 MEMORY_DAILY_GIST_DIR_REL: Final[str] = "memory/daily"
 
 
