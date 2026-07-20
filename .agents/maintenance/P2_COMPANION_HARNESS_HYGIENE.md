@@ -472,9 +472,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-135** #3413: add `INTY_V2_DREAMING_STATE_JSON_REL`; wire `memory_store_scope` + `memory_store_document_mapping`. **claimed** `cursor/agent-maintenance-tasks-298d`.
-- [ ] **HYGIENE-2026-136** #3413: `test_memory_store_scope.py` — `INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL` for `.inty_v2` prefix. **claimed** `cursor/agent-maintenance-tasks-298d`.
-- [ ] **HYGIENE-2026-137** #3413: `test_memory_store_document_mapping.py` — roundtrip `INTY_V2_*` + companion state JSON paths. **claimed** `cursor/agent-maintenance-tasks-298d`.
+- [x] **HYGIENE-2026-135** #3413: add `INTY_V2_DREAMING_STATE_JSON_REL`; wire `memory_store_scope` + `memory_store_document_mapping`. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
+- [x] **HYGIENE-2026-136** #3413: `test_memory_store_scope.py` — `INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL` for `.inty_v2` prefix. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
+- [x] **HYGIENE-2026-137** #3413: `test_memory_store_document_mapping.py` — roundtrip `INTY_V2_*` + companion state JSON paths. Fixed in `cursor/agent-maintenance-tasks-298d` / pull/3853.
 
 ### Deferred (open PR overlap)
 
