@@ -491,9 +491,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-138** #3413: `test_dreaming_consolidation.py` — legacy flat daily path via named constant (claimed `cursor/agent-maintenance-tasks-95db`).
-- [ ] **HYGIENE-2026-139** #3413: `test_memory_store_scope.py` — `significance_perception_md` + `transcript_inner_tick` property assertions (claimed `cursor/agent-maintenance-tasks-95db`).
-- [ ] **HYGIENE-2026-140** #3413: `test_memory_store_document_mapping.py` — roundtrip remaining `_REL_TO_KIND` static paths (claimed `cursor/agent-maintenance-tasks-95db`).
+- [x] **HYGIENE-2026-138** #3413: `test_dreaming_consolidation.py` — legacy flat daily path via named constant. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
+- [x] **HYGIENE-2026-139** #3413: `test_memory_store_scope.py` — `significance_perception_md` + `transcript_inner_tick` property assertions. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
+- [x] **HYGIENE-2026-140** #3413: `test_memory_store_document_mapping.py` — roundtrip remaining `_REL_TO_KIND` static paths. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
 
 ### Deferred (open PR overlap)
 
