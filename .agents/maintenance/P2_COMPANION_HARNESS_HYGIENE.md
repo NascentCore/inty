@@ -482,3 +482,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-21 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; #3413 follow-up — scope-path property tests and document-mapping roundtrip still omit mapped rel paths.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-138** #3413: `test_dreaming_consolidation.py` — legacy flat daily path via named constant. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
+- [x] **HYGIENE-2026-139** #3413: `test_memory_store_scope.py` — `significance_perception_md` + `transcript_inner_tick` property assertions. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
+- [x] **HYGIENE-2026-140** #3413: `test_memory_store_document_mapping.py` — roundtrip remaining `_REL_TO_KIND` static paths. Fixed in `cursor/agent-maintenance-tasks-95db` / pull/3854.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).

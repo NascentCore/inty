@@ -35,6 +35,7 @@ from tests.app.core.companion_harness.companion.companion_scripted_llm import (
 
 _DAILY_2026_01_02 = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist("2026-01-02")
 _DAILY_2026_01_03 = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist("2026-01-03")
+_LEGACY_FLAT_DAILY_2026_01_02 = "memory/2026-01-02.md"
 
 
 def _one_shot_llm_client(response: _FakeResponse) -> Any:
@@ -239,7 +240,7 @@ def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     ]
     daily = store.read_document(_DAILY_2026_01_02)
     assert daily == "dreaming_day_summary curated\n"
-    assert store.read_document_if_exists("memory/2026-01-02.md") is None
+    assert store.read_document_if_exists(_LEGACY_FLAT_DAILY_2026_01_02) is None
     assert store.read_document(MEMORY_MD_REL) == "memory curated\n"
     assert store.read_document(USER_MD_REL) == "user curated\n"
     assert store.read_document(STYLE_MD_REL) == "style curated\n"
