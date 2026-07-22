@@ -11,8 +11,8 @@ from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    USER_MD_REL,
 )
-from app.core.companion_harness.memory.user_md_identity import USER_MD_REL
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
