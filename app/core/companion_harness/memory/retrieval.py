@@ -27,6 +27,9 @@ from enum import StrEnum
 
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    CHAT_HISTORY_MD_REL,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
@@ -58,5 +61,5 @@ def select_slices_for_turn(
     _ = track
     return SliceSelection(
         resident_paths=(),
-        transcript_window_spec="CHAT_HISTORY.md",
+        transcript_window_spec=CHAT_HISTORY_MD_REL,
     )

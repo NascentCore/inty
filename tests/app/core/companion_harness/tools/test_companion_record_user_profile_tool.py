@@ -9,8 +9,10 @@ from sqlalchemy import delete, select
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.user_md_identity import (
+from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.user_md_identity import (
     UserIdentityFieldLabel,
     load_user_md_template_text,
 )

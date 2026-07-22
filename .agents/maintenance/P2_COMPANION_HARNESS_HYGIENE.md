@@ -510,10 +510,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-141** #3413: add `CHAT_HISTORY_MD_REL` to `memory_store_path_constants`; wire `retrieval.py`. Claimed `cursor/agent-maintenance-tasks-ae51`.
-- [claimed] **HYGIENE-2026-142** #3413: `test_bootstrap_complete_not_blocked_without_profile.py` — `USER_MD_REL` from `memory_store_path_constants`. Claimed `cursor/agent-maintenance-tasks-ae51`.
-- [claimed] **HYGIENE-2026-143** #3413: `test_companion_user_feedback_tool.py` — `COMPANION_USER_FEEDBACK_JSONL_REL` from constants (drop re-export). Claimed `cursor/agent-maintenance-tasks-ae51`.
-- [claimed] **HYGIENE-2026-144** #3413: `test_companion_record_user_profile_tool.py` — `USER_MD_REL` from constants. Claimed `cursor/agent-maintenance-tasks-ae51`.
+- [x] **HYGIENE-2026-141** #3413: add `CHAT_HISTORY_MD_REL` to `memory_store_path_constants`; wire `retrieval.py`. Fixed in `cursor/agent-maintenance-tasks-ae51` / pull/3855.
+- [x] **HYGIENE-2026-142** #3413: `test_bootstrap_complete_not_blocked_without_profile.py` — `USER_MD_REL` from `memory_store_path_constants`. Fixed in `cursor/agent-maintenance-tasks-ae51` / pull/3855.
+- [x] **HYGIENE-2026-143** #3413: `test_companion_user_feedback_tool.py` — `COMPANION_USER_FEEDBACK_JSONL_REL` from constants (drop re-export). Fixed in `cursor/agent-maintenance-tasks-ae51` / pull/3855.
+- [x] **HYGIENE-2026-144** #3413: `test_companion_record_user_profile_tool.py` — `USER_MD_REL` from constants. Fixed in `cursor/agent-maintenance-tasks-ae51` / pull/3855.
 
 ### Deferred (open PR overlap)
 

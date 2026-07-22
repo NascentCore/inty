@@ -15,6 +15,7 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANION_USER_FEEDBACK_JSONL_REL,
     CONTEXT_JSON_REL,
     MEMORY_MD_REL,
     TRANSCRIPT_JSONL_REL,
@@ -25,7 +26,6 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
 )
 from app.core.companion_harness.tools.companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
-    USER_FEEDBACK_JSONL_REL,
     ComplaintCategory,
     HarnessSnapshot,
     UserFeedbackDisclosureMode,
@@ -128,7 +128,7 @@ async def test_record_user_feedback_appends_snapshot_jsonl(
     assert "feedback_recorded" in out
     assert "github_issue" not in out
     assert "http" not in out
-    body = store.read_document(USER_FEEDBACK_JSONL_REL)
+    body = store.read_document(COMPANION_USER_FEEDBACK_JSONL_REL)
     lines = [ln for ln in body.strip().split("\n") if ln.strip()]
     assert len(lines) >= 2
     snapshot_row = json.loads(lines[0])
