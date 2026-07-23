@@ -521,3 +521,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-23 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; follow-up — `retrieval.py` `CHAT_HISTORY_MD_REL` window spec untested; doctrine prompt getters untested; UP041 `asyncio.TimeoutError` in two companion test modules.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-145** ruff UP041: replace `asyncio.TimeoutError` with builtin `TimeoutError` in `test_implicit_sign_on_greeting_llm.py` and `test_companion_llm_client.py`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
+- [x] **HYGIENE-2026-146** `memory/test_retrieval.py` — `select_slices_for_turn` uses `CHAT_HISTORY_MD_REL` as `transcript_window_spec`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
+- [x] **HYGIENE-2026-147** `memory/test_memory_store_scope.py` — smoke `get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).

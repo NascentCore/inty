@@ -185,7 +185,7 @@ def test_implicit_sign_on_greeting_llm_timeout_retries_then_raises(
     _seed_workspace(store)
     client = _SlowLLMClient(block_sec=0.25)
 
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(TimeoutError):
         asyncio.run(
             run_companion_implicit_sign_on_greeting_turn(
                 "",
