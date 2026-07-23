@@ -530,9 +530,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [claimed] **HYGIENE-2026-145** ruff UP041: replace `asyncio.TimeoutError` with builtin `TimeoutError` in `test_implicit_sign_on_greeting_llm.py` and `test_companion_llm_client.py`. Claimed `cursor/agent-maintenance-tasks-3cdf`.
-- [claimed] **HYGIENE-2026-146** `memory/test_retrieval.py` — `select_slices_for_turn` uses `CHAT_HISTORY_MD_REL` as `transcript_window_spec`. Claimed `cursor/agent-maintenance-tasks-3cdf`.
-- [claimed] **HYGIENE-2026-147** `memory/test_memory_store_scope.py` — smoke `get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`. Claimed `cursor/agent-maintenance-tasks-3cdf`.
+- [x] **HYGIENE-2026-145** ruff UP041: replace `asyncio.TimeoutError` with builtin `TimeoutError` in `test_implicit_sign_on_greeting_llm.py` and `test_companion_llm_client.py`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
+- [x] **HYGIENE-2026-146** `memory/test_retrieval.py` — `select_slices_for_turn` uses `CHAT_HISTORY_MD_REL` as `transcript_window_spec`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
+- [x] **HYGIENE-2026-147** `memory/test_memory_store_scope.py` — smoke `get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`. Fixed in `cursor/agent-maintenance-tasks-3cdf` / pull/3856.
 
 ### Deferred (open PR overlap)
 

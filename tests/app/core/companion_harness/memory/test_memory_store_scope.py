@@ -31,6 +31,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.core.companion_harness.memory.memory_store_scope import (
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
+    get_imate_axiom_system_text,
+    get_inty_facts_system_text,
+    get_safety_system_text,
     is_scope_initialized_in_store,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -63,6 +66,15 @@ def test_memory_store_scope_paths_properties() -> None:
     )
     assert p.schedule_queue_json == COMPANION_SCHEDULE_TASKS_JSON_REL
     assert p.dreaming_state_json == COMPANION_DREAMING_STATE_JSON_REL
+
+
+def test_doctrine_prompt_seed_getters_return_non_empty() -> None:
+    for text in (
+        get_imate_axiom_system_text(),
+        get_inty_facts_system_text(),
+        get_safety_system_text(),
+    ):
+        assert text.strip()
 
 
 def test_memory_store_scope_paths_custom_state_file_prefix() -> None:

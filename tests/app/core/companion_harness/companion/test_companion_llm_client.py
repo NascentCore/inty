@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 from types import SimpleNamespace
 from typing import Any
@@ -287,7 +286,7 @@ async def test_chat_completion_with_retrial_times_out_per_attempt(
         return _ok_completion()
 
     monkeypatch.setattr(client, "chat_completion", _slow)
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(TimeoutError):
         await client.chat_completion_with_retrial(
             messages=[{"role": "user", "content": "hi"}],
             model=None,
