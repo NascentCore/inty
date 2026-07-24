@@ -9,6 +9,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
+    HARNESS_MD_REL,
     TRANSCRIPT_JSONL_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
@@ -73,6 +74,8 @@ def test_load_prompt_bundle_loads_harness_from_package_template(
         repository=None,
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
+    expected = load_template_seed_text(HARNESS_MD_REL).strip()
+    assert bundle.harness_md == expected
     assert "Innate limits of the companion harness" in bundle.harness_md
     assert "only communicate in text" in bundle.harness_md
 

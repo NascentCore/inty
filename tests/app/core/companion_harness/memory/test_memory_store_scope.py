@@ -4,6 +4,10 @@ from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    ABOUT_MD_REL,
+    AXIOM_MD_REL,
+    BOOTSTRAP_MD_REL,
+    BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     COMPANION_DREAMING_STATE_JSON_REL,
@@ -11,13 +15,17 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
     COMPANION_SCHEDULE_TASKS_JSON_REL,
     CONTEXT_JSON_REL,
+    HARNESS_MD_REL,
     IDENTITY_MD_REL,
+    INTY_MD_REL,
     INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
     INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
+    OUTPUT_FORMAT_IM_DM_MD_REL,
+    SAFETY_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
@@ -35,6 +43,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_inty_facts_system_text,
     get_safety_system_text,
     is_scope_initialized_in_store,
+    load_template_seed_text,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 
@@ -75,6 +84,23 @@ def test_doctrine_prompt_seed_getters_return_non_empty() -> None:
         get_safety_system_text(),
     ):
         assert text.strip()
+
+
+def test_package_prompt_seed_files_load_via_canonical_rel_paths() -> None:
+    for rel in (
+        ABOUT_MD_REL,
+        AXIOM_MD_REL,
+        BOOTSTRAP_MD_REL,
+        BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
+        CHANNELS_MD_REL,
+        HARNESS_MD_REL,
+        INTY_MD_REL,
+        OUTPUT_FORMAT_IM_DM_MD_REL,
+        SAFETY_MD_REL,
+        TOOLS_MD_REL,
+        SIGNIFICANCE_PERCEPTION_MD_REL,
+    ):
+        assert load_template_seed_text(rel).strip()
 
 
 def test_memory_store_scope_paths_custom_state_file_prefix() -> None:
