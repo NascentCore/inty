@@ -7,6 +7,8 @@ from pathlib import Path
 from app.core.companion_harness.companion.bootstrap import (
     CompanionSetExperienceProfileToolInput,
     interactive_bootstrap_active,
+    load_bootstrap_spec_text,
+    load_bootstrap_telegram_profile_slice_text,
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
@@ -20,6 +22,8 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    BOOTSTRAP_MD_REL,
+    BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
@@ -48,6 +52,15 @@ def _store(root: Path):
         scope=CompanionScope("bootstrap", "agent", str(root.resolve())),
         repository=None,
     )
+
+
+def test_bootstrap_spec_loaders_use_canonical_prompt_seed_paths() -> None:
+    assert load_bootstrap_spec_text() == load_template_seed_text(
+        BOOTSTRAP_MD_REL
+    ).rstrip()
+    assert load_bootstrap_telegram_profile_slice_text() == load_template_seed_text(
+        BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
+    ).rstrip()
 
 
 def test_interactive_bootstrap_active_requires_incomplete_meta() -> None:
