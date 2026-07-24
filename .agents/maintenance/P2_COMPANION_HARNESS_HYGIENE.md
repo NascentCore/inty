@@ -549,9 +549,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-148** `memory/test_memory_store_scope.py` — smoke `load_template_seed_text` for all `_PACKAGE_PROMPT_SEED_FILES` rel constants. **claimed** `cursor/agent-maintenance-tasks-2d5c`.
-- [ ] **HYGIENE-2026-149** `companion/test_models.py` — `load_prompt_bundle` harness slice matches `HARNESS_MD_REL` seed. **claimed** `cursor/agent-maintenance-tasks-2d5c`.
-- [ ] **HYGIENE-2026-150** `companion/test_bootstrap.py` — `load_bootstrap_spec_text` / telegram slice align with `BOOTSTRAP_MD_REL` / `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`. **claimed** `cursor/agent-maintenance-tasks-2d5c`.
+- [x] **HYGIENE-2026-148** `memory/test_memory_store_scope.py` — smoke `load_template_seed_text` for all `_PACKAGE_PROMPT_SEED_FILES` rel constants. Fixed in `cursor/agent-maintenance-tasks-2d5c` / pull/3857.
+- [x] **HYGIENE-2026-149** `companion/test_models.py` — `load_prompt_bundle` harness slice matches `HARNESS_MD_REL` seed. Fixed in `cursor/agent-maintenance-tasks-2d5c` / pull/3857.
+- [x] **HYGIENE-2026-150** `companion/test_bootstrap.py` — `load_bootstrap_spec_text` / telegram slice align with `BOOTSTRAP_MD_REL` / `BOOTSTRAP_TELEGRAM_PROFILE_MD_REL`; wire telegram profile into `_PACKAGE_PROMPT_SEED_FILES`. Fixed in `cursor/agent-maintenance-tasks-2d5c` / pull/3857.
 
 ### Deferred (open PR overlap)
 
