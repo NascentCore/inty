@@ -23,6 +23,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIVING_SPHERE_MD_REL,
+    MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
     SAFETY_MD_REL,
@@ -65,6 +66,9 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.transcript_inner_tick == TRANSCRIPT_INNER_TICK_JSONL_REL
     assert p.context_json == CONTEXT_JSON_REL
     assert p.memory_daily_gist("2026-04-05") == memory_daily_gist_rel("2026-04-05")
+    assert memory_daily_gist_rel("2026-04-05").startswith(
+        f"{MEMORY_DAILY_GIST_DIR_REL}/"
+    )
     assert (
         p.living_sphere_curator_state_json
         == COMPANION_LIVING_SPHERE_CURATOR_JSON_REL
