@@ -559,3 +559,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
 - **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
 - **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+
+## 2026-07-25 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — HYGIENE-2026-92/122..124 stay deferred); ruff UP017/UP035/UP041/F841 + vulture `--min-confidence 80` clean except deferred F401; follow-up — `load_prompt_bundle` core MemDoc reads and retrieval slice selection lack canonical-path smoke coverage outside #3834 scope.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-151** `companion/test_models.py` — smoke `load_prompt_bundle` reads `SOUL_MD_REL` / `MEMORY_MD_REL` / `STYLE_MD_REL` / `IDENTITY_MD_REL` / `USER_MD_REL` from store. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
+- [x] **HYGIENE-2026-152** `memory/test_retrieval.py` — parametrize `select_slices_for_turn` across USER_CHAT + inner-tick tracks. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
+- [x] **HYGIENE-2026-153** `memory/test_memory_store_scope.py` — assert `memory_daily_gist_rel` uses `MEMORY_DAILY_GIST_DIR_REL` prefix. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
+
+### Deferred (open PR overlap)
+
+- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
+- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
+- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
+- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).

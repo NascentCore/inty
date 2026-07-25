@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -14,8 +16,13 @@ from app.core.companion_harness.memory.retrieval import select_slices_for_turn
 from app.core.companion_harness.prompting.bundle import PromptBundle
 
 
+@pytest.mark.parametrize(
+    "track",
+    list(CompanionTurnTrack),
+)
 def test_select_slices_for_turn_uses_chat_history_window_spec(
     tmp_path: Path,
+    track: CompanionTurnTrack,
 ) -> None:
     store = MemoryStore(
         scope=CompanionScope(
@@ -32,7 +39,7 @@ def test_select_slices_for_turn_uses_chat_history_window_spec(
         memory_md="mem",
     )
     selection = select_slices_for_turn(
-        track=CompanionTurnTrack.USER_CHAT,
+        track=track,
         store=store,
         bundle=bundle,
     )
