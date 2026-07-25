@@ -10,7 +10,12 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     HARNESS_MD_REL,
+    IDENTITY_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
     TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -91,6 +96,26 @@ def test_load_prompt_bundle_loads_about_from_package_template(
     expected = load_template_seed_text(ABOUT_MD_REL).strip()
     assert bundle.about_md == expected
     assert "Describe how a user should interact" in bundle.about_md
+
+
+def test_load_prompt_bundle_reads_core_memdocs_from_store(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-core-memdocs"),
+        repository=None,
+    )
+    store.write_document(IDENTITY_MD_REL, "# Identity\ncustom identity\n")
+    store.write_document(SOUL_MD_REL, "# Soul\ncustom soul\n")
+    store.write_document(STYLE_MD_REL, "# Style\ncustom style\n")
+    store.write_document(USER_MD_REL, "# User\ncustom user\n")
+    store.write_document(MEMORY_MD_REL, "# Memory\ncustom memory\n")
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    assert "custom identity" in bundle.identity
+    assert "custom soul" in bundle.soul
+    assert "custom style" in bundle.style_md
+    assert "custom user" in bundle.user_md
+    assert "custom memory" in bundle.memory_md
 
 
 def test_load_prompt_bundle_reads_companionship_from_memory_store(
