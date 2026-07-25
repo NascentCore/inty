@@ -568,9 +568,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-151** `companion/test_models.py` — smoke `load_prompt_bundle` reads `SOUL_MD_REL` / `MEMORY_MD_REL` / `STYLE_MD_REL` / `IDENTITY_MD_REL` / `USER_MD_REL` from store. **claimed** `cursor/agent-maintenance-tasks-f010`.
-- [ ] **HYGIENE-2026-152** `memory/test_retrieval.py` — parametrize `select_slices_for_turn` across USER_CHAT + inner-tick tracks. **claimed** `cursor/agent-maintenance-tasks-f010`.
-- [ ] **HYGIENE-2026-153** `memory/test_memory_store_scope.py` — assert `memory_daily_gist_rel` uses `MEMORY_DAILY_GIST_DIR_REL` prefix. **claimed** `cursor/agent-maintenance-tasks-f010`.
+- [x] **HYGIENE-2026-151** `companion/test_models.py` — smoke `load_prompt_bundle` reads `SOUL_MD_REL` / `MEMORY_MD_REL` / `STYLE_MD_REL` / `IDENTITY_MD_REL` / `USER_MD_REL` from store. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
+- [x] **HYGIENE-2026-152** `memory/test_retrieval.py` — parametrize `select_slices_for_turn` across USER_CHAT + inner-tick tracks. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
+- [x] **HYGIENE-2026-153** `memory/test_memory_store_scope.py` — assert `memory_daily_gist_rel` uses `MEMORY_DAILY_GIST_DIR_REL` prefix. Fixed in `cursor/agent-maintenance-tasks-f010` / pull/3858.
 
 ### Deferred (open PR overlap)
 
