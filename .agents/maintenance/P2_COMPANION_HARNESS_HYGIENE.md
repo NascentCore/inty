@@ -587,9 +587,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Open tasks
 
-- [ ] **HYGIENE-2026-154** `companion/test_models.py` — smoke `load_prompt_bundle` reads `TOOLS_MD_REL` from store. **claimed** `cursor/agent-maintenance-tasks-2571`.
-- [ ] **HYGIENE-2026-155** `companion/test_models.py` — smoke `load_prompt_bundle` reads `SIGNIFICANCE_PERCEPTION_MD_REL` from store. **claimed** `cursor/agent-maintenance-tasks-2571`.
-- [ ] **HYGIENE-2026-156** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys are canonical `*_MD_REL` constants. **claimed** `cursor/agent-maintenance-tasks-2571`.
+- [x] **HYGIENE-2026-154** `companion/test_models.py` — smoke `load_prompt_bundle` loads `TOOLS_MD_REL` package template. Fixed in `cursor/agent-maintenance-tasks-2571` / pull/3859.
+- [x] **HYGIENE-2026-155** `companion/test_models.py` — smoke `load_prompt_bundle` loads `SIGNIFICANCE_PERCEPTION_MD_REL` package template. Fixed in `cursor/agent-maintenance-tasks-2571` / pull/3859.
+- [x] **HYGIENE-2026-156** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys are canonical `*_MD_REL` constants. Fixed in `cursor/agent-maintenance-tasks-2571` / pull/3859.
 
 ### Deferred (open PR overlap)
 
