@@ -12,8 +12,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     HARNESS_MD_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
+    SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
+    TOOLS_MD_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
@@ -131,6 +133,36 @@ def test_load_prompt_bundle_reads_companionship_from_memory_store(
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
     assert "异地恋人" in bundle.companionship_md
+
+
+def test_load_prompt_bundle_loads_tools_from_package_template(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("models", "a", f"{tmp_path.name}-tools"),
+        repository=None,
+    )
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    expected = load_template_seed_text(TOOLS_MD_REL).strip()
+    assert bundle.tools_md == expected
+    assert "Tools - interact with the environment" in bundle.tools_md
+
+
+def test_load_prompt_bundle_loads_significance_perception_from_package_template(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope(
+            "models",
+            "a",
+            f"{tmp_path.name}-significance",
+        ),
+        repository=None,
+    )
+    bundle = load_prompt_bundle(store, meta=ContextMeta())
+    expected = load_template_seed_text(SIGNIFICANCE_PERCEPTION_MD_REL).strip()
+    assert bundle.significance_perception_md == expected
+    assert "Significance perception" in bundle.significance_perception_md
 
 
 def test_context_meta_defaults() -> None:
