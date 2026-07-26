@@ -10,6 +10,16 @@ from pydantic import ValidationError
 from app.core.companion_harness.memory.memdoc_frontmatter import (
     MemDocFrontmatter,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
+    LIVING_SPHERE_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    TECHNO_CORE_MD_REL,
+    USER_MD_REL,
+)
 from app.core.companion_harness.memory.retrieval import RetrievalTier
 from app.core.companion_harness.prompting.projection import ordering, slot_rank
 from app.core.companion_harness.prompting.projection.ordering import (
@@ -28,6 +38,20 @@ def test_slot_rank_values_are_integers() -> None:
     for path, rank in slot_rank.SLOT_RANK.items():
         assert isinstance(path, str)
         assert isinstance(rank, int)
+
+
+def test_slot_rank_keys_use_canonical_memdoc_path_constants() -> None:
+    expected = {
+        IDENTITY_MD_REL,
+        SOUL_MD_REL,
+        USER_MD_REL,
+        STYLE_MD_REL,
+        COMPANIONSHIP_MD_REL,
+        MEMORY_MD_REL,
+        LIVING_SPHERE_MD_REL,
+        TECHNO_CORE_MD_REL,
+    }
+    assert set(slot_rank.SLOT_RANK) == expected
 
 
 def test_memdoc_frontmatter_validates() -> None:
