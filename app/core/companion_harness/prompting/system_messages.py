@@ -59,10 +59,6 @@ from typing import Any
 
 from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_injects_private_memory,
-    experience_profile_system_clause,
-)
-from app.core.companion_harness.experience_profile.experience_directives import (
-    experience_directives_system_clause,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_document_mapping import (
@@ -111,7 +107,6 @@ from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
-    default_runtime_context_for_compose,
     empty_memory_store_for_compose,
     extend_contextual_system_slices,
     turn_compose_context_for_self_contained_track,

@@ -27,6 +27,10 @@ from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
     output_format_prompt_slice_for_runtime_channel,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    ABOUT_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+)
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
@@ -349,12 +353,12 @@ def test_autonomy_inner_tick_emits_autonomy_section_and_no_proactive_clause() ->
         "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
         in autonomy_lines[2]
     )
-    assert any("LIFE_CURRENTS.md" in line for line in autonomy_lines)
+    assert any(LIFE_CURRENTS_MD_REL in line for line in autonomy_lines)
     autonomy_text = autonomy_blocks[0]
     assert "与 ai_private 分工" in autonomy_text
     assert "禁止写入" in autonomy_text
     assert "成为他的知己" in autonomy_text
-    assert "只允许" in autonomy_text and "LIFE_CURRENTS.md" in autonomy_text
+    assert "只允许" in autonomy_text and LIFE_CURRENTS_MD_REL in autonomy_text
 
 
 def _make_bundle() -> PromptBundle:
@@ -405,7 +409,7 @@ def test_build_system_messages_for_inner_tick_autonomy_is_production_builder(
 
 
 def test_user_message_turn_includes_about_guidance_slice() -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     bundle = PromptBundle(
         identity="id\n",
         soul="s\n",
@@ -427,7 +431,7 @@ def test_user_message_turn_includes_about_guidance_slice() -> None:
 def test_inner_tick_monolog_omits_about_guidance_slice(
     tmp_path,
 ) -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     bundle = PromptBundle(
         identity="id\n",
         soul="s\n",
@@ -452,7 +456,7 @@ def test_inner_tick_monolog_omits_about_guidance_slice(
 
 
 def test_greeting_omits_about_guidance_slice() -> None:
-    about_body = load_template_seed_text("ABOUT.md").strip()
+    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
     bundle = PromptBundle(
         identity="id\n",
         soul="s\n",

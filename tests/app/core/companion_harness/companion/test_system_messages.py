@@ -13,6 +13,11 @@ from app.core.companion_harness.experience_profile.context_mode import (
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+)
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.companion.prompt_stack import (
@@ -131,7 +136,7 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> (
     )
     assert "memory_store_write_document" in joined
     assert "COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md" in joined
-    assert "SOUL.md" in joined and "MEMORY.md" in joined
+    assert SOUL_MD_REL in joined and MEMORY_MD_REL in joined
     assert "companion_update_prompt_slice" not in joined
     assert "schedule_task" not in joined
 
@@ -244,7 +249,7 @@ def test_persona_injects_seed_companionship_after_bootstrap() -> None:
         style_md="style",
         user_md="user",
         memory_md="memory",
-        companionship_md=load_template_seed_text("COMPANIONSHIP.md"),
+        companionship_md=load_template_seed_text(COMPANIONSHIP_MD_REL),
     )
     joined = "\n".join(
         _system_contents(
