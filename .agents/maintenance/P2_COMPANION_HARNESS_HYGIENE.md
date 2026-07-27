@@ -599,7 +599,7 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-2e8a`)
 
-- [ ] **HYGIENE-2026-92** ruff F401: remove unused imports in `prompting/system_messages.py`.
-- [ ] **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL`.
-- [ ] **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL`.
-- [ ] **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL`.
+- [x] **HYGIENE-2026-92** ruff F401: remove unused imports in `prompting/system_messages.py`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
+- [x] **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
+- [x] **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
+- [x] **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
