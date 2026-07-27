@@ -34,6 +34,9 @@ from app.core.companion_harness.memory.user_md_identity import (
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
+    IDENTITY_MD_REL,
+    LIFE_CURRENTS_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
@@ -269,8 +272,8 @@ def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
             }
         ),
     )
-    store.write_document("IDENTITY.md", "id")
-    store.write_document("USER.md", load_user_md_template_text())
+    store.write_document(IDENTITY_MD_REL, "id")
+    store.write_document(USER_MD_REL, load_user_md_template_text())
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -316,8 +319,8 @@ def test_refresh_bootstrap_prefix_updates_probe_hint_after_partial_user_md() -> 
             }
         ),
     )
-    store.write_document("IDENTITY.md", "id")
-    store.write_document("USER.md", partial_user_md)
+    store.write_document(IDENTITY_MD_REL, "id")
+    store.write_document(USER_MD_REL, partial_user_md)
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -363,8 +366,8 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
             }
         ),
     )
-    store.write_document("IDENTITY.md", "id")
-    store.write_document("USER.md", load_user_md_template_text())
+    store.write_document(IDENTITY_MD_REL, "id")
+    store.write_document(USER_MD_REL, load_user_md_template_text())
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -515,8 +518,8 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
     store.write_document(
         CONTEXT_JSON_REL, '{"context_mode":"emotional_companion"}'
     )
-    store.write_document("IDENTITY.md", "id")
-    store.write_document("USER.md", "user")
+    store.write_document(IDENTITY_MD_REL, "id")
+    store.write_document(USER_MD_REL, "user")
     runtime = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
@@ -563,8 +566,8 @@ def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() ->
         repository=None,
     )
     store.write_document(CONTEXT_JSON_REL, '{"context_mode":"bootstrap"}')
-    store.write_document("IDENTITY.md", "id")
-    store.write_document("USER.md", "user")
+    store.write_document(IDENTITY_MD_REL, "id")
+    store.write_document(USER_MD_REL, "user")
     runtime = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
@@ -810,7 +813,7 @@ def test_proactive_life_currents_preserved(tmp_path) -> None:
         "## 今天（当日兴致）\n"
         "翻一翻他上次提到的那本《xxx》\n"
     )
-    store.write_document("LIFE_CURRENTS.md", life_currents)
+    store.write_document(LIFE_CURRENTS_MD_REL, life_currents)
     builder = PromptBuilder(
         bundle=_bundle(),
         context=ContextMeta(),
