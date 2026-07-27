@@ -591,9 +591,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-155** `companion/test_models.py` — smoke `load_prompt_bundle` loads `SIGNIFICANCE_PERCEPTION_MD_REL` package template. Fixed in `cursor/agent-maintenance-tasks-2571` / pull/3859.
 - [x] **HYGIENE-2026-156** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys are canonical `*_MD_REL` constants. Fixed in `cursor/agent-maintenance-tasks-2571` / pull/3859.
 
-### Deferred (open PR overlap)
+## 2026-07-27 scan (cron)
 
-- **HYGIENE-2026-92** ruff F401: `system_messages.py` — unused imports (defer until #3834 lands).
-- **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL` (defer until #3834 lands).
-- **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL` assertions (defer until #3834 lands).
-- **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL` (defer until #3834 lands).
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe — overlapping files but disjoint hunks; deferred #3413/F401 follow-up unblocked); ruff F401 (3 hits in `system_messages.py`); vulture `--min-confidence 80` clean.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no direct task overlap.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-2e8a`)
+
+- [ ] **HYGIENE-2026-92** ruff F401: remove unused imports in `prompting/system_messages.py`.
+- [ ] **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL`.
+- [ ] **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL`.
+- [ ] **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL`.
