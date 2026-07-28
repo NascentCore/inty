@@ -603,3 +603,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-122** #3413: `test_prompt_builder.py` — `IDENTITY_MD_REL` / `USER_MD_REL` / `LIFE_CURRENTS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
 - [x] **HYGIENE-2026-123** #3413: `prompting/test_system_messages.py` — `ABOUT_MD_REL` + `LIFE_CURRENTS_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
 - [x] **HYGIENE-2026-124** #3413: `companion/test_system_messages.py` — `SOUL_MD_REL` / `MEMORY_MD_REL` / `COMPANIONSHIP_MD_REL`. Fixed in `cursor/agent-maintenance-tasks-2e8a` / pull/3860.
+
+## 2026-07-28 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `load_prompt_bundle` optional MemDoc reads and tool write allowlists lack canonical-path smoke coverage.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-ef73`)
+
+- [ ] **HYGIENE-2026-157** `companion/test_models.py` — smoke `load_prompt_bundle` reads `TECHNO_CORE_MD_REL` / `LIVING_SPHERE_MD_REL` from store.
+- [ ] **HYGIENE-2026-158** `companion/test_models.py` — smoke `load_prompt_bundle` loads `OUTPUT_FORMAT_IM_DM_MD_REL` package template.
+- [ ] **HYGIENE-2026-159** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` ⊆ canonical `*_MD_REL` constants.
