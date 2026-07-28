@@ -612,6 +612,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-ef73`)
 
-- [ ] **HYGIENE-2026-157** `companion/test_models.py` — smoke `load_prompt_bundle` reads `TECHNO_CORE_MD_REL` / `LIVING_SPHERE_MD_REL` from store.
-- [ ] **HYGIENE-2026-158** `companion/test_models.py` — smoke `load_prompt_bundle` loads `OUTPUT_FORMAT_IM_DM_MD_REL` package template.
-- [ ] **HYGIENE-2026-159** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` ⊆ canonical `*_MD_REL` constants.
+- [x] **HYGIENE-2026-157** `companion/test_models.py` — smoke `load_prompt_bundle` reads `TECHNO_CORE_MD_REL` / `LIVING_SPHERE_MD_REL` from store. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
+- [x] **HYGIENE-2026-158** `companion/test_models.py` — smoke `load_prompt_bundle` loads `OUTPUT_FORMAT_IM_DM_MD_REL` package template. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
+- [x] **HYGIENE-2026-159** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` ⊆ canonical `*_MD_REL` constants. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
