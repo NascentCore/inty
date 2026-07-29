@@ -9,6 +9,9 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
     _SELECTABLE_EXPERIENCE_SESSION_INTENTS,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    LIFE_CURRENTS_MD_REL,
+)
 
 _CANONICAL_MD_REL_PATHS = frozenset(
     value
@@ -35,3 +38,9 @@ def test_memory_store_write_allowlists_use_canonical_md_rel_paths() -> None:
         *MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
     ):
         assert rel in _CANONICAL_MD_REL_PATHS
+
+
+def test_memory_store_write_allowlist_autonomy_is_life_currents_only() -> None:
+    assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == frozenset(
+        {LIFE_CURRENTS_MD_REL}
+    )
