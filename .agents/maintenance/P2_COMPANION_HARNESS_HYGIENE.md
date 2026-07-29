@@ -624,7 +624,7 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a290`)
 
-- [ ] **HYGIENE-2026-160** #3413: `memory_store_scope.py` — add `life_currents_md` property; wire `test_memory_store_scope.py`.
-- [ ] **HYGIENE-2026-161** #3413: `memory_store_scope.py` — add `ai_private_md` + `ai_private_jsonl` properties; wire `test_memory_store_scope.py`.
-- [ ] **HYGIENE-2026-162** #3413: `memory_store_scope.py` — add `tool_background_jsonl` property; wire `test_memory_store_scope.py`.
-- [ ] **HYGIENE-2026-163** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == {LIFE_CURRENTS_MD_REL}`.
+- [x] **HYGIENE-2026-160** #3413: `memory_store_scope.py` — add `life_currents_md` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-161** #3413: `memory_store_scope.py` — add `ai_private_md` + `ai_private_jsonl` properties; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-162** #3413: `memory_store_scope.py` — add `tool_background_jsonl` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-163** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == {LIFE_CURRENTS_MD_REL}`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
