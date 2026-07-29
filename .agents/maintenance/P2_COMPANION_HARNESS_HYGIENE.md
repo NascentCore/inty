@@ -615,3 +615,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-157** `companion/test_models.py` — smoke `load_prompt_bundle` reads `TECHNO_CORE_MD_REL` / `LIVING_SPHERE_MD_REL` from store. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
 - [x] **HYGIENE-2026-158** `companion/test_models.py` — smoke `load_prompt_bundle` loads `OUTPUT_FORMAT_IM_DM_MD_REL` package template. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
 - [x] **HYGIENE-2026-159** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` ⊆ canonical `*_MD_REL` constants. Fixed in `cursor/agent-maintenance-tasks-ef73` / pull/3861.
+
+## 2026-07-29 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `MemoryStoreScopePaths` missing mapped MemDoc/JSONL accessors; AUTONOMY write allowlist lacks explicit canonical-path assertion.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-a290`)
+
+- [x] **HYGIENE-2026-160** #3413: `memory_store_scope.py` — add `life_currents_md` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-161** #3413: `memory_store_scope.py` — add `ai_private_md` + `ai_private_jsonl` properties; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-162** #3413: `memory_store_scope.py` — add `tool_background_jsonl` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+- [x] **HYGIENE-2026-163** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == {LIFE_CURRENTS_MD_REL}`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
