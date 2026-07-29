@@ -9,6 +9,8 @@ from typing import Final
 
 from .memory_store_path_constants import (
     ABOUT_MD_REL,
+    AI_PRIVATE_JSONL_REL,
+    AI_PRIVATE_MD_REL,
     AXIOM_MD_REL,
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
@@ -26,6 +28,7 @@ from .memory_store_path_constants import (
     INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
+    LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
@@ -35,6 +38,7 @@ from .memory_store_path_constants import (
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
+    TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
@@ -125,6 +129,10 @@ class MemoryStoreScopePaths:
         return MEMORY_MD_REL
 
     @property
+    def life_currents_md(self) -> str:
+        return LIFE_CURRENTS_MD_REL
+
+    @property
     def channels_md(self) -> str:
         return CHANNELS_MD_REL
 
@@ -159,8 +167,20 @@ class MemoryStoreScopePaths:
         return TRANSCRIPT_INNER_TICK_JSONL_REL
 
     @property
+    def tool_background_jsonl(self) -> str:
+        return TOOL_BACKGROUND_JSONL_REL
+
+    @property
     def context_json(self) -> str:
         return CONTEXT_JSON_REL
+
+    @property
+    def ai_private_md(self) -> str:
+        return AI_PRIVATE_MD_REL
+
+    @property
+    def ai_private_jsonl(self) -> str:
+        return AI_PRIVATE_JSONL_REL
 
     def memory_daily_gist(self, day: str) -> str:
         """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""

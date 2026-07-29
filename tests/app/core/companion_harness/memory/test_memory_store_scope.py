@@ -5,6 +5,8 @@ from pathlib import Path
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
+    AI_PRIVATE_JSONL_REL,
+    AI_PRIVATE_MD_REL,
     AXIOM_MD_REL,
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
@@ -22,6 +24,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     INTY_V2_DREAMING_STATE_JSON_REL,
     INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
+    LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
@@ -32,6 +35,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
+    TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
@@ -56,6 +60,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.style_md == STYLE_MD_REL
     assert p.user_md == USER_MD_REL
     assert p.memory_md == MEMORY_MD_REL
+    assert p.life_currents_md == LIFE_CURRENTS_MD_REL
     assert p.channels_md == CHANNELS_MD_REL
     assert p.companionship_md == COMPANIONSHIP_MD_REL
     assert p.techno_core_md == TECHNO_CORE_MD_REL
@@ -64,7 +69,10 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.significance_perception_md == SIGNIFICANCE_PERCEPTION_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
     assert p.transcript_inner_tick == TRANSCRIPT_INNER_TICK_JSONL_REL
+    assert p.tool_background_jsonl == TOOL_BACKGROUND_JSONL_REL
     assert p.context_json == CONTEXT_JSON_REL
+    assert p.ai_private_md == AI_PRIVATE_MD_REL
+    assert p.ai_private_jsonl == AI_PRIVATE_JSONL_REL
     assert p.memory_daily_gist("2026-04-05") == memory_daily_gist_rel("2026-04-05")
     assert memory_daily_gist_rel("2026-04-05").startswith(
         f"{MEMORY_DAILY_GIST_DIR_REL}/"
