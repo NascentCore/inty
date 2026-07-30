@@ -628,3 +628,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-161** #3413: `memory_store_scope.py` — add `ai_private_md` + `ai_private_jsonl` properties; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
 - [x] **HYGIENE-2026-162** #3413: `memory_store_scope.py` — add `tool_background_jsonl` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
 - [x] **HYGIENE-2026-163** `tools/test_companion_tool_definitions.py` — assert `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == {LIFE_CURRENTS_MD_REL}`. Fixed in `cursor/agent-maintenance-tasks-a290` / pull/3862.
+
+## 2026-07-30 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `MemoryStoreScopePaths` missing event JSONL / feedback / image-index accessors; USER_CHAT + bootstrap write allowlists lack explicit canonical-path assertions.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-7836`)
+
+- [x] **HYGIENE-2026-164** #3413: `memory_store_scope.py` — add `techno_core_events_jsonl`, `living_sphere_updates_jsonl`, `companion_runtime_events_jsonl`, `companion_user_feedback_jsonl`, `generated_images_index_jsonl`, `chat_history_md` properties. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.
+- [x] **HYGIENE-2026-165** #3413: `test_memory_store_scope.py` — property assertions for HYGIENE-2026-164 accessors. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.
+- [x] **HYGIENE-2026-166** `tools/test_companion_tool_definitions.py` — explicit frozenset assertions for `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` and `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP`. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.

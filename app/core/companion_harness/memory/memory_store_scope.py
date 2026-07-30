@@ -15,12 +15,16 @@ from .memory_store_path_constants import (
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CHANNELS_MD_REL,
+    CHAT_HISTORY_MD_REL,
     COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
     COMPANION_DREAMING_STATE_JSON_REL,
     COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+    COMPANION_RUNTIME_EVENTS_JSONL_REL,
     COMPANION_SCHEDULE_TASKS_JSON_REL,
+    COMPANION_USER_FEEDBACK_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
+    GENERATED_IMAGES_INDEX_JSONL_REL,
     HARNESS_MD_REL,
     IDENTITY_MD_REL,
     INTY_MD_REL,
@@ -30,6 +34,7 @@ from .memory_store_path_constants import (
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
     SAFETY_MD_REL,
@@ -37,6 +42,7 @@ from .memory_store_path_constants import (
     SOUL_MD_REL,
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
     TOOLS_MD_REL,
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
@@ -181,6 +187,30 @@ class MemoryStoreScopePaths:
     @property
     def ai_private_jsonl(self) -> str:
         return AI_PRIVATE_JSONL_REL
+
+    @property
+    def chat_history_md(self) -> str:
+        return CHAT_HISTORY_MD_REL
+
+    @property
+    def techno_core_events_jsonl(self) -> str:
+        return TECHNO_CORE_EVENTS_JSONL_REL
+
+    @property
+    def living_sphere_updates_jsonl(self) -> str:
+        return LIVING_SPHERE_UPDATES_JSONL_REL
+
+    @property
+    def companion_runtime_events_jsonl(self) -> str:
+        return COMPANION_RUNTIME_EVENTS_JSONL_REL
+
+    @property
+    def companion_user_feedback_jsonl(self) -> str:
+        return COMPANION_USER_FEEDBACK_JSONL_REL
+
+    @property
+    def generated_images_index_jsonl(self) -> str:
+        return GENERATED_IMAGES_INDEX_JSONL_REL
 
     def memory_daily_gist(self, day: str) -> str:
         """Daily gist path (``memory/daily/<date>.md``); written only by dreaming consolidation."""

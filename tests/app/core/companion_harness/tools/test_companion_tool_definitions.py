@@ -10,7 +10,13 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
     _SELECTABLE_EXPERIENCE_SESSION_INTENTS,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANIONSHIP_MD_REL,
+    IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
+    MEMORY_MD_REL,
+    SOUL_MD_REL,
+    STYLE_MD_REL,
+    USER_MD_REL,
 )
 
 _CANONICAL_MD_REL_PATHS = frozenset(
@@ -43,4 +49,29 @@ def test_memory_store_write_allowlists_use_canonical_md_rel_paths() -> None:
 def test_memory_store_write_allowlist_autonomy_is_life_currents_only() -> None:
     assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == frozenset(
         {LIFE_CURRENTS_MD_REL}
+    )
+
+
+def test_memory_store_write_allowlist_user_chat_paths() -> None:
+    assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST == frozenset(
+        {
+            COMPANIONSHIP_MD_REL,
+            IDENTITY_MD_REL,
+            LIFE_CURRENTS_MD_REL,
+            MEMORY_MD_REL,
+            SOUL_MD_REL,
+            STYLE_MD_REL,
+            USER_MD_REL,
+        }
+    )
+
+
+def test_memory_store_write_allowlist_bootstrap_paths() -> None:
+    assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP == frozenset(
+        {
+            COMPANIONSHIP_MD_REL,
+            IDENTITY_MD_REL,
+            STYLE_MD_REL,
+            USER_MD_REL,
+        }
     )

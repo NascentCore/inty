@@ -11,12 +11,16 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CHANNELS_MD_REL,
+    CHAT_HISTORY_MD_REL,
     COMPANIONSHIP_MD_REL,
     COMPANION_DREAMING_STATE_JSON_REL,
     COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
     COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+    COMPANION_RUNTIME_EVENTS_JSONL_REL,
     COMPANION_SCHEDULE_TASKS_JSON_REL,
+    COMPANION_USER_FEEDBACK_JSONL_REL,
     CONTEXT_JSON_REL,
+    GENERATED_IMAGES_INDEX_JSONL_REL,
     HARNESS_MD_REL,
     IDENTITY_MD_REL,
     INTY_MD_REL,
@@ -26,6 +30,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     INTY_V2_SCHEDULE_TASKS_JSON_REL,
     LIFE_CURRENTS_MD_REL,
     LIVING_SPHERE_MD_REL,
+    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_DAILY_GIST_DIR_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
@@ -34,6 +39,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     SOUL_MD_REL,
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
+    TECHNO_CORE_EVENTS_JSONL_REL,
     TOOLS_MD_REL,
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
@@ -73,6 +79,12 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.context_json == CONTEXT_JSON_REL
     assert p.ai_private_md == AI_PRIVATE_MD_REL
     assert p.ai_private_jsonl == AI_PRIVATE_JSONL_REL
+    assert p.chat_history_md == CHAT_HISTORY_MD_REL
+    assert p.techno_core_events_jsonl == TECHNO_CORE_EVENTS_JSONL_REL
+    assert p.living_sphere_updates_jsonl == LIVING_SPHERE_UPDATES_JSONL_REL
+    assert p.companion_runtime_events_jsonl == COMPANION_RUNTIME_EVENTS_JSONL_REL
+    assert p.companion_user_feedback_jsonl == COMPANION_USER_FEEDBACK_JSONL_REL
+    assert p.generated_images_index_jsonl == GENERATED_IMAGES_INDEX_JSONL_REL
     assert p.memory_daily_gist("2026-04-05") == memory_daily_gist_rel("2026-04-05")
     assert memory_daily_gist_rel("2026-04-05").startswith(
         f"{MEMORY_DAILY_GIST_DIR_REL}/"
