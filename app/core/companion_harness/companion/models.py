@@ -303,7 +303,6 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
-OUTPUT_FORMAT_IM_DM_MD = OUTPUT_FORMAT_IM_DM_MD_REL
 
 
 def _read_memory_document_optional(

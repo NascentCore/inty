@@ -3,7 +3,6 @@ from __future__ import annotations
 import inspect
 
 from app.core.companion_harness.companion.models import (
-    OUTPUT_FORMAT_IM_DM_MD,
     ContextMeta,
 )
 from app.core.companion_harness.experience_profile.experience_directives import (
@@ -30,6 +29,7 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     LIFE_CURRENTS_MD_REL,
+    OUTPUT_FORMAT_IM_DM_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -233,7 +233,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
         style_md="style\n",
         user_md="user\n",
         memory_md="memory\n",
-        output_format_im_dm_md=load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD),
+        output_format_im_dm_md=load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD_REL),
     )
     messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
@@ -259,7 +259,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
 
     assert mirrored_tools_index < envelope_index < im_index
     assert contents[im_index].split("\n") == load_template_seed_text(
-        OUTPUT_FORMAT_IM_DM_MD
+        OUTPUT_FORMAT_IM_DM_MD_REL
     ).strip().split("\n")
     assert ChannelKind.WECHAT_WEIXIN.value == "wechat_weixin"
 
@@ -285,7 +285,7 @@ def test_output_format_slice_is_runtime_decorator_not_system_builder_argument() 
 
 
 def test_output_format_slice_resolves_from_runtime_channel() -> None:
-    body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD)
+    body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD_REL)
     bundle = PromptBundle(
         identity="identity\n",
         soul="soul\n",
