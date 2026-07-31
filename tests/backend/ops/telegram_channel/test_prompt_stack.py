@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     ContextMeta,
+    OUTPUT_FORMAT_IM_DM_MD,
 )
 from app.core.companion_harness.companion.prompt_stack import (
     companion_system_messages_for_track,
@@ -13,9 +14,6 @@ from app.core.companion_harness.companion.prompt_stack import (
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
-)
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    OUTPUT_FORMAT_IM_DM_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
@@ -34,7 +32,7 @@ def _bundle() -> PromptBundle:
 
 
 def test_telegram_output_format_uses_im_dm_slice() -> None:
-    im_body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD_REL)
+    im_body = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD)
     bundle = PromptBundle(
         identity="identity",
         soul="soul",
