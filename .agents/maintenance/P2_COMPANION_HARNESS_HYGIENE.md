@@ -640,3 +640,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-164** #3413: `memory_store_scope.py` — add `techno_core_events_jsonl`, `living_sphere_updates_jsonl`, `companion_runtime_events_jsonl`, `companion_user_feedback_jsonl`, `generated_images_index_jsonl`, `chat_history_md` properties. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.
 - [x] **HYGIENE-2026-165** #3413: `test_memory_store_scope.py` — property assertions for HYGIENE-2026-164 accessors. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.
 - [x] **HYGIENE-2026-166** `tools/test_companion_tool_definitions.py` — explicit frozenset assertions for `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` and `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP`. Fixed in `cursor/agent-maintenance-tasks-7836` / pull/3863.
+
+## 2026-07-31 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `user_md_identity.py` hardcodes template filename; `USER_FEEDBACK_JSONL_REL` alias redundant; retrieval test does not tie window spec to `MemoryStoreScopePaths`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-6ab2`)
+
+- [ ] **HYGIENE-2026-167** #3413: `user_md_identity.py` — `load_user_md_template_text` via `load_template_seed_text(USER_MD_REL)` (drop `_USER_TEMPLATE_PATH` hardcode).
+- [ ] **HYGIENE-2026-168** `memory/test_retrieval.py` — assert `transcript_window_spec` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`.
+- [ ] **HYGIENE-2026-169** #3413: `companion_user_feedback.py` — drop `USER_FEEDBACK_JSONL_REL` alias; callers use `COMPANION_USER_FEEDBACK_JSONL_REL`.
