@@ -50,7 +50,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
 
-USER_FEEDBACK_JSONL_REL = COMPANION_USER_FEEDBACK_JSONL_REL
 COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME = "companion_record_user_feedback"
 
 # Snapshot paths from canonical MemDoc path constants (canonical path constants).
@@ -252,7 +251,7 @@ def _snapshot_to_record(snapshot: HarnessSnapshot) -> dict[str, Any]:
 def append_user_feedback_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
-    store.append_jsonl_record(USER_FEEDBACK_JSONL_REL, record)
+    store.append_jsonl_record(COMPANION_USER_FEEDBACK_JSONL_REL, record)
 
 
 def append_github_issue_completion(

@@ -11,10 +11,12 @@ completion.
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
 
 from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL as USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
 )
 from app.models.user import Gender
 from app.schemas.user import UserProfileSnapshot
@@ -22,7 +24,6 @@ from app.schemas.user import UserProfileSnapshot
 USER_PROFILE_SECTION = "## 身份信息"
 _IDENTITY_BULLET_PREFIX = "- "
 _FULLWIDTH_COLON = "："
-_USER_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "USER.md"
 
 
 class UserIdentityFieldLabel(StrEnum):
@@ -171,4 +172,4 @@ def build_cohort_profile_probe_hint(user_md_text: str) -> str:
 
 def load_user_md_template_text() -> str:
     """Load package USER.md seed template for tests and sync checks."""
-    return _USER_TEMPLATE_PATH.read_text(encoding="utf-8")
+    return load_template_seed_text(USER_MD_REL)

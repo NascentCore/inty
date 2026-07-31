@@ -32,9 +32,11 @@ from app.core.companion_harness.tools.companion_tool_definitions import (
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    COMPANION_USER_FEEDBACK_JSONL_REL,
+)
 from app.core.companion_harness.tools.companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
-    USER_FEEDBACK_JSONL_REL,
 )
 from app.core.companion_harness.tools.runtime import (
     resolve_openai_tool_call_loop_async,
@@ -149,7 +151,7 @@ async def test_real_llm_calls_companion_record_user_feedback(tmp_path) -> None:
     assert (
         saw_feedback_tool
     ), f"real LLM did not call {COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME}"
-    feedback_raw = store.read_document_if_exists(USER_FEEDBACK_JSONL_REL)
+    feedback_raw = store.read_document_if_exists(COMPANION_USER_FEEDBACK_JSONL_REL)
     assert feedback_raw
     row = json.loads(feedback_raw.strip().split("\n")[0])
     assert row["kind"] == "snapshot"
