@@ -175,3 +175,40 @@ def turn_compose_context_for_user_turn_chat_leg(
         ai_private_text="",
         proactive_life_currents_block=None,
     )
+
+
+def turn_compose_context_from_legacy_flags(
+    *,
+    bundle: PromptBundle,
+    context_meta: ContextMeta,
+    runtime_context: TurnRuntimeContext,
+    store: MemoryStore,
+    track: CompanionTurnTrack,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity,
+    ai_private_text: str,
+    proactive_life_currents_block: str | None,
+    interactive_bootstrap_active: bool,
+) -> TurnComposeContext:
+    """Bridge ``build_system_messages`` bool flags to ``TurnComposeContext``."""
+    if interactive_bootstrap_active:
+        phase = Phase.BOOTSTRAP
+    else:
+        phase = resolve_phase_for_compose(track, context_meta)
+    derived_activity = _derive_inner_tick_activity(track)
+    if derived_activity is None:
+        assert not inner_tick_turn
+    else:
+        assert inner_tick_turn
+        assert inner_tick_activity == derived_activity
+    return build_turn_compose_context(
+        bundle=bundle,
+        context_meta=context_meta,
+        runtime_context=runtime_context,
+        store=store,
+        track=track,
+        phase=phase,
+        leg_kind=PromptLegKind.SINGLE_LLM,
+        ai_private_text=ai_private_text,
+        proactive_life_currents_block=proactive_life_currents_block,
+    )
