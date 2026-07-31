@@ -54,9 +54,11 @@ def main() -> int:
     from app.core.companion_harness.companion.scope import CompanionScope
     from app.core.companion_harness.memory.memory_store import MemoryStore
     from app.core.companion_harness.tools.companion_tool_runtime import execute_tool_call
+    from app.core.companion_harness.memory.memory_store_path_constants import (
+        COMPANION_USER_FEEDBACK_JSONL_REL,
+    )
     from app.core.companion_harness.tools.companion_user_feedback import (
         COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
-        USER_FEEDBACK_JSONL_REL,
     )
     from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
         GITHUB_ISSUE_TITLE_PREFIX,
@@ -113,7 +115,7 @@ def main() -> int:
 
     deadline = time.monotonic() + 60.0
     while time.monotonic() < deadline and (not issue_url or issue_number <= 0):
-        raw = store.read_document_if_exists(USER_FEEDBACK_JSONL_REL) or ""
+        raw = store.read_document_if_exists(COMPANION_USER_FEEDBACK_JSONL_REL) or ""
         for line in raw.strip().split("\n"):
             if not line.strip():
                 continue

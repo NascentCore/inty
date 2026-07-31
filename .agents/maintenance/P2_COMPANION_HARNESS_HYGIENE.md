@@ -649,6 +649,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-6ab2`)
 
-- [ ] **HYGIENE-2026-167** #3413: `user_md_identity.py` — `load_user_md_template_text` via `load_template_seed_text(USER_MD_REL)` (drop `_USER_TEMPLATE_PATH` hardcode).
-- [ ] **HYGIENE-2026-168** `memory/test_retrieval.py` — assert `transcript_window_spec` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`.
-- [ ] **HYGIENE-2026-169** #3413: `companion_user_feedback.py` — drop `USER_FEEDBACK_JSONL_REL` alias; callers use `COMPANION_USER_FEEDBACK_JSONL_REL`.
+- [x] **HYGIENE-2026-167** #3413: `user_md_identity.py` — `load_user_md_template_text` via `load_template_seed_text(USER_MD_REL)` (drop `_USER_TEMPLATE_PATH` hardcode). Fixed in `cursor/agent-maintenance-tasks-6ab2`.
+- [x] **HYGIENE-2026-168** `memory/test_retrieval.py` — assert `transcript_window_spec` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-6ab2`.
+- [x] **HYGIENE-2026-169** #3413: `companion_user_feedback.py` — drop `USER_FEEDBACK_JSONL_REL` alias; callers use `COMPANION_USER_FEEDBACK_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-6ab2`.
