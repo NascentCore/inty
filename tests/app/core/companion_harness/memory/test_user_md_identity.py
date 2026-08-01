@@ -13,12 +13,22 @@ from app.core.companion_harness.memory.user_md_identity import (
     list_unfilled_identity_labels,
     load_user_md_template_text,
 )
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    load_template_seed_text,
+)
 from app.models.user import Gender
 from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 
 
 def _template_body() -> str:
     return load_user_md_template_text()
+
+
+def test_load_user_md_template_text_matches_canonical_seed() -> None:
+    assert load_user_md_template_text() == load_template_seed_text(USER_MD_REL)
 
 
 def test_is_identity_slot_unfilled_empty_and_hint_only() -> None:

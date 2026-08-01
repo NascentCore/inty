@@ -661,6 +661,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-95cc`)
 
-- [ ] **HYGIENE-2026-170** #3413: `memory_store_scope.py` — add `about_md` property; wire `test_memory_store_scope.py`.
-- [ ] **HYGIENE-2026-171** `memory/test_user_md_identity.py` — assert `load_user_md_template_text()` matches `load_template_seed_text(USER_MD_REL)`.
-- [ ] **HYGIENE-2026-172** #3413: `prompting/test_system_messages.py` — `OUTPUT_FORMAT_IM_DM_MD_REL` from constants (drop models re-export import).
+- [x] **HYGIENE-2026-170** #3413: `memory_store_scope.py` — add `about_md` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
+- [x] **HYGIENE-2026-171** `memory/test_user_md_identity.py` — assert `load_user_md_template_text()` matches `load_template_seed_text(USER_MD_REL)`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
+- [x] **HYGIENE-2026-172** #3413: `prompting/test_system_messages.py` — `OUTPUT_FORMAT_IM_DM_MD_REL` from constants (drop models re-export import). Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.

@@ -73,6 +73,7 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.living_sphere_md == LIVING_SPHERE_MD_REL
     assert p.tools_md == TOOLS_MD_REL
     assert p.significance_perception_md == SIGNIFICANCE_PERCEPTION_MD_REL
+    assert p.about_md == ABOUT_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
     assert p.transcript_inner_tick == TRANSCRIPT_INNER_TICK_JSONL_REL
     assert p.tool_background_jsonl == TOOL_BACKGROUND_JSONL_REL

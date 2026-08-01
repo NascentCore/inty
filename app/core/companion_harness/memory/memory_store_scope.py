@@ -163,6 +163,10 @@ class MemoryStoreScopePaths:
         return SIGNIFICANCE_PERCEPTION_MD_REL
 
     @property
+    def about_md(self) -> str:
+        return ABOUT_MD_REL
+
+    @property
     def transcript(self) -> str:
         return TRANSCRIPT_JSONL_REL
 
