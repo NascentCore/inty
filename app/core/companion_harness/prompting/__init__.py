@@ -13,4 +13,6 @@ Assembly design (content categories vs runtime organization): see
 Target memory projection (order + budget + render) lives in ``prompting.projection``
 after ``memory.retrieval`` selection (#3521). User-readable summary:
 ``docs/imate/companion_harness/MEMORY_STORE.md`` § Memory projection.
+
+Track × phase × leg system-prefix recipes live in ``prompting.recipe``.
 """

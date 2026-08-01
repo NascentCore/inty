@@ -7,6 +7,7 @@ from pathlib import Path
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
 )
+from app.core.companion_harness.prompting.phase import Phase
 from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_tool_track,
 )
@@ -129,6 +130,7 @@ def test_dual_llm_system_message_variants_user_chat_matches_builders(
             system_messages=build_settled_user_turn_dual_chat_leg_system_messages(
                 bundle,
                 context,
+                phase=Phase.SETTLED,
             ),
             bundle=bundle,
             runtime_context=runtime_context,

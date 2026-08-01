@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 
 from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
     OUTPUT_FORMAT_IM_DM_MD,
     ContextMeta,
 )
@@ -14,13 +15,14 @@ from app.core.companion_harness.experience_profile.experience_directives import 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
-)
+from app.core.companion_harness.prompting.phase import Phase
 from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.companion.prompt_stack import (
@@ -93,6 +95,7 @@ def test_contextual_messages_include_infer_time_zone_slice_with_tool_name() -> (
     messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
+        phase=Phase.SETTLED,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"
@@ -121,6 +124,7 @@ def test_contextual_messages_include_experience_directives_when_tone_set() -> (
                 tone=ExperienceDirectiveTone.WARM,
             ),
         ),
+        phase=Phase.SETTLED,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"
@@ -148,6 +152,7 @@ def test_contextual_messages_include_experience_directives_when_intent_only() ->
                 intent=ExperienceSessionIntent.CASUAL_CHAT,
             ),
         ),
+        phase=Phase.SETTLED,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"
@@ -168,6 +173,7 @@ def test_contextual_messages_omit_experience_directives_when_unset() -> None:
     messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
+        phase=Phase.SETTLED,
     )
     joined = "\n".join(
         str(m["content"]) for m in messages if m["role"] == "system"
@@ -208,12 +214,12 @@ def test_inner_tick_monolog_is_monolog_only_without_ls_tc_or_memory_store() -> (
         memory_md="memory\n",
     )
     messages = build_system_messages_for_inner_tick_monolog(
-        store=MemoryStore(
+        bundle,
+        ContextMeta(),
+        MemoryStore(
             scope=CompanionScope("sm", "a", "monolog-prompt"),
             repository=None,
         ),
-        bundle=bundle,
-        context=ContextMeta(),
     )
     contents = [str(m["content"]) for m in messages if m["role"] == "system"]
     inner_blocks = [c for c in contents if c.startswith("本轮（内在节拍）")]
@@ -238,6 +244,7 @@ def test_im_output_format_slice_is_appended_by_runtime_decorator() -> None:
     messages = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         ContextMeta(),
+        phase=Phase.SETTLED,
     )
     messages = append_runtime_output_format_system_message(
         system_messages=messages,

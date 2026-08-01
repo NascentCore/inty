@@ -35,7 +35,7 @@ Contextual slices use plain lead-in lines (e.g. ``本轮（…）``), not markdo
 | Scenario | Function |
 |----------|----------|
 | USER_CHAT_BOOTSTRAP (sync tools in-turn) | ``PromptBuilder.bootstrap_turn_system_dicts`` / ``build_bootstrap_user_chat_prompt`` |
-| ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``prompting/tracks``) |
+| ASYNC user-round foreground + plan prefix | ``build_settled_user_turn_dual_chat_leg_system_messages`` (``tracks``) |
 | ASYNC user-round tool_background / refresh | ``build_system_messages_for_tool_track`` |
 | ASYNC monolog inner tick plan + tool leg | ``build_system_messages_for_inner_tick_monolog`` |
 | ASYNC autonomy inner tick (silent self-directed work) | ``build_system_messages_for_inner_tick_autonomy`` |
@@ -110,6 +110,7 @@ from app.core.companion_harness.prompting.compose_context import (
     empty_memory_store_for_compose,
     extend_contextual_system_slices,
     turn_compose_context_for_self_contained_track,
+    turn_compose_context_for_user_turn_tool_leg,
 )
 from app.core.companion_harness.prompting.compose_trigger import PromptComposeTrigger
 
@@ -880,13 +881,9 @@ def build_system_messages_for_tool_track(
     )
     extend_contextual_system_slices(
         out,
-        turn_compose_context_for_self_contained_track(
+        turn_compose_context_for_user_turn_tool_leg(
             bundle=bundle,
             context_meta=context,
-            store=empty_memory_store_for_compose(),
-            track=CompanionTurnTrack.USER_CHAT,
-            ai_private_text="",
-            proactive_life_currents_block=None,
         ),
     )
     return out

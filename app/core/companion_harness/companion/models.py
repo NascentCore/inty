@@ -148,10 +148,10 @@ class InnerTickKind(StrEnum):
 
 
 class CompanionTurnTrack(StrEnum):
-    """Active production turn entry tracks (1:1 with ``build_system_messages_for_*``).
+    """Active production turn entry tracks routed by ``turn_pipeline`` and ``prompt_stack``.
 
-    Newer prompt assembly code may still model phase-specific user-turn slices
-    separately, but runtime routing uses these concrete production tracks.
+    Core system-prefix recipes for monolog, autonomy, and dual-LLM legs are keyed
+    by (track, phase, leg_kind) in ``prompting.recipe``.
     """
 
     USER_CHAT = "user_chat"

@@ -56,8 +56,8 @@ from .dreaming import (
     load_dreaming_state,
 )
 from .prompt_stack import (
+    companion_core_system_messages_for_track,
     companion_tools_for_turn,
-    companion_turn_tools_and_system_messages,
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
@@ -282,15 +282,16 @@ def build_companion_turn_prompt_plan(
                 implicit_user_signed_on_turn=implicit_sign_on_turn,
             )
         case _:
-            tools_for_turn, system_messages = (
-                companion_turn_tools_and_system_messages(
-                    store=store,
-                    bundle=loaded_state.bundle,
-                    context=loaded_state.context,
-                    track=track,
-                    implicit_user_signed_on_turn=implicit_sign_on_turn,
-                    runtime_context=runtime_context,
-                )
+            tools_for_turn = companion_tools_for_turn(
+                track=track,
+                implicit_user_signed_on_turn=implicit_sign_on_turn,
+            )
+            system_messages = companion_core_system_messages_for_track(
+                store=store,
+                bundle=loaded_state.bundle,
+                context=loaded_state.context,
+                track=track,
+                runtime_context=runtime_context,
             )
     use_ai_private_splice = track_uses_ai_private_splice(track)
 

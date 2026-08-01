@@ -4,7 +4,7 @@ Builds ``PromptPlan`` objects for AgenticLoop single-LLM execution: system slice
 transcript window, optional private-thought splice, time context, and tail user.
 Bootstrap, settled user chat, and chat-only tracks (greeting, proactive, scheduled)
 compose system prefixes through this module. Monolog, autonomy, and dual-LLM
-paths still use per-track ``build_system_messages_for_*`` entrypoints (#3453).
+CHAT_LEG / TOOL_LEG core stacks use ``prompting.recipe.compose_system_prefix``.
 
 ``PromptPlan`` is the **output** of the memory projection stage (target pipeline:
 MemoryStore → retrieval → ``prompting.projection`` → PromptPlan). **Today** assembly
@@ -63,6 +63,9 @@ from app.core.companion_harness.prompting.system_messages import (
     _scheduled_reminder_structured_output_contract_text,
     _system_message,
     append_profile_collection_system_messages,
+)
+from app.core.companion_harness.prompting.phase import Phase
+from app.core.companion_harness.prompting.system_messages import (
     build_system_messages_for_tool_track,
 )
 from app.core.companion_harness.prompting.tracks import (
