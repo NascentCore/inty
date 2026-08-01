@@ -649,6 +649,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-6ab2`)
 
-- [x] **HYGIENE-2026-167** #3413: `user_md_identity.py` — `load_user_md_template_text` via `load_template_seed_text(USER_MD_REL)` (drop `_USER_TEMPLATE_PATH` hardcode). Fixed in `cursor/agent-maintenance-tasks-6ab2`.
-- [x] **HYGIENE-2026-168** `memory/test_retrieval.py` — assert `transcript_window_spec` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-6ab2`.
-- [x] **HYGIENE-2026-169** #3413: `companion_user_feedback.py` — drop `USER_FEEDBACK_JSONL_REL` alias; callers use `COMPANION_USER_FEEDBACK_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-6ab2`.
+- [x] **HYGIENE-2026-167** #3413: `user_md_identity.py` — `load_user_md_template_text` via `load_template_seed_text(USER_MD_REL)` (drop `_USER_TEMPLATE_PATH` hardcode). Fixed in `cursor/agent-maintenance-tasks-6ab2` / pull/3864.
+- [x] **HYGIENE-2026-168** `memory/test_retrieval.py` — assert `transcript_window_spec` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-6ab2` / pull/3864.
+- [x] **HYGIENE-2026-169** #3413: `companion_user_feedback.py` — drop `USER_FEEDBACK_JSONL_REL` alias; callers use `COMPANION_USER_FEEDBACK_JSONL_REL`. Fixed in `cursor/agent-maintenance-tasks-6ab2` / pull/3864.
+
+## 2026-08-01 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `ABOUT_MD_REL` lacks `MemoryStoreScopePaths` accessor; harness tests still import `OUTPUT_FORMAT_IM_DM_MD` models alias; `load_user_md_template_text` lacks canonical-path smoke assertion.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-95cc`)
+
+- [x] **HYGIENE-2026-170** #3413: `memory_store_scope.py` — add `about_md` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
+- [x] **HYGIENE-2026-171** `memory/test_user_md_identity.py` — assert `load_user_md_template_text()` matches `load_template_seed_text(USER_MD_REL)`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
+- [x] **HYGIENE-2026-172** #3413: `prompting/test_system_messages.py` — `OUTPUT_FORMAT_IM_DM_MD_REL` from constants (drop models re-export import). Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
