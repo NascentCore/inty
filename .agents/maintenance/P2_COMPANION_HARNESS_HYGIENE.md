@@ -664,3 +664,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-170** #3413: `memory_store_scope.py` — add `about_md` property; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
 - [x] **HYGIENE-2026-171** `memory/test_user_md_identity.py` — assert `load_user_md_template_text()` matches `load_template_seed_text(USER_MD_REL)`. Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
 - [x] **HYGIENE-2026-172** #3413: `prompting/test_system_messages.py` — `OUTPUT_FORMAT_IM_DM_MD_REL` from constants (drop models re-export import). Fixed in `cursor/agent-maintenance-tasks-95cc` / pull/3865.
+
+## 2026-08-02 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `bootstrap.py` still reads prompt seeds via local `Path`; package prompt seeds lack `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-a8f2`)
+
+- [ ] **HYGIENE-2026-173** #3413: `bootstrap.py` — `load_bootstrap_spec_text` / `load_bootstrap_telegram_profile_slice_text` via `load_template_seed_text` (drop `_BOOTSTRAP_SPEC_PATH` hardcodes).
+- [ ] **HYGIENE-2026-174** #3413: `memory_store_scope.py` — add `harness_md`, `bootstrap_md`, `bootstrap_telegram_profile_md`, `output_format_im_dm_md`, `axiom_md`, `inty_md`, `safety_md` properties; wire `test_memory_store_scope.py`.
+- [ ] **HYGIENE-2026-175** `memory/test_memory_store_scope.py` — assert `_PACKAGE_PROMPT_SEED_FILES` matches `MemoryStoreScopePaths` prompt-seed accessor rel paths.
