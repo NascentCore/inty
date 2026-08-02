@@ -673,6 +673,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a8f2`)
 
-- [ ] **HYGIENE-2026-173** #3413: `bootstrap.py` — `load_bootstrap_spec_text` / `load_bootstrap_telegram_profile_slice_text` via `load_template_seed_text` (drop `_BOOTSTRAP_SPEC_PATH` hardcodes).
-- [ ] **HYGIENE-2026-174** #3413: `memory_store_scope.py` — add `harness_md`, `bootstrap_md`, `bootstrap_telegram_profile_md`, `output_format_im_dm_md`, `axiom_md`, `inty_md`, `safety_md` properties; wire `test_memory_store_scope.py`.
-- [ ] **HYGIENE-2026-175** `memory/test_memory_store_scope.py` — assert `_PACKAGE_PROMPT_SEED_FILES` matches `MemoryStoreScopePaths` prompt-seed accessor rel paths.
+- [x] **HYGIENE-2026-173** #3413: `bootstrap.py` — `load_bootstrap_spec_text` / `load_bootstrap_telegram_profile_slice_text` via `load_template_seed_text` (drop `_BOOTSTRAP_SPEC_PATH` hardcodes). Fixed in `cursor/agent-maintenance-tasks-a8f2` / pull/3866.
+- [x] **HYGIENE-2026-174** #3413: `memory_store_scope.py` — add `harness_md`, `bootstrap_md`, `bootstrap_telegram_profile_md`, `output_format_im_dm_md`, `axiom_md`, `inty_md`, `safety_md` properties; wire `test_memory_store_scope.py`. Fixed in `cursor/agent-maintenance-tasks-a8f2` / pull/3866.
+- [x] **HYGIENE-2026-175** `memory/test_memory_store_scope.py` — assert `_PACKAGE_PROMPT_SEED_FILES` matches `MemoryStoreScopePaths` prompt-seed accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-a8f2` / pull/3866.

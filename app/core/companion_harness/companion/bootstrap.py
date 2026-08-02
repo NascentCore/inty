@@ -25,25 +25,17 @@ documents and flipping the bootstrap completion flag.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any, Final
 
 from loguru import logger
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.companion_harness.experience_profile.experience_directives import (
-    ExperienceDirectiveTone,
     ExperienceDirectives,
+    ExperienceDirectiveTone,
     ExperienceSessionIntent,
     context_mode_for_session_intent,
 )
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    BOOTSTRAP_WRITABLE_REL_PATHS,
-    CompanionToolName,
-)
-from app.models.user import Gender
-from app.schemas.user import UserAgeGroup, UserProfileSnapshot
-
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     BOOTSTRAP_MD_REL,
@@ -52,16 +44,17 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     MEMORY_MD_REL,
     SOUL_MD_REL,
 )
-from .models import ContextMeta
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
-
-_PKG_DIR = Path(__file__).resolve().parent
-_BOOTSTRAP_SPEC_PATH = _PKG_DIR / "prompts" / BOOTSTRAP_MD_REL
-_BOOTSTRAP_TELEGRAM_PROFILE_PATH = (
-    _PKG_DIR / "prompts" / BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    BOOTSTRAP_WRITABLE_REL_PATHS,
+    CompanionToolName,
 )
+from app.models.user import Gender
+from app.schemas.user import UserAgeGroup, UserProfileSnapshot
+
+from .models import ContextMeta
 
 # Seed-only rels from canonical MemDoc path constants (canonical path constants).
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
@@ -109,11 +102,7 @@ def build_bootstrap_tool_call_section() -> str:
 def load_bootstrap_spec_text() -> str:
     """Load the internal bootstrap procedure injected into bootstrap turns."""
 
-    if not _BOOTSTRAP_SPEC_PATH.is_file():
-        raise FileNotFoundError(
-            f"missing bootstrap spec: {_BOOTSTRAP_SPEC_PATH}"
-        )
-    return _BOOTSTRAP_SPEC_PATH.read_text(encoding="utf-8").rstrip()
+    return load_template_seed_text(BOOTSTRAP_MD_REL).rstrip()
 
 
 def load_bootstrap_telegram_profile_slice_text() -> str:
@@ -127,11 +116,7 @@ def load_bootstrap_telegram_profile_slice_text() -> str:
     Tools, profile fields, and completion rules remain in the shared bootstrap procedure.
     """
 
-    if not _BOOTSTRAP_TELEGRAM_PROFILE_PATH.is_file():
-        raise FileNotFoundError(
-            f"missing bootstrap telegram profile slice: {_BOOTSTRAP_TELEGRAM_PROFILE_PATH}"
-        )
-    return _BOOTSTRAP_TELEGRAM_PROFILE_PATH.read_text(encoding="utf-8").rstrip()
+    return load_template_seed_text(BOOTSTRAP_TELEGRAM_PROFILE_MD_REL).rstrip()
 
 
 def profile_collection_active(*, context: ContextMeta) -> bool:

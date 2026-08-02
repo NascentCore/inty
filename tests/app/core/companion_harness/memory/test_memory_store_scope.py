@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
@@ -12,13 +13,13 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CHANNELS_MD_REL,
     CHAT_HISTORY_MD_REL,
-    COMPANIONSHIP_MD_REL,
-    COMPANION_DREAMING_STATE_JSON_REL,
     COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+    COMPANION_DREAMING_STATE_JSON_REL,
     COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
     COMPANION_RUNTIME_EVENTS_JSONL_REL,
     COMPANION_SCHEDULE_TASKS_JSON_REL,
     COMPANION_USER_FEEDBACK_JSONL_REL,
+    COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     GENERATED_IMAGES_INDEX_JSONL_REL,
     HARNESS_MD_REL,
@@ -38,16 +39,17 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
     TECHNO_CORE_EVENTS_JSONL_REL,
-    TOOLS_MD_REL,
+    TECHNO_CORE_MD_REL,
     TOOL_BACKGROUND_JSONL_REL,
+    TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
     memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    _PACKAGE_PROMPT_SEED_FILES,
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     get_imate_axiom_system_text,
@@ -56,7 +58,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
     is_scope_initialized_in_store,
     load_template_seed_text,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
 
 
 def test_memory_store_scope_paths_properties() -> None:
@@ -74,6 +75,13 @@ def test_memory_store_scope_paths_properties() -> None:
     assert p.tools_md == TOOLS_MD_REL
     assert p.significance_perception_md == SIGNIFICANCE_PERCEPTION_MD_REL
     assert p.about_md == ABOUT_MD_REL
+    assert p.harness_md == HARNESS_MD_REL
+    assert p.bootstrap_md == BOOTSTRAP_MD_REL
+    assert p.bootstrap_telegram_profile_md == BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
+    assert p.output_format_im_dm_md == OUTPUT_FORMAT_IM_DM_MD_REL
+    assert p.axiom_md == AXIOM_MD_REL
+    assert p.inty_md == INTY_MD_REL
+    assert p.safety_md == SAFETY_MD_REL
     assert p.transcript == TRANSCRIPT_JSONL_REL
     assert p.transcript_inner_tick == TRANSCRIPT_INNER_TICK_JSONL_REL
     assert p.tool_background_jsonl == TOOL_BACKGROUND_JSONL_REL
@@ -100,6 +108,26 @@ def test_memory_store_scope_paths_properties() -> None:
     )
     assert p.schedule_queue_json == COMPANION_SCHEDULE_TASKS_JSON_REL
     assert p.dreaming_state_json == COMPANION_DREAMING_STATE_JSON_REL
+
+
+def test_package_prompt_seed_files_match_scope_path_accessors() -> None:
+    p = MemoryStoreScopePaths()
+    accessor_rels = frozenset(
+        {
+            p.about_md,
+            p.axiom_md,
+            p.bootstrap_md,
+            p.bootstrap_telegram_profile_md,
+            p.channels_md,
+            p.harness_md,
+            p.inty_md,
+            p.output_format_im_dm_md,
+            p.safety_md,
+            p.tools_md,
+            p.significance_perception_md,
+        }
+    )
+    assert accessor_rels == _PACKAGE_PROMPT_SEED_FILES
 
 
 def test_doctrine_prompt_seed_getters_return_non_empty() -> None:

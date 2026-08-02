@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Final
 
+from .memory_store import MemoryStore
 from .memory_store_path_constants import (
     ABOUT_MD_REL,
     AI_PRIVATE_JSONL_REL,
@@ -41,16 +42,15 @@ from .memory_store_path_constants import (
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
     TECHNO_CORE_EVENTS_JSONL_REL,
-    TOOLS_MD_REL,
+    TECHNO_CORE_MD_REL,
     TOOL_BACKGROUND_JSONL_REL,
+    TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
     memory_daily_gist_rel,
 )
-from .memory_store import MemoryStore
 
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
 _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
@@ -165,6 +165,34 @@ class MemoryStoreScopePaths:
     @property
     def about_md(self) -> str:
         return ABOUT_MD_REL
+
+    @property
+    def harness_md(self) -> str:
+        return HARNESS_MD_REL
+
+    @property
+    def bootstrap_md(self) -> str:
+        return BOOTSTRAP_MD_REL
+
+    @property
+    def bootstrap_telegram_profile_md(self) -> str:
+        return BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
+
+    @property
+    def output_format_im_dm_md(self) -> str:
+        return OUTPUT_FORMAT_IM_DM_MD_REL
+
+    @property
+    def axiom_md(self) -> str:
+        return AXIOM_MD_REL
+
+    @property
+    def inty_md(self) -> str:
+        return INTY_MD_REL
+
+    @property
+    def safety_md(self) -> str:
+        return SAFETY_MD_REL
 
     @property
     def transcript(self) -> str:
