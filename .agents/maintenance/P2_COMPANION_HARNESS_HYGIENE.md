@@ -685,6 +685,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-1db3`)
 
-- [ ] **HYGIENE-2026-176** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_REL_PATHS` matches `MemoryStoreScopePaths` core template accessor rel paths.
-- [ ] **HYGIENE-2026-177** `memory/test_memory_store_scope.py` — assert `_REQUIRED_FILES_ATTR` matches `MemoryStoreScopePaths` required-file accessor rel paths.
-- [ ] **HYGIENE-2026-178** `companion/test_bootstrap.py` — assert `BOOTSTRAP_WRITABLE_REL_PATHS` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` bootstrap write accessors.
+- [x] **HYGIENE-2026-176** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_REL_PATHS` matches `MemoryStoreScopePaths` core template accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
+- [x] **HYGIENE-2026-177** `memory/test_memory_store_scope.py` — assert `_REQUIRED_FILES_ATTR` matches `MemoryStoreScopePaths` required-file accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
+- [x] **HYGIENE-2026-178** `companion/test_bootstrap.py` — assert `BOOTSTRAP_WRITABLE_REL_PATHS` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` bootstrap write accessors. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
