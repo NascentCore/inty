@@ -49,7 +49,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    _CORE_COMPANION_TEMPLATE_REL_PATHS,
     _PACKAGE_PROMPT_SEED_FILES,
+    _REQUIRED_FILES_ATTR,
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     get_imate_axiom_system_text,
@@ -108,6 +110,36 @@ def test_memory_store_scope_paths_properties() -> None:
     )
     assert p.schedule_queue_json == COMPANION_SCHEDULE_TASKS_JSON_REL
     assert p.dreaming_state_json == COMPANION_DREAMING_STATE_JSON_REL
+
+
+def test_core_companion_template_rel_paths_match_scope_path_accessors() -> None:
+    p = MemoryStoreScopePaths()
+    accessor_rels = frozenset(
+        {
+            p.identity,
+            p.soul,
+            p.style_md,
+            p.user_md,
+            p.memory_md,
+            p.channels_md,
+            p.companionship_md,
+        }
+    )
+    assert accessor_rels == frozenset(_CORE_COMPANION_TEMPLATE_REL_PATHS)
+
+
+def test_required_files_attr_matches_scope_path_accessors() -> None:
+    p = MemoryStoreScopePaths()
+    accessor_rels = frozenset(getattr(p, attr) for attr in _REQUIRED_FILES_ATTR)
+    assert accessor_rels == frozenset(
+        {
+            p.identity,
+            p.soul,
+            p.user_md,
+            p.memory_md,
+            p.transcript,
+        }
+    )
 
 
 def test_package_prompt_seed_files_match_scope_path_accessors() -> None:
