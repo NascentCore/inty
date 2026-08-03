@@ -32,6 +32,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -61,6 +62,19 @@ def test_bootstrap_spec_loaders_use_canonical_prompt_seed_paths() -> None:
     assert load_bootstrap_telegram_profile_slice_text() == load_template_seed_text(
         BOOTSTRAP_TELEGRAM_PROFILE_MD_REL
     ).rstrip()
+
+
+def test_bootstrap_writable_rel_paths_match_scope_path_accessors() -> None:
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    accessor_rels = frozenset(
+        {
+            p.companionship_md,
+            p.identity,
+            p.style_md,
+            p.user_md,
+        }
+    )
+    assert accessor_rels == frozenset(BOOTSTRAP_WRITABLE_REL_PATHS)
 
 
 def test_interactive_bootstrap_active_requires_incomplete_meta() -> None:
