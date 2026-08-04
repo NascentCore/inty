@@ -5,6 +5,17 @@ from __future__ import annotations
 import ast
 
 from app.core.companion_harness.companion import lifecycle_invariants as inv
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+
+def test_awake_turn_allowed_append_jsonl_matches_scope_path_accessors() -> None:
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert inv.AWAKE_TURN_ALLOWED_APPEND_JSONL == frozenset(
+        {p.transcript, p.transcript_inner_tick}
+    )
+    assert inv.AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL == p.tool_background_jsonl
 
 
 def test_awake_turn_kernel_does_not_import_dreaming_consolidation() -> None:
