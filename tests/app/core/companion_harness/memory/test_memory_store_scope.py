@@ -171,6 +171,18 @@ def test_doctrine_prompt_seed_getters_return_non_empty() -> None:
         assert text.strip()
 
 
+def test_doctrine_prompt_seed_getters_match_load_template_seed_text() -> None:
+    assert get_imate_axiom_system_text() == load_template_seed_text(
+        AXIOM_MD_REL
+    ).strip()
+    assert get_inty_facts_system_text() == load_template_seed_text(
+        INTY_MD_REL
+    ).strip()
+    assert get_safety_system_text() == load_template_seed_text(
+        SAFETY_MD_REL
+    ).strip()
+
+
 def test_package_prompt_seed_files_load_via_canonical_rel_paths() -> None:
     for rel in (
         ABOUT_MD_REL,

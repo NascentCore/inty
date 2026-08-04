@@ -43,6 +43,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
     memory_daily_gist_rel,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    MemoryStoreScopePaths,
+)
 
 
 def test_parse_identity_and_daily() -> None:
@@ -95,3 +98,79 @@ def test_roundtrip_static_paths() -> None:
 def test_invalid_path_raises() -> None:
     with pytest.raises(ValueError, match="unsupported"):
         parse_memory_store_relative_path("memory/not-a-date.md")
+
+
+def test_rel_to_kind_static_paths_match_scope_path_accessors() -> None:
+    default_paths = MemoryStoreScopePaths()
+    inty_v2_paths = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
+    rel_accessor_cases: tuple[tuple[str, MemoryStoreScopePaths, str], ...] = (
+        (IDENTITY_MD_REL, default_paths, "identity"),
+        (SOUL_MD_REL, default_paths, "soul"),
+        (STYLE_MD_REL, default_paths, "style_md"),
+        (USER_MD_REL, default_paths, "user_md"),
+        (MEMORY_MD_REL, default_paths, "memory_md"),
+        (LIFE_CURRENTS_MD_REL, default_paths, "life_currents_md"),
+        (CHANNELS_MD_REL, default_paths, "channels_md"),
+        (COMPANIONSHIP_MD_REL, default_paths, "companionship_md"),
+        (TECHNO_CORE_MD_REL, default_paths, "techno_core_md"),
+        (TECHNO_CORE_EVENTS_JSONL_REL, default_paths, "techno_core_events_jsonl"),
+        (LIVING_SPHERE_MD_REL, default_paths, "living_sphere_md"),
+        (
+            LIVING_SPHERE_UPDATES_JSONL_REL,
+            default_paths,
+            "living_sphere_updates_jsonl",
+        ),
+        (TOOLS_MD_REL, default_paths, "tools_md"),
+        (
+            SIGNIFICANCE_PERCEPTION_MD_REL,
+            default_paths,
+            "significance_perception_md",
+        ),
+        (TRANSCRIPT_JSONL_REL, default_paths, "transcript"),
+        (TRANSCRIPT_INNER_TICK_JSONL_REL, default_paths, "transcript_inner_tick"),
+        (CONTEXT_JSON_REL, default_paths, "context_json"),
+        (AI_PRIVATE_MD_REL, default_paths, "ai_private_md"),
+        (AI_PRIVATE_JSONL_REL, default_paths, "ai_private_jsonl"),
+        (TOOL_BACKGROUND_JSONL_REL, default_paths, "tool_background_jsonl"),
+        (
+            GENERATED_IMAGES_INDEX_JSONL_REL,
+            default_paths,
+            "generated_images_index_jsonl",
+        ),
+        (
+            COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
+            default_paths,
+            "living_sphere_curator_state_json",
+        ),
+        (
+            COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+            default_paths,
+            "context_compaction_state_json",
+        ),
+        (COMPANION_SCHEDULE_TASKS_JSON_REL, default_paths, "schedule_queue_json"),
+        (
+            COMPANION_RUNTIME_EVENTS_JSONL_REL,
+            default_paths,
+            "companion_runtime_events_jsonl",
+        ),
+        (
+            COMPANION_USER_FEEDBACK_JSONL_REL,
+            default_paths,
+            "companion_user_feedback_jsonl",
+        ),
+        (COMPANION_DREAMING_STATE_JSON_REL, default_paths, "dreaming_state_json"),
+        (
+            INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
+            inty_v2_paths,
+            "living_sphere_curator_state_json",
+        ),
+        (
+            INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
+            inty_v2_paths,
+            "context_compaction_state_json",
+        ),
+        (INTY_V2_SCHEDULE_TASKS_JSON_REL, inty_v2_paths, "schedule_queue_json"),
+        (INTY_V2_DREAMING_STATE_JSON_REL, inty_v2_paths, "dreaming_state_json"),
+    )
+    for rel, paths, attr in rel_accessor_cases:
+        assert rel == getattr(paths, attr)
