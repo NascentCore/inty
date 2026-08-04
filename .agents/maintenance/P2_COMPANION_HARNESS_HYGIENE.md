@@ -688,3 +688,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-176** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_REL_PATHS` matches `MemoryStoreScopePaths` core template accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
 - [x] **HYGIENE-2026-177** `memory/test_memory_store_scope.py` — assert `_REQUIRED_FILES_ATTR` matches `MemoryStoreScopePaths` required-file accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
 - [x] **HYGIENE-2026-178** `companion/test_bootstrap.py` — assert `BOOTSTRAP_WRITABLE_REL_PATHS` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` bootstrap write accessors. Fixed in `cursor/agent-maintenance-tasks-1db3` / pull/3867.
+
+## 2026-08-04 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `lifecycle_invariants` awake append JSONL constants and doctrine prompt getters lack `MemoryStoreScopePaths` smoke assertions; `_REL_TO_KIND` mapped paths lack accessor parity test.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-d3c7`)
+
+- [ ] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors.
+- [ ] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths.
+- [ ] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths.
