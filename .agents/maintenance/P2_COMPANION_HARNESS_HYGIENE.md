@@ -709,8 +709,8 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-0c4a`)
 
-- [ ] **HYGIENE-2026-182** `companion/test_dreaming.py` — assert `save_dreaming_state`/`load_dreaming_state` use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json`.
-- [ ] **HYGIENE-2026-183** `companion/test_schedule_queue.py` — assert `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`.
-- [ ] **HYGIENE-2026-184** `companion/runtime_events.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl` (drop direct `COMPANION_RUNTIME_EVENTS_JSONL_REL` import).
-- [ ] **HYGIENE-2026-185** `tools/image_gate.py` — use scope accessor for generated-images index; import profile `*_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export).
-- [ ] **HYGIENE-2026-186** `tools/companion_user_feedback.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl`.
+- [x] **HYGIENE-2026-182** `companion/test_dreaming.py` — assert `save_dreaming_state`/`load_dreaming_state` use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json`. Fixed in `cursor/agent-maintenance-tasks-0c4a` / pull/3869.
+- [x] **HYGIENE-2026-183** `companion/test_schedule_queue.py` — assert `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`. Fixed in `cursor/agent-maintenance-tasks-0c4a` / pull/3869.
+- [x] **HYGIENE-2026-184** `companion/runtime_events.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl` (drop direct `COMPANION_RUNTIME_EVENTS_JSONL_REL` import). Fixed in `cursor/agent-maintenance-tasks-0c4a` / pull/3869.
+- [x] **HYGIENE-2026-185** `tools/image_gate.py` — use scope accessor for generated-images index; import profile `*_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export). Fixed in `cursor/agent-maintenance-tasks-0c4a` / pull/3869.
+- [x] **HYGIENE-2026-186** `tools/companion_user_feedback.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl`. Fixed in `cursor/agent-maintenance-tasks-0c4a` / pull/3869.
