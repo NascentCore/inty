@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-05 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — production modules still import JSONL path constants directly where `MemoryStoreScopePaths` accessors exist; dreaming/schedule persistence paths lack accessor smoke assertions in their unit tests.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-0c4a`)
+
+- [ ] **HYGIENE-2026-182** `companion/test_dreaming.py` — assert `save_dreaming_state`/`load_dreaming_state` use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json`.
+- [ ] **HYGIENE-2026-183** `companion/test_schedule_queue.py` — assert `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`.
+- [ ] **HYGIENE-2026-184** `companion/runtime_events.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl` (drop direct `COMPANION_RUNTIME_EVENTS_JSONL_REL` import).
+- [ ] **HYGIENE-2026-185** `tools/image_gate.py` — use scope accessor for generated-images index; import profile `*_MD_REL` from `memory_store_path_constants` (drop `memory_store_scope` re-export).
+- [ ] **HYGIENE-2026-186** `tools/companion_user_feedback.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl`.
