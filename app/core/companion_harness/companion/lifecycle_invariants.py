@@ -12,11 +12,16 @@ import ast
 from pathlib import Path
 from typing import Final
 
-from app.core.companion_harness.memory import memory_store_path_constants as _memdoc_path_constants
+from app.core.companion_harness.memory import (
+    memory_store_path_constants as _memdoc_path_constants,
+)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -170,6 +175,14 @@ def append_jsonl_literal_paths(relative_path: str) -> list[str]:
             continue
         if isinstance(first, ast.Name) and first.id in _MEMDOC_PATH_CONSTANT_NAMES:
             paths.append(getattr(_memdoc_path_constants, first.id))
+            continue
+        if (
+            isinstance(first, ast.Attribute)
+            and isinstance(first.value, ast.Name)
+            and first.value.id == "DEFAULT_MEMORY_STORE_SCOPE_PATHS"
+            and hasattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, first.attr)
+        ):
+            paths.append(getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, first.attr))
     return paths
 
 

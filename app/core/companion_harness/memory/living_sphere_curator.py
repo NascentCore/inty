@@ -9,11 +9,10 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -119,7 +118,8 @@ def _curator_curated_through_update_id(state: dict[str, object]) -> str:
 
 
 def _read_all_updates(store: MemoryStore) -> list[LivingSphereUpdate]:
-    raw = store.read_document_if_exists(LIVING_SPHERE_UPDATES_JSONL_REL)
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl
+    raw = store.read_document_if_exists(rel)
     if raw is None or not raw.strip():
         return []
     out: list[LivingSphereUpdate] = []

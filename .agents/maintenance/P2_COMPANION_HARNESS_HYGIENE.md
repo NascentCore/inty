@@ -709,8 +709,8 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8790`)
 
-- [ ] **HYGIENE-2026-187** `tools/tool_background.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl`; extend `lifecycle_invariants.append_jsonl_literal_paths` for scope-path attribute sites.
-- [ ] **HYGIENE-2026-188** `tools/companion_tool_runtime.py` — use scope accessors for `techno_core_events_jsonl` / `living_sphere_updates_jsonl`.
-- [ ] **HYGIENE-2026-189** `memory/living_sphere_curator.py` — use `living_sphere_updates_jsonl` accessor (drop direct constant import).
-- [ ] **HYGIENE-2026-190** `companion/ai_private_prompt.py` — use `ai_private_jsonl` accessor (drop direct constant import).
-- [ ] **HYGIENE-2026-191** `companion/test_ai_private_prompt.py` — assert persistence path matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`.
+- [x] **HYGIENE-2026-187** `tools/tool_background.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl`; extend `lifecycle_invariants.append_jsonl_literal_paths` for scope-path attribute sites. Fixed in `cursor/agent-maintenance-tasks-8790` / pull/3870.
+- [x] **HYGIENE-2026-188** `tools/companion_tool_runtime.py` — use scope accessors for `techno_core_events_jsonl` / `living_sphere_updates_jsonl`. Fixed in `cursor/agent-maintenance-tasks-8790` / pull/3870.
+- [x] **HYGIENE-2026-189** `memory/living_sphere_curator.py` — use `living_sphere_updates_jsonl` accessor (drop direct constant import). Fixed in `cursor/agent-maintenance-tasks-8790` / pull/3870.
+- [x] **HYGIENE-2026-190** `companion/ai_private_prompt.py` — use `ai_private_jsonl` accessor (drop direct constant import). Fixed in `cursor/agent-maintenance-tasks-8790` / pull/3870.
+- [x] **HYGIENE-2026-191** `companion/test_ai_private_prompt.py` — assert persistence path matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`. Fixed in `cursor/agent-maintenance-tasks-8790` / pull/3870.
