@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-06 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator, #3869 HYGIENE-2026-182..186 scope-path accessors — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — production modules still import JSONL path constants directly where `MemoryStoreScopePaths` accessors exist; lifecycle AST guard does not resolve scope-path attribute append sites.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3869 (`cursor/agent-maintenance-tasks-0c4a`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-8790`)
+
+- [ ] **HYGIENE-2026-187** `tools/tool_background.py` — use `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl`; extend `lifecycle_invariants.append_jsonl_literal_paths` for scope-path attribute sites.
+- [ ] **HYGIENE-2026-188** `tools/companion_tool_runtime.py` — use scope accessors for `techno_core_events_jsonl` / `living_sphere_updates_jsonl`.
+- [ ] **HYGIENE-2026-189** `memory/living_sphere_curator.py` — use `living_sphere_updates_jsonl` accessor (drop direct constant import).
+- [ ] **HYGIENE-2026-190** `companion/ai_private_prompt.py` — use `ai_private_jsonl` accessor (drop direct constant import).
+- [ ] **HYGIENE-2026-191** `companion/test_ai_private_prompt.py` — assert persistence path matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`.
