@@ -709,9 +709,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-01ce`)
 
-- [ ] **HYGIENE-2026-192** `manager.py` — `context_json` accessor
-- [ ] **HYGIENE-2026-193** `bootstrap.py` — `context_json` accessor
-- [ ] **HYGIENE-2026-194** `models.py` — `context_json` + transcript path accessors
-- [ ] **HYGIENE-2026-195** `inner_tick_schedule.py` — `transcript` accessor
-- [ ] **HYGIENE-2026-196** `proactive_chat.py` — `transcript` accessor
-- [ ] **HYGIENE-2026-197** `test_bootstrap.py` — `context_json` accessor smoke assertion
+- [x] **HYGIENE-2026-192** `manager.py` — `context_json` accessor
+- [x] **HYGIENE-2026-193** `bootstrap.py` — `context_json` accessor
+- [x] **HYGIENE-2026-194** `models.py` — `context_json` + transcript path accessors
+- [x] **HYGIENE-2026-195** `inner_tick_schedule.py` — `transcript` accessor
+- [x] **HYGIENE-2026-196** `proactive_chat.py` — `transcript` accessor
+- [x] **HYGIENE-2026-197** `test_bootstrap.py` — `context_json` accessor smoke assertion
