@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-05 scan (cron)
+
+Source: open PR overlap check (#3869 HYGIENE-182..186, #3870 HYGIENE-187..191, #3871 HYGIENE-192..197, #3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — production modules still read `context.json` / transcript JSONL via path constants instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/agent-maintenance-tasks-8790`), #3871 (`cursor/agent-maintenance-tasks-01ce`), #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-e945`)
+
+- [x] **HYGIENE-2026-198** `companion_user_feedback.py` — `context_json` + `transcript` accessors in snapshot paths / transcript tail load. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-199** `companion_tool_runtime.py` — transcript write guard via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-200** `lifecycle_invariants.py` — derive `AWAKE_TURN_ALLOWED_APPEND_JSONL` + tool-background log from scope-path accessors. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-201** `test_dreaming.py` — `transcript` accessor for `_write_transcript` helper. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-202** `companion_scripted_llm.py` — `transcript` / `transcript_inner_tick` / `tool_background_jsonl` accessors in scripted read helpers. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.

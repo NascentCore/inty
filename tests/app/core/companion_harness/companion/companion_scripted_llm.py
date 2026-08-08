@@ -32,11 +32,13 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TOOL_BACKGROUND_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.llms.client import CompanionLLMConfig, LlmClient
 from app.external_services.fakes.openai import (
@@ -173,7 +175,7 @@ def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
     for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL, STYLE_MD_REL):
         store.write_document(rel, f"# {rel}\n")
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        _SCOPE_PATHS.transcript,
         "\n".join(
             [
                 json.dumps(
@@ -369,7 +371,7 @@ def memory_store_for_injected_runtime(
 
 
 def scripted_transcript_roles(store: MemoryStore) -> list[str]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL)
+    raw = store.read_document(_SCOPE_PATHS.transcript)
     rows = [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -377,7 +379,7 @@ def scripted_transcript_roles(store: MemoryStore) -> list[str]:
 
 
 def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL)
+    raw = store.read_document(_SCOPE_PATHS.transcript)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -386,7 +388,7 @@ def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
 def scripted_inner_tick_transcript_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document(TRANSCRIPT_INNER_TICK_JSONL_REL)
+    raw = store.read_document(_SCOPE_PATHS.transcript_inner_tick)
     if not raw.strip():
         return []
     return [
@@ -397,7 +399,7 @@ def scripted_inner_tick_transcript_rows(
 def scripted_tool_background_done_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document(TOOL_BACKGROUND_JSONL_REL)
+    raw = store.read_document(_SCOPE_PATHS.tool_background_jsonl)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
