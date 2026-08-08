@@ -709,8 +709,8 @@ Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-e945`)
 
-- [ ] **HYGIENE-2026-198** `companion_user_feedback.py` — `context_json` + `transcript` accessors in snapshot paths / transcript tail load
-- [ ] **HYGIENE-2026-199** `companion_tool_runtime.py` — transcript write guard via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors
-- [ ] **HYGIENE-2026-200** `lifecycle_invariants.py` — derive `AWAKE_TURN_ALLOWED_APPEND_JSONL` + tool-background log from scope-path accessors
-- [ ] **HYGIENE-2026-201** `test_dreaming.py` — `transcript` accessor for `_write_transcript` helper
-- [ ] **HYGIENE-2026-202** `companion_scripted_llm.py` — `transcript` / `transcript_inner_tick` / `tool_background_jsonl` accessors in scripted read helpers
+- [x] **HYGIENE-2026-198** `companion_user_feedback.py` — `context_json` + `transcript` accessors in snapshot paths / transcript tail load. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-199** `companion_tool_runtime.py` — transcript write guard via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-200** `lifecycle_invariants.py` — derive `AWAKE_TURN_ALLOWED_APPEND_JSONL` + tool-background log from scope-path accessors. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-201** `test_dreaming.py` — `transcript` accessor for `_write_transcript` helper. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
+- [x] **HYGIENE-2026-202** `companion_scripted_llm.py` — `transcript` / `transcript_inner_tick` / `tool_background_jsonl` accessors in scripted read helpers. Fixed in `cursor/agent-maintenance-tasks-e945` / pull/3872.
