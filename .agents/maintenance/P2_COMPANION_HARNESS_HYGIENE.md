@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-09 scan (cron)
+
+Source: open PR overlap check (#3869–#3872 scope-path accessor follow-ups — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — production MemDoc readers still import `*_MD_REL` / `CHAT_HISTORY_MD_REL` directly instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/agent-maintenance-tasks-8790`), #3871 (`cursor/agent-maintenance-tasks-01ce`), #3872 (`cursor/agent-maintenance-tasks-e945`), #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-3b33`)
+
+- [ ] **HYGIENE-2026-203** #3413: `read_web_page.py` — `memory_md` accessor.
+- [ ] **HYGIENE-2026-204** #3413: `client_time_from_memory_store.py` — `user_md` accessor.
+- [ ] **HYGIENE-2026-205** #3413: `retrieval.py` — `chat_history_md` accessor.
+- [ ] **HYGIENE-2026-206** #3413: `dreaming_consolidation.py` — curator MemDoc paths via scope accessors.
