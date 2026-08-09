@@ -709,7 +709,7 @@ Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-3b33`)
 
-- [ ] **HYGIENE-2026-203** #3413: `read_web_page.py` — `memory_md` accessor.
-- [ ] **HYGIENE-2026-204** #3413: `client_time_from_memory_store.py` — `user_md` accessor.
-- [ ] **HYGIENE-2026-205** #3413: `retrieval.py` — `chat_history_md` accessor.
-- [ ] **HYGIENE-2026-206** #3413: `dreaming_consolidation.py` — curator MemDoc paths via scope accessors.
+- [x] **HYGIENE-2026-203** #3413: `read_web_page.py` — `memory_md` accessor. Fixed in `cursor/agent-maintenance-tasks-3b33` / pull/3873.
+- [x] **HYGIENE-2026-204** #3413: `client_time_from_memory_store.py` — `user_md` accessor. Fixed in `cursor/agent-maintenance-tasks-3b33` / pull/3873.
+- [x] **HYGIENE-2026-205** #3413: `retrieval.py` — `chat_history_md` accessor. Fixed in `cursor/agent-maintenance-tasks-3b33` / pull/3873.
+- [x] **HYGIENE-2026-206** #3413: `dreaming_consolidation.py` — curator MemDoc paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-3b33` / pull/3873.
