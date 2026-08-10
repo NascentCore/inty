@@ -5,38 +5,40 @@ import inspect
 from app.core.companion_harness.companion.models import (
     ContextMeta,
 )
-from app.core.companion_harness.experience_profile.experience_directives import (
-    ExperienceDirectiveTone,
-    ExperienceDirectives,
-    ExperienceSessionIntent,
-)
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
-)
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_inner_tick_autonomy,
-    build_system_messages_for_inner_tick_monolog,
-    build_system_messages_for_tool_track,
-)
-from app.core.companion_harness.prompt_builder import PromptBuilder
 from app.core.companion_harness.companion.prompt_stack import (
     append_runtime_output_format_system_message,
     output_format_prompt_slice_for_runtime_channel,
 )
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.experience_profile.experience_directives import (
+    ExperienceDirectives,
+    ExperienceDirectiveTone,
+    ExperienceSessionIntent,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     LIFE_CURRENTS_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
+from app.core.companion_harness.prompt_builder import PromptBuilder
+from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.system_messages import (
+    _bootstrap_output_contract_template_variables,
+    build_system_messages_for_inner_tick_autonomy,
+    build_system_messages_for_inner_tick_monolog,
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 
 
@@ -477,3 +479,16 @@ def test_greeting_omits_about_guidance_slice() -> None:
         str(m["content"]) for m in messages if m["role"] == "system"
     )
     assert "Describe how a user should interact" not in joined
+
+
+def test_bootstrap_output_contract_template_variables_use_scope_accessors() -> (
+    None
+):
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    variables = _bootstrap_output_contract_template_variables()
+    assert variables["companionship_doc"] == paths.companionship_md
+    assert variables["identity_doc"] == paths.identity
+    assert variables["style_doc"] == paths.style_md
+    assert variables["user_doc"] == paths.user_md
+    assert variables["soul_doc"] == paths.soul
+    assert variables["memory_doc"] == paths.memory_md
