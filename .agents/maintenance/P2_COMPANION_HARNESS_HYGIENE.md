@@ -709,7 +709,7 @@ Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8456`)
 
-- [ ] **HYGIENE-2026-207** #3413: `system_messages.py` — bootstrap output contract template vars via scope accessors.
-- [ ] **HYGIENE-2026-208** #3413: `memory_store_scope.py` — `ensure_template_seeded_core_documents_in_store` via scope accessors.
-- [ ] **HYGIENE-2026-209** `prompting/test_system_messages.py` — smoke assert bootstrap contract doc paths match scope accessors.
-- [ ] **HYGIENE-2026-210** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_ATTRS` matches core template accessor rel paths.
+- [x] **HYGIENE-2026-207** #3413: `system_messages.py` — bootstrap output contract template vars via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-208** #3413: `memory_store_scope.py` — `ensure_template_seeded_core_documents_in_store` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-209** `prompting/test_system_messages.py` — smoke assert bootstrap contract doc paths match scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-210** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_ATTRS` matches core template accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
