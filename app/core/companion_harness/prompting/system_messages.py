@@ -57,6 +57,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.companion_harness.companion.ai_private_prompt import (
+    get_ai_private_jsonl_text_for_prompt,
+)
+from app.core.companion_harness.companion.bootstrap import (
+    load_bootstrap_telegram_profile_slice_text,
+    profile_collection_active,
+)
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
+from app.core.companion_harness.companion.runtime_channel import ChannelKind
 from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_injects_private_memory,
 )
@@ -67,28 +79,6 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
-)
-from app.core.companion_harness.prompting.template import (
-    BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
-    render_prompt_template,
-)
-from app.core.companion_harness.tools.companion_tool_definitions import (
-    CompanionToolName,
-    UPDATE_USER_MD,
-)
-
-from app.core.companion_harness.companion.ai_private_prompt import (
-    get_ai_private_jsonl_text_for_prompt,
-)
-from app.core.companion_harness.companion.bootstrap import (
-    load_bootstrap_telegram_profile_slice_text,
-    profile_collection_active,
-)
-from app.core.companion_harness.companion.runtime_channel import ChannelKind
-from app.core.companion_harness.memory.user_md_identity import (
-    build_cohort_profile_probe_hint,
-)
-from app.core.companion_harness.memory.memory_store_scope import (
     get_imate_axiom_system_text,
     get_inty_facts_system_text,
     get_safety_system_text,
@@ -98,21 +88,27 @@ from app.core.companion_harness.memory.memory_taxonomy import (
     MEMORY_SYSTEM_HEADING_DAILY_GIST,
     MEMORY_SYSTEM_HEADING_SEMANTIC,
 )
-from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
-
+from app.core.companion_harness.memory.user_md_identity import (
+    build_cohort_profile_probe_hint,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     empty_memory_store_for_compose,
     extend_contextual_system_slices,
     turn_compose_context_for_self_contained_track,
 )
-from app.core.companion_harness.prompting.compose_trigger import PromptComposeTrigger
-
-from app.core.companion_harness.companion.models import (
-    CompanionTurnTrack,
-    ContextMeta,
+from app.core.companion_harness.prompting.compose_trigger import (
+    PromptComposeTrigger,
 )
-
+from app.core.companion_harness.prompting.template import (
+    BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
+    render_prompt_template,
+)
+from app.core.companion_harness.tools.companion_tool_definitions import (
+    UPDATE_USER_MD,
+    CompanionToolName,
+)
+from app.living_sphere.models import LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME
 
 # 与 memory_store_* / MemoryStore 一致；避免模型误以为在访问用户设备本地文件系统。
 _MEMORYSTORE_PATH_TOOLS_INTRO_ZH = (
