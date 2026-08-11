@@ -35,22 +35,13 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
-    CHANNELS_MD_REL,
-    COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     HARNESS_MD_REL,
-    IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
 )
 
 if TYPE_CHECKING:
@@ -419,32 +410,33 @@ def load_prompt_bundle(
     ``MEMORY.md`` semantic 语义记忆。
     未启用私人记忆的体验配置时不读取日程路径且将 ``MEMORY.md`` 注入留空。"""
     ensure_template_seeded_core_documents_in_store(store)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
 
     daily_md = ""
-    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
+    memory_long = _read_memory_document_required(store, paths.memory_md)
     if inject_private:
         daily_md = _read_memory_document_optional(
             store,
-            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
+            paths.memory_daily_gist(day),
             max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
         )
     else:
         memory_long = ""
 
     return PromptBundle(
-        identity=_read_memory_document_required(store, IDENTITY_MD_REL),
-        soul=_read_memory_document_required(store, SOUL_MD_REL),
-        style_md=_read_memory_document_required(store, STYLE_MD_REL),
-        user_md=_read_memory_document_required(store, USER_MD_REL),
+        identity=_read_memory_document_required(store, paths.identity),
+        soul=_read_memory_document_required(store, paths.soul),
+        style_md=_read_memory_document_required(store, paths.style_md),
+        user_md=_read_memory_document_required(store, paths.user_md),
         memory_md=memory_long,
         techno_core_md=_read_memory_document_optional(
-            store, TECHNO_CORE_MD_REL
+            store, paths.techno_core_md
         ),
         living_sphere_md=_read_memory_document_optional(
-            store, LIVING_SPHERE_MD_REL
+            store, paths.living_sphere_md
         ),
         tools_md=_template_doc_truncated(
             TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
@@ -455,9 +447,9 @@ def load_prompt_bundle(
         about_md=_template_doc_truncated(
             ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
-        channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
+        channels_md=_read_memory_document_required(store, paths.channels_md),
         companionship_md=_read_memory_document_required(
-            store, COMPANIONSHIP_MD_REL
+            store, paths.companionship_md
         ),
         significance_perception_md=_template_doc_truncated(
             SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
