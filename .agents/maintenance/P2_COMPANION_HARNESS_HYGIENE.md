@@ -709,8 +709,8 @@ Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-0c86`)
 
-- [ ] **HYGIENE-2026-211** `living_sphere_curator.py` — `living_sphere_md` accessor for LIVING_SPHERE read/write
-- [ ] **HYGIENE-2026-212** `companion_tool_runtime.py` — `user_md` accessor in `tool_update_user_md`
-- [ ] **HYGIENE-2026-213** `image_gate.py` — profile doc reads via scope accessors (identity/soul/user_md)
-- [ ] **HYGIENE-2026-214** `models.py` — `load_prompt_bundle` core MemDoc reads via scope accessors
-- [ ] **HYGIENE-2026-215** `memory/test_transcript_compaction.py` — compaction state path via `context_compaction_state_json` accessor
+- [x] **HYGIENE-2026-211** `living_sphere_curator.py` — `living_sphere_md` accessor for LIVING_SPHERE read/write. Fixed in `cursor/agent-maintenance-tasks-0c86` / pull/3876.
+- [x] **HYGIENE-2026-212** `companion_tool_runtime.py` — `user_md` accessor in `tool_update_user_md`. Fixed in `cursor/agent-maintenance-tasks-0c86` / pull/3876.
+- [x] **HYGIENE-2026-213** `image_gate.py` — profile doc reads via scope accessors (identity/soul/user_md). Fixed in `cursor/agent-maintenance-tasks-0c86` / pull/3876.
+- [x] **HYGIENE-2026-214** `models.py` — `load_prompt_bundle` core MemDoc reads via scope accessors. Fixed in `cursor/agent-maintenance-tasks-0c86` / pull/3876.
+- [x] **HYGIENE-2026-215** `memory/test_transcript_compaction.py` — compaction state path via `context_compaction_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-0c86` / pull/3876.
