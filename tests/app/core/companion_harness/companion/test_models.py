@@ -13,16 +13,14 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
-    OUTPUT_FORMAT_IM_DM_MD_REL,
-    SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
-    TOOLS_MD_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -146,7 +144,8 @@ def test_load_prompt_bundle_loads_tools_from_package_template(
         repository=None,
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
-    expected = load_template_seed_text(TOOLS_MD_REL).strip()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    expected = load_template_seed_text(paths.tools_md).strip()
     assert bundle.tools_md == expected
     assert "Tools - interact with the environment" in bundle.tools_md
 
@@ -163,7 +162,8 @@ def test_load_prompt_bundle_loads_significance_perception_from_package_template(
         repository=None,
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
-    expected = load_template_seed_text(SIGNIFICANCE_PERCEPTION_MD_REL).strip()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    expected = load_template_seed_text(paths.significance_perception_md).strip()
     assert bundle.significance_perception_md == expected
     assert "Significance perception" in bundle.significance_perception_md
 
@@ -193,7 +193,8 @@ def test_load_prompt_bundle_loads_output_format_from_package_template(
         repository=None,
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
-    expected = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD_REL).strip()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    expected = load_template_seed_text(paths.output_format_im_dm_md).strip()
     assert bundle.output_format_im_dm_md == expected
     assert "Output format" in bundle.output_format_im_dm_md
 

@@ -16,6 +16,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL as USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.models.user import Gender
@@ -172,4 +173,4 @@ def build_cohort_profile_probe_hint(user_md_text: str) -> str:
 
 def load_user_md_template_text() -> str:
     """Load package USER.md seed template for tests and sync checks."""
-    return load_template_seed_text(USER_MD_REL)
+    return load_template_seed_text(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md)
