@@ -709,8 +709,8 @@ Open PRs checked: #3869–#3876 (HYGIENE-2026-182..215 scope-path accessors), #3
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8f30`)
 
-- [ ] **HYGIENE-2026-216** `models.py` — `load_prompt_bundle` package template slices via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (`tools_md`, `harness_md`, `about_md`, `significance_perception_md`, `output_format_im_dm_md`).
-- [ ] **HYGIENE-2026-217** `memory/test_memory_pipeline_living_sphere.py` — seed/read paths via scope accessors (incl. `living_sphere_curator_state_json`).
-- [ ] **HYGIENE-2026-218** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
-- [ ] **HYGIENE-2026-219** `companion/test_models.py` — template slice smoke tests use scope accessor rel paths.
-- [ ] **HYGIENE-2026-220** `user_md_identity.py` — `load_user_md_template_text` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`.
+- [x] **HYGIENE-2026-216** `models.py` — `load_prompt_bundle` package template slices via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (`tools_md`, `harness_md`, `about_md`, `significance_perception_md`, `output_format_im_dm_md`). Fixed in `cursor/agent-maintenance-tasks-8f30`.
+- [x] **HYGIENE-2026-217** `memory/test_memory_pipeline_living_sphere.py` — seed/read paths via scope accessors (incl. `living_sphere_curator_state_json`). Fixed in `cursor/agent-maintenance-tasks-8f30`.
+- [x] **HYGIENE-2026-218** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-8f30`.
+- [x] **HYGIENE-2026-219** `companion/test_models.py` — template slice smoke tests use scope accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-8f30`.
+- [x] **HYGIENE-2026-220** `user_md_identity.py` — `load_user_md_template_text` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`. Fixed in `cursor/agent-maintenance-tasks-8f30`.
