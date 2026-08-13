@@ -709,7 +709,7 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8506`)
 
-- [ ] **HYGIENE-2026-221** `system_messages.py` — `_assemble_proactive_chat_life_currents_hint_prompt` via `life_currents_md` scope accessor
-- [ ] **HYGIENE-2026-222** `system_messages.py` — `_get_inner_tick_autonomy_prompt_slice` MemDoc paths via scope accessors
-- [ ] **HYGIENE-2026-223** `prompting/test_system_messages.py` — smoke `_assemble_proactive_chat_life_currents_hint_prompt` reads `life_currents_md` accessor path
-- [ ] **HYGIENE-2026-224** `prompting/test_system_messages.py` — assert AUTONOMY prompt slice MemDoc paths match scope accessors
+- [x] **HYGIENE-2026-221** `system_messages.py` — `_assemble_proactive_chat_life_currents_hint_prompt` via `life_currents_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8506` / pull/3878.
+- [x] **HYGIENE-2026-222** `system_messages.py` — `_get_inner_tick_autonomy_prompt_slice` MemDoc paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8506` / pull/3878.
+- [x] **HYGIENE-2026-223** `prompting/test_system_messages.py` — smoke `_assemble_proactive_chat_life_currents_hint_prompt` reads `life_currents_md` accessor path. Fixed in `cursor/agent-maintenance-tasks-8506` / pull/3878.
+- [x] **HYGIENE-2026-224** `prompting/test_system_messages.py` — assert AUTONOMY prompt slice MemDoc paths match scope accessors. Fixed in `cursor/agent-maintenance-tasks-8506` / pull/3878.
