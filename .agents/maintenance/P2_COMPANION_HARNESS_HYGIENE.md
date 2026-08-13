@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-13 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator, #3869–#3877 maintenance scope-path batches — HYGIENE-2026-182..220 claimed); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `system_messages.py` still resolves MemDoc paths via `relative_path_for_kind` in proactive life-currents hint + AUTONOMY prompt slice.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3869–#3877 (HYGIENE-2026-182..220 scope-path accessor batches) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-8506`)
+
+- [ ] **HYGIENE-2026-221** `system_messages.py` — `_assemble_proactive_chat_life_currents_hint_prompt` via `life_currents_md` scope accessor
+- [ ] **HYGIENE-2026-222** `system_messages.py` — `_get_inner_tick_autonomy_prompt_slice` MemDoc paths via scope accessors
+- [ ] **HYGIENE-2026-223** `prompting/test_system_messages.py` — smoke `_assemble_proactive_chat_life_currents_hint_prompt` reads `life_currents_md` accessor path
+- [ ] **HYGIENE-2026-224** `prompting/test_system_messages.py` — assert AUTONOMY prompt slice MemDoc paths match scope accessors
