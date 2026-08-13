@@ -17,6 +17,7 @@ from app.core.companion_harness.prompting.tracks import (
     build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.prompting.system_messages import (
+    _assemble_proactive_chat_life_currents_hint_prompt,
     build_system_messages_for_inner_tick_autonomy,
     build_system_messages_for_inner_tick_monolog,
     build_system_messages_for_tool_track,
@@ -28,10 +29,15 @@ from app.core.companion_harness.companion.prompt_stack import (
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
+    IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
+    LIVING_SPHERE_MD_REL,
+    MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.companion.runtime_channel import (
@@ -477,3 +483,52 @@ def test_greeting_omits_about_guidance_slice() -> None:
         str(m["content"]) for m in messages if m["role"] == "system"
     )
     assert "Describe how a user should interact" not in joined
+
+
+def test_proactive_life_currents_hint_reads_scope_accessor_path(
+    tmp_path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("sm", "a", tmp_path.name),
+        repository=None,
+    )
+    life_currents = "# 我最近在做的事\n\n## 今天（当日兴致）\n翻书\n"
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md
+    assert rel == LIFE_CURRENTS_MD_REL
+    store.write_document(rel, life_currents)
+    block = _assemble_proactive_chat_life_currents_hint_prompt(store)
+    assert block is not None
+    assert "翻书" in block
+    assert block.split("\n")[0] == "## 你最近在做的事（仅供参考）"
+
+
+def test_autonomy_prompt_slice_memdoc_paths_match_scope_accessors() -> None:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    messages = build_system_messages_for_inner_tick_autonomy(
+        _make_bundle(),
+        ContextMeta(),
+        MemoryStore(
+            scope=CompanionScope("sm", "a", "autonomy-paths"),
+            repository=None,
+        ),
+    )
+    autonomy_blocks = [
+        str(m["content"])
+        for m in messages
+        if str(m["content"]).startswith("本轮（AUTONOMY 自主活动）")
+    ]
+    assert len(autonomy_blocks) == 1
+    autonomy_text = autonomy_blocks[0]
+    for rel in (
+        paths.life_currents_md,
+        paths.user_md,
+        paths.memory_md,
+        paths.identity,
+        paths.living_sphere_md,
+    ):
+        assert rel in autonomy_text
+    assert paths.life_currents_md == LIFE_CURRENTS_MD_REL
+    assert paths.user_md == USER_MD_REL
+    assert paths.memory_md == MEMORY_MD_REL
+    assert paths.identity == IDENTITY_MD_REL
+    assert paths.living_sphere_md == LIVING_SPHERE_MD_REL
