@@ -700,3 +700,13 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-13 scan (cron — stale code review)
+
+Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean; ruff F401/F841 clean; 60% hits all false positives (Pydantic `model_config`, `@field_validator`, invariant-check constants referenced by CI scripts, service/test refs). One superseded legacy bridge found kept alive only by its own test. Memory-projection Phase 0 stubs (`retrieval.py`, `prompting/projection/*`) and the config-selected `dual_llm` / `in_turn_single_llm` split are forward-looking / live — left untouched.
+
+Open PRs checked: none open on harness — no overlap.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** #3463: remove stale `turn_compose_context_from_legacy_flags` (bridge from `build_system_messages` bool flags to `TurnComposeContext`); production compose paths use `build_turn_compose_context` / `turn_compose_context_for_self_contained_track` directly, so the bridge had zero production callers and was referenced only by its own test. Deleted the function in `prompting/compose_context.py` plus the orphaned `test_compose_context.py::test_legacy_flags_use_track_pinned_bootstrap_phase` and its now-unused import; the track-pinned bootstrap-phase behavior stays covered by `test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap`.
