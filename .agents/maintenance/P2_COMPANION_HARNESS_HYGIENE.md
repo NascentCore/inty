@@ -709,8 +709,8 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-e96a`)
 
-- [ ] **HYGIENE-2026-225** `companion_user_feedback.py` — `SNAPSHOT_DOC_PATHS` profile MemDoc paths via scope accessors
-- [ ] **HYGIENE-2026-226** `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` via `memory_md` / `soul` scope accessors
-- [ ] **HYGIENE-2026-227** `prompting/projection/slot_rank.py` — `SLOT_RANK` keys via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors
-- [ ] **HYGIENE-2026-228** `tools/test_companion_user_feedback_tool.py` — assert `SNAPSHOT_DOC_PATHS` matches scope accessors
-- [ ] **HYGIENE-2026-229** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys match scope accessor rel paths
+- [x] **HYGIENE-2026-225** `companion_user_feedback.py` — `SNAPSHOT_DOC_PATHS` profile MemDoc paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-226** `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` via `memory_md` / `soul` scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-227** `prompting/projection/slot_rank.py` — `SLOT_RANK` keys via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-228** `tools/test_companion_user_feedback_tool.py` — assert `SNAPSHOT_DOC_PATHS` matches scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-229** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys match scope accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
