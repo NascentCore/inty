@@ -19,25 +19,20 @@ from __future__ import annotations
 
 from typing import Final
 
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 # Lower rank = earlier in prompt prefix (more cache-stable / durable).
 SLOT_RANK: Final[dict[str, int]] = {
-    IDENTITY_MD_REL: 10,
-    SOUL_MD_REL: 20,
-    USER_MD_REL: 30,
-    STYLE_MD_REL: 40,
-    COMPANIONSHIP_MD_REL: 50,
-    MEMORY_MD_REL: 60,
-    LIVING_SPHERE_MD_REL: 70,
-    TECHNO_CORE_MD_REL: 80,
+    _PATHS.identity: 10,
+    _PATHS.soul: 20,
+    _PATHS.user_md: 30,
+    _PATHS.style_md: 40,
+    _PATHS.companionship_md: 50,
+    _PATHS.memory_md: 60,
+    _PATHS.living_sphere_md: 70,
+    _PATHS.techno_core_md: 80,
 }
