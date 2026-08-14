@@ -41,10 +41,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
     CONTEXT_JSON_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -56,10 +55,12 @@ from app.schemas.user import UserAgeGroup, UserProfileSnapshot
 
 from .models import ContextMeta
 
-# Seed-only rels from canonical MemDoc path constants (canonical path constants).
+_SCOPE_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+
+# Seed-only rels via MemoryStoreScopePaths accessors (#3413).
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
+    _SCOPE_PATHS.memory_md,
+    _SCOPE_PATHS.soul,
 )
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(

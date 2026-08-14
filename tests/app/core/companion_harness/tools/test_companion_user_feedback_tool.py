@@ -21,11 +21,15 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
 )
 from app.core.companion_harness.tools.companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
+    SNAPSHOT_DOC_PATHS,
     ComplaintCategory,
     HarnessSnapshot,
     UserFeedbackDisclosureMode,
@@ -41,13 +45,11 @@ from app.core.companion_harness.tools.companion_user_feedback import (
 )
 from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
     GITHUB_ISSUE_TITLE_PREFIX,
-    build_github_issue_labels,
     build_github_issue_body,
+    build_github_issue_labels,
     build_github_issue_title,
     github_issue_severity_label_for_category,
 )
-
-
 from app.utils.github.issues import GithubIssueCreateResult
 
 
@@ -245,10 +247,10 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
 ) -> None:
     from unittest.mock import AsyncMock, patch
 
-    from app.core.companion_harness.tools import companion_user_feedback as mod
     from app.core.agentic_companion.types import (
         OutputMessageKind,
     )
+    from app.core.companion_harness.tools import companion_user_feedback as mod
 
     class _FakeRecord:
         def __init__(self, message_id: str, text: str, sequence: int) -> None:
@@ -509,6 +511,19 @@ async def test_record_user_feedback_rejects_empty_summary(tmp_path) -> None:
         json.dumps({"complaint_summary": "  ", "complaint_category": "tone"}),
     )
     assert out.startswith("ERROR:")
+
+
+def test_snapshot_doc_paths_match_scope_path_accessors() -> None:
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    expected = (
+        p.context_json,
+        p.identity,
+        p.soul,
+        p.style_md,
+        p.user_md,
+        p.memory_md,
+    )
+    assert SNAPSHOT_DOC_PATHS == expected
 
 
 def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
