@@ -709,8 +709,8 @@ Open PRs checked: #3834, #3837, #3869–#3879 — no overlap with tasks below.
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a9c6`)
 
-- [ ] **HYGIENE-2026-230** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` via scope accessors
-- [ ] **HYGIENE-2026-231** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP` + `BOOTSTRAP_WRITABLE_REL_PATHS` via scope accessors
-- [ ] **HYGIENE-2026-232** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY` via scope accessors
-- [ ] **HYGIENE-2026-233** `companion_tool_definitions.py` — tool description JSONL paths (`ai_private_jsonl`, `living_sphere_updates_jsonl`, `techno_core_events_jsonl`) via scope accessors
-- [ ] **HYGIENE-2026-234** `tools/test_companion_tool_definitions.py` — assert allowlists match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessor rel paths
+- [x] **HYGIENE-2026-230** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-a9c6` / pull/3880.
+- [x] **HYGIENE-2026-231** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP` + `BOOTSTRAP_WRITABLE_REL_PATHS` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-a9c6` / pull/3880.
+- [x] **HYGIENE-2026-232** `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-a9c6` / pull/3880.
+- [x] **HYGIENE-2026-233** `companion_tool_definitions.py` — tool description JSONL paths (`ai_private_jsonl`, `living_sphere_updates_jsonl`, `techno_core_events_jsonl`) via scope accessors. Fixed in `cursor/agent-maintenance-tasks-a9c6` / pull/3880.
+- [x] **HYGIENE-2026-234** `tools/test_companion_tool_definitions.py` — assert allowlists match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-a9c6` / pull/3880.
