@@ -20,13 +20,8 @@ from app.core.agentic_companion.types import (
     synthetic_user_message_batch,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -94,10 +89,11 @@ class _FakeLLMClient:
 
 
 def _seed_workspace(store: MemoryStore) -> None:
-    store.write_document(IDENTITY_MD_REL, "identity")
-    store.write_document(SOUL_MD_REL, "soul")
-    store.write_document(USER_MD_REL, "user")
-    store.write_document(MEMORY_MD_REL, "memory")
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    store.write_document(p.identity, "identity")
+    store.write_document(p.soul, "soul")
+    store.write_document(p.user_md, "user")
+    store.write_document(p.memory_md, "memory")
 
 
 def test_run_turn_inner_tick_scheduled_semantics(
@@ -133,7 +129,9 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
     rows = [
         json.loads(line)
-        for line in store.read_document(TRANSCRIPT_JSONL_REL).strip().splitlines()
+        for line in store.read_document(
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
+        ).strip().splitlines()
     ]
     assert rows[0]["role"] == "user"
     assert rows[0]["content"] == scheduled_text
@@ -143,7 +141,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -296,7 +294,9 @@ async def test_bootstrap_queue_turn_persists_single_user_row(
     )
     rows = [
         json.loads(line)
-        for line in store.read_document(TRANSCRIPT_JSONL_REL).splitlines()
+        for line in store.read_document(
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
+        ).splitlines()
         if line
     ]
     user_rows = [row for row in rows if row["role"] == "user"]

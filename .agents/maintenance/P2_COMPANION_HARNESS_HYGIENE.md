@@ -709,8 +709,8 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-40e8`)
 
-- [ ] **HYGIENE-2026-235** `companion/test_transcript_inner_tick_streams.py` — transcript rel params + seed/read via scope accessors
-- [ ] **HYGIENE-2026-236** `memory/test_living_sphere_curator.py` — `living_sphere_md` / `living_sphere_updates_jsonl` accessors
-- [ ] **HYGIENE-2026-237** `memory/test_resolve_client_time.py` — `user_md` accessor
-- [ ] **HYGIENE-2026-238** `tools/test_read_web_page_tool.py` — `memory_md` accessor
-- [ ] **HYGIENE-2026-239** `companion/test_turn.py` — workspace seed + transcript/context reads via scope accessors
+- [x] **HYGIENE-2026-235** `companion/test_transcript_inner_tick_streams.py` — transcript rel params + seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
+- [x] **HYGIENE-2026-236** `memory/test_living_sphere_curator.py` — `living_sphere_md` / `living_sphere_updates_jsonl` accessors. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
+- [x] **HYGIENE-2026-237** `memory/test_resolve_client_time.py` — `user_md` accessor. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
+- [x] **HYGIENE-2026-238** `tools/test_read_web_page_tool.py` — `memory_md` accessor. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
+- [x] **HYGIENE-2026-239** `companion/test_turn.py` — workspace seed + transcript/context reads via scope accessors. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
