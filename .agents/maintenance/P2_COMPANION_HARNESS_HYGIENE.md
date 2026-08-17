@@ -714,3 +714,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-237** `memory/test_resolve_client_time.py` — `user_md` accessor. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
 - [x] **HYGIENE-2026-238** `tools/test_read_web_page_tool.py` — `memory_md` accessor. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
 - [x] **HYGIENE-2026-239** `companion/test_turn.py` — workspace seed + transcript/context reads via scope accessors. Fixed in `cursor/agent-maintenance-tasks-40e8` / pull/3881.
+
+## 2026-08-17 scan (cron)
+
+Source: open PR overlap check (#3869–#3881 HYGIENE-2026-182..239 scope-path accessor wave — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — harness tests still seed/read MemDoc paths via `*_REL` constants instead of `MemoryStoreScopePaths` accessors; stale issue audit doc remains.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3869–#3881 (HYGIENE-2026-182..239), #3882 (stale compose-context bridge) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-8dd2`)
+
+- [ ] **HYGIENE-2026-240** `companion/test_turn_tracks.py` — context + workspace seed via scope accessors
+- [ ] **HYGIENE-2026-241** `companion/test_turn_proactive_structured.py` — workspace seed + transcript read via scope accessors
+- [ ] **HYGIENE-2026-242** `companion/test_proactive_chat.py` — transcript seed/append via `transcript` accessor
+- [ ] **HYGIENE-2026-243** `companion/test_inner_tick_schedule.py` — transcript + context_json via scope accessors
+- [ ] **HYGIENE-2026-244** `companion/test_implicit_sign_on_greeting_llm.py` — workspace seed via scope accessors
+- [ ] **HYGIENE-2026-245** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
