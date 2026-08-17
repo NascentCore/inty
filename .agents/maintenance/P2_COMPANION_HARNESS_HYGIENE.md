@@ -723,9 +723,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8dd2`)
 
-- [ ] **HYGIENE-2026-240** `companion/test_turn_tracks.py` — context + workspace seed via scope accessors
-- [ ] **HYGIENE-2026-241** `companion/test_turn_proactive_structured.py` — workspace seed + transcript read via scope accessors
-- [ ] **HYGIENE-2026-242** `companion/test_proactive_chat.py` — transcript seed/append via `transcript` accessor
-- [ ] **HYGIENE-2026-243** `companion/test_inner_tick_schedule.py` — transcript + context_json via scope accessors
-- [ ] **HYGIENE-2026-244** `companion/test_implicit_sign_on_greeting_llm.py` — workspace seed via scope accessors
-- [ ] **HYGIENE-2026-245** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-240** `companion/test_turn_tracks.py` — context + workspace seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
+- [x] **HYGIENE-2026-241** `companion/test_turn_proactive_structured.py` — workspace seed + transcript read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
+- [x] **HYGIENE-2026-242** `companion/test_proactive_chat.py` — transcript seed/append via `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
+- [x] **HYGIENE-2026-243** `companion/test_inner_tick_schedule.py` — transcript + `context_json` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
+- [x] **HYGIENE-2026-244** `companion/test_implicit_sign_on_greeting_llm.py` — workspace seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
+- [x] **HYGIENE-2026-245** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-8dd2` / pull/3883.
