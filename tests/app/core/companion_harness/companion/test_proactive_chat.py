@@ -11,9 +11,11 @@ from app.core.companion_harness.companion.proactive_chat import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+TRANSCRIPT_JSONL_REL = DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
 
 
 def test_proactive_chat_empty_transcript(tmp_path: Path) -> None:

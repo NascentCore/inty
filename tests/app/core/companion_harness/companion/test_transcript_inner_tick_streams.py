@@ -14,10 +14,11 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 
 def test_merge_transcripts_by_ts_orders_then_stable_tiebreak() -> None:
@@ -34,18 +35,18 @@ def test_merge_transcripts_by_ts_orders_then_stable_tiebreak() -> None:
 @pytest.mark.parametrize(
     "track, expected_rel",
     [
-        (CompanionTurnTrack.USER_CHAT, TRANSCRIPT_JSONL_REL),
-        (CompanionTurnTrack.USER_CHAT_BOOTSTRAP, TRANSCRIPT_JSONL_REL),
-        (CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING, TRANSCRIPT_JSONL_REL),
-        (CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT, TRANSCRIPT_JSONL_REL),
-        (CompanionTurnTrack.INNER_TICK_SCHEDULED, TRANSCRIPT_JSONL_REL),
+        (CompanionTurnTrack.USER_CHAT, _PATHS.transcript),
+        (CompanionTurnTrack.USER_CHAT_BOOTSTRAP, _PATHS.transcript),
+        (CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING, _PATHS.transcript),
+        (CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT, _PATHS.transcript),
+        (CompanionTurnTrack.INNER_TICK_SCHEDULED, _PATHS.transcript),
         (
             CompanionTurnTrack.INNER_TICK_MONOLOG,
-            TRANSCRIPT_INNER_TICK_JSONL_REL,
+            _PATHS.transcript_inner_tick,
         ),
         (
             CompanionTurnTrack.INNER_TICK_AUTONOMY,
-            TRANSCRIPT_INNER_TICK_JSONL_REL,
+            _PATHS.transcript_inner_tick,
         ),
     ],
 )
@@ -78,11 +79,11 @@ def _seed_transcripts(store: MemoryStore) -> None:
         "uuid": "inner-1",
     }
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        _PATHS.transcript,
         json.dumps(main_row, ensure_ascii=False) + "\n",
     )
     store.write_document(
-        TRANSCRIPT_INNER_TICK_JSONL_REL,
+        _PATHS.transcript_inner_tick,
         json.dumps(inner_row, ensure_ascii=False) + "\n",
     )
 
@@ -94,8 +95,8 @@ def _loaded_contents(
 ) -> list[str]:
     loaded = companion_turn_transcript_loaded_messages(
         store,
-        rel_main_transcript=TRANSCRIPT_JSONL_REL,
-        rel_inner_tick_transcript=TRANSCRIPT_INNER_TICK_JSONL_REL,
+        rel_main_transcript=_PATHS.transcript,
+        rel_inner_tick_transcript=_PATHS.transcript_inner_tick,
         track=track,
     )
     return [row.content for row in loaded]

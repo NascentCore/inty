@@ -29,12 +29,8 @@ from app.core.companion_harness.llm.chat_completions import (
 )
 from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
@@ -77,10 +73,11 @@ class _FakeProactiveLLMClient:
 
 
 def _seed_workspace(store: MemoryStore) -> None:
-    store.write_document(IDENTITY_MD_REL, "identity")
-    store.write_document(SOUL_MD_REL, "soul")
-    store.write_document(USER_MD_REL, "user")
-    store.write_document(MEMORY_MD_REL, "memory")
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    store.write_document(p.identity, "identity")
+    store.write_document(p.soul, "soul")
+    store.write_document(p.user_md, "user")
+    store.write_document(p.memory_md, "memory")
 
 
 def _default_deps(
@@ -90,7 +87,7 @@ def _default_deps(
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL).strip()
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript).strip()
     if not raw:
         return []
     return [json.loads(line) for line in raw.splitlines()]
