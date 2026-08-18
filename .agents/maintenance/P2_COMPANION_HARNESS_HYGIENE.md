@@ -709,8 +709,8 @@ Open PRs checked: #3883 (`cursor/agent-maintenance-tasks-8dd2`), #3882 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-551a`)
 
-- [ ] **HYGIENE-2026-246** `companion/test_turn_tail_user_track_metadata.py` — transcript rel params + read via scope accessors
-- [ ] **HYGIENE-2026-247** `companion/test_transcript_assistant_row.py` — transcript seed/read via `transcript` accessor
-- [ ] **HYGIENE-2026-248** `companion/test_transcript_ai_private_hydrate.py` — transcript rel params + read via scope accessors
-- [ ] **HYGIENE-2026-249** `loop/test_greeting_loop_context.py` — `transcript_rel` via scope accessor
-- [ ] **HYGIENE-2026-250** `loop/context_builder_test_support.py` — `transcript_rel` via scope accessor
+- [x] **HYGIENE-2026-246** `companion/test_turn_tail_user_track_metadata.py` — transcript rel params + read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-247** `companion/test_transcript_assistant_row.py` — transcript seed/read via `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-248** `companion/test_transcript_ai_private_hydrate.py` — transcript rel params + read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-249** `loop/test_greeting_loop_context.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-250** `loop/context_builder_test_support.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
