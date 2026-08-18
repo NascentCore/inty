@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-18 scan (cron)
+
+Source: open PR overlap check (#3881..#3883 HYGIENE-2026-235..245 scope-path test migrations, #3882 stale compose-context bridge, #3834 TrackSystemRecipe, #3837 user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — harness loop/transcript tests still seed/read via `*_REL` constants instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3883 (`cursor/agent-maintenance-tasks-8dd2`), #3882 (`cursor/stale-companion-harness-code-8040`), #3881 (`cursor/agent-maintenance-tasks-40e8`), #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-551a`)
+
+- [x] **HYGIENE-2026-246** `companion/test_turn_tail_user_track_metadata.py` — transcript rel params + read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-247** `companion/test_transcript_assistant_row.py` — transcript seed/read via `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-248** `companion/test_transcript_ai_private_hydrate.py` — transcript rel params + read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-249** `loop/test_greeting_loop_context.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+- [x] **HYGIENE-2026-250** `loop/context_builder_test_support.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
