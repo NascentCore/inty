@@ -24,8 +24,8 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_deps import CompanionTurnDeps
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
@@ -61,12 +61,15 @@ class InMemoryTestOutputQueue(OutputQueue):
 
 def mark_interactive_bootstrap_completed(store: MemoryStore) -> None:
     """Mark ``context.json`` bootstrap complete so settled ``USER_CHAT`` track applies."""
-    raw = store.read_document_if_exists(CONTEXT_JSON_REL)
+    raw = store.read_document_if_exists(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+    )
     data = json.loads(raw) if raw and str(raw).strip() else {}
     assert isinstance(data, dict)
     data["workspace_bootstrap_user_interactive_completed"] = True
     store.write_document(
-        CONTEXT_JSON_REL, json.dumps(data, ensure_ascii=False) + "\n"
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        json.dumps(data, ensure_ascii=False) + "\n",
     )
 
 

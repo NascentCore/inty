@@ -22,8 +22,8 @@ from app.core.companion_harness.companion.transcript_ai_private import (
     transcript_window_to_llm_dialogue,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
@@ -115,7 +115,7 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
     persist_ai_private_splice_if_applicable(
         AiPrivateSplicePersistInput(
             store=store,
-            transcript_relative_path=TRANSCRIPT_JSONL_REL,
+            transcript_relative_path=DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
             track=CompanionTurnTrack.USER_CHAT,
             splice_plan=AiPrivateSplicePlan(
                 thoughts=(thought,),
@@ -126,7 +126,10 @@ def test_persist_ai_private_splice_appends_manifest_and_marks_surfaced(
             skip_final_transcript_assistant_row=False,
         )
     )
-    rows = load_transcript_from_store(store, TRANSCRIPT_JSONL_REL)
+    rows = load_transcript_from_store(
+        store,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+    )
     assert len(rows) == 1
     assert rows[0].source == AI_PRIVATE_SPLICE_MANIFEST_SOURCE
     assert rows[0].ai_private_thought_uuids == [thought.uuid]
@@ -156,7 +159,7 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
     )
     persist_input = AiPrivateSplicePersistInput(
         store=store,
-        transcript_relative_path=TRANSCRIPT_JSONL_REL,
+        transcript_relative_path=DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         track=CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT,
         splice_plan=AiPrivateSplicePlan(
             thoughts=(thought,),
@@ -168,7 +171,10 @@ def test_persist_ai_private_splice_skips_silent_reply(tmp_path: Path) -> None:
     )
     assert not should_persist_ai_private_splice(persist_input)
     persist_ai_private_splice_if_applicable(persist_input)
-    assert load_transcript_from_store(store, TRANSCRIPT_JSONL_REL) == []
+    assert load_transcript_from_store(
+        store,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+    ) == []
     assert build_ai_private_splice_plan(
         store,
         [

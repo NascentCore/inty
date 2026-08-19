@@ -20,11 +20,8 @@ from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    TRANSCRIPT_JSONL_REL,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     ensure_minimal_documents_in_store,
 )
 from app.core.companion_harness.prompt_builder import PromptBuilder
@@ -35,7 +32,7 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -49,7 +46,7 @@ def _seed_bootstrap_workspace(store: MemoryStore) -> None:
         + "\n",
     )
     ensure_minimal_documents_in_store(store)
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript, "")
 
 
 def _tail_user() -> tuple[TurnTailUserMessage, ...]:
@@ -140,7 +137,7 @@ def test_greeting_prompt_plan_system_messages_match_prompt_builder_settled(
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -154,7 +151,7 @@ def test_greeting_prompt_plan_system_messages_match_prompt_builder_settled(
         + "\n",
     )
     ensure_minimal_documents_in_store(store)
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript, "")
     runtime_context = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
