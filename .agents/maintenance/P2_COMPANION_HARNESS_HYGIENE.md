@@ -714,3 +714,17 @@ Open PRs checked: #3883 (`cursor/agent-maintenance-tasks-8dd2`), #3882 (`cursor/
 - [x] **HYGIENE-2026-248** `companion/test_transcript_ai_private_hydrate.py` — transcript rel params + read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
 - [x] **HYGIENE-2026-249** `loop/test_greeting_loop_context.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
 - [x] **HYGIENE-2026-250** `loop/context_builder_test_support.py` — `transcript_rel` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-551a` / pull/3884.
+
+## 2026-08-19 scan (cron)
+
+Source: open PR overlap check (#3884 HYGIENE-2026-246..250, #3883 HYGIENE-2026-240..245, #3881 HYGIENE-2026-235..239, #3882 stale compose-context bridge, #3834 TrackSystemRecipe, #3837 user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — harness loop/pipeline tests and shared bootstrap helpers still seed/read via `*_REL` constants instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3884 (`cursor/agent-maintenance-tasks-551a`), #3883 (`cursor/agent-maintenance-tasks-8dd2`), #3882 (`cursor/stale-companion-harness-code-8040`), #3881 (`cursor/agent-maintenance-tasks-40e8`), #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-51b3`)
+
+- [ ] **HYGIENE-2026-251** `loop/test_chat_only_prompt_plan.py` — transcript seed/read + `transcript_rel` via scope accessors
+- [ ] **HYGIENE-2026-252** `loop/test_agentic_loop_output_queue.py` — transcript seed/read + `transcript_rel` via scope accessors
+- [ ] **HYGIENE-2026-253** `companion/test_turn_pipeline_bootstrap.py` — `context_json` + `transcript` via scope accessors
+- [ ] **HYGIENE-2026-254** `companion/test_turn_pipeline_dreaming.py` — transcript seed via scope accessor
+- [ ] **HYGIENE-2026-255** `companion/bootstrap_test_helpers.py` — `context_json` read/write via scope accessor
