@@ -2,7 +2,9 @@
 
 # IntelliMate VM 部署现状（`inty` GCP VM）
 
-**最后核对**：2026-07-02（`ssh inty` + `docker ps` / `docker inspect`）。变更记录见 [rollback_records/2026-07-02-disable-gcplogs-and-vm-state.md](rollback_records/2026-07-02-disable-gcplogs-and-vm-state.md)。
+SSH 别名 `inty` → `35.186.154.142`。GCE **实例名** `prod-intellimate`（asia-southeast1-a，e2-custom-4-8192）；**boot disk 名**仍为 `dev-instance`（现 200GB）。控制台：[prod-intellimate](https://console.cloud.google.com/compute/instancesDetail/zones/asia-southeast1-a/instances/prod-intellimate)。
+
+**最后核对**：2026-08-19（磁盘写满恢复后 `ssh inty` + `docker ps` / `docker inspect`）。事件见 [rollback_records/2026-08-19-enospc-recovery.md](rollback_records/2026-08-19-enospc-recovery.md)。
 
 ## 运行中服务
 
@@ -25,12 +27,13 @@
 
 - VM 上：`sudo docker logs <container>`
 - 从本机拉取：`devops/fetch_inty_vm_container_logs.sh <alias>`
+- 宿主机：`/etc/docker/daemon.json` 限制新建容器 json-file（`50m` × 3）；`/etc/logrotate.d/docker-container-json` 对已有 `*-json.log` 做 `copytruncate`。daemon.json 需 dockerd 重启后才作用于新容器。
 
 ## 镜像 digest（当前）
 
 - `inty-backend-prod`：`ghcr.io/nascentcore/inty-backend/inty-server@sha256:afdef1b7775742771c55218276232fd5b89cf7a14a470e9407382e28b808b690`
-- `inty-ops-prod`：`ghcr.io/nascentcore/inty-backend/inty-ops@sha256:82b0c28435280fdb2f52e2a435c614ef29b544f0a15887599f714de6e5b86e51`
-- `inty-ops-dev`：`ghcr.io/nascentcore/inty-backend/inty-ops@sha256:1675cf18638828e019abd0a919479a754f054e426a9e9bc488e38fa725134430`
+- `inty-ops-prod`：`ghcr.io/nascentcore/inty-backend/inty-ops@sha256:6fa979f14dfb5b24e641752f54c5a9c2db3d10dd3e84be89945fe06913362b08`
+- `inty-ops-dev`：`ghcr.io/nascentcore/inty-backend/inty-ops@sha256:6d37e7ee6f04177220b56b55af189476161413a96f7196578c09c6ebc3bd3c54`
 - `inty-backend-dev`（已停）：`ghcr.io/nascentcore/inty-backend/inty-server@sha256:1679f33c1d47ca0ff10eaf2fbaac6fcaa8e414ee438f0771f87dfc80cfa84574`
 
 ## 非默认启动配置（重建容器时须保留）
@@ -47,10 +50,10 @@
 
 ```bash
 --env INTY_SKIP_ALEMBIC_UPGRADE=1 \
---volume /tmp/inty-backend-start.sh:/start.sh:ro \
+--volume /opt/inty-prod/inty-backend-start.sh:/start.sh:ro \
 ```
 
-`/tmp/inty-backend-start.sh` 内容与仓库 [backend/inty/start.sh](../backend/inty/start.sh) 一致（含 `INTY_SKIP_ALEMBIC_UPGRADE` 判断）。未来 prod 镜像 digest 更新且内置 `start.sh` 已含该逻辑后，可去掉此 bind mount。
+脚本放在 `/opt/inty-prod/inty-backend-start.sh`（内容与仓库 [backend/inty/start.sh](../backend/inty/start.sh) 一致）。**不要**只挂 `/tmp/...`：reboot 会清空 `/tmp`，Docker 会把缺失的 bind 源建成目录，容器 exit 127。systemd `inty-restore-backend-start-sh.service` 仍会在 Docker 前把该文件拷到 `/tmp`，仅作兼容。未来 prod 镜像内置 `start.sh` 已含 skip-alembic 逻辑后，可去掉 bind mount。
 
 **`inty-backend-prod` 完整重建示例**（密钥与 LangSmith 值以 VM 为准）：
 
@@ -68,7 +71,7 @@ sudo docker run --detach \
   --label environment=prod \
   --volume /opt/inty-prod/inty-backend-key.json:/inty-backend-key.json \
   --volume /opt/inty-prod/inty-firebase-key.json:/inty-firebase-key.json \
-  --volume /tmp/inty-backend-start.sh:/start.sh:ro \
+  --volume /opt/inty-prod/inty-backend-start.sh:/start.sh:ro \
   ghcr.io/nascentcore/inty-backend/inty-server@sha256:afdef1b7775742771c55218276232fd5b89cf7a14a470e9407382e28b808b690
 ```
 
