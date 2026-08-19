@@ -74,7 +74,7 @@ agent:
     # Fast proactive + dreaming rhythm for REPL regression gate (defaults: idle 30s / 7200s).
     # Min idle 10s (RootConfig validation); poll 3s → proactive + scope dreaming within ~90s wait.
     dreaming_idle_seconds: 10
-    bootstrap_memdoc_policy: awake_write
+    bootstrap_memdoc_policy: dreaming_only
     inner_tick:
       proactive_chat:
         base_idle_seconds: 10

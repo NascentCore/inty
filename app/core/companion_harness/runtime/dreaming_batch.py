@@ -119,6 +119,55 @@ def run_dreaming_batch_if_due(
     )
 
 
+def run_dreaming_batch_with_candidate(
+    session: CompanionSession,
+    *,
+    candidate: DreamingCandidate,
+    curator_mode: DreamingCuratorMode,
+) -> DreamingBatchOutcome:
+    """Run one dreaming batch from a caller-supplied candidate (eval force kick).
+
+    Skips ``dreaming_due``, idle, inception policy, and UTC daily cap. The caller
+    must supply a ``DreamingCandidate`` whose transcript boundary matches the store
+    (no intervening rows since capture).
+    """
+
+    assert candidate is not None
+    if not session.is_initialized:
+        return DreamingBatchOutcome.NOT_DUE
+
+    inty_trace_id = new_dreaming_batch_trace_id()
+
+    if session.store.uses_repository_without_scope_disk:
+        with try_dreaming_scope_advisory_lock(
+            session.store.scope.registry_key()
+        ) as lock_acquired:
+            if not lock_acquired:
+                record_dreaming_batch_observability(
+                    session=session,
+                    inty_trace_id=inty_trace_id,
+                    outcome=DreamingBatchOutcome.ADVISORY_LOCK_BUSY,
+                    candidate=candidate,
+                    langsmith_root_run=None,
+                )
+                return DreamingBatchOutcome.ADVISORY_LOCK_BUSY
+            return _run_dreaming_batch_locked(
+                session=session,
+                candidate=candidate,
+                idle_seconds=1,
+                curator_mode=curator_mode,
+                inty_trace_id=inty_trace_id,
+            )
+
+    return _run_dreaming_batch_locked(
+        session=session,
+        candidate=candidate,
+        idle_seconds=1,
+        curator_mode=curator_mode,
+        inty_trace_id=inty_trace_id,
+    )
+
+
 def _run_dreaming_batch_locked(
     *,
     session: CompanionSession,

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from app.core.companion_harness.companion.dreaming import (
     DreamingState,
+    dreaming_candidate_slice,
     load_dreaming_state,
     save_dreaming_state,
 )
@@ -29,6 +30,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 from app.core.companion_harness.runtime.dreaming_batch import (
     run_dreaming_batch_if_due,
+    run_dreaming_batch_with_candidate,
 )
 from app.external_services.fakes.openai import (
     fake_step_text,
@@ -297,4 +299,60 @@ def test_run_dreaming_batch_if_due_one_shot_uses_single_llm_and_saves_checkpoint
     assert fake.script_index == 1
     assert store.read_document(daily_path) == f"{daily_path} scripted\n"
     assert store.read_document("MEMORY.md") == "MEMORY.md scripted\n"
+    assert load_dreaming_state(store) is not None
+
+
+def test_run_dreaming_batch_with_candidate_force_kick(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-force", "agent", tmp_path.name),
+        repository=None,
+    )
+    daily_path = _seed_scope_due_for_one_shot_dreaming(store)
+    candidate = dreaming_candidate_slice(store, now=datetime.now(UTC))
+    assert candidate is not None
+
+    llm_config = scripted_harness_llm_config()
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config,
+        _one_shot_dreaming_script_step(daily_path),
+    )
+    session = _companion_session(store, client)
+
+    outcome = run_dreaming_batch_with_candidate(
+        session,
+        candidate=candidate,
+        curator_mode=DreamingCuratorMode.ONE_SHOT,
+    )
+
+    assert outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
+    assert fake.script_index == 1
+    assert store.read_document("IDENTITY.md") == "IDENTITY.md scripted\n"
+    assert load_dreaming_state(store) is not None
+
+
+def test_run_dreaming_batch_with_candidate_force_kick(tmp_path: Path) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-force", "agent", tmp_path.name),
+        repository=None,
+    )
+    daily_path = _seed_scope_due_for_one_shot_dreaming(store)
+    candidate = dreaming_candidate_slice(store, now=datetime.now(UTC))
+    assert candidate is not None
+
+    llm_config = scripted_harness_llm_config()
+    client, fake = companion_llm_client_with_scripted_transport(
+        llm_config,
+        _one_shot_dreaming_script_step(daily_path),
+    )
+    session = _companion_session(store, client)
+
+    outcome = run_dreaming_batch_with_candidate(
+        session,
+        candidate=candidate,
+        curator_mode=DreamingCuratorMode.ONE_SHOT,
+    )
+
+    assert outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
+    assert fake.script_index == 1
+    assert store.read_document("IDENTITY.md") == "IDENTITY.md scripted\n"
     assert load_dreaming_state(store) is not None

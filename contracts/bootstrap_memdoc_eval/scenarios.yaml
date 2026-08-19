@@ -1,7 +1,7 @@
 # Bootstrap MemDoc eval scenarios (#3606). Repo-root-relative path.
 scenarios:
-  - scenario_id: standard_zh_nickname
-    description: Standard Chinese bootstrap with nickname and assistant name
+  - scenario_id: recall_baseline
+    description: Canonical Chinese bootstrap for awake vs dreaming recall comparison
     user_turns:
       - "你好，叫我大雄就好。"
       - "我希望你像多啦一样陪我聊天，轻松一点。"
@@ -13,92 +13,13 @@ scenarios:
       language: zh
       relationship_framing: 陪
       session_intent: casual_chat
-    settled_turns:
-      - "大雄今天过得怎么样？"
-      - "你还记得我怎么称呼你吗？"
-      - "我们是什么关系来着？"
-
-  - scenario_id: impatient_complete
-    description: User asks to skip bootstrap quickly
-    user_turns:
-      - "别问太多了，直接开始聊天吧。"
-      - "叫我阿泽，你就当普通朋友。"
-    experience_profile: null
-    golden_facts:
-      user_address: 阿泽
-      assistant_name: 朋友
-      language: zh
-      relationship_framing: 朋友
-      session_intent: casual_chat
-    settled_turns:
-      - "在吗？"
-      - "你还记得我叫什么吗？"
-
-  - scenario_id: minimal_answers
-    description: User gives very short answers
-    user_turns:
-      - "嗯"
-      - "小北"
-      - "随便"
-      - "好了"
-    experience_profile: null
-    golden_facts:
-      user_address: 小北
-      assistant_name: Inty
-      language: zh
-      relationship_framing: 相处
-      session_intent: casual_chat
-    settled_turns:
-      - "嗨"
-
-  - scenario_id: english_session
-    description: English names and framing
-    user_turns:
-      - "Hi, call me Alex."
-      - "I'd like a calm companion named Sam."
-      - "Let's just chat normally."
-    experience_profile: null
-    golden_facts:
-      user_address: Alex
-      assistant_name: Sam
-      language: en
-      relationship_framing: companion
-      session_intent: casual_chat
-    settled_turns:
-      - "How are you today, Alex?"
-
-  - scenario_id: roleplay_intent
-    description: User wants roleplay experience
-    user_turns:
-      - "你好，我是小林。"
-      - "我想玩角色扮演，轻松剧情向就好。"
-    experience_profile:
-      intent: roleplay
-      tone: playful
-      user_line: "对，就是角色扮演，剧情轻松一点。"
-    golden_facts:
-      user_address: 小林
-      assistant_name: 搭档
-      language: zh
-      relationship_framing: 角色
-      session_intent: roleplay
-    settled_turns:
-      - "我们继续昨天那个场景吧。"
-
-  - scenario_id: remote_romance_intent
-    description: Remote romance experience profile
-    user_turns:
-      - "晚上好，叫我安安。"
-      - "想要一点远程陪伴的感觉，温柔一点。"
-    experience_profile:
-      intent: remote_romance
-      tone: warm
-      user_line: "对，远程浪漫一点，语气温柔。"
-    golden_facts:
-      user_address: 安安
-      assistant_name: 你
-      language: zh
-      relationship_framing: 陪伴
-      session_intent: remote_romance
-    settled_turns:
-      - "今晚有点想你。"
+    recall_probes:
+      - probe_id: nickname
+        user_line: "你还记得我怎么称呼你吗？"
+        expect_markers: [assistant_name]
+      - probe_id: user_name
+        user_line: "我叫什么来着？"
+        expect_markers: [user_address]
+      - probe_id: relationship
+        user_line: "我们是什么关系来着？"
+        expect_markers: [relationship_framing]

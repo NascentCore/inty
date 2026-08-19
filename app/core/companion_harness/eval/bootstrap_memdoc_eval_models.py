@@ -1,4 +1,4 @@
-"""Frozen scenario and snapshot types for Bootstrap MemDoc L1 eval."""
+"""Frozen scenario and chat-recall types for Bootstrap MemDoc L1 eval."""
 
 from __future__ import annotations
 
@@ -8,14 +8,22 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, model_validator
 
+_CHAT_RECALL_MARKER_NAMES: frozenset[str] = frozenset(
+    {"user_address", "assistant_name", "relationship_framing"}
+)
 
-class BootstrapMemDocCheckpoint(StrEnum):
-    """Eval sampling moment aligned with Persona prompt injection rhythm."""
 
-    T0_COMPLETE = "t0_complete"
-    T1_FIRST_DREAM = "t1_first_dream"
-    T2_SETTLED_1 = "t2_settled_1"
-    T2_SETTLED_3 = "t2_settled_3"
+class RecallProbePhase(StrEnum):
+    """When a recall probe runs relative to bootstrap and dreaming."""
+
+    POST_DOCS = "post_docs"
+    PRE_DREAM = "pre_dream"
+    POST_DREAM = "post_dream"
+
+
+_POST_PHASES: frozenset[RecallProbePhase] = frozenset(
+    {RecallProbePhase.POST_DOCS, RecallProbePhase.POST_DREAM}
+)
 
 
 class GoldenFacts(BaseModel):
@@ -29,6 +37,20 @@ class GoldenFacts(BaseModel):
     )
     session_intent: str = Field(
         description="Expected ExperienceSessionIntent value"
+    )
+
+
+class RecallProbe(BaseModel):
+    """One scripted user line that probes golden-fact recall in assistant chat."""
+
+    probe_id: str = Field(description="Unique probe key within a scenario")
+    user_line: str = Field(description="User utterance sent during eval probe")
+    expect_markers: tuple[str, ...] = Field(
+        description="GoldenFacts field names expected in assistant reply"
+    )
+    phase: RecallProbePhase = Field(
+        default=RecallProbePhase.POST_DREAM,
+        description="Probe timing; YAML omits for POST template probes",
     )
 
 
@@ -56,71 +78,74 @@ class BootstrapMemDocEvalScenario(BaseModel):
     golden_facts: GoldenFacts = Field(
         description="Golden facts for deterministic scoring"
     )
-    settled_turns: tuple[str, ...] = Field(
-        description="Fixed settled USER_CHAT lines after bootstrap"
+    recall_probes: tuple[RecallProbe, ...] = Field(
+        description="Chat recall probes after bootstrap (POST template in YAML)"
     )
 
     @model_validator(mode="after")
-    def _non_empty_user_turns(self) -> BootstrapMemDocEvalScenario:
+    def _non_empty_script(self) -> BootstrapMemDocEvalScenario:
         if not self.user_turns:
             raise ValueError("user_turns must be non-empty")
-        if not self.settled_turns:
-            raise ValueError("settled_turns must be non-empty")
+        if not self.recall_probes:
+            raise ValueError("recall_probes must be non-empty")
+        probe_ids = [probe.probe_id for probe in self.recall_probes]
+        if len(probe_ids) != len(set(probe_ids)):
+            raise ValueError("probe_id values must be unique within scenario")
+        for probe in self.recall_probes:
+            if not probe.expect_markers:
+                raise ValueError(
+                    f"probe {probe.probe_id!r} must have expect_markers"
+                )
+            invalid = set(probe.expect_markers) - _CHAT_RECALL_MARKER_NAMES
+            if invalid:
+                raise ValueError(
+                    f"probe {probe.probe_id!r} invalid markers: {sorted(invalid)}"
+                )
         return self
 
 
-class MemDocSnapshotBody(BaseModel):
-    """One MemDoc body at a checkpoint."""
+class ChatTurnRecord(BaseModel):
+    """One probe turn's user line and assistant downlink text."""
 
-    relative_path: str = Field(description="MemDoc relative path")
-    sequence_id: int = Field(description="Postgres document version seq")
-    body_preview: str = Field(description="Truncated body for report")
-    contains_markers: dict[str, bool] = Field(
-        description="Golden marker presence per marker name"
-    )
+    probe_id: str = Field(description="Matching RecallProbe.probe_id")
+    phase: RecallProbePhase = Field(description="Probe phase when turn ran")
+    user_text: str = Field(description="User message sent")
+    assistant_text: str = Field(description="Full assistant visible reply")
 
 
-class BootstrapMemDocSnapshot(BaseModel):
-    """Collected observables at one eval checkpoint."""
+class ProbeRecallResult(BaseModel):
+    """Recall result for one probe (substring or LLM judge)."""
 
-    checkpoint: BootstrapMemDocCheckpoint = Field(description="Sampling moment")
-    memdocs: tuple[MemDocSnapshotBody, ...] = Field(
-        description="USER/IDENTITY/STYLE/COMPANIONSHIP/MEMORY/SOUL bodies"
+    probe_id: str = Field(description="Matching RecallProbe.probe_id")
+    phase: RecallProbePhase = Field(description="Probe phase scored")
+    marker_hits: dict[str, bool] = Field(
+        description="Golden marker name to hit in assistant_text"
     )
-    prompt_markers: dict[str, bool] = Field(
-        description="Golden marker hits in prompt injection summary"
+    recall_ratio: float = Field(
+        description="Fraction of expect_markers hit for this probe"
     )
-    settled_reply_preview: str = Field(
-        description="Assistant reply preview at settled checkpoints"
-    )
-    tool_background_counts: dict[str, int] = Field(
-        description="Bootstrap write and related tool counts"
+    judge_reasons: dict[str, str] = Field(
+        description="Per-marker LLM judge rationale; empty when substring scorer"
     )
 
 
-class BootstrapMemDocScores(BaseModel):
-    """Deterministic L0 metrics for one scenario × policy run."""
+class GoldenFactsRecallScore(BaseModel):
+    """Chat golden-fact recall summary for one agent eval run."""
 
-    golden_field_recall: dict[str, float] = Field(
-        description="Per-doc recall 0-1"
+    post_recall: float = Field(
+        description="Primary metric: POST_DOCS or POST_DREAM probe hit rate"
     )
-    persona_gap_turns: int = Field(
-        description="Consecutive turns without persona markers after T0"
+    pre_recall: float | None = Field(
+        description="PRE_DREAM hit rate when pre probes ran; else null"
     )
-    bootstrap_tool_call_count: int = Field(
-        description="Bootstrap memory_store_write_document calls"
+    overall_recall: float = Field(
+        description="All probe×marker hits over all probes in this run"
     )
-    memory_soul_still_seed_at_t0: bool = Field(
-        description="B/C expect seed at T0"
+    per_marker_recall: dict[str, float] = Field(
+        description="Per golden marker hit rate across probes in this run"
     )
-    awake_memdoc_violation: bool = Field(
-        description="Settled-phase non-dreaming MEMORY write"
-    )
-    seconds_to_t1: float | None = Field(
-        description="Complete to first DreamingState seconds"
-    )
-    inception_delayed_by_user_chat: bool = Field(
-        description="Settled USER_CHAT between T0 and T1"
+    per_probe: tuple[ProbeRecallResult, ...] = Field(
+        description="Per-probe breakdown"
     )
 
 
@@ -139,6 +164,17 @@ class BootstrapMemDocEvalScenariosFile(BaseModel):
         return self
 
 
+def golden_fact_chat_markers(golden: GoldenFacts) -> dict[str, str]:
+    """Return substring needles used for chat recall scoring."""
+
+    assert golden is not None
+    return {
+        "user_address": golden.user_address,
+        "assistant_name": golden.assistant_name,
+        "relationship_framing": golden.relationship_framing,
+    }
+
+
 def load_eval_scenarios(path: Path) -> tuple[BootstrapMemDocEvalScenario, ...]:
     """Load and validate scenarios YAML from repo-root-relative path."""
 
@@ -148,102 +184,142 @@ def load_eval_scenarios(path: Path) -> tuple[BootstrapMemDocEvalScenario, ...]:
     return doc.scenarios
 
 
-_PERSONA_PATHS: tuple[str, ...] = (
-    "USER.md",
-    "IDENTITY.md",
-    "STYLE.md",
-    "COMPANIONSHIP.md",
-)
+def _probe_expect_markers(
+    scenario: BootstrapMemDocEvalScenario,
+    probe_id: str,
+) -> tuple[str, ...]:
+    for probe in scenario.recall_probes:
+        if probe.probe_id == probe_id:
+            return probe.expect_markers
+    raise ValueError(f"unknown probe_id: {probe_id!r}")
 
 
-def score_bootstrap_memdoc_run(
+def _phase_ratio(
+    *,
+    results: list[ProbeRecallResult],
+    phases: frozenset[RecallProbePhase],
+) -> float:
+    hits = 0
+    total = 0
+    for result in results:
+        if result.phase not in phases:
+            continue
+        for hit in result.marker_hits.values():
+            total += 1
+            if hit:
+                hits += 1
+    return hits / total if total else 0.0
+
+
+def aggregate_probe_recall_score(
+    *,
+    per_probe: tuple[ProbeRecallResult, ...],
+    marker_names: frozenset[str],
+) -> GoldenFactsRecallScore:
+    """Aggregate per-probe hits into post/pre/overall recall metrics."""
+
+    marker_hits_total: dict[str, int] = {name: 0 for name in marker_names}
+    marker_counts: dict[str, int] = {name: 0 for name in marker_names}
+    for result in per_probe:
+        for name, hit in result.marker_hits.items():
+            if name not in marker_names:
+                continue
+            marker_counts[name] += 1
+            if hit:
+                marker_hits_total[name] += 1
+    overall_hits = sum(marker_hits_total.values())
+    overall_total = sum(marker_counts.values())
+    per_marker_recall = {
+        name: (
+            marker_hits_total[name] / marker_counts[name]
+            if marker_counts[name]
+            else 0.0
+        )
+        for name in marker_names
+    }
+    pre_recall: float | None = None
+    pre_total = sum(
+        1
+        for result in per_probe
+        if result.phase is RecallProbePhase.PRE_DREAM
+        for _ in result.marker_hits
+    )
+    if pre_total:
+        pre_recall = _phase_ratio(
+            results=list(per_probe),
+            phases=frozenset({RecallProbePhase.PRE_DREAM}),
+        )
+    return GoldenFactsRecallScore(
+        post_recall=_phase_ratio(results=list(per_probe), phases=_POST_PHASES),
+        pre_recall=pre_recall,
+        overall_recall=overall_hits / overall_total if overall_total else 0.0,
+        per_marker_recall=per_marker_recall,
+        per_probe=per_probe,
+    )
+
+
+def score_golden_chat_recall(
     *,
     scenario: BootstrapMemDocEvalScenario,
-    policy_value: str,
-    snapshots: dict[BootstrapMemDocCheckpoint, BootstrapMemDocSnapshot],
-    memory_seed_preview: str,
-    soul_seed_preview: str,
-    bootstrap_complete_at: float | None,
-    dreaming_checkpoint_at: float | None,
-) -> BootstrapMemDocScores:
-    """Compute deterministic L0 metrics from collected snapshots."""
+    chat_records: tuple[ChatTurnRecord, ...],
+) -> GoldenFactsRecallScore:
+    """Score golden-fact recall via substring match (unit tests / legacy)."""
 
-    golden = scenario.golden_facts
-    markers = (
-        ("user_address", golden.user_address),
-        ("assistant_name", golden.assistant_name),
-        ("relationship_framing", golden.relationship_framing),
-        ("session_intent", golden.session_intent),
-    )
+    assert scenario is not None
+    markers = golden_fact_chat_markers(scenario.golden_facts)
+    per_probe: list[ProbeRecallResult] = []
+    marker_hits_total: dict[str, int] = {name: 0 for name in markers}
+    marker_counts: dict[str, int] = {name: 0 for name in markers}
 
-    t0 = snapshots.get(BootstrapMemDocCheckpoint.T0_COMPLETE)
-    t1 = snapshots.get(BootstrapMemDocCheckpoint.T1_FIRST_DREAM)
-    recall: dict[str, float] = {}
-    for rel in _PERSONA_PATHS:
-        hits = 0
-        total = len(markers)
-        if t1 is not None:
-            for body in t1.memdocs:
-                if body.relative_path != rel:
-                    continue
-                for name, needle in markers:
-                    if needle in body.body_preview:
-                        hits += 1
-        if t0 is not None:
-            for body in t0.memdocs:
-                if body.relative_path != rel:
-                    continue
-                for name, needle in markers:
-                    if needle in body.body_preview:
-                        hits += 1
-        recall[rel] = hits / total if total else 0.0
-
-    persona_gap = 0
-    if t0 is not None and not any(t0.prompt_markers.values()):
-        persona_gap = 1
-
-    bootstrap_writes = 0
-    if t0 is not None:
-        bootstrap_writes = t0.tool_background_counts.get(
-            "memory_store_write_document", 0
+    for record in chat_records:
+        expect = _probe_expect_markers(scenario, record.probe_id)
+        hits: dict[str, bool] = {}
+        probe_hits = 0
+        for name in expect:
+            needle = markers[name]
+            hit = needle in record.assistant_text
+            hits[name] = hit
+            marker_counts[name] += 1
+            if hit:
+                probe_hits += 1
+                marker_hits_total[name] += 1
+        ratio = probe_hits / len(expect) if expect else 0.0
+        per_probe.append(
+            ProbeRecallResult(
+                probe_id=record.probe_id,
+                phase=record.phase,
+                marker_hits=hits,
+                recall_ratio=ratio,
+                judge_reasons={},
+            )
         )
 
-    memory_seed = memory_seed_preview
-    soul_seed = soul_seed_preview
-    memory_soul_seed = True
-    if t0 is not None:
-        for body in t0.memdocs:
-            if body.relative_path == "MEMORY.md":
-                memory_soul_seed = memory_soul_seed and (
-                    body.body_preview.strip() == memory_seed.strip()
-                    or "seed" in body.body_preview.lower()
-                )
-            if body.relative_path == "SOUL.md":
-                memory_soul_seed = memory_soul_seed and (
-                    body.body_preview.strip() == soul_seed.strip()
-                    or "seed" in body.body_preview.lower()
-                )
-
-    seconds_to_t1: float | None = None
-    if bootstrap_complete_at is not None and dreaming_checkpoint_at is not None:
-        seconds_to_t1 = dreaming_checkpoint_at - bootstrap_complete_at
-
-    awake_violation = False
-    t2 = snapshots.get(BootstrapMemDocCheckpoint.T2_SETTLED_3)
-    if t2 is not None:
-        for body in t2.memdocs:
-            if body.relative_path == "MEMORY.md" and not memory_soul_seed:
-                awake_violation = True
-
-    if policy_value == "awake_write":
-        memory_soul_seed = True
-
-    return BootstrapMemDocScores(
-        golden_field_recall=recall,
-        persona_gap_turns=persona_gap,
-        bootstrap_tool_call_count=bootstrap_writes,
-        memory_soul_still_seed_at_t0=memory_soul_seed,
-        awake_memdoc_violation=awake_violation,
-        seconds_to_t1=seconds_to_t1,
-        inception_delayed_by_user_chat=False,
+    return aggregate_probe_recall_score(
+        per_probe=tuple(per_probe),
+        marker_names=frozenset(markers),
     )
+
+
+def expand_pre_dream_probes(
+    probes: tuple[RecallProbe, ...],
+) -> tuple[RecallProbe, ...]:
+    """Copy POST template probes as PRE_DREAM for dreaming pre-agent runs."""
+
+    assert probes is not None
+    expanded: list[RecallProbe] = []
+    for probe in probes:
+        expanded.append(
+            RecallProbe(
+                probe_id=probe.probe_id,
+                user_line=probe.user_line,
+                expect_markers=probe.expect_markers,
+                phase=RecallProbePhase.PRE_DREAM,
+            )
+        )
+    return tuple(expanded)
+
+
+def post_phase_for_awake_policy() -> RecallProbePhase:
+    """POST phase label when policy is awake_write."""
+
+    return RecallProbePhase.POST_DOCS

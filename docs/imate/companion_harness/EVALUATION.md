@@ -1,5 +1,7 @@
 # Companion Evaluation: 评测一个 personal AI companion 的第一性原理
 
+High-level design for long-term objective in evaluationg a personal AI companion.
+
 > 本文件由 AI（编码智能体）依据 repo 现有散点记录与公开科研文献综合生成（generated entirely by the coding agent）。
 > 读者：思考「评什么、为什么这么评」的设计者与工程师；运营评测台操作见 [evaluation/](/evaluation/)。
 > 用途：先立**第一性原理**（评测对象是什么、依据何在），再把工程化的分层与对照作为**次要落地说明**。
@@ -134,13 +136,3 @@ Repo pointers：
 - [BRAINSTORM.md](./BRAINSTORM.md) — eudaimonic 取向、Gottman、north-star（回访+情绪收束）；见 §「iMate智能体陪伴系统点子」。
 - `evaluation/` — 运营人评与行为分析台。
 - Issues：#3341（CRS）、#3323（retention/trust）、#3606（regression vs eval）、#457（对话评价系统）、#72（本地 inty-eval）。
-
-## Bootstrap MemDoc policy eval（L1）
-
-Report-only harness comparing three `BootstrapMemDocPolicy` arms at fixed checkpoints (T0 complete, T1 first dream, T2 settled). Driver: [`.cursor/skills/scripts/run_bootstrap_memdoc_eval.py`](/.cursor/skills/scripts/run_bootstrap_memdoc_eval.py); scenarios: [`contracts/bootstrap_memdoc_eval/scenarios.yaml`](/contracts/bootstrap_memdoc_eval/scenarios.yaml). Config: `devops/config.yaml.bootstrap_memdoc_eval.yaml` — **restart Ops** per matrix cell when changing `bootstrap_memdoc_policy`.
-
-- **A `awake_write`** — current bootstrap MemDoc writes.
-- **B `dreaming_only`** — run **B_fast** (`dreaming_idle_seconds=10`) and **B_prod** (`7200`) separately.
-- **C `dreaming_inception`** — B plus one inception DreamingBatch after complete.
-
-Exit code always 0; does not gate CI. After eval, migrate production to a single policy and align L0 regression (`_verify_bootstrap_memdocs`) — see plan todos `migrate-winner`.

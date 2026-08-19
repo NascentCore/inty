@@ -1165,6 +1165,9 @@ def _wait_input_delivered(
     return False
 
 
+# TODO(ws-correlation): Align with REPL ``_correlation_uuid_from_meta`` — also match
+# ``reply_to_user_msg_uuid`` on tool_bg frames. Cross-turn stale frames are async
+# OutputQueue delivery, not a production user-visible bug.
 def _downlink_user_msg_uuid(meta: dict[str, Any]) -> str:
     return str(meta.get("user_msg_uuid") or "").strip()
 
@@ -1690,6 +1693,117 @@ def _dreaming_checkpoint_present(
         document_kind="companion_dreaming_state_json",
     )
     return doc is not None and bool(doc.content.strip())
+
+
+_DREAMING_FORCE_POLL_SEC = 3.0
+_DREAMING_FORCE_MAX_SEC = 120.0
+
+
+def _force_dream_at_bootstrap_boundary(
+    repo_root: Path,
+    config_path: Path,
+    *,
+    user_id: str,
+    agent_id: str,
+    stderr: TextIO,
+    skip_db_checks: bool,
+) -> bool:
+    """Capture bootstrap slice and force one DreamingBatch for L1 eval (#3606)."""
+
+    assert user_id != ""
+    assert agent_id != ""
+    if skip_db_checks:
+        print(f"{_TAG} skip force dream (no db)", flush=True)
+        return False
+    _ensure_import_path(repo_root)
+    import asyncio
+    from datetime import UTC, datetime
+
+    from app.core.companion_harness.companion.dreaming import dreaming_candidate_slice
+    from app.core.companion_harness.companion.dreaming_observability import (
+        DreamingBatchOutcome,
+    )
+    from app.core.companion_harness.runtime.dreaming_batch import (
+        run_dreaming_batch_with_candidate,
+    )
+    from app.core.config import global_config_loaded_from_config_yaml
+    from app.services.agentic_companion.inner_tick_turn_scope import (
+        inner_tick_turn_scope,
+    )
+    from app.services.companion_chat_service import (
+        resolve_companion_session_for_api_turn,
+    )
+    from app.utils.models_catalog import resolve_chat_text_model
+
+    os.environ["INTY_CONFIG_YAML"] = str(config_path.resolve())
+    chat_id = _agent_scope_chat_id(user_id, agent_id)
+    cfg = global_config_loaded_from_config_yaml
+    resolved = resolve_chat_text_model(cfg.agent.sub_user_chat_model)
+    curator_mode = cfg.agent.companion_harness.dreaming_curator_mode
+
+    async def _run_batch() -> bool:
+        batch_deadline = time.monotonic() + _DREAMING_FORCE_MAX_SEC
+        while time.monotonic() < batch_deadline:
+            session = await resolve_companion_session_for_api_turn(
+                user_id=user_id,
+                agent_id=agent_id,
+                chat_id=chat_id,
+                resolved_chat_model=resolved,
+                session_id=None,
+            )
+            async with inner_tick_turn_scope(session=session):
+                candidate = dreaming_candidate_slice(
+                    session.store,
+                    now=datetime.now(UTC),
+                )
+                if candidate is None:
+                    print(
+                        f"{_TAG} force dream: no candidate slice",
+                        file=stderr,
+                        flush=True,
+                    )
+                    return False
+                outcome = await asyncio.to_thread(
+                    run_dreaming_batch_with_candidate,
+                    session,
+                    candidate=candidate,
+                    curator_mode=curator_mode,
+                )
+                if outcome == DreamingBatchOutcome.CHECKPOINT_SAVED:
+                    return True
+                if outcome == DreamingBatchOutcome.ADVISORY_LOCK_BUSY:
+                    print(
+                        f"{_TAG} force dream: advisory lock busy, retry",
+                        file=stderr,
+                        flush=True,
+                    )
+                    await asyncio.sleep(_DREAMING_FORCE_POLL_SEC)
+                    continue
+                print(
+                    f"{_TAG} force dream: outcome={outcome.value}",
+                    file=stderr,
+                    flush=True,
+                )
+                return False
+        print(f"{_TAG} force dream: batch retry timeout", file=stderr, flush=True)
+        return False
+
+    if not asyncio.run(_run_batch()):
+        print(f"{_TAG} force dream batch failed", file=stderr, flush=True)
+        return False
+    deadline = time.monotonic() + _DREAMING_FORCE_MAX_SEC
+    while time.monotonic() < deadline:
+        if _dreaming_checkpoint_present(
+            repo_root,
+            config_path,
+            user_id=user_id,
+            agent_id=agent_id,
+        ):
+            print(f"{_TAG} force dream checkpoint observed", file=stderr, flush=True)
+            return True
+        time.sleep(_DREAMING_FORCE_POLL_SEC)
+    print(f"{_TAG} force dream: checkpoint timeout", file=stderr, flush=True)
+    return False
 
 
 # TODO(dreaming-completion-notify): #3744 — replace log scraping with in-process
