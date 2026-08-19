@@ -8,7 +8,7 @@ Review the current pending changes.
 
 - Understand what the code does
 - Critique architecture, its fitness to the [companion harness design](/docs/imate/companion_harness/DESIGN.md)
-- Check for bugs
+- Review according to [Python style guides](/.agents/guidelines/python_style_guides.md)
 
 ### Enhance
 

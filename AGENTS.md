@@ -9,14 +9,20 @@ Inty are AI personal companion.
 
 Inty uses agentic harness to elicit human-like emotional behaviors from LLMs, which in turn arouse human users' emotional responses, and cultivate long-term emotional bonding with human users.
 
-## Project plan organization
+## LLM model adjustment
 
-The whole project can be tracked from this repo.
+- If you are running with Auto model in cursor, then you should be very concerve, do the essential work, refrain from free thinking, as the Auto model's intelligence is weak
 
-- High-level designs are written in human-authored markdown docs
-- System architecture are reflected in source code file system layout and the high-level abstractions in the code (package, module, class)
-- Change requests are managed in GitHub issues, with NOTEs TODOs referencing them in the source code
-- Comments in the source code for contextual information
+## Response style
+
+Answer in human readable manner:
+
+- Only output core information, do not show details, unless requested by human parnters
+
+## Coding style
+
+- Attend to the existing pattern of the code.
+- Read [Python style guides](/.agents/guidelines/python_style_guides.md)
 
 ## Your responsibility
 

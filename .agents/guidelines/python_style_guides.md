@@ -25,3 +25,39 @@ Same word, different dimension → different suffix. Example: `ChannelKind` (whi
 **Members:** `SCREAMING_SNAKE`. If stored in DB or on the wire, use a stable lowercase value: `APP_WS = "app_ws"`.
 
 **Docstring:** one line on what the enum classifies. Comment a member when its meaning or wire value is not obvious.
+
+## Instructions
+
+- Model messy state with a familiar data structure; one function should return it.
+- Separate what from how: describe effects in data or a DSL, not execution code.
+- Find seams between systems — put abstractions there.
+- Split by responsibility; make implicit concepts explicit.
+- Name dependencies; isolate core business logic.
+
+## Anti-patterns
+
+### All-in-one function and specialized wrappers
+
+Avoid the following pattern:
+
+```
+def build_system_messages(...):
+  """An all-in-one function can do a lot of things"""
+  ...
+
+def build_system_messages_for_x(...):
+  # Build arguments
+  args = ...
+  return build_system_messages(args)
+```
+
+Instead, just implement details in specialized functions.
+
+```
+def build_system_messages_for_x(...):
+  # Build arguments
+  do-x
+  do-y
+  ...
+  return ...
+```

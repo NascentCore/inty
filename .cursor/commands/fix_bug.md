@@ -12,3 +12,8 @@
   do not use `if` to tolerate empty input argument, or redefine the argument as `StrEnum`.
 - If the bug is caused by exceptional situation, do not handle that, just leave a NOTE of how that exceptional
   situation comes into being.
+- Do a minimal fix, do not expand the scope
+- Record investigation/troubleshooting process and conclusions in PR description
+- Create GitHub issues and TODOs to follow-up if necessary
+- Create tests to prevent regression if necessary
+- Commit the changes

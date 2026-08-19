@@ -1,5 +1,7 @@
 # Terminology
 
+Use these terminology for consistent communication with your human partners.
+
 **Common ones aside, certain words are used specifically.**
 
 - Systems: interdependent software (mobile/web apps, service, infra components etc.), as in Inty is a human-like agentic companion system,

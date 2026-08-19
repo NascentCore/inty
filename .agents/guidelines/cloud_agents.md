@@ -1,202 +1,96 @@
-# Cursor Cloud Agent 执行契约（强制）
+# Cursor Cloud Agent 执行契约
 
-> 适用于在 Cursor Cloud 中运行的自动化 Agent。
+> 在 Cursor Cloud VM 里跑自动化 Agent 时用。配置入口：[`.cursor/environment.json`](../../.cursor/environment.json)。
 
-## Environment setup (Cursor contract)
+## 先读这个
 
-This repo configures Cloud Agents **in code** via [`.cursor/environment.json`](../../.cursor/environment.json). Cursor resolves config in order: **repo `.cursor/environment.json`** → personal saved environment → team saved environment ([docs](https://cursor.com/docs/cloud-agent/setup#environment-setup-options)).
+VM 启动后 Cursor 会自动跑 `install` 和 `start`，你通常只需：
 
-### What this repo uses
+1. `source .venv/bin/activate`（Python 工具都在 venv 里，不 activate 会误报「未安装」）
+2. 确认 Postgres 已就绪（`start` hook 会跑；见下方验证命令）
+3. 按需启动 backend，再跑测试
 
-- **Mode**: install-script (no committed `Dockerfile` or `snapshot` ID in `environment.json`).
-- **`install`** (Cursor “update” command): [`bash .cursor/cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh) — idempotent; runs on every agent boot. System apt packages live in [`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh). Cursor checkpoints the VM after a slow install so later boots reuse cached layers.
-- **`start`**: [`bash .cursor/cloud-agent-start.sh`](../../.cursor/cloud-agent-start.sh) → `tools/scripts/ensure_postgres_for_tests.sh` (Postgres on `:5432`).
-- **`ports`**: `8000` (Inty API), `8001` (Ops / REPL), `5432` (PostgreSQL).
+**端口**：`8000` Inty API · `8001` Ops/REPL · `15432` PostgreSQL
 
-### `install` provisions (committed script)
+**install 脚本会装什么**（[`cloud-agent-install.sh`](../../.cursor/cloud-agent-install.sh)）：Python 3.12 + `.venv`、`config.yaml`（从 `devops/config.yaml.test` 复制）、apt 依赖（见 [`cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh)）。
 
-- **Apt** ([`.cursor/cloud-agent-apt.sh`](../../.cursor/cloud-agent-apt.sh)): Python 3.12 + venv/dev headers, `libpq-dev`, `postgresql`, `docker.io`, `google-cloud-cli`.
-- **Python**: `.venv` from `requirements.txt` + `tests/requirements.txt`; dev tools (`uv`, `ruff`, `black`, `pylint`, `vulture`) into `.venv/bin/`.
-- **Config**: copies `devops/config.yaml.test` → `config.yaml` when missing.
-- **Remote VM logs**: `devops/fetch_inty_vm_container_logs.sh`（SSH；见 [DEPLOYMENT_STATE.md](/devops/DEPLOYMENT_STATE.md)）。
+**不在 install 里**（需 snapshot 或手动）：Android SDK、`evaluation/node_modules`、emulator AVD。缺了再装或存 dashboard snapshot。
 
-### Not in `install` (on-demand or dashboard snapshot)
+## Agent 工作流（强制）
 
-Sections below (Android SDK at `/opt/android-sdk`, `evaluation/node_modules`, emulator AVD) describe **optional snapshot/dashboard setup**, not the committed install script. If missing on a fresh VM, either run the relevant setup during agent-driven environment creation and save a snapshot, or add steps to `cloud-agent-install.sh`.
+1. **分支**：只在任务指定分支开发；本地没有就先建同名分支。
+2. **提交**：一次逻辑变更一个 commit；message = 一句话总结 + 详细描述。
+3. **推送**：`git push -u origin <branch>`；除非用户明确要求，禁止 force push / amend 已推送提交。
+4. **PR**：每轮实现-测试后更新远端并创建/更新 PR；描述里附测试证据。
+5. **交付前**：检查 diff（无无关改动、无调试代码、无密钥）；若影响目录规范，同步更新对应 `AGENTS.md` / `README.md` / `TODOS.md`。
 
-### Faster cold starts (optional)
+## 常用命令
 
-- **Dashboard snapshot**: after first successful guided setup, save a VM snapshot and add `"snapshot": "snapshot-…"` to `environment.json`.
-- **Dockerfile**: for heavy system deps (complex Docker, Tailscale), add `.cursor/Dockerfile` + `"build": { "dockerfile": "Dockerfile" }` per Cursor docs.
-
-## Agent workflow rules
-
-1. **分支约束**
-   - 仅在任务指定分支开发，不切换到其他分支。
-   - 本地缺失该分支时先创建同名分支，再开始改动。
-2. **提交粒度**
-   - 每次逻辑变更尽量独立成一个 commit，避免“大杂烩提交”。
-   - commit message 必须包含：一句话总结 + 详细描述。
-3. **推送规则**
-   - 使用 `git push -u origin <branch-name>` 推送当前分支。
-   - 非用户明确要求，禁止 force push、禁止 amend 已推送提交。
-4. **PR 规则**
-   - 每轮实现-测试循环后，同步更新远端并创建/更新 PR。
-   - 在 PR 描述中补充测试证据（关键命令输出、截图/录屏、日志片段）。
-5. **交付前自检**
-   - 回看 diff，确认无无关改动、无临时调试代码、无敏感信息。
-   - 若变更影响目录规范，同时更新对应目录的 `AGENTS.md` / `README.md` / `TODOS.md`。
-
-## Service overview
-
-The primary service for development is the **Python backend** (FastAPI/Uvicorn on port 8000), backed by **PostgreSQL** (Docker, port **15432**). Standard commands are documented in `backend/README.md` and the CI workflow `.github/workflows/ci_backend.yaml`.
-
-The **Android app** (`android_app/`) builds with Gradle 8.14+ and Java 21. CI workflow: `.github/workflows/ci_android_app.yaml`.
-
-## Update script
-
-See **Environment setup (Cursor contract)** above. Quick verify after boot:
+### 验证环境
 
 ```bash
-command -v gcloud && gcloud version | head -1
-source .venv/bin/activate && command -v uv && uv --version
+source .venv/bin/activate && uv --version && ruff --version
+PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'
 ```
 
-### Verify Python dev tools (agents: read this before reporting “not installed”)
+缺工具时重跑：`bash .cursor/cloud-agent-install.sh`
 
-`uv` and `ruff` are **venv-local**. Bare `command -v uv` / `command -v ruff` without activating `.venv` will fail even when install succeeded.
+### 启动服务
 
-From repo root:
+**PostgreSQL**（boot 时 `.cursor/cloud-agent-start.sh` 已调用；手动：`./tools/scripts/ensure_postgres_for_tests.sh`）
+
+**Inty backend (8000)**
 
 ```bash
-source .venv/bin/activate && command -v uv && uv --version && command -v ruff && ruff --version
+export INTY_CONFIG_YAML=devops/config.yaml.test
+source .venv/bin/activate
+./backend/inty/start.sh --test    # CI 模式，无 reload
+# ./backend/inty/start.sh --dev   # 开发模式，带 reload
 ```
 
-Or without activating:
+**Ops / REPL (8001，可选)**
 
 ```bash
-test -x .venv/bin/uv && .venv/bin/uv --version
-test -x .venv/bin/ruff && .venv/bin/ruff --version
+source .venv/bin/activate
+./backend/ops/start.sh --local --no-build-frontend
+# REPL 调试加：--debug --log-file ./inty-ops-local.log
 ```
 
-If missing, re-run install: `bash .cursor/cloud-agent-install.sh`.
+`start.sh` 不会帮你 activate venv。Python 里 `Environment.TEST` 来自 `config.yaml`，不是 `--test` CLI flag。
 
-Use dev tools as `uv run ruff …` / `uv run black …`, or after `source .venv/bin/activate`.
+### 测试
 
-### Starting services
-
-1. **PostgreSQL** (preferred): run from repo root after install/update:
-   - `./tools/scripts/ensure_postgres_for_tests.sh` — Docker container `pg-inty` (`postgres:16` on **`:15432`**) when Docker works, otherwise starts distro PostgreSQL; **`INTY_CONFIG_YAML=devops/config.yaml.test`** then `alembic upgrade head` (same DSN as `config.yaml.local`).
-   - Cloud Agent VM start hook: `.cursor/cloud-agent-start.sh` (same script).
-   - Manual Docker only: `sudo docker run --rm --name pg-inty -p 15432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD='sxwl666!' -e POSTGRES_DB=inty -d postgres:16`
-   - Verify readiness: `PGPASSWORD='sxwl666!' psql -h localhost -U postgres -d inty -c 'SELECT 1'` (**assume DB matches `config.yaml.local`; do not alter password during smoke**)
-2. **Inty backend (port 8000)**: `export INTY_CONFIG_YAML=devops/config.yaml.test && source .venv/bin/activate && ./backend/inty/start.sh --test`
-   - `--test` and `--dev` share the same seeds; `--dev` uses uvicorn `--reload`, `--test` does not (CI). Neither runs the evaluation static build (that is Ops `backend/ops/start.sh --local` only).
-   - **`Environment.TEST` in Python** comes from `config.yaml` (`app.environment`), not from the `--test` CLI flag.
-   - The server runs on `http://localhost:8000`
-3. **Ops backend (port 8001, optional for REPL / ops stack)**: `source .venv/bin/activate && ./backend/ops/start.sh --local --no-build-frontend` skips `evaluation/build.sh` (faster startup if `app/static/evaluation` is already populated). Omit `--no-build-frontend` when you need a fresh evaluation static bundle. For REPL-style debugging, add `--debug --log-file ./inty-ops-local.log` (chat WS REPL: [`tools/inty_v2_repl/README.md`](tools/inty_v2_repl/README.md)). See `backend/ops/start.sh --help`.
-
-## Running tests
-
-**Backend (Python):**
+**Backend**（需 backend 先跑着；见 [`tests/AGENTS.md`](/tests/AGENTS.md)）
 
 ```bash
 source .venv/bin/activate
 pytest -m "not noci" -v -s tests/
 ```
 
-Tests are functional/E2E against a running backend (not unit-style mocks). The backend must be running first. See `tests/AGENTS.md`.
-
-**Android app unit tests (mirrors CI):**
+**Lint**（activate 后或 `uv run …`）
 
 ```bash
-cd android_app
-./gradlew :app:testDebugUnitTest :core:common:testDebugUnitTest :core:data:testDebugUnitTest \
-  :core:design:testDebugUnitTest :core:firebase:testDebugUnitTest \
-  :library:utils:testDebugUnitTest :library:network:testDebugUnitTest
+uv run ruff check <paths>
+uv run black --check app/ backend/
 ```
 
-For targeted testing after changing specific modules, see the module-to-task mapping in `.github/workflows/ci_android_app.yaml`.
+**Android / evaluation**：见 [`backend/README.md`](/backend/README.md)、[`.github/workflows/ci_android_app.yaml`](/.github/workflows/ci_android_app.yaml)、[`evaluation/AGENTS.md`](/evaluation/AGENTS.md)。evaluation 需先 `cd evaluation && npm install`。
 
-**Evaluation frontend (TypeScript/Vite):**
+### 测试用 auth token
 
 ```bash
-cd evaluation
-npm install            # not in committed install script; run once or use dashboard snapshot
-npm run test          # vitest
-npm run type-check    # tsc --noEmit
-npm run build         # vite build (production bundle)
-npx eslint . --ext .ts,.tsx  # lint
+PYTHONPATH=. python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"
 ```
 
-See also `evaluation/AGENTS.md`. On snapshot VMs `node_modules` may already exist.
+（需已有 `config.yaml`）
 
-## Lint / formatting
+## 常见坑
 
-After `source .venv/bin/activate` (or `uv run`):
+- **venv**：`uv` / `ruff` / `black` 等在 `.venv/bin/`，用 `source .venv/bin/activate` 或 `uv run …`。
+- **Docker**：Cloud VM 需手动起 daemon：`sudo dockerd &>/tmp/dockerd.log &`（fuse-overlayfs + iptables-legacy）。
+- **远程日志**：IntelliMate VM 容器日志走 SSH + [`devops/fetch_inty_vm_container_logs.sh`](/devops/fetch_inty_vm_container_logs.sh)（见 [`DEPLOYMENT_STATE.md`](/devops/DEPLOYMENT_STATE.md)），不是 `gcloud logging read`。
+- **Android emulator**：Cloud VM 无 KVM，必须 `-no-accel -gpu swiftshader_indirect`，冷启动约 4 分钟；AVD 名 `test_avd`，SDK 通常在 `/opt/android-sdk`（snapshot 才有）。完整命令见 [`cloud_agents_android.md`](cloud_agents_android.md)。
 
-- `uv run black --check app/ backend/` — Python formatting (daily auto-PR via CI, so local failures are expected/acceptable)
-- `uv run ruff check <paths>` — unused imports (`F401`), etc.
-- No strict linter is enforced in CI for the backend currently
+## 可选：加速冷启动
 
-### Android SDK (snapshot / manual setup)
-
-When present (dashboard snapshot or manual install), SDK is typically at `/opt/android-sdk` with `ANDROID_HOME` and `ANDROID_SDK_ROOT` in `~/.bashrc`. Packages: `platform-tools`, `emulator`, `build-tools;35.0.0`, `build-tools;36.0.0`, `platforms;android-36`, `system-images;android-36;google_apis;x86_64`. Java 21 (OpenJDK) is the system JDK.
-
-- `android_app/local.properties` is gitignored; set `sdk.dir=/opt/android-sdk` when using the snapshot SDK.
-- The SDK directory must be owned by the current user (not root) so Gradle can auto-install additional SDK components.
-
-## Android emulator (no-KVM)
-
-Cloud Agent VMs run inside Firecracker and **do not have KVM** (`/dev/kvm` absent, no `vmx`/`svm` CPU flags). The Android emulator still works using software-only CPU emulation, but boots significantly slower (~4 min vs ~20 s with KVM).
-
-**Pre-created AVD:** `test_avd` (Pixel 6, API 36, google_apis/x86_64). Created during dashboard snapshot setup, not by the committed install script.
-
-**Starting the emulator (headless, no-KVM):**
-
-```bash
-export ANDROID_HOME=/opt/android-sdk
-export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
-
-emulator -avd test_avd -no-window -no-audio -no-boot-anim -no-accel -gpu swiftshader_indirect -no-snapshot &
-```
-
-**Waiting for boot to complete:**
-
-```bash
-adb wait-for-device
-# Poll until sys.boot_completed=1 (may take ~4 minutes without KVM)
-while [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do sleep 10; done
-echo "Emulator booted"
-```
-
-**Key flags explained:**
-
-| Flag | Purpose |
-|------|---------|
-| `-no-accel` | Disables KVM/HVF; uses TCG software emulation (mandatory in no-KVM VMs) |
-| `-gpu swiftshader_indirect` | Software GPU rendering via SwiftShader (no host GPU needed) |
-| `-no-window` | Headless mode (no X11 display required) |
-| `-no-audio` | Disables audio (no PulseAudio/ALSA needed) |
-| `-no-boot-anim` | Skips boot animation to speed up startup |
-| `-no-snapshot` | Cold boot every time; avoids stale snapshot issues |
-
-**Caveats and performance tips:**
-
-- Cold boot takes ~4 minutes without KVM. Budget for this in test scripts.
-- Use `-no-snapshot` to avoid stale quickboot state; cold boot is more reliable in ephemeral VMs.
-- After boot, `adb install` and `adb shell` commands work normally.
-- To run instrumented tests: `cd android_app && ./gradlew connectedDebugAndroidTest` (requires a running emulator).
-- To kill the emulator cleanly: `adb -s emulator-5554 emu kill`
-- Memory: the emulator uses ~1.5 GB RAM. Ensure the VM has enough headroom for both the emulator and the backend.
-
-## Gotchas
-
-- **`gcloud` auth**: install script only installs the CLI; IntelliMate VM 容器日志用 SSH + `devops/fetch_inty_vm_container_logs.sh`（见 [DEPLOYMENT_STATE.md](/devops/DEPLOYMENT_STATE.md)），不依赖 `gcloud logging read`。
-- Docker in Cloud Agent VMs requires `fuse-overlayfs` storage driver and `iptables-legacy`. The dockerd must be started manually: `sudo dockerd &>/tmp/dockerd.log &`
-- `psycopg2` (non-binary) build requires `python3.12-dev` and `libpq-dev` system packages.
-- Creating the venv requires `python3.12-venv` system package (not pre-installed in Cloud Agent VMs).
-- `uv`, `ruff`, `black`, `pylint`, and `vulture` live in `.venv/bin/`, not on global PATH — activate the venv or use `uv run` (see **Verify Python dev tools** above).
-- The venv **must** be activated before running `start.sh` — the script does not activate it.
-- Auth tokens for testing: `python3 -c "from app.core.security import create_access_token; print(create_access_token('user-testing'))"` (requires `PYTHONPATH=.` and `config.yaml` present).
-- **Android emulator without KVM**: always pass `-no-accel -gpu swiftshader_indirect`; omitting `-no-accel` will crash with `KVM is not found`. See "Android emulator (no-KVM)" section above for full instructions.
+首次手动配好 Android SDK / node_modules 等 heavyweight 依赖后，可在 dashboard 存 snapshot，并在 `environment.json` 加 `"snapshot": "snapshot-…"`。更重系统依赖可用 `.cursor/Dockerfile` + `"build"`（见 [Cursor docs](https://cursor.com/docs/cloud-agent/setup#environment-setup-options)）。
