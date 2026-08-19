@@ -723,8 +723,8 @@ Open PRs checked: #3884 (`cursor/agent-maintenance-tasks-551a`), #3883 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-51b3`)
 
-- [ ] **HYGIENE-2026-251** `loop/test_chat_only_prompt_plan.py` — transcript seed/read + `transcript_rel` via scope accessors
-- [ ] **HYGIENE-2026-252** `loop/test_agentic_loop_output_queue.py` — transcript seed/read + `transcript_rel` via scope accessors
-- [ ] **HYGIENE-2026-253** `companion/test_turn_pipeline_bootstrap.py` — `context_json` + `transcript` via scope accessors
-- [ ] **HYGIENE-2026-254** `companion/test_turn_pipeline_dreaming.py` — transcript seed via scope accessor
-- [ ] **HYGIENE-2026-255** `companion/bootstrap_test_helpers.py` — `context_json` read/write via scope accessor
+- [x] **HYGIENE-2026-251** `loop/test_chat_only_prompt_plan.py` — transcript seed/read + `transcript_rel` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-51b3` / pull/3886.
+- [x] **HYGIENE-2026-252** `loop/test_agentic_loop_output_queue.py` — transcript seed/read + `transcript_rel` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-51b3` / pull/3886.
+- [x] **HYGIENE-2026-253** `companion/test_turn_pipeline_bootstrap.py` — `context_json` + `transcript` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-51b3` / pull/3886.
+- [x] **HYGIENE-2026-254** `companion/test_turn_pipeline_dreaming.py` — transcript seed via scope accessor. Fixed in `cursor/agent-maintenance-tasks-51b3` / pull/3886.
+- [x] **HYGIENE-2026-255** `companion/bootstrap_test_helpers.py` — `context_json` read/write via scope accessor. Fixed in `cursor/agent-maintenance-tasks-51b3` / pull/3886.
