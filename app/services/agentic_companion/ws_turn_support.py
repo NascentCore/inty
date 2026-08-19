@@ -4,13 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.models import CompanionTurnResult
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.tools.image_gate import (
-    generated_image_meta_from_index_slice,
-    list_image_asset_records,
-)
 from app.schemas.chat_websocket import (
     ChatWsCompanionWireMessageMetaData,
     ChatWsGeneratedImageMeta,
@@ -19,40 +13,6 @@ from app.schemas.chat_websocket import (
 from app.core.agentic_companion.output_queue import (
     ReadyOutputMessage,
 )
-from app.core.agentic_companion.types import WireAssistantSource
-
-
-def image_asset_baseline_for_scope_store(store) -> int:
-    """Index length before a turn; new assets append after this offset."""
-    return len(list_image_asset_records(store))
-
-
-def generated_image_meta_from_baseline(
-    memory_store: MemoryStore,
-    image_asset_baseline: int,
-) -> ChatWsGeneratedImageMeta | None:
-    """``meta_data.generated_image`` for in-turn sync tools (e.g. ``generate_image``)."""
-    raw = generated_image_meta_from_index_slice(
-        memory_store,
-        image_asset_baseline,
-    )
-    if raw is None:
-        return None
-    return ChatWsGeneratedImageMeta.model_validate(raw)
-
-
-async def generated_image_meta_for_queue_delivery(
-    scope: AgentScope,
-    *,
-    image_asset_baseline: int,
-    memory_store: MemoryStore | None = None,
-) -> ChatWsGeneratedImageMeta | None:
-    """Load scope store when ``memory_store`` is omitted (non-queue call sites)."""
-    store = memory_store
-    if store is None:
-        session = await ensure_memory_store_session(scope)
-        store = session.store
-    return generated_image_meta_from_baseline(store, image_asset_baseline)
 
 
 def companion_ai_meta_from_turn_result(
