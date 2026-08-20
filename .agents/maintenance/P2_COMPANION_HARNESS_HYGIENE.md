@@ -709,9 +709,9 @@ Open PRs checked: #3834, #3837, #3870–#3886 (HYGIENE-2026-182..255 claimed) �
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-861a`)
 
-- [ ] **HYGIENE-2026-256** `tools/test_tool_background_transcript_metadata.py` — transcript seed/read via `transcript` scope accessor
-- [ ] **HYGIENE-2026-257** `experience_profile/test_experience_directives.py` — `context_json` scope accessor
-- [ ] **HYGIENE-2026-258** `memory/test_memory_store.py` — `transcript` + `soul` scope accessors
-- [ ] **HYGIENE-2026-259** `test_prompt_builder.py` — workspace seed via scope accessors
-- [ ] **HYGIENE-2026-260** `tools/test_tools.py` — `user_md` / `channels_md` / `life_currents_md` scope accessors
-- [ ] **HYGIENE-2026-261** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-256** `tools/test_tool_background_transcript_metadata.py` — transcript seed/read via `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
+- [x] **HYGIENE-2026-257** `experience_profile/test_experience_directives.py` — `context_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
+- [x] **HYGIENE-2026-258** `memory/test_memory_store.py` — `transcript` + `soul` scope accessors. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
+- [x] **HYGIENE-2026-259** `test_prompt_builder.py` — workspace seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
+- [x] **HYGIENE-2026-260** `tools/test_tools.py` — `user_md` / `channels_md` / `life_currents_md` scope accessors. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
+- [x] **HYGIENE-2026-261** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-861a` / pull/3892.
