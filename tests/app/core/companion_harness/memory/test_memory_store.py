@@ -4,17 +4,16 @@ import threading
 
 import pytest
 
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import (
     MemoryCache,
     MemoryRecord,
     MemoryStore,
     normalize_memory_store_relative_path,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
 
 
 def _scope(tmp_name: str) -> CompanionScope:
@@ -64,13 +63,12 @@ def test_memory_store_read_if_exists_none(tmp_path) -> None:
 
 def test_memory_store_append_jsonl_record(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
+    transcript_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
+    store.append_jsonl_record(transcript_rel, {"role": "user", "content": "a"})
     store.append_jsonl_record(
-        TRANSCRIPT_JSONL_REL, {"role": "user", "content": "a"}
+        transcript_rel, {"role": "assistant", "content": "b"}
     )
-    store.append_jsonl_record(
-        TRANSCRIPT_JSONL_REL, {"role": "assistant", "content": "b"}
-    )
-    body = store.read_document(TRANSCRIPT_JSONL_REL)
+    body = store.read_document(transcript_rel)
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 2
 
@@ -84,7 +82,7 @@ def test_memory_store_append_jsonl_record_concurrent(tmp_path) -> None:
         try:
             barrier.wait(timeout=5.0)
             store.append_jsonl_record(
-                TRANSCRIPT_JSONL_REL,
+                DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
                 {"role": "user", "content": f"m{idx}"},
             )
         except BaseException as exc:
@@ -99,7 +97,7 @@ def test_memory_store_append_jsonl_record_concurrent(tmp_path) -> None:
         thread.join(timeout=10.0)
 
     assert not errors
-    body = store.read_document(TRANSCRIPT_JSONL_REL)
+    body = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript)
     lines = [ln for ln in body.splitlines() if ln.strip()]
     assert len(lines) == 8
 
@@ -119,8 +117,9 @@ def test_memory_store_uses_repository_without_scope_disk_predicate(
 
 def test_memory_store_no_disk_files(tmp_path) -> None:
     store = MemoryStore(scope=_scope(tmp_path.name), repository=None)
-    store.write_document(SOUL_MD_REL, "# soul\n")
-    assert store.read_document(SOUL_MD_REL) == "# soul\n"
+    soul_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.soul
+    store.write_document(soul_rel, "# soul\n")
+    assert store.read_document(soul_rel) == "# soul\n"
 
 
 def test_memory_store_iter_stored_relative_paths_in_memory(tmp_path) -> None:
