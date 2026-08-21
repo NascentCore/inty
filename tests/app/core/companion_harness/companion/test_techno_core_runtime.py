@@ -17,8 +17,8 @@ from app.core.companion_harness.companion.runtime_channel import (
 from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TECHNO_CORE_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.techno_core.models import Sphere, TechnoCoreEvent, Visibility
 from app.techno_core.seeding import ensure_techno_core_seeded
@@ -38,7 +38,8 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
         "user-tc", "companion-tc", "chat-tc"
     )
 
-    seeded = session.store.read_document(TECHNO_CORE_MD_REL)
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    seeded = session.store.read_document(p.techno_core_md)
     assert "TechnoCore 是 Inty 的 AI-only 虚拟居留层" in seeded
     assert "LivingSphere" in seeded
     assert "Channels" in seeded
@@ -47,7 +48,7 @@ def test_companion_session_seeds_techno_core_and_injects_prompt() -> None:
     assert "陪伴" in seeded
 
     ensure_techno_core_seeded(session.store)
-    assert session.store.read_document(TECHNO_CORE_MD_REL) == seeded
+    assert session.store.read_document(p.techno_core_md) == seeded
 
     context = load_context_meta(store=session.store)
     bundle = load_prompt_bundle(session.store, meta=context)

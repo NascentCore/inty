@@ -15,17 +15,8 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -53,24 +44,25 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         scope=CompanionScope("user-ls", "companion-ls", str(root.resolve())),
         repository=None,
     )
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for name, body in (
-        (IDENTITY_MD_REL, "id\n"),
-        (SOUL_MD_REL, "soul\n"),
-        (STYLE_MD_REL, "style\n"),
-        (USER_MD_REL, "user\n"),
-        (MEMORY_MD_REL, "mem\n"),
-        (COMPANIONSHIP_MD_REL, "companionship\n"),
-        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
+        (p.identity, "id\n"),
+        (p.soul, "soul\n"),
+        (p.style_md, "style\n"),
+        (p.user_md, "user\n"),
+        (p.memory_md, "mem\n"),
+        (p.companionship_md, "companionship\n"),
+        (p.context_json, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
-    seeded = store.read_document(LIVING_SPHERE_MD_REL)
+    seeded = store.read_document(p.living_sphere_md)
     assert "世界：TechnoCore" in seeded
     assert "当前默认位置：" in seeded
     assert "不要冒充现实地理位置" in seeded
 
     ensure_living_sphere_seeded(store)
-    assert store.read_document(LIVING_SPHERE_MD_REL) == seeded
+    assert store.read_document(p.living_sphere_md) == seeded
 
     context = load_context_meta(store=store)
     bundle = load_prompt_bundle(store, meta=context)
@@ -111,26 +103,27 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
         scope=CompanionScope("u", "c", str(root.resolve())),
         repository=None,
     )
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for name, body in (
-        (IDENTITY_MD_REL, "id\n"),
-        (SOUL_MD_REL, "soul\n"),
-        (STYLE_MD_REL, "style\n"),
-        (USER_MD_REL, "user\n"),
-        (MEMORY_MD_REL, "mem\n"),
-        (TECHNO_CORE_MD_REL, "tc\n"),
-        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
+        (p.identity, "id\n"),
+        (p.soul, "soul\n"),
+        (p.style_md, "style\n"),
+        (p.user_md, "user\n"),
+        (p.memory_md, "mem\n"),
+        (p.techno_core_md, "tc\n"),
+        (p.context_json, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
     update = LivingSphereUpdate(change_request="书架旁加落地灯")
     store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_REL,
+        p.living_sphere_updates_jsonl,
         update.model_dump(mode="json"),
     )
 
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         if model_role == "memory":
-            body = store.read_document(LIVING_SPHERE_MD_REL)
+            body = store.read_document(p.living_sphere_md)
             return body.replace("氛围：", "氛围：落地灯旁更暖，")
         return "noop\n"
 

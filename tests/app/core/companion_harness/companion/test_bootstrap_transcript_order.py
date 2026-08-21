@@ -17,13 +17,8 @@ from app.core.companion_harness.companion.turn import (
     run_companion_user_chat_turn,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.external_services.fakes.openai import (
     FakeCompletionStep,
@@ -42,8 +37,9 @@ _NEVER = 86400.0 * 365.0
 
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     store.write_document(
-        CONTEXT_JSON_REL,
+        p.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -56,9 +52,9 @@ def _seed_bootstrap_workspace(store: MemoryStore) -> None:
         )
         + "\n",
     )
-    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
+    for rel in (p.identity, p.soul, p.user_md, p.memory_md):
         store.write_document(rel, f"{rel}\n")
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    store.write_document(p.transcript, "")
 
 
 def _bootstrap_deps(
@@ -73,7 +69,7 @@ def _bootstrap_deps(
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
-    body = store.read_document(TRANSCRIPT_JSONL_REL)
+    body = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript)
     assert body is not None
     return [json.loads(line) for line in body.splitlines() if line.strip()]
 
@@ -111,7 +107,7 @@ async def test_bootstrap_multi_round_transcript_user_before_all_assistants(
                 name="memory_store_write_document",
                 arguments=json.dumps(
                     {
-                        "relative_path": IDENTITY_MD_REL,
+                        "relative_path": DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity,
                         "content": "孔明\n",
                     },
                     ensure_ascii=False,
