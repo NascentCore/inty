@@ -709,10 +709,10 @@ Open PRs checked: #3880..#3892 (HYGIENE-2026-182..261 claimed) — no overlap wi
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-c55b`)
 
-- [ ] **HYGIENE-2026-262** `tools/test_tool_background_langsmith_channel.py` — workspace seed via scope accessors
-- [ ] **HYGIENE-2026-263** `companion/test_bootstrap_transcript_order.py` — bootstrap workspace seed/read via scope accessors
-- [ ] **HYGIENE-2026-264** `companion/test_ai_private_manifest_persist.py` — workspace seed + transcript via scope accessors
-- [ ] **HYGIENE-2026-265** `companion/test_living_sphere_runtime.py` — workspace seed + JSONL append via scope accessors
-- [ ] **HYGIENE-2026-266** `companion/test_harness_orchestration_scripted_llm.py` — `context_json` read + `life_currents_md` assertion via scope accessors
-- [ ] **HYGIENE-2026-267** `companion/test_techno_core_runtime.py` — `techno_core_md` read via scope accessor
-- [ ] **HYGIENE-2026-268** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-262** `tools/test_tool_background_langsmith_channel.py` — workspace seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-263** `companion/test_bootstrap_transcript_order.py` — bootstrap workspace seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-264** `companion/test_ai_private_manifest_persist.py` — workspace seed + transcript via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-265** `companion/test_living_sphere_runtime.py` — workspace seed + JSONL append via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-266** `companion/test_harness_orchestration_scripted_llm.py` — `context_json` read + `life_currents_md` assertion via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-267** `companion/test_techno_core_runtime.py` — `techno_core_md` read via scope accessor. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-268** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
