@@ -41,6 +41,7 @@ from app.utils.companion_feature_defaults import (
 # 3. 【如有必要】删除该配置项在 app 客户端相关的使用，部署、发布验证一切正常。
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 # Chat LLM is invoked via OpenAI client (app.core.llms.openai_client) against OpenRouter (agent.base_url / agent.api_key).
 # Model IDs are OpenRouter model names, e.g. google/gemini-2.5-flash-lite (GEMINI_2_5_FLASH_LITE), google/gemini-2.5-flash (GEMINI_2_5_FLASH).
 
@@ -461,7 +462,15 @@ class AgentConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     # OpenRouter API key; chat is invoked via OpenAI client (app.core.llms.openai_client) against base_url.
-    api_key: str = Field(...)
+    # DEPRECATED for prod: set OPENROUTER_API_KEY env (GitHub Environment secret). YAML kept for dev/local
+    # until issues/3897 removes this field.
+    api_key: str = Field(
+        ...,
+        description=(
+            "DEPRECATED for prod: use OPENROUTER_API_KEY env. "
+            "YAML value kept for dev/local until issues/3897."
+        ),
+    )
     langchain_api_key: str = Field(...)
     # DEPRECATED: Do not use. Use free_user_chat_model and sub_user_chat_model instead.
     model: str = GEMINI_2_5_FLASH
@@ -898,6 +907,11 @@ class AgentConfig(BaseModel):
                     "agent.newapi_gemini_bearer_token or NEWAPI_GEMINI_BEARER_TOKEN "
                     "required when newapi_gemini_base_url is set"
                 )
+        env_openrouter_key = (
+            os.environ.get(OPENROUTER_API_KEY_ENV) or ""
+        ).strip()
+        if env_openrouter_key:
+            self.api_key = env_openrouter_key
         return self
 
 
@@ -1320,6 +1334,7 @@ def _validate_config(config: Config):
     """Validate config values with auto-correction"""
     if not config.app.gcp_service_account_key:
         raise ValueError("app.gcp_service_account_key is required")
+    # TODO(issues/3897): require OPENROUTER_API_KEY env instead of YAML agent.api_key.
     if not config.agent.api_key:
         raise ValueError("agent.api_key is required")
     if not config.agent.langchain_api_key:

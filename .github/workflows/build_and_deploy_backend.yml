@@ -194,6 +194,7 @@ jobs:
               --env LANGCHAIN_TRACING_V2=true \
               --env LANGCHAIN_PROJECT=${{ steps.map.outputs.langchain_project }} \
               --env LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+              --env OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }} \
               --label application=${{ steps.map.outputs.app_label }} \
               --label environment=${{ steps.prep.outputs.environment }} \
               --volume ${{ steps.map.outputs.keys_dir }}/inty-backend-key.json:/inty-backend-key.json \

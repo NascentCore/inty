@@ -67,6 +67,7 @@ sudo docker run --detach \
   --env LANGCHAIN_TRACING_V2=true \
   --env LANGCHAIN_PROJECT=inty-backend-prod \
   --env LANGCHAIN_API_KEY=<from-existing-container-or-secrets> \
+  --env OPENROUTER_API_KEY=<from-github-prod-secret-or-1password> \
   --label application=inty-backend \
   --label environment=prod \
   --volume /opt/inty-prod/inty-backend-key.json:/inty-backend-key.json \

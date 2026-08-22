@@ -61,7 +61,12 @@ firebase:
   service_account_path: "inty-firebase-key.json"
 
 agent:
-  # OpenRouter API Key: inty-prod
+  # OpenRouter API key (shared YAML; transitional):
+  # - inty-backend-prod runtime: overridden by OPENROUTER_API_KEY env (GitHub Environment prod secret).
+  # - inty-ops-prod: still reads this YAML value until issues/3896.
+  # TODO(issues/3896): migrate ops to env; then set placeholder __SET_VIA_OPENROUTER_API_KEY__.
+  # TODO(issues/3897): remove agent.api_key from all config.yaml.* after all envs inject OPENROUTER_API_KEY.
+  # OpenRouter API Key: inty-prod (legacy; ops only after backend env migration)
   api_key: "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"
   base_url: "https://openrouter.ai/api/v1"
   # LangSmith try@sxwl.ai IntelliMate-prod project, inty-prod API key 名字

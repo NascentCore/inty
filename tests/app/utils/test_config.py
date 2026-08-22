@@ -33,6 +33,7 @@ from app.utils.config import (
     TTSConfig,
     UserAnalyticsReportConfig,
     VerificationConfig,
+    OPENROUTER_API_KEY_ENV,
     _validate_config,
     load_config,
 )
@@ -861,6 +862,87 @@ def test_agent_config_newapi_gemini_accepts_env_bearer_token():
             os.environ.pop("NEWAPI_GEMINI_BEARER_TOKEN", None)
         else:
             os.environ["NEWAPI_GEMINI_BEARER_TOKEN"] = original
+
+
+def test_agent_config_openrouter_api_key_yaml_when_env_unset():
+    original = os.environ.get(OPENROUTER_API_KEY_ENV)
+    try:
+        os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        agent_config = AgentConfig(
+            api_key="yaml-key",
+            langchain_api_key="test",
+        )
+        assert agent_config.api_key == "yaml-key"
+    finally:
+        if original is None:
+            os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        else:
+            os.environ[OPENROUTER_API_KEY_ENV] = original
+
+
+def test_agent_config_openrouter_api_key_env_overrides_yaml():
+    original = os.environ.get(OPENROUTER_API_KEY_ENV)
+    try:
+        os.environ[OPENROUTER_API_KEY_ENV] = "env-openrouter-key"
+        agent_config = AgentConfig(
+            api_key="yaml-legacy-key",
+            langchain_api_key="test",
+        )
+        assert agent_config.api_key == "env-openrouter-key"
+    finally:
+        if original is None:
+            os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        else:
+            os.environ[OPENROUTER_API_KEY_ENV] = original
+
+
+def test_agent_config_openrouter_api_key_empty_env_does_not_override_yaml():
+    original = os.environ.get(OPENROUTER_API_KEY_ENV)
+    try:
+        os.environ[OPENROUTER_API_KEY_ENV] = ""
+        agent_config = AgentConfig(
+            api_key="yaml-key",
+            langchain_api_key="test",
+        )
+        assert agent_config.api_key == "yaml-key"
+    finally:
+        if original is None:
+            os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        else:
+            os.environ[OPENROUTER_API_KEY_ENV] = original
+
+
+def test_validate_config_rejects_empty_agent_api_key_without_env():
+    original = os.environ.get(OPENROUTER_API_KEY_ENV)
+    try:
+        os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        config = Config(
+            app=AppConfig(
+                name="test",
+                environment=Environment.PROD,
+                gcp_service_account_key="key.json",
+            ),
+            security=SecurityConfig(secret_key="test"),
+            database=DatabaseSettings(),
+            google_oauth=GoogleOAuthConfig(),
+            verification=VerificationConfig(),
+            logging=LoggingConfig(),
+            embedding=EmbeddingConfig(),
+            agent=AgentConfig(api_key="", langchain_api_key="test"),
+            gcs=GCSConfig(bucket="test"),
+            firebase=FirebaseConfig(service_account_path="test"),
+            google_play=GooglePlayConfig(),
+            elevenlabs=ElevenLabsConfig(api_key="test"),
+            cloudflare=CloudflareConfig(),
+            push_notification=PushNotificationConfig(),
+        )
+        with pytest.raises(ValueError, match="agent.api_key is required"):
+            _validate_config(config)
+    finally:
+        if original is None:
+            os.environ.pop(OPENROUTER_API_KEY_ENV, None)
+        else:
+            os.environ[OPENROUTER_API_KEY_ENV] = original
 
 
 def test_app_config_model_validate_ignores_unknown_keys():
