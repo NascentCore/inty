@@ -709,9 +709,9 @@ Open PRs checked: #3834, #3837, #3870–#3893 (HYGIENE-2026-182..268 claimed) �
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-66df`)
 
-- [ ] **HYGIENE-2026-269** `runtime/test_dreaming_batch_scripted_llm.py` — workspace seed/read via scope accessors
-- [ ] **HYGIENE-2026-270** `tools/test_inner_tick_autonomy_tool_names.py` — `life_currents_md` scope accessor for allowlist assertions
-- [ ] **HYGIENE-2026-271** `tools/test_companion_record_user_profile_tool.py` — `user_md` scope accessor
-- [ ] **HYGIENE-2026-272** `companion/test_bootstrap_complete_not_blocked_without_profile.py` — `context_json` + `user_md` scope accessors
-- [ ] **HYGIENE-2026-273** `prompting/test_contextual.py` — `about_md` scope accessor
-- [ ] **HYGIENE-2026-274** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-269** `runtime/test_dreaming_batch_scripted_llm.py` — workspace seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.
+- [x] **HYGIENE-2026-270** `tools/test_inner_tick_autonomy_tool_names.py` — `life_currents_md` scope accessor for allowlist assertions. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.
+- [x] **HYGIENE-2026-271** `tools/test_companion_record_user_profile_tool.py` — `user_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.
+- [x] **HYGIENE-2026-272** `companion/test_bootstrap_complete_not_blocked_without_profile.py` — `context_json` + `user_md` scope accessors. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.
+- [x] **HYGIENE-2026-273** `prompting/test_contextual.py` — `about_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.
+- [x] **HYGIENE-2026-274** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-66df` / pull/3898.

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.companion.models import CompanionTurnTrack
+from app.core.companion_harness.companion.models import (
+    CompanionTurnTrack,
+    ContextMeta,
+)
 from app.core.companion_harness.companion.proactive_chat import (
     BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
 )
@@ -17,8 +20,9 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    ABOUT_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    load_template_seed_text,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
@@ -27,10 +31,6 @@ from app.core.companion_harness.prompting.compose_context import (
 from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
 from app.core.companion_harness.prompting.phase import Phase
-from app.core.companion_harness.companion.models import ContextMeta
-from app.core.companion_harness.memory.memory_store_scope import (
-    load_template_seed_text,
-)
 
 
 def _store(tmp_path) -> MemoryStore:
@@ -65,7 +65,9 @@ def _joined(messages: list[dict]) -> str:
 
 
 def test_settled_user_turn_contextual(tmp_path) -> None:
-    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
+    about_body = load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.about_md
+    ).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(context_mode="intimate"),
@@ -83,7 +85,9 @@ def test_settled_user_turn_contextual(tmp_path) -> None:
 
 
 def test_bootstrap_user_turn_contextual_greeting_no_about(tmp_path) -> None:
-    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
+    about_body = load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.about_md
+    ).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(),
@@ -101,7 +105,9 @@ def test_bootstrap_user_turn_contextual_greeting_no_about(tmp_path) -> None:
 
 
 def test_monolog_contextual(tmp_path) -> None:
-    about_body = load_template_seed_text(ABOUT_MD_REL).strip()
+    about_body = load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.about_md
+    ).strip()
     ctx = build_turn_compose_context(
         bundle=_bundle(about_md=about_body),
         context_meta=ContextMeta(),

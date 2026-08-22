@@ -23,17 +23,6 @@ from app.core.companion_harness.companion.manager import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_DAILY_GIST_DIR_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
@@ -69,8 +58,9 @@ def _seed_settled_scope_with_checkpoint(
     assistant_ts = user_ts + timedelta(minutes=1)
     checkpoint_at = now - timedelta(days=1)
 
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     store.write_document(
-        CONTEXT_JSON_REL,
+        paths.context_json,
         json.dumps(
             {
                 "context_mode": "public",
@@ -83,11 +73,11 @@ def _seed_settled_scope_with_checkpoint(
         )
         + "\n",
     )
-    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL):
+    for rel in (paths.identity, paths.soul, paths.user_md, paths.memory_md):
         store.write_document(rel, f"# {rel}\n")
 
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        paths.transcript,
         "\n".join(
             [
                 json.dumps(
@@ -156,7 +146,8 @@ def test_run_dreaming_batch_if_due_skips_without_llm_when_no_user_messages_since
     """DreamingBatch must not call LLM when no real user rows exist after checkpoint."""
     store = _memory_store(tmp_path)
     checkpoint = _seed_settled_scope_with_checkpoint(store)
-    memory_before = store.read_document(MEMORY_MD_REL)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    memory_before = store.read_document(paths.memory_md)
 
     llm_config = scripted_harness_llm_config()
     client, fake = companion_llm_client_with_scripted_transport(
@@ -174,7 +165,7 @@ def test_run_dreaming_batch_if_due_skips_without_llm_when_no_user_messages_since
 
     assert outcome == DreamingBatchOutcome.NOT_DUE
     assert fake.script_index == 0
-    assert store.read_document(MEMORY_MD_REL) == memory_before
+    assert store.read_document(paths.memory_md) == memory_before
     assert load_dreaming_state(store) == checkpoint
 
 
@@ -186,8 +177,9 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
     day_iso = user_ts.date().isoformat()
     daily_path = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day_iso)
 
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     store.write_document(
-        CONTEXT_JSON_REL,
+        paths.context_json,
         json.dumps(
             {
                 "context_mode": "public",
@@ -201,17 +193,17 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
         + "\n",
     )
     for rel in (
-        IDENTITY_MD_REL,
-        SOUL_MD_REL,
-        USER_MD_REL,
-        MEMORY_MD_REL,
-        STYLE_MD_REL,
-        COMPANIONSHIP_MD_REL,
+        paths.identity,
+        paths.soul,
+        paths.user_md,
+        paths.memory_md,
+        paths.style_md,
+        paths.companionship_md,
     ):
         store.write_document(rel, f"# {rel}\n")
 
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        paths.transcript,
         "\n".join(
             [
                 json.dumps(
@@ -241,28 +233,25 @@ def _seed_scope_due_for_one_shot_dreaming(store: MemoryStore) -> str:
 
 
 def _one_shot_dreaming_script_step(daily_path: str) -> tuple:
+    scope_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     paths = (
         daily_path,
-        MEMORY_MD_REL,
-        USER_MD_REL,
-        STYLE_MD_REL,
-        SOUL_MD_REL,
-        COMPANIONSHIP_MD_REL,
+        scope_paths.memory_md,
+        scope_paths.user_md,
+        scope_paths.style_md,
+        scope_paths.soul,
+        scope_paths.companionship_md,
     )
+    kind_by_rel = {
+        scope_paths.memory_md: "memory",
+        scope_paths.user_md: "user",
+        scope_paths.style_md: "style",
+        scope_paths.soul: "soul",
+        scope_paths.companionship_md: "companionship",
+    }
     calls: list[tuple[str, str, str]] = []
     for rel in paths:
-        if rel.startswith(f"{MEMORY_DAILY_GIST_DIR_REL}/"):
-            kind = "daily_gist"
-        elif rel == MEMORY_MD_REL:
-            kind = "memory"
-        elif rel == USER_MD_REL:
-            kind = "user"
-        elif rel == STYLE_MD_REL:
-            kind = "style"
-        elif rel == SOUL_MD_REL:
-            kind = "soul"
-        else:
-            kind = "companionship"
+        kind = "daily_gist" if rel == daily_path else kind_by_rel[rel]
         payload = json.dumps(
             {
                 "document_kind": kind,
@@ -303,5 +292,7 @@ def test_run_dreaming_batch_if_due_one_shot_uses_single_llm_and_saves_checkpoint
     assert outcome == DreamingBatchOutcome.CHECKPOINT_SAVED
     assert fake.script_index == 1
     assert store.read_document(daily_path) == f"{daily_path} scripted\n"
-    assert store.read_document(MEMORY_MD_REL) == f"{MEMORY_MD_REL} scripted\n"
+    assert store.read_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md
+    ) == f"{DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md} scripted\n"
     assert load_dreaming_state(store) is not None
