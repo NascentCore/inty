@@ -9,9 +9,8 @@ from sqlalchemy import delete
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -45,9 +44,10 @@ async def test_bootstrap_complete_not_blocked_without_profile(tmp_path) -> None:
         user_id = user.id
 
     st = _store(tmp_path, user_id)
-    st.write_document(USER_MD_REL, "# 用户档案\n\n## 身份信息\n\n")
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    st.write_document(paths.user_md, "# 用户档案\n\n## 身份信息\n\n")
     st.write_document(
-        CONTEXT_JSON_REL,
+        paths.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -65,7 +65,7 @@ async def test_bootstrap_complete_not_blocked_without_profile(tmp_path) -> None:
         json.dumps({"note": "user impatient"}),
     )
     assert out.startswith("OK")
-    ctx = json.loads(st.read_document(CONTEXT_JSON_REL))
+    ctx = json.loads(st.read_document(paths.context_json))
     assert ctx["workspace_bootstrap_user_interactive_completed"] is True
 
     async with AsyncSessionLocal() as db:

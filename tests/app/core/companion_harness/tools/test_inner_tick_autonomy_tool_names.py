@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    LIFE_CURRENTS_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     COMPANION_LLM_TOOLS_BY_NAME,
@@ -49,23 +49,27 @@ def test_inner_tick_autonomy_tools_are_registered_openai_schemas() -> None:
 
 
 def test_life_currents_on_memory_store_write_allowlist() -> None:
-    assert LIFE_CURRENTS_MD_REL in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+    assert (
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md
+        in MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+    )
 
 
 def test_autonomy_write_allowlist_is_life_currents_only() -> None:
     assert MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY == frozenset(
-        {LIFE_CURRENTS_MD_REL}
+        {DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md}
     )
 
 
 def test_autonomy_tool_schema_write_description_names_life_currents_only() -> (
     None
 ):
+    life_currents_md = DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md
     write_desc = REPL_DESCRIPTION_OVERRIDES_AUTONOMY[
         CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT
     ]
     assert (
-        f"Only writable path via this tool: {LIFE_CURRENTS_MD_REL}" in write_desc
+        f"Only writable path via this tool: {life_currents_md}" in write_desc
     )
     tools = build_openai_repl_tools_inner_tick_autonomy()
     write_tool = next(
@@ -74,6 +78,6 @@ def test_autonomy_tool_schema_write_description_names_life_currents_only() -> (
         if t["function"]["name"] == "memory_store_write_document"
     )
     assert (
-        f"Only writable path via this tool: {LIFE_CURRENTS_MD_REL}"
+        f"Only writable path via this tool: {life_currents_md}"
         in write_tool["function"]["description"]
     )
