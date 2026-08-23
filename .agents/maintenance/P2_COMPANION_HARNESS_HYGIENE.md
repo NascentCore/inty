@@ -705,11 +705,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean (60% hits all false positives per 2026-07-10 note); repo-wide reference analysis for harness top-level symbols kept alive only by their own tests.
 
-One dead legacy bridge found: `prompting/compose_context.py::turn_compose_context_from_legacy_flags` — docstring bridges the removed `build_system_messages` bool-flag entrypoint (replaced by per-track `build_system_messages_for_*` + `turn_compose_context_for_self_contained_track`); only its own test referenced it, and its assertion is already covered by `test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap`.
+Found a genuinely-new, real breakage (not lint-detectable): commit `8a53cab27` ("Update skills and guidelines", 2026-08-19) changed `tools/google_web_search.py` to import `app.utils.simple_http`, which does not exist (the module lives at `app/core/simple_http.py`). This `ModuleNotFoundError` propagates through `prompt_stack` → `companion_tool_runtime` → `google_web_search`, breaking companion-harness pytest collection entirely. It went unnoticed because prior no-change cron runs skip pytest when the branch is byte-identical to main, and ruff does not resolve import targets.
 
-Also found and fixed a pre-existing import breakage introduced in commit `8a53cab27` that blocked all harness test collection.
+The other tempting candidate — `prompting/compose_context.py::turn_compose_context_from_legacy_flags` (dead bridge to the removed `build_system_messages` bool-flag entrypoint) — remains **locked behind still-open PR #3834** (which edits `compose_context.py` adjacently). Per the recurring-trap policy it was left untouched this run.
 
 ### Open tasks
 
-- [x] **HYGIENE-2026-182** #3834: remove dead `turn_compose_context_from_legacy_flags` + orphaned `test_legacy_flags_use_track_pinned_bootstrap_phase` (superseded by track-based compose after `build_system_messages` bool-flag entrypoint removal). Fixed in `cursor/stale-companion-harness-code-f15c`.
-- [x] **HYGIENE-2026-183** fix `tools/google_web_search.py` import `app.utils.simple_http` → `app.core.simple_http` (module lives at `app/core/simple_http.py`; `app.utils.simple_http` does not exist); restores harness pytest collection. Fixed in `cursor/stale-companion-harness-code-f15c`.
+- [x] **HYGIENE-2026-182** fix `tools/google_web_search.py` import `app.utils.simple_http` → `app.core.simple_http` (module lives at `app/core/simple_http.py`; `app.utils.simple_http` does not exist); restores harness pytest collection. Fixed in `cursor/stale-companion-harness-code-f15c`.
