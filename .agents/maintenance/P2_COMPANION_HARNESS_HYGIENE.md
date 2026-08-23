@@ -709,6 +709,6 @@ Open PRs checked: maintenance batch PRs through HYGIENE-274, #3899 (`google_web_
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-b757`)
 
-- [ ] **HYGIENE-2026-275** `companion/test_system_messages.py` — bootstrap output contract SOUL/MEMORY paths via scope accessors
-- [ ] **HYGIENE-2026-276** `companion/test_system_messages.py` — seed companionship template via `companionship_md` scope accessor
-- [ ] **HYGIENE-2026-277** `tools/google_web_search.py` — restore `app.core.simple_http` import (harness pytest collection blocker; parallel to #3899)
+- [x] **HYGIENE-2026-275** `companion/test_system_messages.py` — bootstrap output contract SOUL/MEMORY paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-b757` / pull/3900.
+- [x] **HYGIENE-2026-276** `companion/test_system_messages.py` — seed companionship template via `companionship_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-b757` / pull/3900.
+- [x] **HYGIENE-2026-277** `tools/google_web_search.py` — restore `app.core.simple_http` import (harness pytest collection blocker; parallel to #3899). Fixed in `cursor/agent-maintenance-tasks-b757` / pull/3900.

@@ -135,7 +135,7 @@ def test_bootstrap_output_contract_names_memory_store_write_paths_only() -> (
     assert "memory_store_write_document" in joined
     assert "COMPANIONSHIP.md / IDENTITY.md / STYLE.md / USER.md" in joined
     scope_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    assert scope_paths.soul_md in joined and scope_paths.memory_md in joined
+    assert scope_paths.soul in joined and scope_paths.memory_md in joined
     assert "companion_update_prompt_slice" not in joined
     assert "schedule_task" not in joined
 
