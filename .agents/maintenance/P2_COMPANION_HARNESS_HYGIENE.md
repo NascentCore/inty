@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-23 scan (cron)
+
+Source: open PR overlap check (#3834 TrackSystemRecipe, #3898 HYGIENE-269..274, #3893..#3886 scope accessors, #3899 google_web_search import — defer import fix to stale-code PR); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; `companion/test_system_messages.py` still asserts bootstrap MemDoc paths via `*_REL` constants instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: maintenance batch PRs through HYGIENE-274, #3899 (`google_web_search` import) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-b757`)
+
+- [ ] **HYGIENE-2026-275** `companion/test_system_messages.py` — bootstrap output contract SOUL/MEMORY paths via scope accessors
+- [ ] **HYGIENE-2026-276** `companion/test_system_messages.py` — seed companionship template via `companionship_md` scope accessor
+- [ ] **HYGIENE-2026-277** `tools/google_web_search.py` — restore `app.core.simple_http` import (harness pytest collection blocker; parallel to #3899)
