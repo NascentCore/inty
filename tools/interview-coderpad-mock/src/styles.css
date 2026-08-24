@@ -1,0 +1,166 @@
+/* Generated entirely by Cursor agent for mock CoderPad interview UI. */
+
+:root {
+  --mcp-bg: #1e1e1e;
+  --mcp-panel: #252526;
+  --mcp-border: #3c3c3c;
+  --mcp-text: #d4d4d4;
+  --mcp-muted: #9da5b4;
+  --mcp-accent: #4fc1ff;
+  --mcp-green: #3dd68c;
+  --mcp-orange: #ffb454;
+  --mcp-red: #ff6b6b;
+  --mcp-interviewer: #c5e478;
+  --mcp-font: "Segoe UI", system-ui, sans-serif;
+  --mcp-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--mcp-bg);
+  color: var(--mcp-text);
+  font-family: var(--mcp-font);
+}
+
+.mcp-page { min-height: 100vh; display: flex; flex-direction: column; }
+
+.mcp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #2d2d30;
+  border-bottom: 1px solid var(--mcp-border);
+}
+
+.mcp-header__brand { display: flex; align-items: center; gap: 0.75rem; }
+.mcp-header__logo { font-weight: 700; letter-spacing: 0.02em; }
+.mcp-header__badge {
+  font-size: 0.75rem;
+  color: var(--mcp-bg);
+  background: var(--mcp-accent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.mcp-header__meta { display: flex; gap: 1rem; font-size: 0.85rem; color: var(--mcp-muted); }
+
+.mcp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--mcp-border);
+  background: var(--mcp-panel);
+}
+
+.mcp-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; color: var(--mcp-muted); }
+.mcp-field--inline { flex-direction: row; align-items: center; gap: 0.5rem; }
+.mcp-field select {
+  min-width: 16rem;
+  background: var(--mcp-bg);
+  color: var(--mcp-text);
+  border: 1px solid var(--mcp-border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+.mcp-btn {
+  border: 1px solid var(--mcp-border);
+  background: #333;
+  color: var(--mcp-text);
+  border-radius: 4px;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  font: inherit;
+}
+.mcp-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.mcp-btn--primary { background: #0e639c; border-color: #1177bb; }
+.mcp-btn--mic { border-color: #3a7d5a; }
+.mcp-btn--mic.is-live { background: #1f4d35; color: var(--mcp-green); }
+.mcp-btn--ghost { background: transparent; }
+
+.mcp-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  min-height: 0;
+}
+
+.mcp-pane { min-height: 0; display: flex; flex-direction: column; }
+.mcp-pane--code { border-right: 1px solid var(--mcp-border); }
+.mcp-pane__titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--mcp-muted);
+  background: #2a2a2a;
+  border-bottom: 1px solid var(--mcp-border);
+}
+.mcp-typing { color: var(--mcp-orange); animation: mcp-pulse 1.2s ease-in-out infinite; }
+@keyframes mcp-pulse { 50% { opacity: 0.45; } }
+
+#mcp-editor-host { flex: 1; min-height: 0; }
+#mcp-editor-host .CodeMirror {
+  height: 100%;
+  font-family: var(--mcp-mono);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mcp-pane--side {
+  overflow: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: #1a1a1a;
+}
+
+.mcp-card {
+  background: var(--mcp-panel);
+  border: 1px solid var(--mcp-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+.mcp-card--accent { border-color: #4a6fa5; }
+.mcp-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mcp-muted);
+}
+
+.mcp-narration { margin: 0; line-height: 1.5; color: var(--mcp-interviewer); }
+.mcp-your-turn { margin: 0; line-height: 1.5; font-size: 1rem; }
+.mcp-uncle-hook {
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--mcp-border);
+  color: var(--mcp-orange);
+  font-size: 0.9rem;
+}
+
+.mcp-mic-status { font-size: 0.85rem; margin-bottom: 0.5rem; }
+.mcp-mic-status.is-live { color: var(--mcp-green); }
+.mcp-mic-status.is-error { color: var(--mcp-red); }
+.mcp-interim { min-height: 1.25rem; margin: 0 0 0.5rem; color: var(--mcp-muted); font-style: italic; }
+.mcp-transcript, .mcp-corners { margin: 0; padding-left: 1.1rem; line-height: 1.45; }
+.mcp-transcript li { margin-bottom: 0.5rem; }
+.mcp-transcript time { display: block; font-size: 0.7rem; color: var(--mcp-muted); }
+
+@media (max-width: 960px) {
+  .mcp-main { grid-template-columns: 1fr; }
+  .mcp-pane--code {
+    min-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--mcp-border);
+  }
+}

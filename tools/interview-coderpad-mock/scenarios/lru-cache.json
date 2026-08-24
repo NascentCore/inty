@@ -1,0 +1,46 @@
+{
+  "id": "lru-cache",
+  "title": "LRU Cache (Java) - communication round",
+  "language": "java",
+  "uncle_hook": "Imagine your uncle asks why we cannot just use a regular HashMap and delete old keys manually.",
+  "corner_checklist": [
+    "What happens on cache miss?",
+    "What happens when capacity is full on put?",
+    "Are get and put both O(1)? Why?",
+    "Thread safety - do we need it for this problem?",
+    "Null keys or null values allowed?",
+    "What if capacity is zero or negative?"
+  ],
+  "steps": [
+    {
+      "narration": "Thanks for joining. I will drive today - I will type the Java structure and you talk me through your thinking. No need for you to write code. We are building an LRU cache with O(1) get and put.",
+      "code_addition": "import java.util.HashMap;\nimport java.util.Map;\n\n/**\n * Least-recently-used cache with fixed capacity.\n */\npublic class LRUCache {\n\n}\n",
+      "your_turn": "In one sentence for a non-technical friend: what problem does an LRU cache solve?"
+    },
+    {
+      "narration": "I will store entries in a HashMap for O(1) lookup. Each value also needs recency order, so I add a doubly-linked list of nodes.",
+      "code_addition": "    private final int capacity;\n    private final Map<Integer, Node> map;\n    private final Node head;\n    private final Node tail;\n\n    private static class Node {\n        int key;\n        int value;\n        Node prev;\n        Node next;\n\n        Node(int key, int value) {\n            this.key = key;\n            this.value = value;\n        }\n    }\n",
+      "your_turn": "Why both HashMap and a linked list? Explain like you are talking to your uncle."
+    },
+    {
+      "narration": "Constructor sets capacity, creates the map, and sentinel head/tail nodes so list operations stay simple.",
+      "code_addition": "    public LRUCache(int capacity) {\n        if (capacity <= 0) {\n            throw new IllegalArgumentException(\"capacity must be positive\");\n        }\n        this.capacity = capacity;\n        this.map = new HashMap<>();\n        this.head = new Node(0, 0);\n        this.tail = new Node(0, 0);\n        head.next = tail;\n        tail.prev = head;\n    }\n",
+      "your_turn": "What corner case did I just handle in the constructor? Anything else you would flag?"
+    },
+    {
+      "narration": "get returns -1 on miss. On hit, I move the node to the front (most recently used).",
+      "code_addition": "    public int get(int key) {\n        Node node = map.get(key);\n        if (node == null) {\n            return -1;\n        }\n        moveToFront(node);\n        return node.value;\n    }\n",
+      "your_turn": "Walk through get(3) when key 3 exists vs when it does not. Keep it plain language."
+    },
+    {
+      "narration": "put updates an existing key or inserts a new one. If we exceed capacity, evict the tail (least recently used).",
+      "code_addition": "    public void put(int key, int value) {\n        Node existing = map.get(key);\n        if (existing != null) {\n            existing.value = value;\n            moveToFront(existing);\n            return;\n        }\n        Node node = new Node(key, value);\n        map.put(key, node);\n        addToFront(node);\n        if (map.size() > capacity) {\n            Node lru = removeTail();\n            map.remove(lru.key);\n        }\n    }\n",
+      "your_turn": "After put fills the cache, what happens on the next new key? Explain the eviction story simply."
+    },
+    {
+      "narration": "Helper methods unlink a node and splice it at the front, or remove the LRU node before tail.",
+      "code_addition": "    private void moveToFront(Node node) {\n        remove(node);\n        addToFront(node);\n    }\n\n    private void addToFront(Node node) {\n        node.prev = head;\n        node.next = head.next;\n        head.next.prev = node;\n        head.next = node;\n    }\n\n    private void remove(Node node) {\n        node.prev.next = node.next;\n        node.next.prev = node.prev;\n    }\n\n    private Node removeTail() {\n        Node lru = tail.prev;\n        remove(lru);\n        return lru;\n    }\n}\n",
+      "your_turn": "Summarize time complexity for get/put and why. Then name two production corners we did not code (monitoring, persistence, concurrency, etc.)."
+    }
+  ]
+}
