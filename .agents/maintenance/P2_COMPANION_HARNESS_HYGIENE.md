@@ -709,7 +709,7 @@ Open PRs checked: #3834, #3837, #3892..#3900 (maintenance HYGIENE-2026-256..277)
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-4e06`)
 
-- [ ] **HYGIENE-2026-278** `tools/test_ai_private_append_tool.py` — `ai_private_jsonl` scope accessor
-- [ ] **HYGIENE-2026-279** `tools/test_living_sphere_record_update_tool.py` — `living_sphere_updates_jsonl` scope accessor
-- [ ] **HYGIENE-2026-280** `tools/test_techno_core_record_event_tool.py` — `techno_core_events_jsonl` scope accessor
-- [ ] **HYGIENE-2026-281** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-278** `tools/test_ai_private_append_tool.py` — `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-279** `tools/test_living_sphere_record_update_tool.py` — `living_sphere_updates_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-280** `tools/test_techno_core_record_event_tool.py` — `techno_core_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-281** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
