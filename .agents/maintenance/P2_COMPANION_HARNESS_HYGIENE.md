@@ -709,7 +709,7 @@ Open PRs checked: #3834, #3837, #3899, #3900, #3902 — no overlap with tasks be
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-4725`)
 
-- [ ] **HYGIENE-2026-282** `memory/test_memory_store_document_mapping.py` — `test_roundtrip_static_paths` via `MemoryStoreScopePaths` accessors.
-- [ ] **HYGIENE-2026-283** `memory/test_memory_store_document_mapping.py` — `test_parse_identity_and_daily` via scope accessors.
-- [ ] **HYGIENE-2026-284** `memory/test_memory_store_document_mapping.py` — `test_rel_to_kind_static_paths_match_scope_path_accessors` derive rel paths from accessors only (drop bulk constant imports).
-- [ ] **HYGIENE-2026-285** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-282** `memory/test_memory_store_document_mapping.py` — `test_roundtrip_static_paths` via `MemoryStoreScopePaths` accessors. Fixed in `cursor/agent-maintenance-tasks-4725` / pull/3904.
+- [x] **HYGIENE-2026-283** `memory/test_memory_store_document_mapping.py` — `test_parse_identity_and_daily` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-4725` / pull/3904.
+- [x] **HYGIENE-2026-284** `memory/test_memory_store_document_mapping.py` — `test_rel_to_kind_static_paths_match_scope_path_accessors` derive rel paths from accessors only (drop bulk constant imports). Fixed in `cursor/agent-maintenance-tasks-4725` / pull/3904.
+- [x] **HYGIENE-2026-285** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-4725` / pull/3904.
