@@ -709,6 +709,6 @@ Open PRs checked: #3904 (`cursor/agent-maintenance-tasks-4725`), #3902 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-c02f`)
 
-- [ ] **HYGIENE-2026-286** `memory/test_dreaming_consolidation.py` — curator MemDoc seed/read/assert via scope accessors
-- [ ] **HYGIENE-2026-287** `memory/test_user_md_identity.py` — canonical seed assertion via `user_md` scope accessor
-- [ ] **HYGIENE-2026-288** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-286** `memory/test_dreaming_consolidation.py` — curator MemDoc seed/read/assert via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c02f` / pull/3905.
+- [x] **HYGIENE-2026-287** `memory/test_user_md_identity.py` — canonical seed assertion via `user_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c02f` / pull/3905.
+- [x] **HYGIENE-2026-288** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-c02f` / pull/3905.
