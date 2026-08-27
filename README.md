@@ -67,6 +67,10 @@ cursor .
 3. [IntelliMate Firebase 崩溃报告](https://console.firebase.google.com/project/alien-paratext-461204-i9/crashlytics/app/android:com.ai.intellimate/issues?fb_gclid=CjwKCAjwwNbEBhBpEiwAFYLtGL7ajs2-xPHLL4coQR6eSTui8PqkfhB7tNmotp8PWywmhtvPMR2hKhoCr5QQAvD_BwE&time=24h&state=open&types=crash&tag=all&sort=eventCount)
 4. [IntelliMate Google Play Consle](https://play.google.com/console/u/0/developers/8311322450209629787/app/4972036709846537052/app-dashboard)
 
+## Useful technologies
+
+- [Ontology](https://github.com/ozekik/awesome-ontology) to gave human-like thinking
+
 ## Use cases
 
 - [Simulated persona for audience research](https://www.youtube.com/watch?v=YnNF55QV0zs)
