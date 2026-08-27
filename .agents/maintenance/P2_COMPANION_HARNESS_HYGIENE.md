@@ -709,6 +709,6 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-13f2`)
 
-- [ ] **HYGIENE-2026-289** `companion/test_schedule_queue.py` — smoke `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`
-- [ ] **HYGIENE-2026-290** `companion/test_ws_channel_runtime_events.py` + `companion/test_llm_runtime_events.py` — smoke runtime events JSONL path via `companion_runtime_events_jsonl` scope accessor
-- [ ] **HYGIENE-2026-291** `memory_store_document_mapping.py` — build `_REL_TO_KIND` keys from `MemoryStoreScopePaths` accessors (companion + `.inty_v2` prefix variants)
+- [x] **HYGIENE-2026-289** `companion/test_schedule_queue.py` — smoke `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`. Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
+- [x] **HYGIENE-2026-290** `companion/test_ws_channel_runtime_events.py` + `companion/test_llm_runtime_events.py` — smoke runtime events JSONL path via `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
+- [x] **HYGIENE-2026-291** `memory_store_document_mapping.py` — build `_REL_TO_KIND` keys from `MemoryStoreScopePaths` accessors (companion + `.inty_v2` prefix variants). Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
