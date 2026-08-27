@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-23 scan (cron — stale code review)
+
+Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean (60% hits all false positives per 2026-07-10 note); repo-wide reference analysis for harness top-level symbols kept alive only by their own tests.
+
+Found a genuinely-new, real breakage (not lint-detectable): commit `8a53cab27` ("Update skills and guidelines", 2026-08-19) changed `tools/google_web_search.py` to import `app.utils.simple_http`, which does not exist (the module lives at `app/core/simple_http.py`). This `ModuleNotFoundError` propagates through `prompt_stack` → `companion_tool_runtime` → `google_web_search`, breaking companion-harness pytest collection entirely. It went unnoticed because prior no-change cron runs skip pytest when the branch is byte-identical to main, and ruff does not resolve import targets.
+
+The other tempting candidate — `prompting/compose_context.py::turn_compose_context_from_legacy_flags` (dead bridge to the removed `build_system_messages` bool-flag entrypoint) — remains **locked behind still-open PR #3834** (which edits `compose_context.py` adjacently). Per the recurring-trap policy it was left untouched this run.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** fix `tools/google_web_search.py` import `app.utils.simple_http` → `app.core.simple_http` (module lives at `app/core/simple_http.py`; `app.utils.simple_http` does not exist); restores harness pytest collection. Fixed in `cursor/stale-companion-harness-code-f15c`.
