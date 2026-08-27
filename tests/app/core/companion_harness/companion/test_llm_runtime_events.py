@@ -13,6 +13,9 @@ from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.companion.runtime_events import (
     read_runtime_events,
 )
@@ -77,3 +80,7 @@ def test_create_chat_completion_sync_writes_llm_inference_failure(
     assert rows[0]["phase"] == "foreground_chat"
     assert rows[0]["model"] == "model/ev-test"
     assert rows[0]["error_type"] == "CompanionLLMInferenceBackendError"
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl
+    raw = store.read_document_if_exists(rel)
+    assert raw is not None
+    assert "llm_inference_failure" in raw
