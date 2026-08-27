@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mock CoderPad - Communication Interview</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+    />
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <div class="mcp-page" id="mcp-root">
+      <header class="mcp-header">
+        <div class="mcp-header__brand">
+          <span class="mcp-header__logo">CoderPad</span>
+          <span class="mcp-header__badge">Mock - communication round</span>
+        </div>
+        <div class="mcp-header__meta">
+          <span id="mcp-role-label">Role: Interviewee (read-only)</span>
+          <span id="mcp-step-label">Step 0 / 0</span>
+        </div>
+      </header>
+
+      <section class="mcp-toolbar">
+        <label class="mcp-field">
+          Scenario
+          <select id="mcp-scenario-select"></select>
+        </label>
+        <button type="button" id="mcp-start-btn" class="mcp-btn mcp-btn--primary">
+          Start round
+        </button>
+        <button type="button" id="mcp-next-btn" class="mcp-btn" disabled>
+          Next interviewer step
+        </button>
+        <button type="button" id="mcp-mic-btn" class="mcp-btn mcp-btn--mic" disabled>
+          Mic off
+        </button>
+        <label class="mcp-field mcp-field--inline">
+          <input type="checkbox" id="mcp-auto-advance" />
+          Auto-advance after 90s
+        </label>
+        <button type="button" id="mcp-reset-btn" class="mcp-btn mcp-btn--ghost">
+          Reset
+        </button>
+      </section>
+
+      <main class="mcp-main">
+        <section class="mcp-pane mcp-pane--code">
+          <div class="mcp-pane__titlebar">
+            <span>Interviewer pad - Java (read-only for you)</span>
+            <span id="mcp-typing-indicator" class="mcp-typing" hidden>
+              Interviewer typing...
+            </span>
+          </div>
+          <div id="mcp-editor-host"></div>
+        </section>
+
+        <section class="mcp-pane mcp-pane--side">
+          <article class="mcp-card">
+            <h2>Interviewer</h2>
+            <p id="mcp-narration" class="mcp-narration">
+              Pick a scenario and start the round. The interviewer will build code
+              step by step; you respond out loud.
+            </p>
+          </article>
+
+          <article class="mcp-card mcp-card--accent">
+            <h2>Your turn</h2>
+            <p id="mcp-your-turn" class="mcp-your-turn">
+              Waiting to start...
+            </p>
+            <p id="mcp-uncle-hook" class="mcp-uncle-hook"></p>
+          </article>
+
+          <article class="mcp-card">
+            <h2>Your voice (live transcript)</h2>
+            <div id="mcp-mic-status" class="mcp-mic-status">Microphone idle</div>
+            <p id="mcp-interim" class="mcp-interim"></p>
+            <ul id="mcp-transcript" class="mcp-transcript"></ul>
+          </article>
+
+          <article class="mcp-card">
+            <h2>Corner checklist</h2>
+            <ul id="mcp-corners" class="mcp-corners"></ul>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
