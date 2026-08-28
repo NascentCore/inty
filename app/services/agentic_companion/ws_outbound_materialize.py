@@ -8,21 +8,12 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.agentic_companion.output_queue import (
-    OutputQueue,
-    OutputQueueAppendInput,
     ReadyOutputMessage,
 )
 from app.core.agentic_companion.types import (
     InputQueueRecord,
-    OutputMessageKind,
-    UserMessageBatch,
 )
-from app.core.companion_harness.tools.image_gate import (
-    generated_image_meta_from_index_slice,
-)
-from app.core.companion_harness.tools.tool_background import ToolOutputEvent
 from app.schemas.biz_action import ActionType, BizAction
 from app.schemas.chat import ChatCompletionRequest
 from app.schemas.chat_websocket import (
@@ -36,7 +27,6 @@ from app.services.agent_status_line import agent_status_line_for_chat_header
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
-    companion_ai_meta_from_turn_result,
 )
 from app.services.chat_completion_wire import (
     build_chat_ws_queued_success_frame,
@@ -290,97 +280,3 @@ async def materialize_tool_background_from_durable(
             scope.agent_id,
         ),
     )
-
-
-async def materialize_tool_background_ws_payload(
-    *,
-    db: AsyncSession,
-    agent_id: str,
-    session_id: str,
-    ev: ToolOutputEvent,
-    request: ChatCompletionRequest,
-    effective_local_id: str | None,
-    foreground_user_message_id: int | None,
-) -> WsOutboundPayload:
-    """Build one TOOL_BACKGROUND completion frame for App WS outbound."""
-    gi = generated_image_meta_from_index_slice(
-        ev.memory_store, ev.image_asset_baseline
-    )
-    tb_paths: list[str] | None = (
-        list(ev.local_image_paths) if ev.local_image_paths else None
-    )
-    sig = ev.significance_perception if ev.significance_perception else None
-    meta_data = dump_chat_ws_companion_wire_meta(
-        ChatWsCompanionWireMessageMetaData(
-            source="tool_bg",
-            trace_id=ev.trace_id or None,
-            reply_to_user_msg_uuid=ev.user_msg_uuid or None,
-            tool_bg_output_to_user=ev.output_to_user,
-            tool_bg_generation_deliver=ev.generation_deliver,
-            langsmith_trace_id=ev.langsmith_trace_id or None,
-            langsmith_run_id=ev.langsmith_run_id or None,
-            generated_image=gi or None,
-            tool_bg_local_image_paths=tb_paths,
-            significance_perception=sig,
-            turn_recall=ev.turn_recall or None,
-            inner_tick_activity=ev.inner_tick_activity,
-        )
-    )
-    ai_message_id = await chat_history_service.add_ai_message_sync_async(
-        session_id,
-        ev.text,
-        agent_id=agent_id,
-        meta_data=meta_data,
-    )
-    latest_message_info = None
-    try:
-        if ai_message_id is not None:
-            latest_message_info = (
-                await chat_history_service.get_ai_message_info_by_id(
-                    db, ai_message_id
-                )
-            )
-    except Exception:
-        latest_message_info = None
-    user_message_id = foreground_user_message_id
-    if user_message_id is None:
-        try:
-            user_message_id = (
-                await chat_history_service.get_latest_user_message_id(
-                    db, session_id
-                )
-            )
-        except Exception:
-            user_message_id = None
-    subscription_actions = [
-        BizAction(action_type=ActionType.NONE, message=""),
-    ]
-    assistant = build_companion_ws_completion_data(
-        response_text_content=ev.text,
-        response_content_parts=None,
-        last_user_text="",
-        latest_message_info=latest_message_info,
-        audio_url=None,
-        request=request,
-        source_imate_id=request.target_imate_id,
-        user_message_id=user_message_id,
-        subscription_actions=subscription_actions,
-        client_local_id=effective_local_id,
-    )
-    completion = ChatWsCompletionData(
-        id=assistant.id,
-        created=assistant.created,
-        model=assistant.model,
-        user_message_id=user_message_id,
-        business_actions=assistant.business_actions,
-        choices=assistant.choices,
-        usage=assistant.usage,
-        local_id=assistant.local_id,
-        source_imate_id=assistant.source_imate_id,
-    )
-    payload = build_chat_ws_queued_success_frame(
-        completion=completion,
-        agent_id=agent_id,
-        status_line=await agent_status_line_for_chat_header(db, agent_id),
-    )
-    return payload
