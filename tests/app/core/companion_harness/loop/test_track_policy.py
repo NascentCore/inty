@@ -23,6 +23,9 @@ from app.core.companion_harness.loop.track_policy import (
     CompanionLlmScene,
     build_loop_execution_policy,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY,
 )
@@ -53,6 +56,9 @@ def test_autonomy_policy_allowlist() -> None:
     policy = TRACK_POLICY[CompanionTurnTrack.INNER_TICK_AUTONOMY]
     assert (
         policy.write_allowlist == MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_AUTONOMY
+    )
+    assert policy.write_allowlist == frozenset(
+        {DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md}
     )
 
 
