@@ -14,6 +14,25 @@ from app.core.companion_harness.companion.transcript_ai_private import (
     dreaming_transcript_block,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+
+def test_append_ai_private_thought_uses_ai_private_jsonl_scope_path(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-ap-path", "a", tmp_path.name),
+        repository=None,
+    )
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl
+    thought = append_ai_private_thought(
+        store, text="scope path smoke", after_user_msg_uuid=None
+    )
+    body = store.read_document(rel)
+    assert thought.uuid in body
+    assert "scope path smoke" in body
 
 
 def test_dreaming_transcript_block_hydrates_manifest_and_unconsumed(
