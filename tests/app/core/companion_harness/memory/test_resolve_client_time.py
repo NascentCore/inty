@@ -7,8 +7,8 @@ from app.core.companion_harness.memory.client_time_from_memory_store import (
     resolve_client_time,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.schemas.chat import UserTimeContext
 
@@ -23,7 +23,7 @@ def _store(tmp_path) -> MemoryStore:
 def test_resolve_client_time_prefers_incoming_timezone(tmp_path) -> None:
     store = _store(tmp_path)
     store.write_document(
-        USER_MD_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md,
         "## 身份信息\n\n- 时区：Asia/Tokyo\n",
     )
     incoming = UserTimeContext(
@@ -45,7 +45,7 @@ def test_resolve_client_time_prefers_incoming_timezone(tmp_path) -> None:
 def test_resolve_client_time_user_md_beats_config_default(tmp_path) -> None:
     store = _store(tmp_path)
     store.write_document(
-        USER_MD_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md,
         "## 身份信息\n\n- 时区：Asia/Tokyo\n",
     )
 
@@ -63,7 +63,7 @@ def test_resolve_client_time_config_default_when_no_user_md_tz(
     tmp_path,
 ) -> None:
     store = _store(tmp_path)
-    store.write_document(USER_MD_REL, "## 身份信息\n\n- 姓名：Alex\n")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, "## 身份信息\n\n- 姓名：Alex\n")
 
     ctx = resolve_client_time(
         store=store,

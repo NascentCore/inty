@@ -709,10 +709,10 @@ Open PRs checked: #3883..#3908 (scope-path accessor batches), #3899 (`google_web
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-071f`)
 
-- [ ] **HYGIENE-2026-297** #3413: `memory/test_transcript_compaction.py` — `context_compaction_state_json` scope accessor.
-- [ ] **HYGIENE-2026-298** #3413: `memory/test_resolve_client_time.py` — `user_md` scope accessor.
-- [ ] **HYGIENE-2026-299** #3413: `tools/test_read_web_page_tool.py` — `memory_md` scope accessor.
-- [ ] **HYGIENE-2026-300** #3413: `companion/test_dreaming.py` — `transcript` scope accessor.
-- [ ] **HYGIENE-2026-301** #3413: `companion/test_ai_private_prompt.py` — `ai_private_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-302** #3413: `tools/test_companion_user_feedback_tool.py` — context/transcript/user/memory/feedback JSONL via scope accessors.
-- [ ] **HYGIENE-2026-303** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-297** #3413: `memory/test_transcript_compaction.py` — `context_compaction_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-298** #3413: `memory/test_resolve_client_time.py` — `user_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-299** #3413: `tools/test_read_web_page_tool.py` — `memory_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-300** #3413: `companion/test_dreaming.py` — `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-301** #3413: `companion/test_ai_private_prompt.py` — `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-302** #3413: `tools/test_companion_user_feedback_tool.py` — context/transcript/user/memory/feedback JSONL via scope accessors. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
+- [x] **HYGIENE-2026-303** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-071f` / pull/3909.
