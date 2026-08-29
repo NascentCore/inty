@@ -14,12 +14,8 @@ from app.core.companion_harness.companion.llm_runtime_events import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANION_USER_FEEDBACK_JSONL_REL,
-    CONTEXT_JSON_REL,
-    MEMORY_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -41,13 +37,11 @@ from app.core.companion_harness.tools.companion_user_feedback import (
 )
 from app.core.companion_harness.tools.companion_user_feedback_github_issue import (
     GITHUB_ISSUE_TITLE_PREFIX,
-    build_github_issue_labels,
     build_github_issue_body,
+    build_github_issue_labels,
     build_github_issue_title,
     github_issue_severity_label_for_category,
 )
-
-
 from app.utils.github.issues import GithubIssueCreateResult
 
 
@@ -71,7 +65,9 @@ def _sample_snapshot() -> HarnessSnapshot:
         context_mode="intimate",
         context_json='{"context_mode":"intimate"}\n',
         transcript_tail='{"role":"user","content":"why wrong timezone?"}\n',
-        memory_docs={USER_MD_REL: "# USER\nTZ: US/Pacific"},
+        memory_docs={
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md: "# USER\nTZ: US/Pacific"
+        },
         runtime_events=[],
         vcs_revision="abc123",
     )
@@ -86,9 +82,15 @@ async def test_record_user_feedback_appends_snapshot_jsonl(
     rid = uuid.uuid4().hex[:12]
     scope = CompanionScope(f"u-ufb-{rid}", f"c-ufb-{rid}", f"chat-ufb-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
-    store.write_document(TRANSCRIPT_JSONL_REL, '{"role":"user"}\n')
-    store.write_document(USER_MD_REL, "# USER\n")
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        '{"context_mode":"intimate"}\n',
+    )
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+        '{"role":"user"}\n',
+    )
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, "# USER\n")
 
     bind = LlmRuntimeEventBind(
         memory_store=store,
@@ -128,7 +130,9 @@ async def test_record_user_feedback_appends_snapshot_jsonl(
     assert "feedback_recorded" in out
     assert "github_issue" not in out
     assert "http" not in out
-    body = store.read_document(COMPANION_USER_FEEDBACK_JSONL_REL)
+    body = store.read_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl
+    )
     lines = [ln for ln in body.strip().split("\n") if ln.strip()]
     assert len(lines) >= 2
     snapshot_row = json.loads(lines[0])
@@ -245,10 +249,10 @@ async def test_append_user_feedback_issue_disclosure_to_output_queue_visible(
 ) -> None:
     from unittest.mock import AsyncMock, patch
 
-    from app.core.companion_harness.tools import companion_user_feedback as mod
     from app.core.agentic_companion.types import (
         OutputMessageKind,
     )
+    from app.core.companion_harness.tools import companion_user_feedback as mod
 
     class _FakeRecord:
         def __init__(self, message_id: str, text: str, sequence: int) -> None:
@@ -445,7 +449,10 @@ async def test_record_user_feedback_hidden_starts_async_job(
     rid = uuid.uuid4().hex[:8]
     scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        '{"context_mode":"intimate"}\n',
+    )
 
     out = await execute_tool_call(
         store,
@@ -483,7 +490,7 @@ async def test_record_user_feedback_visible_sync_create(monkeypatch) -> None:
 
     scope = CompanionScope("u", "c", "chat")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document(CONTEXT_JSON_REL, "{}\n")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json, "{}\n")
 
     out = await execute_tool_call(
         store,
@@ -515,8 +522,14 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
     rid = uuid.uuid4().hex[:8]
     scope = CompanionScope(f"u-{rid}", f"c-{rid}", f"ch-{rid}")
     store = MemoryStore(scope=scope, repository=None)
-    store.write_document(MEMORY_MD_REL, "# MEM\ntest memory")
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"public"}\n')
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md,
+        "# MEM\ntest memory",
+    )
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        '{"context_mode":"public"}\n',
+    )
 
     snap = build_harness_snapshot(
         store,
@@ -526,7 +539,7 @@ def test_build_harness_snapshot_reads_memory_docs(tmp_path) -> None:
         ),
     )
     assert snap.context_mode == "public"
-    assert MEMORY_MD_REL in snap.memory_docs
+    assert DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md in snap.memory_docs
     assert snap.complaint_category == "tone"
 
 
@@ -538,7 +551,10 @@ def test_build_harness_snapshot_transcript_tail_is_recent_lines(
     prefix = '{"role":"user","content":"EARLY_ONLY"}\n'
     filler = '{"role":"user","content":"f"}\n' * 800
     recent_marker = '{"role":"user","content":"RECENT_COMPLAINT"}\n'
-    store.write_document(TRANSCRIPT_JSONL_REL, prefix + filler + recent_marker)
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+        prefix + filler + recent_marker,
+    )
 
     snap = build_harness_snapshot(
         store,
