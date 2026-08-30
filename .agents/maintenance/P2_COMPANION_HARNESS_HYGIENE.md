@@ -709,7 +709,7 @@ Open PRs checked: #3872 (`companion_scripted_llm` partial scope accessors), #389
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8056`)
 
-- [ ] **HYGIENE-2026-304** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
-- [ ] **HYGIENE-2026-305** `companion_scripted_llm.py` — seed/read paths via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (complete partial #3872).
-- [ ] **HYGIENE-2026-306** remove dead `inner_tick_activity_suppresses_user_delivery`; `test_turn_track.py` asserts `InnerTickKindSpec.suppresses_user_delivery`.
-- [ ] **HYGIENE-2026-307** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-304** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-8056` / pull/3911.
+- [x] **HYGIENE-2026-305** `companion_scripted_llm.py` — seed/read paths via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (complete partial #3872). Fixed in `cursor/agent-maintenance-tasks-8056` / pull/3911.
+- [x] **HYGIENE-2026-306** remove dead `inner_tick_activity_suppresses_user_delivery`; `test_turn_track.py` asserts `InnerTickKindSpec.suppresses_user_delivery`. Fixed in `cursor/agent-maintenance-tasks-8056` / pull/3911.
+- [x] **HYGIENE-2026-307** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-8056` / pull/3911.
