@@ -25,17 +25,8 @@ from app.core.companion_harness.companion.manager import (
 )
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    LIFE_CURRENTS_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TOOL_BACKGROUND_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.config import global_config_loaded_from_config_yaml
 from app.core.llms.client import CompanionLLMConfig, LlmClient
@@ -136,7 +127,7 @@ def build_scripted_autonomy_inner_tick_script(
             "memory_store_write_document",
             json.dumps(
                 {
-                    "relative_path": LIFE_CURRENTS_MD_REL,
+                    "relative_path": DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md,
                     "content": life_currents_body,
                 },
                 ensure_ascii=False,
@@ -157,7 +148,7 @@ def build_scripted_autonomy_inner_tick_script(
 def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
     """Seed MemoryStore for settled inner-tick turns (bootstrap done, min transcript)."""
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "public",
@@ -170,10 +161,16 @@ def seed_settled_scope_for_inner_tick(store: MemoryStore) -> None:
         )
         + "\n",
     )
-    for rel in (IDENTITY_MD_REL, SOUL_MD_REL, USER_MD_REL, MEMORY_MD_REL, STYLE_MD_REL):
+    for rel in (
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.soul,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.style_md,
+    ):
         store.write_document(rel, f"# {rel}\n")
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         "\n".join(
             [
                 json.dumps(
@@ -369,7 +366,7 @@ def memory_store_for_injected_runtime(
 
 
 def scripted_transcript_roles(store: MemoryStore) -> list[str]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL)
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript)
     rows = [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -377,7 +374,7 @@ def scripted_transcript_roles(store: MemoryStore) -> list[str]:
 
 
 def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL)
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
@@ -386,7 +383,7 @@ def scripted_transcript_rows(store: MemoryStore) -> list[dict[str, object]]:
 def scripted_inner_tick_transcript_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document(TRANSCRIPT_INNER_TICK_JSONL_REL)
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript_inner_tick)
     if not raw.strip():
         return []
     return [
@@ -397,7 +394,7 @@ def scripted_inner_tick_transcript_rows(
 def scripted_tool_background_done_rows(
     store: MemoryStore,
 ) -> list[dict[str, object]]:
-    raw = store.read_document(TOOL_BACKGROUND_JSONL_REL)
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl)
     return [
         json.loads(line) for line in raw.strip().splitlines() if line.strip()
     ]
