@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-30 scan (cron)
+
+Source: open PR overlap check (HYGIENE-2026-251..303 claimed in open maintenance PRs); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; `google_web_search.py` import regression on `main`; `companion_scripted_llm.py` seed/read paths still use `*_REL` constants; dead `inner_tick_activity_suppresses_user_delivery` superseded by `InnerTickKindSpec.suppresses_user_delivery`.
+
+Open PRs checked: #3872 (`companion_scripted_llm` partial scope accessors), #3895 (`inner_tick_activity_suppresses_user_delivery` + compose_context — includes unrelated config diff), #3899/#3900/#3909 (`google_web_search` import) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-8056`)
+
+- [ ] **HYGIENE-2026-304** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
+- [ ] **HYGIENE-2026-305** `companion_scripted_llm.py` — seed/read paths via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (complete partial #3872).
+- [ ] **HYGIENE-2026-306** remove dead `inner_tick_activity_suppresses_user_delivery`; `test_turn_track.py` asserts `InnerTickKindSpec.suppresses_user_delivery`.
+- [ ] **HYGIENE-2026-307** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
