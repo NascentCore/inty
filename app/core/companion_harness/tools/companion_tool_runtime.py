@@ -13,21 +13,12 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
-from collections.abc import Iterable
 from typing import Any
 
 from pydantic import ValidationError
-
-from app.core.companion_harness.tools.registry import ToolRegistry
-from app.core.companion_harness.tools.dispatchers.media import (
-    parse_optional_positive_int,
-    parse_optional_strength,
-)
-from app.core.companion_harness.tools.dispatchers.memory_store import (
-    dispatch_memory_store_tool,
-)
 
 from app.core.companion_harness.companion.ai_private_prompt import (
     append_ai_private_thought,
@@ -38,8 +29,9 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
-from app.db.session import AsyncSessionLocal
-from app.services.user_profile_persistence import persist_user_profile_snapshot
+from app.core.companion_harness.companion.llm_runtime_events import (
+    companion_llm_runtime_event_bind_ctx,
+)
 from app.core.companion_harness.companion.models import (
     ChatMessage,
 )
@@ -53,20 +45,59 @@ from app.core.companion_harness.memory.memory_store import (
 from app.core.companion_harness.memory.memory_store_document_mapping import (
     parse_memory_store_relative_path,
 )
-from app.core.companion_harness.companion.llm_runtime_events import (
-    companion_llm_runtime_event_bind_ctx,
+from app.core.companion_harness.memory.memory_store_path_constants import (
+    TRANSCRIPT_INNER_TICK_JSONL_REL,
+    TRANSCRIPT_JSONL_REL,
+    USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+from app.core.companion_harness.memory.user_md_identity import (
+    USER_PROFILE_SECTION,
+    UserIdentityFieldLabel,
+    fill_user_md_identity_fields,
+)
+from app.core.companion_harness.tools.dispatchers.media import (
+    parse_optional_positive_int,
+    parse_optional_strength,
+)
+from app.core.companion_harness.tools.dispatchers.memory_store import (
+    dispatch_memory_store_tool,
+)
+from app.core.companion_harness.tools.registry import ToolRegistry
+from app.db.session import AsyncSessionLocal
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
     LivingSphereUpdate,
 )
+from app.services.user_profile_persistence import persist_user_profile_snapshot
 from app.techno_core.models import (
+    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     Sphere,
     TechnoCoreEvent,
-    TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
     Visibility,
 )
 
+from .companion_tool_definitions import (
+    _EMPTY_DESCRIPTION_OVERRIDES,
+    AI_PRIVATE_APPEND_TOOL_NAME,
+    BOOTSTRAP_TRACK_TOOL_NAMES,
+    COMPANION_LLM_TOOLS,
+    COMPANION_LLM_TOOLS_BY_NAME,
+    INNER_TICK_AUTONOMY_TOOL_NAMES,
+    INNER_TICK_TOOL_NAMES,
+    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
+    REPL_DESCRIPTION_OVERRIDES,
+    REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
+    REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
+    TOOL_NAMES_APPENDED,
+    TOOL_NAMES_NON_BOOTSTRAP_TAIL,
+    TOOL_NAMES_SHARED_HEAD,
+    TOOL_TAG_GENERATION,
+    CompanionToolName,
+    openai_tools_for_names,
+)
 from .companion_user_feedback import (
     COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME,
     tool_companion_record_user_feedback,
@@ -81,37 +112,6 @@ from .image_gate import (
     current_persona_revision_id,
     find_latest_asset_by_local_relative_path,
     list_image_asset_records,
-)
-from .companion_tool_definitions import (
-    AI_PRIVATE_APPEND_TOOL_NAME,
-    COMPANION_LLM_TOOLS,
-    COMPANION_LLM_TOOLS_BY_NAME,
-    BOOTSTRAP_TRACK_TOOL_NAMES,
-    CompanionToolName,
-    INNER_TICK_AUTONOMY_TOOL_NAMES,
-    INNER_TICK_TOOL_NAMES,
-    MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP,
-    REPL_DESCRIPTION_OVERRIDES,
-    REPL_DESCRIPTION_OVERRIDES_AUTONOMY,
-    REPL_DESCRIPTION_OVERRIDES_BOOTSTRAP,
-    TOOL_NAMES_APPENDED,
-    TOOL_NAMES_NON_BOOTSTRAP_TAIL,
-    TOOL_NAMES_SHARED_HEAD,
-    TOOL_TAG_GENERATION,
-    _EMPTY_DESCRIPTION_OVERRIDES,
-    openai_tools_for_names,
-)
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    LIVING_SPHERE_UPDATES_JSONL_REL,
-    TECHNO_CORE_EVENTS_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
-)
-from app.core.companion_harness.memory.user_md_identity import (
-    USER_PROFILE_SECTION,
-    UserIdentityFieldLabel,
-    fill_user_md_identity_fields,
 )
 from .openai_tools_prepare import prepare_openai_tools_for_chat_completions
 from .read_web_page import run_read_web_page
@@ -456,10 +456,8 @@ def tool_techno_core_record_event(
     except ValidationError as exc:
         return f"ERROR: {exc}"
 
-    store.append_jsonl_record(
-        TECHNO_CORE_EVENTS_JSONL_REL,
-        event.model_dump(mode="json"),
-    )
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.techno_core_events_jsonl
+    store.append_jsonl_record(rel, event.model_dump(mode="json"))
     return f"OK recorded techno_core event_id={event.event_id}"
 
 
@@ -489,10 +487,8 @@ def tool_living_sphere_record_update(
         update = LivingSphereUpdate.model_validate(ev_kwargs)
     except ValidationError as exc:
         return f"ERROR: {exc}"
-    store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_REL,
-        update.model_dump(mode="json"),
-    )
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl
+    store.append_jsonl_record(rel, update.model_dump(mode="json"))
     return f"OK recorded update_id={update.update_id}"
 
 
