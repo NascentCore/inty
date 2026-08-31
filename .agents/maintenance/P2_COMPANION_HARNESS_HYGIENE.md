@@ -709,7 +709,7 @@ Open PRs checked: #3872..#3911 (scope-path accessor batches), #3895/#3910/#3911 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-7779`)
 
-- [ ] **HYGIENE-2026-308** `companion_user_feedback.py` — drop `TRANSCRIPT_REL` alias; transcript tail load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-309** `companion/models.py` — docstring cross-ref `InnerTickKindSpec.suppresses_user_delivery` (drop dead helper name).
-- [ ] **HYGIENE-2026-310** `user_md_identity.py` — simplify `USER_MD_REL` import (drop redundant `as` alias).
-- [ ] **HYGIENE-2026-311** `companion/models.py` — `load_prompt_bundle` `channels_md` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.channels_md`.
+- [x] **HYGIENE-2026-308** `companion_user_feedback.py` — drop `TRANSCRIPT_REL` alias; transcript tail load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-7779` / pull/3912.
+- [x] **HYGIENE-2026-309** `companion/models.py` — docstring cross-ref `InnerTickKindSpec.suppresses_user_delivery` (drop dead helper name). Fixed in `cursor/agent-maintenance-tasks-7779` / pull/3912.
+- [x] **HYGIENE-2026-310** `user_md_identity.py` — simplify `USER_MD_REL` import (drop redundant `as` alias). Fixed in `cursor/agent-maintenance-tasks-7779` / pull/3912.
+- [x] **HYGIENE-2026-311** `companion/models.py` — `load_prompt_bundle` `channels_md` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.channels_md`. Fixed in `cursor/agent-maintenance-tasks-7779` / pull/3912.
