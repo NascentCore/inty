@@ -44,8 +44,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
@@ -61,7 +63,6 @@ SNAPSHOT_DOC_PATHS: tuple[str, ...] = (
     USER_MD_REL,
     MEMORY_MD_REL,
 )
-TRANSCRIPT_REL = TRANSCRIPT_JSONL_REL
 TRANSCRIPT_TAIL_MAX_CHARS = 12_000
 MEMORY_DOC_MAX_CHARS = 4_000
 
@@ -193,7 +194,8 @@ def build_harness_snapshot(
     feedback_id = str(uuid.uuid4())
     scope = store.scope
     context_json = store.read_document_if_exists(CONTEXT_JSON_REL) or ""
-    transcript_raw = store.read_document_if_exists(TRANSCRIPT_REL) or ""
+    transcript_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
+    transcript_raw = store.read_document_if_exists(transcript_rel) or ""
     memory_docs: dict[str, str] = {}
     for rel in SNAPSHOT_DOC_PATHS:
         if rel == CONTEXT_JSON_REL:
