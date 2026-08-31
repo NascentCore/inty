@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-31 scan (cron)
+
+Source: open PR overlap check (HYGIENE-2026-251..307 claimed in open maintenance PRs); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `companion_user_feedback.py` `TRANSCRIPT_REL` alias redundant; `models.py` docstring still references superseded helper; `user_md_identity.py` redundant import alias; `load_prompt_bundle` `channels_md` still uses raw `CHANNELS_MD_REL`.
+
+Open PRs checked: #3872..#3911 (scope-path accessor batches), #3895/#3910/#3911 (dead code + `google_web_search` import) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-7779`)
+
+- [ ] **HYGIENE-2026-308** `companion_user_feedback.py` — drop `TRANSCRIPT_REL` alias; transcript tail load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
+- [ ] **HYGIENE-2026-309** `companion/models.py` — docstring cross-ref `InnerTickKindSpec.suppresses_user_delivery` (drop dead helper name).
+- [ ] **HYGIENE-2026-310** `user_md_identity.py` — simplify `USER_MD_REL` import (drop redundant `as` alias).
+- [ ] **HYGIENE-2026-311** `companion/models.py` — `load_prompt_bundle` `channels_md` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.channels_md`.
