@@ -35,7 +35,6 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
-    CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
     HARNESS_MD_REL,
@@ -100,7 +99,7 @@ class InnerTickActivity(StrEnum):
     activity for clean track separation (scheduled reminder vs idle proactive).
 
     ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
-    client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
+    client-visible NL or images (see ``InnerTickKindSpec.suppresses_user_delivery``).
     ``MONOLOG`` (awake inner-tick turn) still uses a restricted tool set today;
     ``TODO(narrow-monolog)`` targets ai_private / transcript reorg only (#3375).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
@@ -455,7 +454,9 @@ def load_prompt_bundle(
         about_md=_template_doc_truncated(
             ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
-        channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
+        channels_md=_read_memory_document_required(
+            store, DEFAULT_MEMORY_STORE_SCOPE_PATHS.channels_md
+        ),
         companionship_md=_read_memory_document_required(
             store, COMPANIONSHIP_MD_REL
         ),
