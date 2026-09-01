@@ -709,8 +709,8 @@ Open PRs checked: #3834 TrackSystemRecipe, #3837 long-term user simulator, #3869
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-224c`)
 
-- [ ] **HYGIENE-2026-312** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
-- [ ] **HYGIENE-2026-313** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
-- [ ] **HYGIENE-2026-314** `companion/lifecycle_invariants.py` — `AWAKE_TURN_*` JSONL constants from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
-- [ ] **HYGIENE-2026-315** `companion/runtime_events.py` — append/read via `companion_runtime_events_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-316** `tools/test_google_web_search.py` — import smoke + `runtime_events` path accessor assertion in existing WS runtime-events test.
+- [x] **HYGIENE-2026-312** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-224c` / pull/3913.
+- [x] **HYGIENE-2026-313** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-224c` / pull/3913.
+- [x] **HYGIENE-2026-314** `companion/lifecycle_invariants.py` — `AWAKE_TURN_*` JSONL constants from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-224c` / pull/3913.
+- [x] **HYGIENE-2026-315** `companion/runtime_events.py` — append/read via `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-224c` / pull/3913.
+- [x] **HYGIENE-2026-316** `tools/test_google_web_search.py` — import smoke + `runtime_events` path accessor assertion in WS runtime-events test. Fixed in `cursor/agent-maintenance-tasks-224c` / pull/3913.
