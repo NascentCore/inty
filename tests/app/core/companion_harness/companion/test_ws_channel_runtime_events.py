@@ -10,6 +10,9 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 
 def test_ws_channel_runtime_events_append_and_read(tmp_path) -> None:
@@ -55,3 +58,9 @@ def test_ws_channel_runtime_events_append_and_read(tmp_path) -> None:
     assert len(drop_rows) == 1
     assert drop_rows[0]["ws_close_code"] == 1006
     assert drop_rows[0]["ws_close_reason"] == "connection reset"
+
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl
+    body = store.read_document_if_exists(rel)
+    assert body is not None
+    assert USER_SIGNED_OUT_RUNTIME_EVENT_KIND in body
+    assert WS_CONN_DROPPED_RUNTIME_EVENT_KIND in body
