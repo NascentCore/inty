@@ -709,9 +709,9 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3869–#3913
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-ec7d`)
 
-- [ ] **HYGIENE-2026-317** `dreaming_consolidation.py` — `_rewrite_style_md` via `style_md` scope accessor
-- [ ] **HYGIENE-2026-318** `dreaming_consolidation.py` — `_rewrite_soul_md` via `soul` scope accessor
-- [ ] **HYGIENE-2026-319** `dreaming_consolidation.py` — companionship curator via `companionship_md` scope accessor
-- [ ] **HYGIENE-2026-320** `dreaming_consolidation.py` — one-shot curator bundle + memory/user rewrite via scope accessors
-- [ ] **HYGIENE-2026-321** `memory/test_dreaming_consolidation.py` — assert one-shot `required_paths` tail matches scope accessors
-- [ ] **HYGIENE-2026-322** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker; overlaps open PRs until one merges)
+- [x] **HYGIENE-2026-317** `dreaming_consolidation.py` — `_rewrite_style_md` via `style_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
+- [x] **HYGIENE-2026-318** `dreaming_consolidation.py` — `_rewrite_soul_md` via `soul` scope accessor. Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
+- [x] **HYGIENE-2026-319** `dreaming_consolidation.py` — companionship curator via `companionship_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
+- [x] **HYGIENE-2026-320** `dreaming_consolidation.py` — one-shot curator bundle + memory/user rewrite via scope accessors. Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
+- [x] **HYGIENE-2026-321** `memory/test_dreaming_consolidation.py` — assert one-shot `required_paths` tail matches scope accessors. Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
+- [x] **HYGIENE-2026-322** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-ec7d` / pull/3914.
