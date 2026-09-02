@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-02 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3869–#3913 path-constant migration batches — no overlap with dreaming_consolidation style/soul/companionship curator paths); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; `google_web_search` import still blocks harness pytest collection on `main`.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3869–#3913 (HYGIENE-182..316 scope-path batches) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-ec7d`)
+
+- [ ] **HYGIENE-2026-317** `dreaming_consolidation.py` — `_rewrite_style_md` via `style_md` scope accessor
+- [ ] **HYGIENE-2026-318** `dreaming_consolidation.py` — `_rewrite_soul_md` via `soul` scope accessor
+- [ ] **HYGIENE-2026-319** `dreaming_consolidation.py` — companionship curator via `companionship_md` scope accessor
+- [ ] **HYGIENE-2026-320** `dreaming_consolidation.py` — one-shot curator bundle + memory/user rewrite via scope accessors
+- [ ] **HYGIENE-2026-321** `memory/test_dreaming_consolidation.py` — assert one-shot `required_paths` tail matches scope accessors
+- [ ] **HYGIENE-2026-322** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker; overlaps open PRs until one merges)
