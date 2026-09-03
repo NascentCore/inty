@@ -709,6 +709,6 @@ Open PRs checked: #3869..#3914 (maintenance scope-accessor lane), #3834, #3837 �
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a635`)
 
-- [ ] **HYGIENE-2026-323** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
-- [ ] **HYGIENE-2026-324** `tools/test_google_web_search.py` — import smoke for `google_web_search` module.
-- [ ] **HYGIENE-2026-325** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-323** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-a635` / pull/3916.
+- [x] **HYGIENE-2026-324** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-a635` / pull/3916.
+- [x] **HYGIENE-2026-325** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-a635` / pull/3916.
