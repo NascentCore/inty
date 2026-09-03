@@ -23,6 +23,8 @@ class InTurnSyncToolLoopResult:
     langsmith_run_id: str
     skip_final_transcript_assistant_row: bool
     last_interim_assistant_msg_uuid: str | None
+    loop_persisted_user_transcript: bool
+    """True when this loop appended the user transcript row."""
     significance_meta: dict[str, Any] | None = None
     """Moment-level significance perception from a structured envelope, when produced."""
     turn_recall: str | None = None

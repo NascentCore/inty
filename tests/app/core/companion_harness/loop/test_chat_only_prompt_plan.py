@@ -350,6 +350,7 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
             langsmith_run_id="",
             skip_final_transcript_assistant_row=False,
             last_interim_assistant_msg_uuid=None,
+            loop_persisted_user_transcript=True,
         )
 
     with patch(
