@@ -442,7 +442,6 @@ async def _run_prompt_plan_tool_loop(
         langsmith_run_id=langsmith_llm_run_acc,
         skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
         last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
-        loop_persisted_user_transcript=True,
     )
 
 
@@ -584,7 +583,6 @@ async def _run_chat_only_prompt_plan(
         langsmith_run_id=langsmith_llm_run_acc,
         skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
         last_interim_assistant_msg_uuid=None,
-        loop_persisted_user_transcript=False,
         significance_meta=significance_meta,
         turn_recall=turn_recall,
     )
