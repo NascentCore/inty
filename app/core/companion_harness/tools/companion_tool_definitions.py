@@ -34,17 +34,19 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    AI_PRIVATE_JSONL_REL,
     COMPANIONSHIP_MD_REL,
     IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TECHNO_CORE_EVENTS_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
@@ -292,7 +294,7 @@ AI_PRIVATE_APPEND_TOOL = LlmFunctionTool(
     name=CompanionToolName.AI_PRIVATE_APPEND,
     description=(
         "Append one inner monolog line about the user or relationship to "
-        f"``{AI_PRIVATE_JSONL_REL}`` (append-only). Use during MONOLOG "
+        f"``{_SCOPE_PATHS.ai_private_jsonl}`` (append-only). Use during MONOLOG "
         "inner-tick to record feelings, unsaid thoughts, or relationship scene beats—"
         "not virtual-world activity (that belongs in LIFE_CURRENTS / AUTONOMY). "
         "Never visible to the user directly; may inform later proactive or user chat."
@@ -323,7 +325,7 @@ LIVING_SPHERE_RECORD_UPDATE_TOOL = LlmFunctionTool(
     name=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE,
     description=(
         "Record a user-directed change to the private LivingSphere home "
-        f"(append-only ``{LIVING_SPHERE_UPDATES_JSONL_REL}``). "
+        f"(append-only ``{_SCOPE_PATHS.living_sphere_updates_jsonl}``). "
         "Call when the user **explicitly** asks to add, move, or re-layout "
         "objects or anchors in the virtual home—not for TechnoCore collective "
         "world edits. ``LIVING_SPHERE.md`` in context is a **snapshot** merged "
@@ -545,7 +547,7 @@ TECHNO_CORE_RECORD_EVENT_TOOL = LlmFunctionTool(
     name=CompanionToolName.TECHNO_CORE_RECORD_EVENT,
     description=(
         "Append one autonomous LivingSphere / TechnoCore beat as structured JSON "
-        f"to MemoryStore ``{TECHNO_CORE_EVENTS_JSONL_REL}`` (append-only). "
+        f"to MemoryStore ``{_SCOPE_PATHS.techno_core_events_jsonl}`` (append-only). "
         "Primary use: **monolog inner-tick** when the user thread is idle (small "
         "in-world actions consistent with ``LIVING_SPHERE.md`` / ``TECHNO_CORE.md``). "
         "**Do not** use for user-directed home layout or object changes—use "

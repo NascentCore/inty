@@ -709,8 +709,8 @@ Open PRs checked: #3869..#3916 (maintenance scope-accessor + collection-fix lane
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-e21e`)
 
-- [ ] **HYGIENE-2026-326** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker on `main`).
-- [ ] **HYGIENE-2026-327** `tools/test_google_web_search.py` — import smoke for `google_web_search` module.
-- [ ] **HYGIENE-2026-328** `tools/companion_tool_definitions.py` — JSONL tool description paths via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
-- [ ] **HYGIENE-2026-329** `tools/test_companion_tool_definitions.py` — assert JSONL tool descriptions match scope accessors.
-- [ ] **HYGIENE-2026-330** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-326** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker on `main`). Fixed in `cursor/agent-maintenance-tasks-e21e` / pull/3918.
+- [x] **HYGIENE-2026-327** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-e21e` / pull/3918.
+- [x] **HYGIENE-2026-328** `tools/companion_tool_definitions.py` — JSONL tool description paths via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-e21e` / pull/3918.
+- [x] **HYGIENE-2026-329** `tools/test_companion_tool_definitions.py` — assert JSONL tool descriptions match scope accessors. Fixed in `cursor/agent-maintenance-tasks-e21e` / pull/3918.
+- [x] **HYGIENE-2026-330** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-e21e` / pull/3918.
