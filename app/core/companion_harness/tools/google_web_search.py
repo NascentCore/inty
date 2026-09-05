@@ -6,7 +6,7 @@ import asyncio
 import os
 from typing import Any
 
-from app.utils.simple_http import http_get_json
+from app.core.simple_http import http_get_json
 
 _CSE_URL = "https://www.googleapis.com/customsearch/v1"
 _MAX_NUM = 10
