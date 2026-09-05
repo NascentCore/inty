@@ -709,9 +709,10 @@ Open PRs checked: #3869..#3918 (maintenance scope-accessor + collection-fix lane
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-6a7f`)
 
-- [ ] **HYGIENE-2026-331** `tools/tool_background.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl` (drop direct `TOOL_BACKGROUND_JSONL_REL` import).
-- [ ] **HYGIENE-2026-332** `companion/ai_private_prompt.py` — scope accessor for `ai_private_jsonl` reads/appends.
-- [ ] **HYGIENE-2026-333** `tools/companion_tool_runtime.py` — transcript rel guard + `user_md` / event JSONL paths via scope accessors.
-- [ ] **HYGIENE-2026-334** `tools/read_web_page.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md` for MEMORY.md read/write.
-- [ ] **HYGIENE-2026-335** `memory/client_time_from_memory_store.py` — scope accessor for USER.md timezone read.
-- [ ] **HYGIENE-2026-336** `memory/retrieval.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md` for transcript window spec.
+- [x] **HYGIENE-2026-331** `tools/tool_background.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl` (drop direct `TOOL_BACKGROUND_JSONL_REL` import). Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-332** `companion/ai_private_prompt.py` — scope accessor for `ai_private_jsonl` reads/appends. Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-333** `tools/companion_tool_runtime.py` — transcript rel guard + `user_md` / event JSONL paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-334** `tools/read_web_page.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md` for MEMORY.md read/write. Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-335** `memory/client_time_from_memory_store.py` — scope accessor for USER.md timezone read. Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-336** `memory/retrieval.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md` for transcript window spec. Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
+- [x] **HYGIENE-2026-337** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker for companion_tool_runtime tests). Fixed in `cursor/agent-maintenance-tasks-6a7f` / pull/3920.
