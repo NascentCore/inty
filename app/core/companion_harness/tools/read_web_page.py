@@ -20,6 +20,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
 _MAX_HTML_BYTES = 2_000_000
 _DEFAULT_BULLETS = 10
 _MIN_BULLETS = 3
