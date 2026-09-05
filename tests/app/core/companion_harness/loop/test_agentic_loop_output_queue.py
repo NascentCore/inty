@@ -146,7 +146,6 @@ def _loop_context(
         openai_tools = ({"type": "function", "function": {"name": "noop"}},)
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     return AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
         openai_tools=openai_tools,
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
         execution=loop_execution_for_track(
@@ -185,7 +184,6 @@ def _dual_llm_loop_context(
 
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     return AgenticLoopContext(
-        openai_messages=({"role": "user", "content": "hi"},),
         openai_tools=(),
         companion_turn_track=companion_turn_track,
         execution=loop_execution_for_track(
