@@ -145,7 +145,6 @@ class BootstrapUserChatPlugin:
         )
         execution = _loop_execution_policy(p)
         loop_context = build_bootstrap_user_chat_loop_context(
-            messages=p.messages,
             tools_for_turn=p.tools_for_turn,
             repository_only_store_text=p.repository_only_store_text,
             trace_id=p.trace_id,
@@ -207,7 +206,6 @@ class SettledUserChatPlugin:
                     tail_splice_thoughts=p.ai_private_splice_plan.thoughts,
                 )
                 loop_context = build_settled_user_chat_loop_context(
-                    messages=p.messages,
                     tools_for_turn=p.tools_for_turn,
                     repository_only_store_text=p.repository_only_store_text,
                     trace_id=p.trace_id,
@@ -260,7 +258,6 @@ class SettledUserChatPlugin:
                 )
                 tool_msgs = prompt_messages_to_openai_dicts(tool_plan.messages)
                 loop_context = build_settled_dual_llm_user_chat_loop_context(
-                    messages=p.messages,
                     tools_for_turn=p.tools_for_turn,
                     repository_only_store_text=p.repository_only_store_text,
                     trace_id=p.trace_id,
@@ -299,7 +296,6 @@ class ImplicitSignOnGreetingPlugin:
             tools=(),
         )
         loop_context = build_implicit_sign_on_greeting_loop_context(
-            messages=p.messages,
             repository_only_store_text=p.repository_only_store_text,
             trace_id=p.trace_id,
             user_text=p.user_text,
@@ -333,7 +329,6 @@ class InnerTickChatOnlyPlugin:
         )
         loop_context = build_inner_tick_chat_only_loop_context(
             track=p.track,
-            messages=p.messages,
             repository_only_store_text=p.repository_only_store_text,
             trace_id=p.trace_id,
             user_text=p.user_text,
@@ -367,7 +362,6 @@ class InnerTickToolLoopPlugin:
         )
         loop_context = build_inner_tick_tool_loop_context(
             track=p.track,
-            messages=p.messages,
             tools_for_turn=p.tools_for_turn,
             repository_only_store_text=p.repository_only_store_text,
             trace_id=p.trace_id,

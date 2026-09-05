@@ -122,7 +122,6 @@ def _appender(store: MemoryStore) -> _UserVisibleOutputAppender:
 def _common_context_kwargs(store: MemoryStore) -> dict:
     _ = store
     return dict(
-        messages=_messages(),
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
