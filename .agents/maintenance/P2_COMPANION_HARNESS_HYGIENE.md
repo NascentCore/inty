@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-05 scan (cron)
+
+Source: open PR overlap check (#3869..#3918 claim HYGIENE-2026-182..330 scope-accessor / google_web_search / audit-delete batches; #3834 TrackSystemRecipe, #3837 user simulator — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; production modules still import `*_REL` path constants directly where `MemoryStoreScopePaths` accessors exist (`tool_background`, `ai_private_prompt`, `companion_tool_runtime`, `read_web_page`, `client_time_from_memory_store`, `retrieval`).
+
+Open PRs checked: #3869..#3918 (maintenance scope-accessor + collection-fix lane), #3834, #3837 — HYGIENE-2026-182..330 claimed; tasks below are new 331+ lane.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-6a7f`)
+
+- [ ] **HYGIENE-2026-331** `tools/tool_background.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl` (drop direct `TOOL_BACKGROUND_JSONL_REL` import).
+- [ ] **HYGIENE-2026-332** `companion/ai_private_prompt.py` — scope accessor for `ai_private_jsonl` reads/appends.
+- [ ] **HYGIENE-2026-333** `tools/companion_tool_runtime.py` — transcript rel guard + `user_md` / event JSONL paths via scope accessors.
+- [ ] **HYGIENE-2026-334** `tools/read_web_page.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md` for MEMORY.md read/write.
+- [ ] **HYGIENE-2026-335** `memory/client_time_from_memory_store.py` — scope accessor for USER.md timezone read.
+- [ ] **HYGIENE-2026-336** `memory/retrieval.py` — `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md` for transcript window spec.
