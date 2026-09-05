@@ -25,8 +25,8 @@ from app.core.companion_harness.companion.transcript_anchor import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    AI_PRIVATE_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 AI_PRIVATE_SURFACED_KIND: Literal["surfaced"] = "surfaced"
@@ -142,7 +142,7 @@ def _parse_ai_private_jsonl_objects(
 
 def load_ai_private_thoughts(store: MemoryStore) -> list[AiPrivateThought]:
     """Load non-surfaced structured thoughts from ``ai_private.jsonl``."""
-    raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
+    raw = store.read_document_if_exists(DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl)
     if not raw or not raw.strip():
         return []
     thoughts, surfaced, _legacy = _parse_ai_private_jsonl_objects(raw)
@@ -151,7 +151,7 @@ def load_ai_private_thoughts(store: MemoryStore) -> list[AiPrivateThought]:
 
 def load_ai_private_index(store: MemoryStore) -> dict[str, AiPrivateThought]:
     """Map thought uuid → row (includes surfaced thoughts for manifest hydrate)."""
-    raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
+    raw = store.read_document_if_exists(DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl)
     if not raw or not raw.strip():
         return {}
     thoughts, _surfaced, _legacy = _parse_ai_private_jsonl_objects(raw)
@@ -165,7 +165,7 @@ def mark_ai_private_surfaced(store: MemoryStore, uuids: list[str]) -> None:
         assert thought_uuid.strip()
         marker = AiPrivateSurfacedMarker(ref_uuid=thought_uuid.strip(), ts=now)
         store.append_jsonl_record(
-            AI_PRIVATE_JSONL_REL,
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl,
             marker.model_dump(mode="json"),
         )
 
@@ -185,7 +185,7 @@ def append_ai_private_thought(
         after_user_msg_uuid=after_user_msg_uuid,
     )
     store.append_jsonl_record(
-        AI_PRIVATE_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl,
         thought.model_dump(mode="json", exclude_none=True),
     )
     return thought
@@ -214,7 +214,7 @@ def get_ai_private_jsonl_text_for_prompt(
     store: MemoryStore, *, max_chars: int = AI_PRIVATE_INJECT_MAX_CHARS
 ) -> str:
     """Plain lines for MONOLOG system injection (unsurfaced + legacy rows)."""
-    raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
+    raw = store.read_document_if_exists(DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl)
     if not raw or not raw.strip():
         return ""
     thoughts, surfaced, legacy_lines = _parse_ai_private_jsonl_objects(raw)

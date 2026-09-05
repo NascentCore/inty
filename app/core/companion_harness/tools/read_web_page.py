@@ -17,7 +17,9 @@ from bs4 import BeautifulSoup
 
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import MEMORY_MD_REL
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 _MAX_HTML_BYTES = 2_000_000
 _DEFAULT_BULLETS = 10
 _MIN_BULLETS = 3
@@ -132,7 +134,8 @@ def _append_memory_block(
     title: str,
     bullets: list[str],
 ) -> None:
-    prev = store.read_document_if_exists(MEMORY_MD_REL) or ""
+    memory_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md
+    prev = store.read_document_if_exists(memory_rel) or ""
     ts = utc_iso_ts()
     block_lines = [
         f"### Web snapshot · read_web_page · {ts}",
@@ -145,7 +148,7 @@ def _append_memory_block(
         block_lines.append(f"  - {b}")
     block = "\n".join(block_lines)
     merged = prev.rstrip() + "\n\n" + block + "\n"
-    store.write_document(MEMORY_MD_REL, merged)
+    store.write_document(memory_rel, merged)
 
 
 def run_read_web_page_sync(
@@ -208,7 +211,8 @@ def run_read_web_page_sync(
     except OSError as exc:
         return f"ERROR: could not write MEMORY.md: {exc}"
 
-    memory_note = f"Memory: appended this snapshot to `{MEMORY_MD_REL}`."
+    memory_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md
+    memory_note = f"Memory: appended this snapshot to `{memory_rel}`."
     return _build_summary_markdown(
         title, bullets, url.strip(), memory_note=memory_note
     )

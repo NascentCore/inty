@@ -101,12 +101,8 @@ from .companion_tool_definitions import (
     _EMPTY_DESCRIPTION_OVERRIDES,
     openai_tools_for_names,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    LIVING_SPHERE_UPDATES_JSONL_REL,
-    TECHNO_CORE_EVENTS_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.user_md_identity import (
     USER_PROFILE_SECTION,
@@ -245,10 +241,10 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     Known template fields (name/gender/age/etc.) are filled inline; other labels are appended as dated bullets.
     items: each entry contains label and value (both non-empty short text).
     """
-    rel = USER_MD_REL
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md
     prev = store.read_document_if_exists(rel)
     if prev is None:
-        return f"ERROR: missing {USER_MD_REL!r}"
+        return f"ERROR: missing {rel!r}"
     today = date.today().isoformat()
     inline_values: dict[str, str] = {}
     append_bullets: list[str] = []
@@ -277,7 +273,7 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
         parts.append(f"filled {len(inline_values)} template slot(s)")
     if append_bullets:
         parts.append(f"appended {len(append_bullets)} line(s)")
-    return f"OK {'; '.join(parts)} in {USER_MD_REL}"
+    return f"OK {'; '.join(parts)} in {rel}"
 
 
 def tool_memory_store_list_paths(
@@ -377,7 +373,8 @@ def tool_memory_store_write_document(
     st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
-    if rel in (TRANSCRIPT_JSONL_REL, TRANSCRIPT_INNER_TICK_JSONL_REL):
+    scope_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    if rel in (scope_paths.transcript, scope_paths.transcript_inner_tick):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err
@@ -457,7 +454,7 @@ def tool_techno_core_record_event(
         return f"ERROR: {exc}"
 
     store.append_jsonl_record(
-        TECHNO_CORE_EVENTS_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.techno_core_events_jsonl,
         event.model_dump(mode="json"),
     )
     return f"OK recorded techno_core event_id={event.event_id}"
@@ -490,7 +487,7 @@ def tool_living_sphere_record_update(
     except ValidationError as exc:
         return f"ERROR: {exc}"
     store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl,
         update.model_dump(mode="json"),
     )
     return f"OK recorded update_id={update.update_id}"
