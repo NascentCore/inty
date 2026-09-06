@@ -17,8 +17,8 @@ import time
 from dataclasses import dataclass
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from .models import (
     ChatMessage,
@@ -85,7 +85,9 @@ def _monolog_transcript_messages(store: MemoryStore) -> list[ChatMessage]:
     """``transcript.jsonl`` rows with trailing presence user lines stripped (monolog gate view)."""
     return transcript_without_trailing_presence_signals(
         load_transcript_projection_from_store(
-            store, TRANSCRIPT_JSONL_REL, TranscriptProjection.USER_VISIBLE
+            store,
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+            TranscriptProjection.USER_VISIBLE,
         )
     )
 

@@ -37,14 +37,8 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     context_mode_for_session_intent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    BOOTSTRAP_MD_REL,
-    BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
-    CONTEXT_JSON_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
@@ -58,8 +52,8 @@ from .models import ContextMeta
 
 # Seed-only rels from canonical MemDoc path constants (canonical path constants).
 _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS: Final[tuple[str, ...]] = (
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md,
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS.soul,
 )
 
 _INTERACTIVE_TEMPLATE_RELS: Final[tuple[str, ...]] = tuple(
@@ -102,7 +96,9 @@ def build_bootstrap_tool_call_section() -> str:
 def load_bootstrap_spec_text() -> str:
     """Load the internal bootstrap procedure injected into bootstrap turns."""
 
-    return load_template_seed_text(BOOTSTRAP_MD_REL).rstrip()
+    return load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.bootstrap_md
+    ).rstrip()
 
 
 def load_bootstrap_telegram_profile_slice_text() -> str:
@@ -116,7 +112,9 @@ def load_bootstrap_telegram_profile_slice_text() -> str:
     Tools, profile fields, and completion rules remain in the shared bootstrap procedure.
     """
 
-    return load_template_seed_text(BOOTSTRAP_TELEGRAM_PROFILE_MD_REL).rstrip()
+    return load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.bootstrap_telegram_profile_md
+    ).rstrip()
 
 
 def profile_collection_active(*, context: ContextMeta) -> bool:
@@ -178,7 +176,7 @@ def tool_companion_bootstrap_user_interactive_complete(
     ``ERROR`` status string because the LLM tool loop consumes the result text.
     """
 
-    rel = CONTEXT_JSON_REL
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
     st = store
     raw_body = st.read_document_if_exists(rel)
     if raw_body is None or not raw_body.strip():
@@ -231,7 +229,7 @@ def tool_companion_set_experience_profile(
     """Persist ``experience_directives`` and mapped ``context_mode`` in ``context.json``."""
 
     normalized = context_mode_for_session_intent(tool_input.experience_intent)
-    rel_ctx = CONTEXT_JSON_REL
+    rel_ctx = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
     st = store
     raw_body = st.read_document_if_exists(rel_ctx)
     if raw_body is None or not str(raw_body).strip():
