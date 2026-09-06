@@ -709,9 +709,9 @@ Open PRs checked: #3881..#3920 (`cursor/agent-maintenance-tasks-*` scope-path / 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-7e4a`)
 
-- [ ] **HYGIENE-2026-337** `companion/proactive_chat.py` — `transcript` scope accessor
-- [ ] **HYGIENE-2026-338** `companion/inner_tick_schedule.py` — `transcript` scope accessor
-- [ ] **HYGIENE-2026-339** `companion/manager.py` — `context_json` scope accessor
-- [ ] **HYGIENE-2026-340** `companion/bootstrap.py` — `context_json` + template seed rels via scope accessors
-- [ ] **HYGIENE-2026-341** `tools/companion_user_feedback.py` — snapshot MemDoc/JSONL paths via scope accessors
-- [ ] **HYGIENE-2026-342** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-337** `companion/proactive_chat.py` — `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
+- [x] **HYGIENE-2026-338** `companion/inner_tick_schedule.py` — `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
+- [x] **HYGIENE-2026-339** `companion/manager.py` — `context_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
+- [x] **HYGIENE-2026-340** `companion/bootstrap.py` — `context_json` + template seed rels via scope accessors. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
+- [x] **HYGIENE-2026-341** `tools/companion_user_feedback.py` — snapshot MemDoc/JSONL paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
+- [x] **HYGIENE-2026-342** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-7e4a` / pull/3921.
