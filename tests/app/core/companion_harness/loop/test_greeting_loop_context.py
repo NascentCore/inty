@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.core.companion_harness.companion.models import CompanionTurnTrack
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -79,7 +79,7 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         user_text="",
         ts_user=ts,
         user_msg_uuid="u1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
+        transcript_rel=DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
