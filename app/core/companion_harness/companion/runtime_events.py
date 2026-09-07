@@ -27,10 +27,10 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANION_RUNTIME_EVENTS_JSONL_REL,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 from .utc import utc_iso_ts
 
@@ -82,7 +82,9 @@ def build_ws_conn_dropped_runtime_event_record(
 
 def append_runtime_event(store: MemoryStore, record: dict[str, Any]) -> None:
     """Append one JSON object as a single line (JSONL) via MemoryStore."""
-    store.append_jsonl_record(COMPANION_RUNTIME_EVENTS_JSONL_REL, record)
+    store.append_jsonl_record(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl, record
+    )
     kind = str(record.get("kind") or "")
     tid = str(record.get("trace_id") or "").strip()
     uid = str(record.get("user_msg_uuid") or "").strip()
@@ -102,7 +104,9 @@ def read_runtime_events(
     limit: int = 20,
 ) -> list[dict[str, Any]]:
     """Return up to ``limit`` newest events (by ``ts`` descending)."""
-    raw = store.read_document_if_exists(COMPANION_RUNTIME_EVENTS_JSONL_REL)
+    raw = store.read_document_if_exists(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl
+    )
     if not raw:
         return []
     rows: list[dict[str, Any]] = []
