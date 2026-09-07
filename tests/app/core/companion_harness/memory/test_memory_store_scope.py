@@ -49,6 +49,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    _CORE_COMPANION_TEMPLATE_ATTRS,
     _CORE_COMPANION_TEMPLATE_REL_PATHS,
     _PACKAGE_PROMPT_SEED_FILES,
     _REQUIRED_FILES_ATTR,
@@ -124,6 +125,14 @@ def test_core_companion_template_rel_paths_match_scope_path_accessors() -> None:
             p.channels_md,
             p.companionship_md,
         }
+    )
+    assert accessor_rels == frozenset(_CORE_COMPANION_TEMPLATE_REL_PATHS)
+
+
+def test_core_companion_template_attrs_match_scope_path_accessors() -> None:
+    p = MemoryStoreScopePaths()
+    accessor_rels = frozenset(
+        getattr(p, attr) for attr in _CORE_COMPANION_TEMPLATE_ATTRS
     )
     assert accessor_rels == frozenset(_CORE_COMPANION_TEMPLATE_REL_PATHS)
 

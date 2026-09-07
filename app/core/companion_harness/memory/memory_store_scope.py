@@ -299,6 +299,16 @@ _REQUIRED_FILES_ATTR = (
     "transcript",
 )
 
+_CORE_COMPANION_TEMPLATE_ATTRS: Final[tuple[str, ...]] = (
+    "identity",
+    "soul",
+    "style_md",
+    "user_md",
+    "memory_md",
+    "channels_md",
+    "companionship_md",
+)
+
 
 def is_scope_initialized_in_store(store: MemoryStore) -> bool:
     """True when the five-piece exists in MemoryStore (production: DB-backed)."""
@@ -337,7 +347,9 @@ def ensure_template_seeded_core_documents_in_store(store: MemoryStore) -> None:
     Does not touch transcript.jsonl; ``ensure_minimal_documents_in_store`` creates an
     empty transcript when the five-piece is not yet satisfied.
     """
-    for rel in _CORE_COMPANION_TEMPLATE_REL_PATHS:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    for attr in _CORE_COMPANION_TEMPLATE_ATTRS:
+        rel = getattr(paths, attr)
         body = store.read_document_if_exists(rel)
         if body is None or not body.strip():
             store.write_document(rel, load_template_seed_text(rel))
