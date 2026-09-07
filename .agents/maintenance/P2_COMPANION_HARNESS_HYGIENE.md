@@ -709,9 +709,9 @@ Open PRs checked: #3869..#3921 (`cursor/agent-maintenance-tasks-*` scope-path / 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-70b4`)
 
-- [ ] **HYGIENE-2026-343** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
-- [ ] **HYGIENE-2026-344** `tools/test_google_web_search.py` — import smoke for `google_web_search` module.
-- [ ] **HYGIENE-2026-345** `companion/runtime_events.py` — `companion_runtime_events_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-346** `companion/ai_private_prompt.py` — `ai_private_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-347** `memory/client_time_from_memory_store.py` — `user_md` scope accessor.
-- [ ] **HYGIENE-2026-348** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-343** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
+- [x] **HYGIENE-2026-344** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
+- [x] **HYGIENE-2026-345** `companion/runtime_events.py` — `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
+- [x] **HYGIENE-2026-346** `companion/ai_private_prompt.py` — `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
+- [x] **HYGIENE-2026-347** `memory/client_time_from_memory_store.py` — `user_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
+- [x] **HYGIENE-2026-348** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-70b4` / pull/3922.
