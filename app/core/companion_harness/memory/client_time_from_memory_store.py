@@ -10,9 +10,9 @@ per-user TZ is reliable.
 from __future__ import annotations
 
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from loguru import logger
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
