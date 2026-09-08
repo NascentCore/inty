@@ -709,8 +709,8 @@ Open PRs checked: #3920 (`cursor/agent-maintenance-tasks-6a7f`), #3921 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-69fe`)
 
-- [ ] **HYGIENE-2026-349** #3413: `living_sphere_curator.py` — `living_sphere_md` + `living_sphere_updates_jsonl` scope accessors. Claimed `cursor/agent-maintenance-tasks-69fe`.
-- [ ] **HYGIENE-2026-350** #3413: `memory/test_living_sphere_curator.py` — seed/read via scope accessors. Claimed `cursor/agent-maintenance-tasks-69fe`.
-- [ ] **HYGIENE-2026-351** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Claimed `cursor/agent-maintenance-tasks-69fe`.
-- [ ] **HYGIENE-2026-352** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Claimed `cursor/agent-maintenance-tasks-69fe`.
-- [ ] **HYGIENE-2026-353** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Claimed `cursor/agent-maintenance-tasks-69fe`.
+- [x] **HYGIENE-2026-349** #3413: `living_sphere_curator.py` — `living_sphere_md` + `living_sphere_updates_jsonl` scope accessors. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-350** #3413: `memory/test_living_sphere_curator.py` — seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-351** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-352** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-353** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
