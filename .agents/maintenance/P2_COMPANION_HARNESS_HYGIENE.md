@@ -709,8 +709,8 @@ Open PRs checked: #3869..#3924 (`cursor/agent-maintenance-tasks-*` scope-path ba
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-b7c2`)
 
-- [ ] **HYGIENE-2026-354** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Claimed in `cursor/agent-maintenance-tasks-b7c2`.
-- [ ] **HYGIENE-2026-355** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Claimed in `cursor/agent-maintenance-tasks-b7c2`.
-- [ ] **HYGIENE-2026-356** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Claimed in `cursor/agent-maintenance-tasks-b7c2`.
-- [ ] **HYGIENE-2026-357** `runtime/test_dreaming_batch.py` — smoke `save_dreaming_state` / `load_dreaming_state` use `dreaming_state_json` scope accessor. Claimed in `cursor/agent-maintenance-tasks-b7c2`.
-- [ ] **HYGIENE-2026-358** `memory/test_companion_scope_listing.py` — assert scope listing `CONTEXT_JSON` kind matches `context_json` scope accessor. Claimed in `cursor/agent-maintenance-tasks-b7c2`.
+- [x] **HYGIENE-2026-354** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-b7c2` / pull/3927.
+- [x] **HYGIENE-2026-355** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-b7c2` / pull/3927.
+- [x] **HYGIENE-2026-356** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-b7c2` / pull/3927.
+- [x] **HYGIENE-2026-357** `runtime/test_dreaming_batch.py` — smoke `save_dreaming_state` / `load_dreaming_state` use `dreaming_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-b7c2` / pull/3927.
+- [x] **HYGIENE-2026-358** `memory/test_companion_scope_listing.py` — assert scope listing `CONTEXT_JSON` kind matches `context_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-b7c2` / pull/3927.
