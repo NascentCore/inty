@@ -2,13 +2,22 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.core.companion_harness.companion.dreaming import (
     DreamingCandidate,
+    DreamingState,
     DreamingTranscriptBoundaryMismatchError,
+    load_dreaming_state,
+    save_dreaming_state,
+)
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.dreaming_observability import (
     DreamingBatchOutcome,
@@ -217,3 +226,25 @@ def test_run_dreaming_batch_if_due_skips_when_advisory_lock_busy() -> None:
         record_obs.call_args.kwargs["outcome"]
         == DreamingBatchOutcome.ADVISORY_LOCK_BUSY
     )
+
+
+def test_dreaming_state_roundtrip_uses_scope_accessor_path(
+    tmp_path: Path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("dream-batch", "agent", tmp_path.name),
+        repository=None,
+    )
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json
+    processed_at = datetime(2026, 1, 2, 12, 0, tzinfo=UTC)
+    state = DreamingState(
+        last_processed_main_line_count=3,
+        last_processed_main_uuid="u-3",
+        last_processed_at=processed_at,
+        last_processed_latest_user_ts=processed_at,
+        last_processed_calendar_date=processed_at.date(),
+    )
+    save_dreaming_state(store, state)
+    loaded = load_dreaming_state(store)
+    assert loaded == state
+    assert store.read_document_if_exists(rel) is not None
