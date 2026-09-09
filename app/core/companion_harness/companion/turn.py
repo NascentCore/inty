@@ -37,7 +37,7 @@ import threading
 import time
 import uuid
 from contextlib import nullcontext
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Any
 
 from loguru import logger
@@ -119,6 +119,285 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 
+def _enrich_companion_turn_deps_client_time(
+    deps: CompanionTurnDeps,
+) -> CompanionTurnDeps:
+    """Resolve client time from MemoryStore and merge into runtime_context."""
+    runtime_context = deps.runtime_context
+    incoming_bundle = runtime_context.implicit_signal_bundle
+    resolved_time = resolve_client_time(
+        store=deps.store,
+        incoming=(
+            incoming_bundle.client_time if incoming_bundle is not None else None
+        ),
+        default_user_time_zone=(
+            global_config_loaded_from_config_yaml.agent.companion_harness.default_user_time_zone
+        ),
+    )
+    if resolved_time is None:
+        return deps
+    if incoming_bundle is None:
+        enriched_bundle = ImplicitSignalBundle(client_time=resolved_time)
+    else:
+        enriched_bundle = incoming_bundle.model_copy(
+            update={"client_time": resolved_time}
+        )
+    runtime_context = replace(
+        runtime_context,
+        implicit_signal_bundle=enriched_bundle,
+    )
+    return replace(deps, runtime_context=runtime_context)
+
+
+def _resolve_tool_bg_idle_wait_timeout_sec(llm_client: Any) -> float:
+    raw_idle_timeout = (
+        os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip() or ""
+    )
+    try:
+        return (
+            float(raw_idle_timeout)
+            if raw_idle_timeout
+            else float(llm_client.config.async_chat_front_timeout_sec)
+        )
+    except ValueError:
+        return float(llm_client.config.async_chat_front_timeout_sec)
+
+
+async def _maybe_await_tool_bg_idle_before_turn(
+    *,
+    track: CompanionTurnTrack,
+    tool_bg_idle_event: threading.Event | None,
+    idle_wait_timeout_sec: float,
+    scope_registry_key: str,
+) -> None:
+    """User/proactive turns skip idle wait so burst USER_CHAT is not starved."""
+    match track:
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+        ):
+            return
+        case _:
+            await _await_tool_background_idle_if_configured(
+                tool_bg_idle_event,
+                idle_wait_timeout_sec=idle_wait_timeout_sec,
+                scope_registry_key=scope_registry_key,
+            )
+
+
+@dataclass(frozen=True)
+class _CompanionTurnAgenticLoopOutcome:
+    assistant_text: str
+    significance_meta: dict[str, Any] | None
+    turn_recall: str | None
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    skip_final_transcript_assistant_row: bool
+    last_interim_assistant_msg_uuid: str | None
+    output_message_ids: tuple[str, ...]
+    tool_background_started: bool
+    skip_proactive_assistant_transcript_row: bool
+
+
+async def _run_companion_turn_agentic_loop(
+    *,
+    prepared: CompanionTurnLoopInput,
+    langsmith_parent_run_enabled: bool,
+    inner_tick_turn: bool,
+    route_inner_activity: Any,
+    implicit_sign_on_turn: bool,
+    store: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    track: CompanionTurnTrack,
+    t_loop_start: float,
+) -> _CompanionTurnAgenticLoopOutcome:
+    langsmith_slice = prepared.langsmith_slice
+    langsmith_trace_acc = prepared.langsmith_trace_id
+    langsmith_llm_run_acc = prepared.langsmith_run_id
+    langsmith_parent_run = create_companion_turn_root_run(
+        inty_trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_model=prepared.llm_client.resolve_model("chat"),
+        tool_model=prepared.llm_client.resolve_model("tool"),
+        user_id=prepared.loaded_state.context.user_id,
+        companion_id=prepared.loaded_state.context.companion_id,
+        parent_run_enabled=langsmith_parent_run_enabled,
+        companion_turn_track=track,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_activity=(
+            route_inner_activity if inner_tick_turn else None
+        ),
+        implicit_user_signed_on=implicit_sign_on_turn,
+        transcript_newest_message_uuid=(
+            transcript_tail_message_uuid(store) if inner_tick_turn else None
+        ),
+        langsmith_slice=langsmith_slice,
+    )
+    _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
+    if _ls_tid:
+        langsmith_trace_acc = _ls_tid
+    if langsmith_parent_run is not None:
+        logger.debug(
+            "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
+            "user_msg_uuid={} ls_trace_id={} defer_end_to_bg={}",
+            trace_id,
+            user_msg_uuid,
+            _ls_tid,
+            bool(prepared.tools_for_turn),
+        )
+
+    _langsmith_cm = nullcontext()
+    if langsmith_parent_run is not None:
+        from langsmith.run_helpers import tracing_context
+
+        _langsmith_cm = tracing_context(parent=langsmith_parent_run)
+
+    last_text = ""
+    skip_proactive_assistant_transcript_row = False
+    significance_meta: dict[str, Any] | None = None
+    turn_recall: str | None = None
+    skip_final_transcript_assistant_row = False
+    last_interim_assistant_msg_uuid: str | None = None
+    output_message_ids: tuple[str, ...] = ()
+    tool_background_started = False
+
+    with _langsmith_cm:
+        try:
+            plugin = resolve_agentic_loop(track=track)
+            loop_out = await plugin.run(prepared)
+            last_text = loop_out.assistant_text
+            significance_meta = loop_out.significance_meta
+            turn_recall = loop_out.turn_recall
+            langsmith_trace_acc = loop_out.langsmith_trace_id
+            langsmith_llm_run_acc = loop_out.langsmith_run_id
+            skip_final_transcript_assistant_row = (
+                loop_out.skip_final_transcript_assistant_row
+            )
+            last_interim_assistant_msg_uuid = (
+                loop_out.last_interim_assistant_msg_uuid
+            )
+            output_message_ids = loop_out.output_message_ids
+            tool_background_started = loop_out.tool_background_started
+            if (
+                companion_turn_track_skips_empty_proactive_assistant_row(track)
+                and not last_text.strip()
+            ):
+                skip_proactive_assistant_transcript_row = True
+            logger.info(
+                "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
+                track.value,
+                (time.perf_counter() - t_loop_start) * 1000.0,
+            )
+        except BaseException as exc:
+            end_companion_turn_root_run_safe(
+                langsmith_parent_run,
+                error=repr(exc),
+                ls_end_source="run_turn_sync_exc",
+            )
+            raise
+        else:
+            end_companion_turn_root_run_safe(
+                langsmith_parent_run, ls_end_source="run_turn_sync_ok"
+            )
+
+    return _CompanionTurnAgenticLoopOutcome(
+        assistant_text=last_text,
+        significance_meta=significance_meta,
+        turn_recall=turn_recall,
+        langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
+        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+        output_message_ids=output_message_ids,
+        tool_background_started=tool_background_started,
+        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
+    )
+
+
+def _persist_companion_turn_transcript(
+    *,
+    store: Any,
+    track: CompanionTurnTrack,
+    implicit_sign_on_turn: bool,
+    in_turn_sync_persisted_transcript: bool,
+    tail_user_messages: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    ts_user: Any,
+    ai_private_splice_plan: AiPrivateSplicePlan,
+    last_text: str,
+    skip_final_transcript_assistant_row: bool,
+    skip_proactive_assistant_transcript_row: bool,
+    last_interim_assistant_msg_uuid: str | None,
+    significance_meta: dict[str, Any] | None,
+    turn_recall: str | None,
+    inner_tick_turn: bool,
+) -> str:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    rel_tr = (
+        paths.transcript
+        if implicit_sign_on_turn
+        else transcript_relative_path_for_turn_persistence(track=track)
+    )
+    assistant_msg_uuid = (
+        last_interim_assistant_msg_uuid
+        if last_interim_assistant_msg_uuid is not None
+        else str(uuid.uuid4())
+    )
+    if implicit_sign_on_turn:
+        sign_on_row: dict[str, Any] = {
+            "role": "user",
+            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
+            "ts": ts_user.isoformat(),
+            "uuid": user_msg_uuid,
+            "trace_id": trace_id,
+            "implicit_user_signed_on": True,
+        }
+        store.append_jsonl_record(rel_tr, sign_on_row)
+    elif not in_turn_sync_persisted_transcript:
+        append_turn_track_tail_user_transcript_rows(
+            store,
+            rel_tr,
+            tail_user_messages=tail_user_messages,
+            trace_id=trace_id,
+            track=track,
+        )
+    last_text = strip_leading_transcript_timestamp_prefixes(last_text)
+    persist_ai_private_splice_if_applicable(
+        AiPrivateSplicePersistInput(
+            store=store,
+            transcript_relative_path=rel_tr,
+            track=track,
+            splice_plan=ai_private_splice_plan,
+            user_msg_uuid=user_msg_uuid,
+            assistant_text=last_text,
+            skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+        )
+    )
+    if (
+        not skip_final_transcript_assistant_row
+        and not skip_proactive_assistant_transcript_row
+    ):
+        append_transcript_assistant_row(
+            store,
+            rel_tr,
+            TranscriptAssistantRowBuildInput(
+                content=last_text,
+                uuid=assistant_msg_uuid,
+                reply_to=user_msg_uuid,
+                trace_id=trace_id,
+                source="inner_tick" if inner_tick_turn else "chat",
+                significance_perception=significance_meta,
+                turn_recall=turn_recall,
+            ),
+            ts=utc_iso_ts(),
+        )
+    return assistant_msg_uuid
+
+
 async def _await_tool_background_idle_if_configured(
     tool_bg_idle_event: threading.Event | None,
     *,
@@ -166,34 +445,13 @@ async def _run_companion_turn_core(
 
     返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
     """
+    deps = _enrich_companion_turn_deps_client_time(deps)
     store = deps.store
     llm_client = deps.llm_client
     transcript_compaction = deps.transcript_compaction
     transcript_llm_window_max_messages = deps.transcript_llm_window_max_messages
     repository_only_store_text = deps.repository_only_store_text
     runtime_context = deps.runtime_context
-    incoming_bundle = runtime_context.implicit_signal_bundle
-    resolved_time = resolve_client_time(
-        store=store,
-        incoming=(
-            incoming_bundle.client_time if incoming_bundle is not None else None
-        ),
-        default_user_time_zone=(
-            global_config_loaded_from_config_yaml.agent.companion_harness.default_user_time_zone
-        ),
-    )
-    if resolved_time is not None:
-        if incoming_bundle is None:
-            enriched_bundle = ImplicitSignalBundle(client_time=resolved_time)
-        else:
-            enriched_bundle = incoming_bundle.model_copy(
-                update={"client_time": resolved_time}
-            )
-        runtime_context = replace(
-            runtime_context,
-            implicit_signal_bundle=enriched_bundle,
-        )
-        deps = replace(deps, runtime_context=runtime_context)
     preset_user_msg_uuid = deps.preset_user_msg_uuid
     langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled
     tool_bg_idle_event = deps.tool_bg_idle_event
@@ -231,35 +489,13 @@ async def _run_companion_turn_core(
         llm_client.resolve_model("tool"),
     )
 
-    raw_idle_timeout = (
-        os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip() or ""
+    idle_wait_timeout_sec = _resolve_tool_bg_idle_wait_timeout_sec(llm_client)
+    await _maybe_await_tool_bg_idle_before_turn(
+        track=track,
+        tool_bg_idle_event=tool_bg_idle_event,
+        idle_wait_timeout_sec=idle_wait_timeout_sec,
+        scope_registry_key=store.scope.registry_key(),
     )
-    try:
-        idle_wait_timeout_sec = (
-            float(raw_idle_timeout)
-            if raw_idle_timeout
-            else float(llm_client.config.async_chat_front_timeout_sec)
-        )
-    except ValueError:
-        idle_wait_timeout_sec = float(
-            llm_client.config.async_chat_front_timeout_sec
-        )
-    # User/proactive turns skip idle wait so burst USER_CHAT is not starved (#3123 / #3113).
-    # Dreaming / LivingSphere curator still wait on ``tool_bg_idle`` before compact.
-    match track:
-        case (
-            CompanionTurnTrack.USER_CHAT
-            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
-            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-        ):
-            pass
-        case _:
-            await _await_tool_background_idle_if_configured(
-                tool_bg_idle_event,
-                idle_wait_timeout_sec=idle_wait_timeout_sec,
-                scope_registry_key=store.scope.registry_key(),
-            )
 
     loaded_state = load_companion_turn_state(
         store=store,
@@ -331,17 +567,10 @@ async def _run_companion_turn_core(
     langsmith_trace_acc = ""
     langsmith_llm_run_acc = ""
 
-    last_text = ""
-    skip_proactive_assistant_transcript_row = False
-    significance_meta: dict[str, Any] | None = None
-    turn_recall: str | None = None
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
-    in_turn_sync_persisted_transcript = False
-    output_message_ids: tuple[str, ...] = ()
-    tool_background_started = False
+    in_turn_sync_persisted_transcript = (
+        companion_turn_track_syncs_transcript_in_agentic_loop(track)
+    )
     t_loop = time.perf_counter()
-
     llm_runtime_bind_token: (
         contextvars.Token[LlmRuntimeEventBind | None] | None
     ) = None
@@ -356,192 +585,83 @@ async def _run_companion_turn_core(
                 scene=None,
             )
         )
-
-        langsmith_slice = deps.langsmith_slice
-
-        langsmith_parent_run = create_companion_turn_root_run(
-            inty_trace_id=trace_id,
+        transcript_rel = (
+            paths.transcript
+            if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            else transcript_relative_path_for_turn_persistence(track=track)
+        )
+        prepared = CompanionTurnLoopInput(
+            store=store,
+            llm_client=llm_client,
+            track=track,
+            runtime_flags=runtime_flags,
+            loaded_state=loaded_state,
+            prompt_plan=prompt_plan,
+            tail_user_messages=tail_user_messages,
+            messages=messages,
+            tools_for_turn=tools_for_turn,
+            trace_id=trace_id,
+            langsmith_slice=deps.langsmith_slice,
+            runtime_context=runtime_context,
+            agentic_output_queue=agentic_output_queue,
+            user_message_batch=user_message_batch,
+            user_text=user_text,
+            ts_user=ts_user,
             user_msg_uuid=user_msg_uuid,
-            chat_model=llm_client.resolve_model("chat"),
-            tool_model=llm_client.resolve_model("tool"),
-            user_id=context.user_id,
-            companion_id=context.companion_id,
-            parent_run_enabled=langsmith_parent_run_enabled,
-            companion_turn_track=track,
+            ai_private_splice_plan=ai_private_splice_plan,
+            repository_only_store_text=repository_only_store_text,
+            langsmith_trace_id=langsmith_trace_acc,
+            langsmith_run_id=langsmith_llm_run_acc,
+            transcript_rel=transcript_rel,
+        )
+        loop_outcome = await _run_companion_turn_agentic_loop(
+            prepared=prepared,
+            langsmith_parent_run_enabled=langsmith_parent_run_enabled,
             inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=(
-                route_inner_activity if inner_tick_turn else None
-            ),
-            implicit_user_signed_on=implicit_sign_on_turn,
-            transcript_newest_message_uuid=(
-                transcript_tail_message_uuid(store) if inner_tick_turn else None
-            ),
-            langsmith_slice=langsmith_slice,
+            route_inner_activity=route_inner_activity,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            store=store,
+            trace_id=trace_id,
+            user_msg_uuid=user_msg_uuid,
+            track=track,
+            t_loop_start=t_loop,
         )
-        _ls_tid = companion_turn_langsmith_parent_trace_id_str(
-            langsmith_parent_run
-        )
-        if _ls_tid:
-            langsmith_trace_acc = _ls_tid
-        if langsmith_parent_run is not None:
-            logger.debug(
-                "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
-                "user_msg_uuid={} ls_trace_id={} defer_end_to_bg={}",
-                trace_id,
-                user_msg_uuid,
-                _ls_tid,
-                bool(tools_for_turn),
-            )
-
-        _langsmith_cm = nullcontext()
-        if langsmith_parent_run is not None:
-            from langsmith.run_helpers import tracing_context
-
-            _langsmith_cm = tracing_context(parent=langsmith_parent_run)
-
-        with _langsmith_cm:
-            try:
-                in_turn_sync_persisted_transcript = (
-                    companion_turn_track_syncs_transcript_in_agentic_loop(track)
-                )
-                transcript_rel = (
-                    paths.transcript
-                    if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-                    else transcript_relative_path_for_turn_persistence(
-                        track=track,
-                    )
-                )
-                prepared = CompanionTurnLoopInput(
-                    store=store,
-                    llm_client=llm_client,
-                    track=track,
-                    runtime_flags=runtime_flags,
-                    loaded_state=loaded_state,
-                    prompt_plan=prompt_plan,
-                    tail_user_messages=tail_user_messages,
-                    messages=messages,
-                    tools_for_turn=tools_for_turn,
-                    trace_id=trace_id,
-                    langsmith_slice=langsmith_slice,
-                    runtime_context=runtime_context,
-                    agentic_output_queue=agentic_output_queue,
-                    user_message_batch=user_message_batch,
-                    user_text=user_text,
-                    ts_user=ts_user,
-                    user_msg_uuid=user_msg_uuid,
-                    ai_private_splice_plan=ai_private_splice_plan,
-                    repository_only_store_text=repository_only_store_text,
-                    langsmith_trace_id=langsmith_trace_acc,
-                    langsmith_run_id=langsmith_llm_run_acc,
-                    transcript_rel=transcript_rel,
-                )
-                plugin = resolve_agentic_loop(track=track)
-                loop_out = await plugin.run(prepared)
-                last_text = loop_out.assistant_text
-                significance_meta = loop_out.significance_meta
-                turn_recall = loop_out.turn_recall
-                langsmith_trace_acc = loop_out.langsmith_trace_id
-                langsmith_llm_run_acc = loop_out.langsmith_run_id
-                skip_final_transcript_assistant_row = (
-                    loop_out.skip_final_transcript_assistant_row
-                )
-                last_interim_assistant_msg_uuid = (
-                    loop_out.last_interim_assistant_msg_uuid
-                )
-                output_message_ids = loop_out.output_message_ids
-                tool_background_started = loop_out.tool_background_started
-                if (
-                    companion_turn_track_skips_empty_proactive_assistant_row(
-                        track
-                    )
-                    and not last_text.strip()
-                ):
-                    skip_proactive_assistant_transcript_row = True
-                logger.info(
-                    "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
-                    track.value,
-                    (time.perf_counter() - t_loop) * 1000.0,
-                )
-            except BaseException as exc:
-                end_companion_turn_root_run_safe(
-                    langsmith_parent_run,
-                    error=repr(exc),
-                    ls_end_source="run_turn_sync_exc",
-                )
-                raise
-            else:
-                end_companion_turn_root_run_safe(
-                    langsmith_parent_run, ls_end_source="run_turn_sync_ok"
-                )
     finally:
         if llm_runtime_bind_token is not None:
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
-    # 持久化 transcript
-    # TODO(code-path-straightforwardness): refactor this function to accept — #3516
-    # the transcript path (resolved at the time when turn track is determined) as an argument.
-    rel_tr = (
-        paths.transcript
-        if implicit_sign_on_turn
-        else transcript_relative_path_for_turn_persistence(
-            track=track,
-        )
+    last_text = loop_outcome.assistant_text
+    significance_meta = loop_outcome.significance_meta
+    turn_recall = loop_outcome.turn_recall
+    langsmith_trace_acc = loop_outcome.langsmith_trace_id
+    langsmith_llm_run_acc = loop_outcome.langsmith_run_id
+    skip_final_transcript_assistant_row = (
+        loop_outcome.skip_final_transcript_assistant_row
     )
-    assistant_msg_uuid = (
-        last_interim_assistant_msg_uuid
-        if last_interim_assistant_msg_uuid is not None
-        else str(uuid.uuid4())
+    skip_proactive_assistant_transcript_row = (
+        loop_outcome.skip_proactive_assistant_transcript_row
     )
-    if implicit_sign_on_turn:
-        sign_on_row: dict[str, Any] = {
-            "role": "user",
-            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
-            "ts": ts_user.isoformat(),
-            "uuid": user_msg_uuid,
-            "trace_id": trace_id,
-            "implicit_user_signed_on": True,
-        }
-        store.append_jsonl_record(rel_tr, sign_on_row)
-    elif not in_turn_sync_persisted_transcript:
-        append_turn_track_tail_user_transcript_rows(
-            store,
-            rel_tr,
-            tail_user_messages=tail_user_messages,
-            trace_id=trace_id,
-            track=track,
-        )
-    last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    persist_ai_private_splice_if_applicable(
-        AiPrivateSplicePersistInput(
-            store=store,
-            transcript_relative_path=rel_tr,
-            track=track,
-            splice_plan=ai_private_splice_plan,
-            user_msg_uuid=user_msg_uuid,
-            assistant_text=last_text,
-            skip_final_transcript_assistant_row=(
-                skip_final_transcript_assistant_row
-            ),
-        )
+    output_message_ids = loop_outcome.output_message_ids
+    tool_background_started = loop_outcome.tool_background_started
+
+    assistant_msg_uuid = _persist_companion_turn_transcript(
+        store=store,
+        track=track,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
+        tail_user_messages=tail_user_messages,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        ts_user=ts_user,
+        ai_private_splice_plan=ai_private_splice_plan,
+        last_text=last_text,
+        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
+        last_interim_assistant_msg_uuid=loop_outcome.last_interim_assistant_msg_uuid,
+        significance_meta=significance_meta,
+        turn_recall=turn_recall,
+        inner_tick_turn=inner_tick_turn,
     )
-    if (
-        not skip_final_transcript_assistant_row
-        and not skip_proactive_assistant_transcript_row
-    ):
-        append_transcript_assistant_row(
-            store,
-            rel_tr,
-            TranscriptAssistantRowBuildInput(
-                content=last_text,
-                uuid=assistant_msg_uuid,
-                reply_to=user_msg_uuid,
-                trace_id=trace_id,
-                source="inner_tick" if inner_tick_turn else "chat",
-                significance_perception=significance_meta,
-                turn_recall=turn_recall,
-            ),
-            ts=utc_iso_ts(),
-        )
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
