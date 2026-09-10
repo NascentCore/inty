@@ -709,8 +709,8 @@ Open PRs checked: #3869..#3927 (`cursor/agent-maintenance-tasks-*` batches) — 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a648`)
 
-- [ ] **HYGIENE-2026-359** `memory/test_companion_scope_listing.py` — `TRANSCRIPT` kind matches `transcript` scope accessor.
-- [ ] **HYGIENE-2026-360** `memory/test_companion_scope_listing.py` — `TRANSCRIPT_INNER_TICK` kind matches `transcript_inner_tick` scope accessor.
-- [ ] **HYGIENE-2026-361** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor.
-- [ ] **HYGIENE-2026-362** `companion/test_schedule_queue.py` — `_schedule_document_rel()` matches `schedule_queue_json` accessor + document-kind roundtrip.
-- [ ] **HYGIENE-2026-363** `memory/test_transcript_compaction.py` — compaction state roundtrip uses `context_compaction_state_json` scope accessor.
+- [x] **HYGIENE-2026-359** `memory/test_companion_scope_listing.py` — `TRANSCRIPT` kind matches `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-a648` / pull/3930.
+- [x] **HYGIENE-2026-360** `memory/test_companion_scope_listing.py` — `TRANSCRIPT_INNER_TICK` kind matches `transcript_inner_tick` scope accessor. Fixed in `cursor/agent-maintenance-tasks-a648` / pull/3930.
+- [x] **HYGIENE-2026-361** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-a648` / pull/3930.
+- [x] **HYGIENE-2026-362** `companion/test_schedule_queue.py` — `_schedule_document_rel()` matches `schedule_queue_json` accessor + document-kind roundtrip. Fixed in `cursor/agent-maintenance-tasks-a648` / pull/3930.
+- [x] **HYGIENE-2026-363** `memory/test_transcript_compaction.py` — compaction state roundtrip uses `context_compaction_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-a648` / pull/3930.
