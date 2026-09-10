@@ -100,7 +100,7 @@ class InnerTickActivity(StrEnum):
     activity for clean track separation (scheduled reminder vs idle proactive).
 
     ``AUTONOMY`` reads/writes ``LIFE_CURRENTS.md`` with an open tool set; never delivers
-    client-visible NL or images (see ``inner_tick_activity_suppresses_user_delivery``).
+    client-visible NL or images (see ``inner_tick_spec`` ``suppresses_user_delivery``).
     ``MONOLOG`` (awake inner-tick turn) still uses a restricted tool set today;
     ``TODO(narrow-monolog)`` targets ai_private / transcript reorg only (#3375).
     ``DREAMING`` (sleeping batch, not a turn) **rolls up the whole day**: user-visible
@@ -113,17 +113,6 @@ class InnerTickActivity(StrEnum):
     PROACTIVE_CHAT = "proactive_chat"
     AUTONOMY = "autonomy"
     DREAMING = "dreaming"
-
-
-def inner_tick_activity_suppresses_user_delivery(
-    inner_tick_activity: InnerTickActivity,
-) -> bool:
-    """True when inner-tick ``tool_background`` must not push NL or images to the client.
-
-    TODO(cross-track-image-delivery): AUTONOMY may generate_images silently; proactive — #3285
-    / user-chat need a coherent path to reference or deliver those assets. #3285 #3468
-    """
-    return inner_tick_activity == InnerTickActivity.AUTONOMY
 
 
 class InnerTickThrottleKind(StrEnum):
@@ -303,7 +292,6 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
 _MEMORY_DAILY_GIST_INJECT_MAX_CHARS = 12_000
-OUTPUT_FORMAT_IM_DM_MD = OUTPUT_FORMAT_IM_DM_MD_REL
 
 
 def _read_memory_document_optional(
