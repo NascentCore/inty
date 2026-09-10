@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-10 scan (cron)
+
+Source: open PR overlap check (#3869..#3927 scope-path accessors + google_web_search — no overlap with tasks below); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; scope listing / schedule / compaction tests lack accessor↔document-kind smoke coverage beyond CONTEXT_JSON (#3927).
+
+Open PRs checked: #3869..#3927 (`cursor/agent-maintenance-tasks-*` batches) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-a648`)
+
+- [ ] **HYGIENE-2026-359** `memory/test_companion_scope_listing.py` — `TRANSCRIPT` kind matches `transcript` scope accessor.
+- [ ] **HYGIENE-2026-360** `memory/test_companion_scope_listing.py` — `TRANSCRIPT_INNER_TICK` kind matches `transcript_inner_tick` scope accessor.
+- [ ] **HYGIENE-2026-361** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor.
+- [ ] **HYGIENE-2026-362** `companion/test_schedule_queue.py` — `_schedule_document_rel()` matches `schedule_queue_json` accessor + document-kind roundtrip.
+- [ ] **HYGIENE-2026-363** `memory/test_transcript_compaction.py` — compaction state roundtrip uses `context_compaction_state_json` scope accessor.
