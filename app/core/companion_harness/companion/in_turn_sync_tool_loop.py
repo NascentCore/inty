@@ -1,7 +1,7 @@
 """Shared result type and round budget for the single-LLM in-turn tool loop.
 
 The single-LLM user turn is executed inline by ``AgenticLoop`` (see
-``loop/agentic_loop.py`` ``_run_prompt_plan_tool_loop``) over a ``PromptPlan``.
+``loop/prompt_plan_tool_loop.py`` ``run_prompt_plan_tool_loop``) over a ``PromptPlan``.
 This module only carries the value types shared between that loop and its callers:
 ``InTurnSyncToolLoopResult`` (the per-turn outcome) and the bootstrap round budget.
 """
