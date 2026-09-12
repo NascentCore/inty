@@ -709,9 +709,9 @@ Open PRs checked: #3930 (`cursor/agent-maintenance-tasks-a648`), #3932 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-21bc`)
 
-- [ ] **HYGIENE-2026-371** `memory/test_companion_scope_listing.py` — `COMPANION_USER_FEEDBACK_JSONL` kind matches `companion_user_feedback_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-372** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor.
-- [ ] **HYGIENE-2026-373** `memory/test_companion_scope_listing.py` — `GENERATED_IMAGES_INDEX_JSONL` kind matches `generated_images_index_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-374** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE_UPDATES_JSONL` kind matches `living_sphere_updates_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-375** `memory/test_companion_scope_listing.py` — `TECHNO_CORE_EVENTS_JSONL` kind matches `techno_core_events_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-376** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor.
+- [x] **HYGIENE-2026-371** `memory/test_companion_scope_listing.py` — `COMPANION_USER_FEEDBACK_JSONL` kind matches `companion_user_feedback_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-372** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-373** `memory/test_companion_scope_listing.py` — `GENERATED_IMAGES_INDEX_JSONL` kind matches `generated_images_index_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-374** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE_UPDATES_JSONL` kind matches `living_sphere_updates_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-375** `memory/test_companion_scope_listing.py` — `TECHNO_CORE_EVENTS_JSONL` kind matches `techno_core_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-376** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
