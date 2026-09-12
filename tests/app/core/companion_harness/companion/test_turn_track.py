@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.companion_harness.companion.inner_tick_kind import (
+    inner_tick_spec,
+)
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    InnerTickActivity,
-    inner_tick_activity_suppresses_user_delivery,
+    InnerTickKind,
 )
 from app.core.companion_harness.companion.turn_track import (
     companion_turn_track_syncs_transcript_in_agentic_loop,
@@ -16,12 +18,8 @@ from app.core.companion_harness.companion.turn_track import (
 
 
 def test_autonomy_suppresses_user_delivery() -> None:
-    assert inner_tick_activity_suppresses_user_delivery(
-        InnerTickActivity.AUTONOMY
-    )
-    assert not inner_tick_activity_suppresses_user_delivery(
-        InnerTickActivity.MONOLOG
-    )
+    assert inner_tick_spec(InnerTickKind.AUTONOMY).suppresses_user_delivery
+    assert not inner_tick_spec(InnerTickKind.MONOLOG).suppresses_user_delivery
 
 
 def test_autonomy_langsmith_lane_groups_with_inner_tick() -> None:
