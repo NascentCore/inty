@@ -201,7 +201,14 @@ class _CompanionTurnAgenticLoopOutcome:
     skip_proactive_assistant_transcript_row: bool
 
 
-async def _run_companion_turn_agentic_loop(
+@dataclass(frozen=True)
+class _CompanionTurnLangsmithParentBinding:
+    parent_run: Any | None
+    langsmith_trace_id: str
+    tracing_context: Any
+
+
+def _bind_companion_turn_langsmith_parent(
     *,
     prepared: CompanionTurnLoopInput,
     langsmith_parent_run_enabled: bool,
@@ -212,11 +219,7 @@ async def _run_companion_turn_agentic_loop(
     trace_id: str,
     user_msg_uuid: str,
     track: CompanionTurnTrack,
-    t_loop_start: float,
-) -> _CompanionTurnAgenticLoopOutcome:
-    langsmith_slice = prepared.langsmith_slice
-    langsmith_trace_acc = prepared.langsmith_trace_id
-    langsmith_llm_run_acc = prepared.langsmith_run_id
+) -> _CompanionTurnLangsmithParentBinding:
     langsmith_parent_run = create_companion_turn_root_run(
         inty_trace_id=trace_id,
         user_msg_uuid=user_msg_uuid,
@@ -234,8 +237,9 @@ async def _run_companion_turn_agentic_loop(
         transcript_newest_message_uuid=(
             transcript_tail_message_uuid(store) if inner_tick_turn else None
         ),
-        langsmith_slice=langsmith_slice,
+        langsmith_slice=prepared.langsmith_slice,
     )
+    langsmith_trace_acc = prepared.langsmith_trace_id
     _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
     if _ls_tid:
         langsmith_trace_acc = _ls_tid
@@ -248,73 +252,93 @@ async def _run_companion_turn_agentic_loop(
             _ls_tid,
             bool(prepared.tools_for_turn),
         )
-
-    _langsmith_cm = nullcontext()
+    tracing_context = nullcontext()
     if langsmith_parent_run is not None:
-        from langsmith.run_helpers import tracing_context
+        from langsmith.run_helpers import tracing_context as langsmith_tracing_context
 
-        _langsmith_cm = tracing_context(parent=langsmith_parent_run)
+        tracing_context = langsmith_tracing_context(parent=langsmith_parent_run)
+    return _CompanionTurnLangsmithParentBinding(
+        parent_run=langsmith_parent_run,
+        langsmith_trace_id=langsmith_trace_acc,
+        tracing_context=tracing_context,
+    )
 
-    last_text = ""
+
+async def _invoke_companion_turn_plugin(
+    *,
+    prepared: CompanionTurnLoopInput,
+    track: CompanionTurnTrack,
+    t_loop_start: float,
+) -> _CompanionTurnAgenticLoopOutcome:
+    plugin = resolve_agentic_loop(track=track)
+    loop_out = await plugin.run(prepared)
     skip_proactive_assistant_transcript_row = False
-    significance_meta: dict[str, Any] | None = None
-    turn_recall: str | None = None
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
-    output_message_ids: tuple[str, ...] = ()
-    tool_background_started = False
+    if (
+        companion_turn_track_skips_empty_proactive_assistant_row(track)
+        and not loop_out.assistant_text.strip()
+    ):
+        skip_proactive_assistant_transcript_row = True
+    logger.info(
+        "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
+        track.value,
+        (time.perf_counter() - t_loop_start) * 1000.0,
+    )
+    return _CompanionTurnAgenticLoopOutcome(
+        assistant_text=loop_out.assistant_text,
+        significance_meta=loop_out.significance_meta,
+        turn_recall=loop_out.turn_recall,
+        langsmith_trace_id=loop_out.langsmith_trace_id,
+        langsmith_run_id=loop_out.langsmith_run_id,
+        skip_final_transcript_assistant_row=loop_out.skip_final_transcript_assistant_row,
+        last_interim_assistant_msg_uuid=loop_out.last_interim_assistant_msg_uuid,
+        output_message_ids=loop_out.output_message_ids,
+        tool_background_started=loop_out.tool_background_started,
+        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
+    )
 
-    with _langsmith_cm:
+
+async def _run_companion_turn_agentic_loop(
+    *,
+    prepared: CompanionTurnLoopInput,
+    langsmith_parent_run_enabled: bool,
+    inner_tick_turn: bool,
+    route_inner_activity: Any,
+    implicit_sign_on_turn: bool,
+    store: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    track: CompanionTurnTrack,
+    t_loop_start: float,
+) -> _CompanionTurnAgenticLoopOutcome:
+    binding = _bind_companion_turn_langsmith_parent(
+        prepared=prepared,
+        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
+        inner_tick_turn=inner_tick_turn,
+        route_inner_activity=route_inner_activity,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        store=store,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        track=track,
+    )
+    with binding.tracing_context:
         try:
-            plugin = resolve_agentic_loop(track=track)
-            loop_out = await plugin.run(prepared)
-            last_text = loop_out.assistant_text
-            significance_meta = loop_out.significance_meta
-            turn_recall = loop_out.turn_recall
-            langsmith_trace_acc = loop_out.langsmith_trace_id
-            langsmith_llm_run_acc = loop_out.langsmith_run_id
-            skip_final_transcript_assistant_row = (
-                loop_out.skip_final_transcript_assistant_row
-            )
-            last_interim_assistant_msg_uuid = (
-                loop_out.last_interim_assistant_msg_uuid
-            )
-            output_message_ids = loop_out.output_message_ids
-            tool_background_started = loop_out.tool_background_started
-            if (
-                companion_turn_track_skips_empty_proactive_assistant_row(track)
-                and not last_text.strip()
-            ):
-                skip_proactive_assistant_transcript_row = True
-            logger.info(
-                "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
-                track.value,
-                (time.perf_counter() - t_loop_start) * 1000.0,
+            return await _invoke_companion_turn_plugin(
+                prepared=prepared,
+                track=track,
+                t_loop_start=t_loop_start,
             )
         except BaseException as exc:
             end_companion_turn_root_run_safe(
-                langsmith_parent_run,
+                binding.parent_run,
                 error=repr(exc),
                 ls_end_source="run_turn_sync_exc",
             )
             raise
         else:
             end_companion_turn_root_run_safe(
-                langsmith_parent_run, ls_end_source="run_turn_sync_ok"
+                binding.parent_run, ls_end_source="run_turn_sync_ok"
             )
-
-    return _CompanionTurnAgenticLoopOutcome(
-        assistant_text=last_text,
-        significance_meta=significance_meta,
-        turn_recall=turn_recall,
-        langsmith_trace_id=langsmith_trace_acc,
-        langsmith_run_id=langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
-        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
-        output_message_ids=output_message_ids,
-        tool_background_started=tool_background_started,
-        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
-    )
 
 
 def _persist_companion_turn_transcript(
