@@ -709,11 +709,11 @@ Open PRs checked: #3930 (`cursor/agent-maintenance-tasks-a648`), #3932 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-8f3c`)
 
-- [ ] **HYGIENE-2026-377** `memory/test_companion_scope_listing.py` — `IDENTITY` kind matches `identity` scope accessor.
-- [ ] **HYGIENE-2026-378** `memory/test_companion_scope_listing.py` — `SOUL` kind matches `soul` scope accessor.
-- [ ] **HYGIENE-2026-379** `memory/test_companion_scope_listing.py` — `STYLE` kind matches `style_md` scope accessor.
-- [ ] **HYGIENE-2026-380** `memory/test_companion_scope_listing.py` — `USER` kind matches `user_md` scope accessor.
-- [ ] **HYGIENE-2026-381** `memory/test_companion_scope_listing.py` — `MEMORY` kind matches `memory_md` scope accessor.
-- [ ] **HYGIENE-2026-382** `memory/test_companion_scope_listing.py` — `LIFE_CURRENTS` kind matches `life_currents_md` scope accessor.
-- [ ] **HYGIENE-2026-383** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker).
-- [ ] **HYGIENE-2026-384** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-377** `memory/test_companion_scope_listing.py` — `IDENTITY` kind matches `identity` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-378** `memory/test_companion_scope_listing.py` — `SOUL` kind matches `soul` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-379** `memory/test_companion_scope_listing.py` — `STYLE` kind matches `style_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-380** `memory/test_companion_scope_listing.py` — `USER` kind matches `user_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-381** `memory/test_companion_scope_listing.py` — `MEMORY` kind matches `memory_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-382** `memory/test_companion_scope_listing.py` — `LIFE_CURRENTS` kind matches `life_currents_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-383** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
+- [x] **HYGIENE-2026-384** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-8f3c` / pull/3938.
