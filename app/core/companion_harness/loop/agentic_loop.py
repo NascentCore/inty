@@ -32,6 +32,7 @@ from app.core.agentic_companion.types import (
 )
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
+    DualLlmForegroundChatResult,
     run_dual_llm_foreground_chat,
 )
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -590,6 +591,97 @@ async def _run_chat_only_prompt_plan(
     )
 
 
+async def _run_dual_llm_foreground_phase(
+    *,
+    context: AgenticLoopContext,
+    llm_client: LlmClient,
+    appender: _UserVisibleOutputAppender,
+) -> DualLlmForegroundChatResult:
+    """Foreground dual-LLM envelope chat and optional user-visible foreground line."""
+    assert (
+        context.dual_llm_chat_msgs is not None
+        and context.dual_llm_tool_msgs is not None
+    )
+    execution = context.execution
+    chat_msgs = list(context.dual_llm_chat_msgs)
+    tool_msgs = list(context.dual_llm_tool_msgs)
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=chat_msgs,
+        user_text=context.user_text,
+    )
+    chat_model = llm_client.resolve_model("chat")
+    fg_result = await run_dual_llm_foreground_chat(
+        DualLlmForegroundChatInput(
+            llm_client=llm_client,
+            chat_msgs=chat_msgs,
+            tool_msgs=tool_msgs,
+            chat_model=chat_model,
+            langsmith_slice=context.langsmith.turn_slice,
+            foreground_scene=execution.llm_scene.value,
+            high_reasoning=execution.high_reasoning,
+            trace_id=context.trace_id,
+            skip_foreground_envelope=execution.skip_foreground_envelope,
+            langsmith_trace_id=context.langsmith.trace_id,
+            langsmith_run_id=context.langsmith.run_id,
+        )
+    )
+    fg_text = fg_result.assistant_text.strip()
+    if fg_text:
+        await appender.append_visible_message(
+            kind=OutputMessageKind.USER_REPLY,
+            text=fg_text,
+            trace_id=context.trace_id,
+            langsmith_trace_id=fg_result.langsmith_trace_id,
+            langsmith_run_id=fg_result.langsmith_run_id,
+            turn_recall=fg_result.turn_recall,
+            tool_background_started=bool(fg_result.tool_msgs_for_bg),
+        )
+    return fg_result
+
+
+async def _run_dual_llm_tool_background_phase(
+    *,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: LlmClient,
+    appender: _UserVisibleOutputAppender,
+    fg_result: DualLlmForegroundChatResult,
+) -> bool:
+    """Tool-path background loop; returns whether tool background was started."""
+    event_sink = _DomainToolBackgroundAppendSink(
+        appender=appender,
+        trace_id=context.trace_id,
+    )
+    assert context.companion_turn_track is not None
+    execution = context.execution
+    tool_model = llm_client.resolve_model("tool")
+    tool_background_started = bool(fg_result.tool_msgs_for_bg)
+    await run_tool_background_loop(
+        memory_store=store,
+        request_messages=list(fg_result.tool_msgs_for_bg),
+        tool_model=tool_model,
+        user_msg_uuid=context.user_msg_uuid,
+        trace_id=context.trace_id,
+        tools=list(context.openai_tools),
+        on_event=event_sink,
+        execute_tool_call_fn=execute_tool_call,
+        client=llm_client.sync_client_for_route("tool"),
+        chat_completion_sync=llm_client.chat_completions_sync,
+        write_allowlist=execution.write_allowlist,
+        repository_only_store_text=context.repository_only_store_text,
+        suppress_user_delivery=execution.suppresses_user_delivery,
+        skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
+        activity_label=execution.tool_bg_activity_label,
+        llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
+        runtime_context=context.runtime_context,
+        langsmith_slice=context.langsmith.turn_slice,
+        companion_turn_track=context.companion_turn_track,
+        force_tools_first_round=fg_result.force_tools_first_round,
+    )
+    await event_sink.flush()
+    return tool_background_started
+
+
 class AgenticLoop:
     """Executes one queue-served user turn for bootstrap or settled chat.
 
@@ -696,73 +788,18 @@ class AgenticLoop:
             store=self.store,
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
-        llm_client = self.legacy_llm_client
-        execution = context.execution
-        chat_msgs = list(context.dual_llm_chat_msgs)
-        tool_msgs = list(context.dual_llm_tool_msgs)
-        apply_agentic_loop_runtime_system_clauses(
-            openai_messages=chat_msgs,
-            user_text=context.user_text,
-        )
-        chat_model = llm_client.resolve_model("chat")
-        tool_model = llm_client.resolve_model("tool")
-
-        fg_result = await run_dual_llm_foreground_chat(
-            DualLlmForegroundChatInput(
-                llm_client=llm_client,
-                chat_msgs=chat_msgs,
-                tool_msgs=tool_msgs,
-                chat_model=chat_model,
-                langsmith_slice=context.langsmith.turn_slice,
-                foreground_scene=execution.llm_scene.value,
-                high_reasoning=execution.high_reasoning,
-                trace_id=context.trace_id,
-                skip_foreground_envelope=execution.skip_foreground_envelope,
-                langsmith_trace_id=context.langsmith.trace_id,
-                langsmith_run_id=context.langsmith.run_id,
-            )
-        )
-        fg_text = fg_result.assistant_text.strip()
-        if fg_text:
-            await appender.append_visible_message(
-                kind=OutputMessageKind.USER_REPLY,
-                text=fg_text,
-                trace_id=context.trace_id,
-                langsmith_trace_id=fg_result.langsmith_trace_id,
-                langsmith_run_id=fg_result.langsmith_run_id,
-                turn_recall=fg_result.turn_recall,
-                tool_background_started=bool(fg_result.tool_msgs_for_bg),
-            )
-        event_sink = _DomainToolBackgroundAppendSink(
+        fg_result = await _run_dual_llm_foreground_phase(
+            context=context,
+            llm_client=self.legacy_llm_client,
             appender=appender,
-            trace_id=context.trace_id,
         )
-
-        assert context.companion_turn_track is not None
-        tool_background_started = bool(fg_result.tool_msgs_for_bg)
-        await run_tool_background_loop(
-            memory_store=self.store,
-            request_messages=list(fg_result.tool_msgs_for_bg),
-            tool_model=tool_model,
-            user_msg_uuid=context.user_msg_uuid,
-            trace_id=context.trace_id,
-            tools=list(context.openai_tools),
-            on_event=event_sink,
-            execute_tool_call_fn=execute_tool_call,
-            client=llm_client.sync_client_for_route("tool"),
-            chat_completion_sync=llm_client.chat_completions_sync,
-            write_allowlist=execution.write_allowlist,
-            repository_only_store_text=context.repository_only_store_text,
-            suppress_user_delivery=execution.suppresses_user_delivery,
-            skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
-            activity_label=execution.tool_bg_activity_label,
-            llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-            runtime_context=context.runtime_context,
-            langsmith_slice=context.langsmith.turn_slice,
-            companion_turn_track=context.companion_turn_track,
-            force_tools_first_round=fg_result.force_tools_first_round,
+        tool_background_started = await _run_dual_llm_tool_background_phase(
+            store=self.store,
+            context=context,
+            llm_client=self.legacy_llm_client,
+            appender=appender,
+            fg_result=fg_result,
         )
-        await event_sink.flush()
         return AgenticLoopOutput(
             assistant_text=fg_result.assistant_text,
             significance_meta=fg_result.significance_meta,
