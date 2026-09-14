@@ -700,3 +700,19 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-14 scan (cron)
+
+Source: open PR overlap check (#3930..#3938 scope-listing batches — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — core MemDoc kinds CHANNELS/COMPANIONSHIP/TECHNO_CORE/LIVING_SPHERE/TOOLS + living-sphere curator JSON lack scope-listing smoke tests.
+
+Open PRs checked: #3930 (`HYGIENE-359..363`), #3932 (`HYGIENE-364..370`), #3935 (`HYGIENE-371..376`), #3938 (`HYGIENE-377..384`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-2564`)
+
+- [ ] **HYGIENE-2026-385** `memory/test_companion_scope_listing.py` — `CHANNELS` kind matches `channels_md` scope accessor
+- [ ] **HYGIENE-2026-386** `memory/test_companion_scope_listing.py` — `COMPANIONSHIP` kind matches `companionship_md` scope accessor
+- [ ] **HYGIENE-2026-387** `memory/test_companion_scope_listing.py` — `TECHNO_CORE` kind matches `techno_core_md` scope accessor
+- [ ] **HYGIENE-2026-388** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE` kind matches `living_sphere_md` scope accessor
+- [ ] **HYGIENE-2026-389** `memory/test_companion_scope_listing.py` — `TOOLS` kind matches `tools_md` scope accessor
+- [ ] **HYGIENE-2026-390** `memory/test_companion_scope_listing.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON` kind matches `living_sphere_curator_state_json` scope accessor
+- [ ] **HYGIENE-2026-391** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
