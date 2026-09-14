@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from app.core.agentic_companion.output_queue import (
@@ -53,7 +52,6 @@ class CompanionTurnLoopInput:
     agentic_output_queue: OutputQueue
     user_message_batch: UserMessageBatch | None
     user_text: str
-    ts_user: datetime
     user_msg_uuid: str
     ai_private_splice_plan: AiPrivateSplicePlan
     repository_only_store_text: bool
