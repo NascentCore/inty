@@ -77,7 +77,6 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="",
-        ts_user=ts,
         user_msg_uuid="u1",
         transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith_slice=CompanionTurnLangsmithSlice.app_default(),

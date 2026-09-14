@@ -86,7 +86,6 @@ def base_user_chat_loop_builder_kwargs() -> dict:
         "repository_only_store_text": False,
         "trace_id": "trace-1",
         "user_text": "hi",
-        "ts_user": ts_user,
         "user_msg_uuid": "user-msg-1",
         "tail_user_messages": (
             TurnTailUserMessage(

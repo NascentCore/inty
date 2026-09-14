@@ -157,7 +157,6 @@ def _loop_context(
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         tail_user_messages=_tail(),
         transcript_rel=TRANSCRIPT_JSONL_REL,
@@ -170,7 +169,6 @@ def _loop_context(
         after_tool_messages_appended=None,
         output_queue=output_queue,
         user_message_batch=batch,
-        context_meta=None,
         prompt_plan=_default_prompt_plan(),
     )
 
@@ -180,9 +178,6 @@ def _dual_llm_loop_context(
     output_queue: OutputQueue,
     companion_turn_track: CompanionTurnTrack,
 ) -> AgenticLoopContext:
-    from app.core.companion_harness.companion.models import ContextMeta
-    from app.core.companion_harness.prompting.bundle import PromptBundle
-
     batch = UserMessageBatch(batch_id="batch-1", message_ids=("input-1",))
     return AgenticLoopContext(
         openai_messages=({"role": "user", "content": "hi"},),
@@ -196,7 +191,6 @@ def _dual_llm_loop_context(
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         tail_user_messages=_tail(),
         transcript_rel=TRANSCRIPT_JSONL_REL,
@@ -211,13 +205,6 @@ def _dual_llm_loop_context(
         user_message_batch=batch,
         dual_llm_chat_msgs=({"role": "user", "content": "hi"},),
         dual_llm_tool_msgs=({"role": "user", "content": "hi"},),
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
     )
 
 

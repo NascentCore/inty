@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    ContextMeta,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     LangsmithLlmSource,
@@ -22,8 +21,6 @@ from app.core.companion_harness.loop.context import (
     build_settled_user_chat_loop_context,
 )
 from app.core.companion_harness.loop.track_policy import TRACK_POLICY
-from app.core.companion_harness.prompting.bundle import PromptBundle
-
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     base_user_chat_loop_builder_kwargs,
     loop_execution_for_track,
@@ -58,13 +55,6 @@ def test_settled_dual_llm_context_packages_prebuilt_stacks() -> None:
         **base_user_chat_loop_builder_kwargs(),
         dual_llm_chat_msgs=chat_msgs,
         dual_llm_tool_msgs=tool_msgs,
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
-        ),
-        context_meta=ContextMeta(),
         execution=loop_execution_for_track(
             track=CompanionTurnTrack.USER_CHAT,
             user_text="hi",
