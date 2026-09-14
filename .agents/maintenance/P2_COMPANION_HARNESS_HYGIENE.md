@@ -709,10 +709,10 @@ Open PRs checked: #3930 (`HYGIENE-359..363`), #3932 (`HYGIENE-364..370`), #3935 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-2564`)
 
-- [ ] **HYGIENE-2026-385** `memory/test_companion_scope_listing.py` — `CHANNELS` kind matches `channels_md` scope accessor
-- [ ] **HYGIENE-2026-386** `memory/test_companion_scope_listing.py` — `COMPANIONSHIP` kind matches `companionship_md` scope accessor
-- [ ] **HYGIENE-2026-387** `memory/test_companion_scope_listing.py` — `TECHNO_CORE` kind matches `techno_core_md` scope accessor
-- [ ] **HYGIENE-2026-388** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE` kind matches `living_sphere_md` scope accessor
-- [ ] **HYGIENE-2026-389** `memory/test_companion_scope_listing.py` — `TOOLS` kind matches `tools_md` scope accessor
-- [ ] **HYGIENE-2026-390** `memory/test_companion_scope_listing.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON` kind matches `living_sphere_curator_state_json` scope accessor
-- [ ] **HYGIENE-2026-391** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-385** `memory/test_companion_scope_listing.py` — `CHANNELS` kind matches `channels_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-386** `memory/test_companion_scope_listing.py` — `COMPANIONSHIP` kind matches `companionship_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-387** `memory/test_companion_scope_listing.py` — `TECHNO_CORE` kind matches `techno_core_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-388** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE` kind matches `living_sphere_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-389** `memory/test_companion_scope_listing.py` — `TOOLS` kind matches `tools_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-390** `memory/test_companion_scope_listing.py` — `COMPANION_LIVING_SPHERE_CURATOR_JSON` kind matches `living_sphere_curator_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
+- [x] **HYGIENE-2026-391** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-2564` / pull/3941.
