@@ -609,6 +609,283 @@ def _memory_store_write_document_allowlist_reject(
     return None
 
 
+def _parse_optional_positive_int_arg(
+    raw: Any,
+    *,
+    field_name: str,
+) -> tuple[int | None, str | None]:
+    if raw is None:
+        return None, None
+    if isinstance(raw, bool):
+        return None, f"{field_name} must be a positive integer or omitted"
+    if isinstance(raw, int):
+        return raw, None
+    if isinstance(raw, float) and raw.is_integer():
+        return int(raw), None
+    return None, f"{field_name} must be a positive integer or omitted"
+
+
+def _dispatch_schedule_task(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    raw_exec_time = arguments.get("exec_time_utc")
+    raw_task_text = arguments.get("task_text")
+    if not isinstance(raw_exec_time, str):
+        return "ERROR: exec_time_utc must be a string"
+    if not isinstance(raw_task_text, str):
+        return "ERROR: task_text must be a string"
+    try:
+        return tool_schedule_task(
+            store,
+            exec_time_utc=raw_exec_time,
+            task_text=raw_task_text,
+        )
+    except ValueError as exc:
+        return f"ERROR: {exc}"
+
+
+def _dispatch_companion_set_experience_profile(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    try:
+        tool_input = CompanionSetExperienceProfileToolInput.model_validate(
+            arguments
+        )
+    except ValidationError as exc:
+        return _companion_tool_validation_error_message(exc)
+    return tool_companion_set_experience_profile(store, tool_input)
+
+
+async def _dispatch_google_web_search(arguments: dict[str, Any]) -> str:
+    raw_q = arguments.get("query")
+    if not isinstance(raw_q, str):
+        return "ERROR: query must be a string"
+    n_opt, err = _parse_optional_positive_int_arg(
+        arguments.get("num_results"),
+        field_name="num_results",
+    )
+    if err:
+        return f"ERROR: {err}"
+    return await run_google_web_search(query=raw_q, num_results=n_opt)
+
+
+async def _dispatch_read_web_page(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    raw_u = arguments.get("url")
+    if not isinstance(raw_u, str):
+        return "ERROR: url must be a string"
+    mb_opt, err = _parse_optional_positive_int_arg(
+        arguments.get("max_bullets"),
+        field_name="max_bullets",
+    )
+    if err:
+        return f"ERROR: {err}"
+    return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
+
+
+async def _dispatch_generate_image(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    prompt = arguments.get("prompt")
+    if not isinstance(prompt, str):
+        return "ERROR: prompt must be a string"
+    if not prompt.strip():
+        return "ERROR: prompt must be non-empty"
+    image_size = arguments.get("image_size")
+    if image_size is not None and not isinstance(image_size, str):
+        return "ERROR: image_size must be a string or omitted"
+    image_size_s = image_size.strip() if isinstance(image_size, str) else None
+    if image_size_s == "":
+        image_size_s = None
+    n_steps, err = parse_optional_positive_int(
+        arguments.get("num_inference_steps"),
+        field_name="num_inference_steps",
+    )
+    if err:
+        return f"ERROR: {err}"
+    n_img, err2 = parse_optional_positive_int(
+        arguments.get("num_images"), field_name="num_images"
+    )
+    if err2:
+        return f"ERROR: {err2}"
+    if n_img is not None and n_img > MAX_NUM_IMAGES_PER_CALL:
+        return (
+            "ERROR: num_images must be at most "
+            f"{MAX_NUM_IMAGES_PER_CALL} per generate_image call"
+        )
+    from loguru import logger
+
+    t_img = time.perf_counter()
+    out = await run_generate_image_z_image_turbo(
+        store,
+        prompt=prompt,
+        image_size=image_size_s,
+        num_inference_steps=n_steps,
+        num_images=n_img,
+        persona_revision_id=current_persona_revision_id(store),
+    )
+    logger.info(
+        "tool generate_image wall_ms={:.0f} scope={} ok={}",
+        (time.perf_counter() - t_img) * 1000.0,
+        store.scope.registry_key(),
+        not out.startswith("ERROR:"),
+    )
+    return out
+
+
+def _resolve_modify_image_source(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> tuple[Path | None, str | None, str | None]:
+    """Return (source_path, source_url, error_message)."""
+    raw_path = arguments.get("source_image_relative_path")
+    raw_url = arguments.get("source_image_url")
+    if raw_path is not None and not isinstance(raw_path, str):
+        return None, None, (
+            "ERROR: source_image_relative_path must be a string or omitted"
+        )
+    if raw_url is not None and not isinstance(raw_url, str):
+        return None, None, "ERROR: source_image_url must be a string or omitted"
+    path_s = raw_path.strip() if isinstance(raw_path, str) else ""
+    url_s = raw_url.strip() if isinstance(raw_url, str) else ""
+    if path_s and url_s:
+        return (
+            None,
+            None,
+            "ERROR: use only one of source_image_relative_path or source_image_url, not both",
+        )
+    src_path: Path | None = None
+    if path_s:
+        try:
+            path_s = normalize_memory_store_relative_path(path_s)
+        except ValueError as exc:
+            return None, None, f"ERROR: {exc}"
+        asset = find_latest_asset_by_local_relative_path(store, path_s)
+        if asset is not None:
+            u = str(asset.get("gcs_http_url") or "").strip()
+            if u.startswith("http://") or u.startswith("https://"):
+                url_s = u
+            else:
+                return (
+                    None,
+                    None,
+                    f"ERROR: source image in index has no http(s) URL for {path_s!r}",
+                )
+        else:
+            return None, None, f"ERROR: source image not in index: {path_s!r}"
+    src_url_out: str | None = url_s if url_s else None
+    if src_path is None and src_url_out is None:
+        src_url_out = _latest_generated_image_http_url_from_index(store)
+        if src_url_out is None:
+            return (
+                None,
+                None,
+                "ERROR: modify_image requires source_image_relative_path or source_image_url; "
+                "no prior image URL in index",
+            )
+    return src_path, src_url_out, None
+
+
+async def _dispatch_modify_image(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    prompt = arguments.get("prompt")
+    if not isinstance(prompt, str):
+        return "ERROR: prompt must be a string"
+    if not prompt.strip():
+        return "ERROR: prompt must be non-empty"
+    src_path, src_url_out, src_err = _resolve_modify_image_source(store, arguments)
+    if src_err is not None:
+        return src_err
+    image_size = arguments.get("image_size")
+    if image_size is not None and not isinstance(image_size, str):
+        return "ERROR: image_size must be a string or omitted"
+    image_size_s = image_size.strip() if isinstance(image_size, str) else None
+    if image_size_s == "":
+        image_size_s = None
+    n_steps, err = parse_optional_positive_int(
+        arguments.get("num_inference_steps"),
+        field_name="num_inference_steps",
+    )
+    if err:
+        return f"ERROR: {err}"
+    strength, err_s = parse_optional_strength(arguments.get("strength"))
+    if err_s:
+        return f"ERROR: {err_s}"
+    from loguru import logger
+
+    t_img = time.perf_counter()
+    out = await run_modify_image_z_image_turbo(
+        store,
+        prompt=prompt,
+        source_path=src_path,
+        source_image_url=src_url_out,
+        image_size=image_size_s,
+        num_inference_steps=n_steps,
+        strength=strength,
+        persona_revision_id=current_persona_revision_id(store),
+    )
+    logger.info(
+        "tool modify_image wall_ms={:.0f} scope={} ok={}",
+        (time.perf_counter() - t_img) * 1000.0,
+        store.scope.registry_key(),
+        not out.startswith("ERROR:"),
+    )
+    return out
+
+
+def _dispatch_bootstrap_user_interactive_complete(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    raw_note = arguments.get("note")
+    if raw_note is not None and not isinstance(raw_note, str):
+        return "ERROR: note must be a string or omitted"
+    # TODO(#3535): profile_complete metrics / USER.md→DB backfill when write_document-only.
+    return tool_companion_bootstrap_user_interactive_complete(store, raw_note)
+
+
+async def _dispatch_companion_record_user_profile(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    try:
+        tool_input = CompanionRecordUserProfileToolInput.model_validate(arguments)
+    except ValidationError as exc:
+        return _companion_tool_validation_error_message(exc)
+    user_id = store.scope.user_id.strip()
+    if not user_id:
+        return "ERROR: missing user scope for companion_record_user_profile"
+    snapshot = tool_input.to_snapshot()
+    try:
+        async with AsyncSessionLocal() as db:
+            await persist_user_profile_snapshot(
+                db,
+                user_id=user_id,
+                snapshot=snapshot,
+                memory_store=store,
+            )
+    except ValueError as exc:
+        return f"ERROR: {exc}"
+    recorded = [
+        label
+        for label, val in (
+            ("gender", snapshot.gender),
+            ("age_group", snapshot.age_group),
+            ("location", snapshot.location),
+            ("iana_timezone", snapshot.iana_timezone),
+        )
+        if val is not None and val != ""
+    ]
+    return f"OK recorded user profile fields: {', '.join(recorded)}"
+
+
 async def _dispatch(
     store: MemoryStore,
     name: str,
@@ -636,239 +913,34 @@ async def _dispatch(
     )
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
-    if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
-        return tool_techno_core_record_event(store, arguments)
-    if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
-        return tool_living_sphere_record_update(store, arguments)
-    if name == AI_PRIVATE_APPEND_TOOL_NAME:
-        return tool_ai_private_append(store, arguments)
-    if name == "schedule_task":
-        raw_exec_time = arguments.get("exec_time_utc")
-        raw_task_text = arguments.get("task_text")
-        if not isinstance(raw_exec_time, str):
-            return "ERROR: exec_time_utc must be a string"
-        if not isinstance(raw_task_text, str):
-            return "ERROR: task_text must be a string"
-        try:
-            return tool_schedule_task(
-                store,
-                exec_time_utc=raw_exec_time,
-                task_text=raw_task_text,
-            )
-        except ValueError as exc:
-            return f"ERROR: {exc}"
-    if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
-        return tool_companion_record_user_feedback(store, arguments)
-    if name == "companion_set_experience_profile":
-        try:
-            tool_input = CompanionSetExperienceProfileToolInput.model_validate(
-                arguments
-            )
-        except ValidationError as exc:
-            return _companion_tool_validation_error_message(exc)
-        return tool_companion_set_experience_profile(store, tool_input)
-    if name == "google_web_search":
-        raw_q = arguments.get("query")
-        if not isinstance(raw_q, str):
-            return "ERROR: query must be a string"
-        n_raw = arguments.get("num_results")
-        n_opt: int | None
-        if n_raw is None:
-            n_opt = None
-        elif isinstance(n_raw, bool):
-            return "ERROR: num_results must be a positive integer or omitted"
-        elif isinstance(n_raw, int):
-            n_opt = n_raw
-        elif isinstance(n_raw, float) and n_raw.is_integer():
-            n_opt = int(n_raw)
-        else:
-            return "ERROR: num_results must be a positive integer or omitted"
-        return await run_google_web_search(query=raw_q, num_results=n_opt)
-    if name == "read_web_page":
-        raw_u = arguments.get("url")
-        if not isinstance(raw_u, str):
-            return "ERROR: url must be a string"
-        mb_raw = arguments.get("max_bullets")
-        mb_opt: int | None
-        if mb_raw is None:
-            mb_opt = None
-        elif isinstance(mb_raw, bool):
-            return "ERROR: max_bullets must be a positive integer or omitted"
-        elif isinstance(mb_raw, int):
-            mb_opt = mb_raw
-        elif isinstance(mb_raw, float) and mb_raw.is_integer():
-            mb_opt = int(mb_raw)
-        else:
-            return "ERROR: max_bullets must be a positive integer or omitted"
-        return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
-    # TODO(#3675): dispatch browse_web via Browserbase adapter — epic #3672.
-    if name == "generate_image":
-        prompt = arguments.get("prompt")
-        if not isinstance(prompt, str):
-            return "ERROR: prompt must be a string"
-        if not prompt.strip():
-            return "ERROR: prompt must be non-empty"
-        image_size = arguments.get("image_size")
-        if image_size is not None and not isinstance(image_size, str):
-            return "ERROR: image_size must be a string or omitted"
-        image_size_s = (
-            image_size.strip() if isinstance(image_size, str) else None
-        )
-        if image_size_s == "":
-            image_size_s = None
-        n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"),
-            field_name="num_inference_steps",
-        )
-        if err:
-            return f"ERROR: {err}"
-        n_img, err2 = parse_optional_positive_int(
-            arguments.get("num_images"), field_name="num_images"
-        )
-        if err2:
-            return f"ERROR: {err2}"
-        if n_img is not None and n_img > MAX_NUM_IMAGES_PER_CALL:
-            return (
-                "ERROR: num_images must be at most "
-                f"{MAX_NUM_IMAGES_PER_CALL} per generate_image call"
-            )
-        from loguru import logger
 
-        t_img = time.perf_counter()
-        out = await run_generate_image_z_image_turbo(
-            store,
-            prompt=prompt,
-            image_size=image_size_s,
-            num_inference_steps=n_steps,
-            num_images=n_img,
-            persona_revision_id=current_persona_revision_id(store),
-        )
-        logger.info(
-            "tool generate_image wall_ms={:.0f} scope={} ok={}",
-            (time.perf_counter() - t_img) * 1000.0,
-            store.scope.registry_key(),
-            not out.startswith("ERROR:"),
-        )
-        return out
-    if name == "modify_image":
-        prompt = arguments.get("prompt")
-        if not isinstance(prompt, str):
-            return "ERROR: prompt must be a string"
-        if not prompt.strip():
-            return "ERROR: prompt must be non-empty"
-        raw_path = arguments.get("source_image_relative_path")
-        raw_url = arguments.get("source_image_url")
-        if raw_path is not None and not isinstance(raw_path, str):
-            return (
-                "ERROR: source_image_relative_path must be a string or omitted"
-            )
-        if raw_url is not None and not isinstance(raw_url, str):
-            return "ERROR: source_image_url must be a string or omitted"
-        path_s = raw_path.strip() if isinstance(raw_path, str) else ""
-        url_s = raw_url.strip() if isinstance(raw_url, str) else ""
-        if path_s and url_s:
-            return "ERROR: use only one of source_image_relative_path or source_image_url, not both"
-        src_path: Path | None = None
-        if path_s:
-            try:
-                path_s = normalize_memory_store_relative_path(path_s)
-            except ValueError as exc:
-                return f"ERROR: {exc}"
-            asset = find_latest_asset_by_local_relative_path(store, path_s)
-            if asset is not None:
-                u = str(asset.get("gcs_http_url") or "").strip()
-                if u.startswith("http://") or u.startswith("https://"):
-                    url_s = u
-                else:
-                    return f"ERROR: source image in index has no http(s) URL for {path_s!r}"
-            else:
-                return f"ERROR: source image not in index: {path_s!r}"
-        src_url_out: str | None = url_s if url_s else None
-        if src_path is None and src_url_out is None:
-            src_url_out = _latest_generated_image_http_url_from_index(store)
-            if src_url_out is None:
-                return (
-                    "ERROR: modify_image requires source_image_relative_path or source_image_url; "
-                    "no prior image URL in index"
-                )
-        image_size = arguments.get("image_size")
-        if image_size is not None and not isinstance(image_size, str):
-            return "ERROR: image_size must be a string or omitted"
-        image_size_s = (
-            image_size.strip() if isinstance(image_size, str) else None
-        )
-        if image_size_s == "":
-            image_size_s = None
-        n_steps, err = parse_optional_positive_int(
-            arguments.get("num_inference_steps"),
-            field_name="num_inference_steps",
-        )
-        if err:
-            return f"ERROR: {err}"
-        strength, err_s = parse_optional_strength(arguments.get("strength"))
-        if err_s:
-            return f"ERROR: {err_s}"
-        from loguru import logger
-
-        t_img = time.perf_counter()
-        out = await run_modify_image_z_image_turbo(
-            store,
-            prompt=prompt,
-            source_path=src_path,
-            source_image_url=src_url_out,
-            image_size=image_size_s,
-            num_inference_steps=n_steps,
-            strength=strength,
-            persona_revision_id=current_persona_revision_id(store),
-        )
-        logger.info(
-            "tool modify_image wall_ms={:.0f} scope={} ok={}",
-            (time.perf_counter() - t_img) * 1000.0,
-            store.scope.registry_key(),
-            not out.startswith("ERROR:"),
-        )
-        return out
-    if name == "companion_bootstrap_user_interactive_complete":
-        raw_note = arguments.get("note")
-        if raw_note is not None and not isinstance(raw_note, str):
-            return "ERROR: note must be a string or omitted"
-        # TODO(#3535): profile_complete metrics / USER.md→DB backfill when write_document-only.
-        return tool_companion_bootstrap_user_interactive_complete(
-            store, raw_note
-        )
-    if name == CompanionToolName.COMPANION_RECORD_USER_PROFILE.value:
-        try:
-            tool_input = CompanionRecordUserProfileToolInput.model_validate(
-                arguments
-            )
-        except ValidationError as exc:
-            return _companion_tool_validation_error_message(exc)
-        user_id = store.scope.user_id.strip()
-        if not user_id:
-            return "ERROR: missing user scope for companion_record_user_profile"
-        snapshot = tool_input.to_snapshot()
-        try:
-            async with AsyncSessionLocal() as db:
-                await persist_user_profile_snapshot(
-                    db,
-                    user_id=user_id,
-                    snapshot=snapshot,
-                    memory_store=store,
-                )
-        except ValueError as exc:
-            return f"ERROR: {exc}"
-        recorded = [
-            label
-            for label, val in (
-                ("gender", snapshot.gender),
-                ("age_group", snapshot.age_group),
-                ("location", snapshot.location),
-                ("iana_timezone", snapshot.iana_timezone),
-            )
-            if val is not None and val != ""
-        ]
-        return f"OK recorded user profile fields: {', '.join(recorded)}"
-    return f"ERROR: unknown tool {name!r}"
+    match name:
+        case _ if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
+            return tool_techno_core_record_event(store, arguments)
+        case _ if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
+            return tool_living_sphere_record_update(store, arguments)
+        case _ if name == AI_PRIVATE_APPEND_TOOL_NAME:
+            return tool_ai_private_append(store, arguments)
+        case "schedule_task":
+            return _dispatch_schedule_task(store, arguments)
+        case _ if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
+            return tool_companion_record_user_feedback(store, arguments)
+        case "companion_set_experience_profile":
+            return _dispatch_companion_set_experience_profile(store, arguments)
+        case "google_web_search":
+            return await _dispatch_google_web_search(arguments)
+        case "read_web_page":
+            return await _dispatch_read_web_page(store, arguments)
+        case "generate_image":
+            return await _dispatch_generate_image(store, arguments)
+        case "modify_image":
+            return await _dispatch_modify_image(store, arguments)
+        case "companion_bootstrap_user_interactive_complete":
+            return _dispatch_bootstrap_user_interactive_complete(store, arguments)
+        case _ if name == CompanionToolName.COMPANION_RECORD_USER_PROFILE.value:
+            return await _dispatch_companion_record_user_profile(store, arguments)
+        case _:
+            return f"ERROR: unknown tool {name!r}"
 
 
 async def execute_tool_call(
