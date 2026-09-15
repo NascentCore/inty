@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-15 scan (cron)
+
+Source: open PR overlap check (#3930–#3941 scope-listing batch — compaction/schedule/daily/inty_v2 kinds still lack `test_companion_scope_listing.py` parity); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/`.
+
+Open PRs checked: #3930, #3932, #3935, #3938, #3941 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-cc8d`)
+
+- [ ] **HYGIENE-2026-392** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` scope accessor
+- [ ] **HYGIENE-2026-393** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor
+- [ ] **HYGIENE-2026-394** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind matches `memory_daily_gist(day)` scope accessor
+- [ ] **HYGIENE-2026-395** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor
+- [ ] **HYGIENE-2026-396** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor
