@@ -709,8 +709,8 @@ Open PRs checked: #3930, #3932, #3935, #3938, #3941 — no overlap with tasks be
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-cc8d`)
 
-- [ ] **HYGIENE-2026-392** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` scope accessor
-- [ ] **HYGIENE-2026-393** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor
-- [ ] **HYGIENE-2026-394** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind matches `memory_daily_gist(day)` scope accessor
-- [ ] **HYGIENE-2026-395** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor
-- [ ] **HYGIENE-2026-396** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor
+- [x] **HYGIENE-2026-392** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-cc8d` / pull/3944.
+- [x] **HYGIENE-2026-393** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-cc8d` / pull/3944.
+- [x] **HYGIENE-2026-394** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind matches `memory_daily_gist(day)` scope accessor. Fixed in `cursor/agent-maintenance-tasks-cc8d` / pull/3944.
+- [x] **HYGIENE-2026-395** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_DREAMING_STATE_JSON` kind matches `dreaming_state_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-cc8d` / pull/3944.
+- [x] **HYGIENE-2026-396** `memory/test_companion_scope_listing.py` — `.inty_v2` prefix `INTY_V2_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-cc8d` / pull/3944.
