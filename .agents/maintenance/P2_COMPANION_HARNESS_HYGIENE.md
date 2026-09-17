@@ -709,6 +709,6 @@ Open PRs checked: `cursor/agent-maintenance-tasks-*` through pull/3947 — no ov
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-239a`)
 
-- [ ] **HYGIENE-2026-402** ruff F401: `ws_outbound_materialize.py` + `ws_turn_support.py` — drop unused imports.
-- [ ] **HYGIENE-2026-403** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
-- [ ] **HYGIENE-2026-404** #3413: drop `OUTPUT_FORMAT_IM_DM_MD` models alias; ops `test_prompt_stack.py` imports `OUTPUT_FORMAT_IM_DM_MD_REL` from path constants.
+- [x] **HYGIENE-2026-402** ruff F401: `ws_outbound_materialize.py` + `ws_turn_support.py` — drop unused imports. Fixed in `cursor/agent-maintenance-tasks-239a` / pull/3949.
+- [x] **HYGIENE-2026-403** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-239a` / pull/3949.
+- [x] **HYGIENE-2026-404** #3413: drop `OUTPUT_FORMAT_IM_DM_MD` models alias; ops `test_prompt_stack.py` imports `OUTPUT_FORMAT_IM_DM_MD_REL` from path constants. Fixed in `cursor/agent-maintenance-tasks-239a` / pull/3949.
