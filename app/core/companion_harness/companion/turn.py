@@ -476,6 +476,116 @@ class _CompanionTurnPrepared:
     tools_for_turn: list[dict[str, Any]]
 
 
+@dataclass(frozen=True)
+class _CompanionTurnUserTailContext:
+    """Loaded transcript state, tail user rows, and InputQueue batch correlation."""
+
+    loaded_state: CompanionTurnLoadedState
+    context: ContextMeta
+    user_text: str
+    user_msg_uuid: str
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    user_message_batch: UserMessageBatch | None
+    ai_private_splice_plan: AiPrivateSplicePlan
+    ts_user: datetime
+
+
+def _log_companion_turn_prepare_start(
+    *,
+    store: Any,
+    track: CompanionTurnTrack,
+    user_text: str,
+    inner_tick_turn: bool,
+    route_inner_activity: Any,
+    llm_client: Any,
+) -> None:
+    logger.info(
+        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={}",
+        store.scope.registry_key(),
+        track.value,
+        len(user_text),
+        inner_tick_turn,
+        route_inner_activity.value if inner_tick_turn else "-",
+    )
+    logger.debug(
+        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
+        llm_client.config.api_base,
+        llm_client.resolve_model("chat"),
+        llm_client.resolve_model("tool"),
+    )
+
+
+def _resolve_companion_turn_user_tail_context(
+    *,
+    store: Any,
+    track: CompanionTurnTrack,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    user_text: str,
+    transcript_llm_window_max_messages: int,
+    preset_user_msg_uuid: str | None,
+    input_batch: Any,
+    user_message_batch: UserMessageBatch | None,
+) -> _CompanionTurnUserTailContext:
+    loaded_state = load_companion_turn_state(
+        store=store,
+        track=track,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
+    )
+    if runtime_flags.tick_proactive:
+        user_text = build_proactive_chat_transcript_user_marker(
+            loaded_state.loaded_transcript
+        )
+    ai_private_splice_plan = AiPrivateSplicePlan(
+        thoughts=(), anchor_user_msg_uuid=None
+    )
+    if track_uses_ai_private_splice(track):
+        ai_private_splice_plan = build_ai_private_splice_plan(
+            store, loaded_state.loaded_transcript
+        )
+    context = loaded_state.context
+    ts_user = utc_now()
+    user_msg_uuid = (
+        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    )
+    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
+    tail_user_messages = resolve_turn_tail_user_messages(
+        mode=resolved_user_turn_batch_messages_llm_call_mode(),
+        input_batch=input_batch,
+        user_text=(
+            USER_SIGNED_ON_TRIGGER_USER_TEXT
+            if implicit_sign_on_turn
+            else user_text
+        ),
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
+    user_msg_uuid = tail_user_messages[-1].message_id
+    if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP and (
+        user_message_batch is None
+        or user_message_batch_is_agent_initiated_synthetic(user_message_batch)
+    ):
+        raise RuntimeError(
+            "USER_CHAT_BOOTSTRAP requires queue-serving InputQueue batch "
+            "correlation; direct synthetic batch is not supported (#3466)."
+        )
+    if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
+        user_message_batch = synthetic_user_message_batch(
+            user_msg_uuid=user_msg_uuid,
+            track_label=track.value,
+        )
+    return _CompanionTurnUserTailContext(
+        loaded_state=loaded_state,
+        context=context,
+        user_text=user_text,
+        user_msg_uuid=user_msg_uuid,
+        tail_user_messages=tail_user_messages,
+        user_message_batch=user_message_batch,
+        ai_private_splice_plan=ai_private_splice_plan,
+        ts_user=ts_user,
+    )
+
+
 async def _prepare_companion_turn_execution(
     user_text: str,
     *,
@@ -504,19 +614,13 @@ async def _prepare_companion_turn_execution(
     inner_tick_turn = runtime_flags.inner_tick_turn
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
-    logger.info(
-        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={}",
-        store.scope.registry_key(),
-        track.value,
-        len(user_text),
-        inner_tick_turn,
-        runtime_flags.route_inner_activity.value if inner_tick_turn else "-",
-    )
-    logger.debug(
-        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
-        llm_client.config.api_base,
-        llm_client.resolve_model("chat"),
-        llm_client.resolve_model("tool"),
+    _log_companion_turn_prepare_start(
+        store=store,
+        track=track,
+        user_text=user_text,
+        inner_tick_turn=inner_tick_turn,
+        route_inner_activity=runtime_flags.route_inner_activity,
+        llm_client=llm_client,
     )
 
     idle_wait_timeout_sec = _resolve_tool_bg_idle_wait_timeout_sec(llm_client)
@@ -527,53 +631,24 @@ async def _prepare_companion_turn_execution(
         scope_registry_key=store.scope.registry_key(),
     )
 
-    loaded_state = load_companion_turn_state(
+    tail_ctx = _resolve_companion_turn_user_tail_context(
         store=store,
         track=track,
+        runtime_flags=runtime_flags,
+        user_text=user_text,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
-    )
-    if tick_proactive:
-        user_text = build_proactive_chat_transcript_user_marker(
-            loaded_state.loaded_transcript
-        )
-    ai_private_splice_plan = AiPrivateSplicePlan(
-        thoughts=(), anchor_user_msg_uuid=None
-    )
-    if track_uses_ai_private_splice(track):
-        ai_private_splice_plan = build_ai_private_splice_plan(
-            store, loaded_state.loaded_transcript
-        )
-    context = loaded_state.context
-    ts_user = utc_now()
-    user_msg_uuid = (
-        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
-    )
-    tail_user_messages = resolve_turn_tail_user_messages(
-        mode=resolved_user_turn_batch_messages_llm_call_mode(),
+        preset_user_msg_uuid=preset_user_msg_uuid,
         input_batch=input_batch,
-        user_text=(
-            USER_SIGNED_ON_TRIGGER_USER_TEXT
-            if implicit_sign_on_turn
-            else user_text
-        ),
-        ts_user=ts_user,
-        user_msg_uuid=user_msg_uuid,
-        implicit_sign_on_turn=implicit_sign_on_turn,
+        user_message_batch=user_message_batch,
     )
-    user_msg_uuid = tail_user_messages[-1].message_id
-    if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP and (
-        user_message_batch is None
-        or user_message_batch_is_agent_initiated_synthetic(user_message_batch)
-    ):
-        raise RuntimeError(
-            "USER_CHAT_BOOTSTRAP requires queue-serving InputQueue batch "
-            "correlation; direct synthetic batch is not supported (#3466)."
-        )
-    if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
-        user_message_batch = synthetic_user_message_batch(
-            user_msg_uuid=user_msg_uuid,
-            track_label=track.value,
-        )
+    loaded_state = tail_ctx.loaded_state
+    context = tail_ctx.context
+    user_text = tail_ctx.user_text
+    user_msg_uuid = tail_ctx.user_msg_uuid
+    tail_user_messages = tail_ctx.tail_user_messages
+    user_message_batch = tail_ctx.user_message_batch
+    ai_private_splice_plan = tail_ctx.ai_private_splice_plan
+    ts_user = tail_ctx.ts_user
     prompt_plan = build_companion_turn_prompt_plan(
         store=store,
         loaded_state=loaded_state,
