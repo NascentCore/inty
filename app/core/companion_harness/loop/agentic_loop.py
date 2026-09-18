@@ -424,6 +424,91 @@ async def _persist_prompt_plan_interim_assistant(
         )
 
 
+async def _run_prompt_plan_openai_tool_call_loop(
+    *,
+    context: AgenticLoopContext,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    max_tool_call_rounds: int,
+    initial_resp: Any,
+    working_messages: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> tuple[Any, _PromptPlanToolLoopAcc, _PromptPlanInterimPersistState]:
+    """OpenAI tool rounds for one in-turn prompt-plan loop."""
+    transcript_rel = context.transcript_rel
+    trace_id = context.trace_id
+    user_msg_uuid = context.user_msg_uuid
+    interim_state = _PromptPlanInterimPersistState()
+
+    async def execute_tool_call(
+        name: str, raw_arguments: str
+    ) -> tuple[str, str | None]:
+        return await _prompt_plan_tool_execute(
+            store,
+            name,
+            raw_arguments,
+            write_allowlist=execution.write_allowlist,
+            repository_only_store_text=context.repository_only_store_text,
+        )
+
+    async def continue_chat(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> tuple[Any, str | None]:
+        return await _prompt_plan_tool_continue_chat(
+            llm_client=llm_client,
+            messages_with_tool_results=messages_with_tool_results,
+            acc=acc,
+            tool_choice=prompt_plan.tool_choice,
+            chat_model=chat_model,
+            langsmith_extra=langsmith_extra,
+            high_reasoning=execution.high_reasoning,
+        )
+
+    async def after_tool_messages_appended(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> None:
+        await _prompt_plan_refresh_tools_after_append(
+            messages_with_tool_results=messages_with_tool_results,
+            acc=acc,
+            after_tool_messages_appended=context.after_tool_messages_appended,
+        )
+
+    async def on_assistant_message(message: Any) -> None:
+        await _persist_prompt_plan_interim_assistant(
+            message,
+            store=store,
+            transcript_rel=transcript_rel,
+            trace_id=trace_id,
+            user_msg_uuid=user_msg_uuid,
+            langsmith_trace_id=acc.langsmith_trace_id,
+            langsmith_run_id=acc.langsmith_run_id,
+            interim_output_sink=interim_output_sink,
+            emit_every_round=True,
+            state=interim_state,
+        )
+
+    loop_result = await resolve_openai_tool_call_loop_async(
+        response=initial_resp,
+        openai_messages=working_messages,
+        max_tool_call_rounds=max_tool_call_rounds,
+        execute_tool_call=execute_tool_call,
+        continue_chat=continue_chat,
+        build_assistant_tool_call_message=openai_assistant_message_dict,
+        insert_system_message=insert_openai_system_message,
+        initial_trace_id=acc.langsmith_trace_id or None,
+        after_tool_messages_appended=after_tool_messages_appended,
+        on_assistant_message=on_assistant_message,
+    )
+    if loop_result.trace_id:
+        acc.langsmith_trace_id = loop_result.trace_id
+    return loop_result, acc, interim_state
+
+
 async def _run_prompt_plan_tool_loop(
     context: AgenticLoopContext,
     *,
@@ -464,69 +549,20 @@ async def _run_prompt_plan_tool_loop(
             high_reasoning=execution.high_reasoning,
         )
     )
-    interim_state = _PromptPlanInterimPersistState()
-
-    async def execute_tool_call(
-        name: str, raw_arguments: str
-    ) -> tuple[str, str | None]:
-        return await _prompt_plan_tool_execute(
-            store,
-            name,
-            raw_arguments,
-            write_allowlist=execution.write_allowlist,
-            repository_only_store_text=context.repository_only_store_text,
-        )
-
-    async def continue_chat(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> tuple[Any, str | None]:
-        return await _prompt_plan_tool_continue_chat(
-            llm_client=llm_client,
-            messages_with_tool_results=messages_with_tool_results,
-            acc=acc,
-            tool_choice=prompt_plan.tool_choice,
-            chat_model=chat_model,
-            langsmith_extra=langsmith_extra,
-            high_reasoning=execution.high_reasoning,
-        )
-
-    async def _after_tool_messages_appended(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> None:
-        await _prompt_plan_refresh_tools_after_append(
-            messages_with_tool_results=messages_with_tool_results,
-            acc=acc,
-            after_tool_messages_appended=context.after_tool_messages_appended,
-        )
-
-    async def _on_assistant_message(message: Any) -> None:
-        await _persist_prompt_plan_interim_assistant(
-            message,
-            store=store,
-            transcript_rel=transcript_rel,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
-            langsmith_trace_id=acc.langsmith_trace_id,
-            langsmith_run_id=acc.langsmith_run_id,
-            interim_output_sink=interim_output_sink,
-            emit_every_round=True,
-            state=interim_state,
-        )
-
-    loop_result = await resolve_openai_tool_call_loop_async(
-        response=initial_resp,
-        openai_messages=working_messages,
+    loop_result, acc, interim_state = await _run_prompt_plan_openai_tool_call_loop(
+        context=context,
+        store=store,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
         max_tool_call_rounds=max_tool_call_rounds,
-        execute_tool_call=execute_tool_call,
-        continue_chat=continue_chat,
-        build_assistant_tool_call_message=openai_assistant_message_dict,
-        insert_system_message=insert_openai_system_message,
-        initial_trace_id=acc.langsmith_trace_id or None,
-        after_tool_messages_appended=_after_tool_messages_appended,
-        on_assistant_message=_on_assistant_message,
+        initial_resp=initial_resp,
+        working_messages=working_messages,
+        acc=acc,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
     )
-    if loop_result.trace_id:
-        acc.langsmith_trace_id = loop_result.trace_id
     final_msg = loop_result.response.choices[0].message
     last_text = (final_msg.content or "").strip()
     approx_ctx_chars = sum(
