@@ -5,9 +5,39 @@ from __future__ import annotations
 import ast
 
 from app.core.companion_harness.companion import lifecycle_invariants as inv
+from app.core.companion_harness.companion import turn_invariants as turn_inv
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+
+def _repo_relative_path_to_import_module(relative_path: str) -> str:
+    assert relative_path.endswith(".py")
+    without_suffix = relative_path[: -len(".py")]
+    return without_suffix.replace("/", ".")
+
+
+def test_awake_turn_orchestrator_paths_match_lifecycle_surface() -> None:
+    expected = frozenset(
+        (
+            *inv.AWAKE_TURN_SURFACE_MODULE_PATHS,
+            inv.AWAKE_TURN_TOOL_BACKGROUND_MODULE_PATH,
+        )
+    )
+    assert turn_inv.AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS == expected
+
+
+def test_dreaming_consolidation_allowlist_matches_turn_invariants_import_allowlist() -> (
+    None
+):
+    lifecycle_modules = frozenset(
+        _repo_relative_path_to_import_module(rel)
+        for rel in inv.DREAMING_CONSOLIDATION_REFERENCE_ALLOWLIST
+    )
+    assert (
+        lifecycle_modules
+        == turn_inv.CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST
+    )
 
 
 def test_awake_turn_allowed_append_jsonl_matches_scope_path_accessors() -> None:
