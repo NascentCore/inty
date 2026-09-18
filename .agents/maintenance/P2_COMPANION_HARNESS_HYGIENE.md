@@ -709,6 +709,6 @@ Open PRs checked: #3930–#3949 (`cursor/agent-maintenance-tasks-*`, `cursor/sta
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-433d`)
 
-- [ ] **HYGIENE-2026-405** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_SURFACE_MODULE_PATHS` + tool_background module equals `turn_invariants.AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS`. Claimed `cursor/agent-maintenance-tasks-433d`.
-- [ ] **HYGIENE-2026-406** `companion/test_lifecycle_invariants.py` — assert `DREAMING_CONSOLIDATION_REFERENCE_ALLOWLIST` file paths align with `turn_invariants.CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST` module paths. Claimed `cursor/agent-maintenance-tasks-433d`.
-- [ ] **HYGIENE-2026-407** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by recurring cron + inline TODO anchors). Claimed `cursor/agent-maintenance-tasks-433d`.
+- [x] **HYGIENE-2026-405** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_SURFACE_MODULE_PATHS` + tool_background module equals `turn_invariants.AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS`. Fixed in `cursor/agent-maintenance-tasks-433d` / pull/3952.
+- [x] **HYGIENE-2026-406** `companion/test_lifecycle_invariants.py` — assert `DREAMING_CONSOLIDATION_REFERENCE_ALLOWLIST` file paths align with `turn_invariants.CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST` module paths. Fixed in `cursor/agent-maintenance-tasks-433d` / pull/3952.
+- [x] **HYGIENE-2026-407** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by recurring cron + inline TODO anchors). Fixed in `cursor/agent-maintenance-tasks-433d` / pull/3952.
