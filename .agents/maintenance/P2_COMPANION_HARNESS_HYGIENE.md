@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-18 scan (cron)
+
+Source: open PR overlap check (#3930–#3949 claim HYGIENE-2026-359..404 scope-listing / F401 / audit delete / models alias); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/`; follow-up — `lifecycle_invariants` awake surface paths not cross-checked against `turn_invariants` orchestrator set; dreaming consolidation allowlist uses file paths in lifecycle vs module paths in `turn_invariants`; stale issue audit snapshot still on disk until merged maintenance PRs land.
+
+Open PRs checked: #3930–#3949 (`cursor/agent-maintenance-tasks-*`, `cursor/stale-*`, `cursor/large-functions-*`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-433d`)
+
+- [ ] **HYGIENE-2026-405** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_SURFACE_MODULE_PATHS` + tool_background module equals `turn_invariants.AWAKE_TURN_ORCHESTRATOR_RELATIVE_PATHS`. Claimed `cursor/agent-maintenance-tasks-433d`.
+- [ ] **HYGIENE-2026-406** `companion/test_lifecycle_invariants.py` — assert `DREAMING_CONSOLIDATION_REFERENCE_ALLOWLIST` file paths align with `turn_invariants.CONSOLIDATE_MEMORY_DURING_DREAMING_IMPORT_ALLOWLIST` module paths. Claimed `cursor/agent-maintenance-tasks-433d`.
+- [ ] **HYGIENE-2026-407** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by recurring cron + inline TODO anchors). Claimed `cursor/agent-maintenance-tasks-433d`.
