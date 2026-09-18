@@ -982,28 +982,11 @@ async def _tool_bg_run_openai_tool_call_loop(
     return loop_result, turn_capture
 
 
-def _tool_bg_apply_delivery_plan(
+def _tool_bg_log_delivery_policy_summary(
     *,
     run_ctx: _ToolBgLoopRunContext,
-    loop_result: Any,
-    turn_capture: ToolBgTurnCapture,
-    progress: ToolBgLoopProgress,
-    t0: float,
+    plan: ToolBgDeliveryPlan,
 ) -> None:
-    """Persist transcript rows and emit user-visible tool-bg output when applicable."""
-    plan = _resolve_tool_bg_delivery_plan(
-        loop_result=loop_result,
-        appended_turn_msgs=turn_capture.appended_turn_msgs,
-        total_tool_calls=progress.total_tool_calls,
-        skip_finish_envelope_routing=run_ctx.skip_finish_envelope_routing,
-        resolved_client=run_ctx.resolved_client,
-        tool_api_id=run_ctx.tool_api_id,
-        chat_completion_sync=run_ctx.chat_completion_sync,
-        trace_id=run_ctx.trace_id,
-        langsmith_slice=run_ctx.langsmith_slice,
-        suppress_user_delivery=run_ctx.suppress_user_delivery,
-    )
-    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
     base_nl = (plan.display_text or "").strip()
     logger.debug(
         "repl.turn.bg policy_summary trace_id={} user_msg_uuid={} "
@@ -1022,57 +1005,51 @@ def _tool_bg_apply_delivery_plan(
         len(plan.transcript_body),
     )
 
-    if is_tool_background_aborted(run_ctx.user_msg_uuid):
+
+def _tool_bg_persist_when_should_not_push(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    plan: ToolBgDeliveryPlan,
+    progress: ToolBgLoopProgress,
+    elapsed_ms: int,
+) -> None:
+    if plan.transcript_body.strip():
+        assistant_msg_uuid = _persist_tool_bg_transcript_and_log(
+            store=run_ctx.memory_store,
+            user_msg_uuid=run_ctx.user_msg_uuid,
+            transcript_body=plan.transcript_body,
+            transcript_append_rel=run_ctx.transcript_append_rel,
+            trace_id=run_ctx.trace_id,
+            significance_meta=plan.significance_meta,
+            turn_recall=plan.turn_recall,
+            elapsed_ms=elapsed_ms,
+            rounds_used=progress.rounds_used,
+            total_tool_calls=progress.total_tool_calls,
+            image_paths=plan.image_paths,
+        )
         logger.debug(
-            "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
+            "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
+            "assistant_msg_uuid={} reason=should_push_false",
+            run_ctx.trace_id,
+            run_ctx.user_msg_uuid,
+            assistant_msg_uuid,
+        )
+    else:
+        logger.debug(
+            "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
+            "reason=should_push_false_empty_transcript_body",
             run_ctx.trace_id,
             run_ctx.user_msg_uuid,
         )
-        return
 
-    if not plan.should_push:
-        if plan.transcript_body.strip():
-            assistant_msg_uuid = _persist_tool_bg_transcript_and_log(
-                store=run_ctx.memory_store,
-                user_msg_uuid=run_ctx.user_msg_uuid,
-                transcript_body=plan.transcript_body,
-                transcript_append_rel=run_ctx.transcript_append_rel,
-                trace_id=run_ctx.trace_id,
-                significance_meta=plan.significance_meta,
-                turn_recall=plan.turn_recall,
-                elapsed_ms=elapsed_ms,
-                rounds_used=progress.rounds_used,
-                total_tool_calls=progress.total_tool_calls,
-                image_paths=plan.image_paths,
-            )
-            logger.debug(
-                "repl.turn.bg transcript_only trace_id={} user_msg_uuid={} "
-                "assistant_msg_uuid={} reason=should_push_false",
-                run_ctx.trace_id,
-                run_ctx.user_msg_uuid,
-                assistant_msg_uuid,
-            )
-        else:
-            logger.debug(
-                "repl.turn.bg suppress_user_visible_output trace_id={} user_msg_uuid={} "
-                "reason=should_push_false_empty_transcript_body",
-                run_ctx.trace_id,
-                run_ctx.user_msg_uuid,
-            )
-        return
 
-    if not plan.transcript_body.strip() and not plan.generation_deliver:
-        logger.debug(
-            "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
-            "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
-            run_ctx.trace_id,
-            run_ctx.user_msg_uuid,
-            plan.generation_deliver,
-            plan.output_to_user_flag,
-            ",".join(plan.tool_call_names),
-        )
-        return
-
+def _tool_bg_persist_and_emit_user_delivery(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    plan: ToolBgDeliveryPlan,
+    progress: ToolBgLoopProgress,
+    elapsed_ms: int,
+) -> None:
     assistant_msg_uuid = _persist_tool_bg_transcript_and_log(
         store=run_ctx.memory_store,
         user_msg_uuid=run_ctx.user_msg_uuid,
@@ -1110,6 +1087,67 @@ def _tool_bg_apply_delivery_plan(
         trace_id=run_ctx.trace_id,
         image_asset_baseline=run_ctx.image_asset_baseline,
         activity_label=run_ctx.activity_label,
+    )
+
+
+def _tool_bg_apply_delivery_plan(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    loop_result: Any,
+    turn_capture: ToolBgTurnCapture,
+    progress: ToolBgLoopProgress,
+    t0: float,
+) -> None:
+    """Persist transcript rows and emit user-visible tool-bg output when applicable."""
+    plan = _resolve_tool_bg_delivery_plan(
+        loop_result=loop_result,
+        appended_turn_msgs=turn_capture.appended_turn_msgs,
+        total_tool_calls=progress.total_tool_calls,
+        skip_finish_envelope_routing=run_ctx.skip_finish_envelope_routing,
+        resolved_client=run_ctx.resolved_client,
+        tool_api_id=run_ctx.tool_api_id,
+        chat_completion_sync=run_ctx.chat_completion_sync,
+        trace_id=run_ctx.trace_id,
+        langsmith_slice=run_ctx.langsmith_slice,
+        suppress_user_delivery=run_ctx.suppress_user_delivery,
+    )
+    elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
+    _tool_bg_log_delivery_policy_summary(run_ctx=run_ctx, plan=plan)
+
+    if is_tool_background_aborted(run_ctx.user_msg_uuid):
+        logger.debug(
+            "repl.turn.bg aborted before transcript append trace_id={} user_msg_uuid={}",
+            run_ctx.trace_id,
+            run_ctx.user_msg_uuid,
+        )
+        return
+
+    if not plan.should_push:
+        _tool_bg_persist_when_should_not_push(
+            run_ctx=run_ctx,
+            plan=plan,
+            progress=progress,
+            elapsed_ms=elapsed_ms,
+        )
+        return
+
+    if not plan.transcript_body.strip() and not plan.generation_deliver:
+        logger.debug(
+            "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
+            "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
+            run_ctx.trace_id,
+            run_ctx.user_msg_uuid,
+            plan.generation_deliver,
+            plan.output_to_user_flag,
+            ",".join(plan.tool_call_names),
+        )
+        return
+
+    _tool_bg_persist_and_emit_user_delivery(
+        run_ctx=run_ctx,
+        plan=plan,
+        progress=progress,
+        elapsed_ms=elapsed_ms,
     )
 
 
