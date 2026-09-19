@@ -14,8 +14,11 @@ from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
     list_image_asset_records,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 
 def _store(tmp: Path) -> MemoryStore:
@@ -23,6 +26,19 @@ def _store(tmp: Path) -> MemoryStore:
         scope=CompanionScope("img-meta", "a", str(tmp.resolve())),
         repository=None,
     )
+
+
+def test_append_image_asset_record_uses_scope_accessor_rel(
+    tmp_path: Path,
+) -> None:
+    ws = tmp_path / "scope-rel"
+    ws.mkdir()
+    store = _store(ws)
+    index_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl
+    append_image_asset_record(store, {"asset_id": "scope-check"})
+    body = store.read_document_if_exists(index_rel)
+    assert body is not None
+    assert "scope-check" in body
 
 
 def test_generated_image_meta_from_slice_prefers_gs_uri(
