@@ -586,6 +586,60 @@ def _resolve_companion_turn_user_tail_context(
     )
 
 
+def _build_companion_turn_prompt_plan_for_prepare(
+    *,
+    store: Any,
+    tail_ctx: _CompanionTurnUserTailContext,
+    track: CompanionTurnTrack,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    runtime_context: Any,
+    transcript_compaction: Any,
+) -> CompanionTurnPromptPlan:
+    return build_companion_turn_prompt_plan(
+        store=store,
+        loaded_state=tail_ctx.loaded_state,
+        tail_user_messages=tail_ctx.tail_user_messages,
+        track=track,
+        tick_proactive=runtime_flags.tick_proactive,
+        implicit_sign_on_turn=runtime_flags.implicit_sign_on_turn,
+        runtime_context=runtime_context,
+        transcript_compaction=transcript_compaction,
+        tail_splice_thoughts=list(tail_ctx.ai_private_splice_plan.thoughts),
+    )
+
+
+async def _resolve_companion_turn_idle_and_user_tail(
+    *,
+    track: CompanionTurnTrack,
+    llm_client: Any,
+    tool_bg_idle_event: threading.Event | None,
+    store: Any,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    user_text: str,
+    transcript_llm_window_max_messages: int,
+    preset_user_msg_uuid: str | None,
+    input_batch: Any,
+    user_message_batch: UserMessageBatch | None,
+) -> _CompanionTurnUserTailContext:
+    idle_wait_timeout_sec = _resolve_tool_bg_idle_wait_timeout_sec(llm_client)
+    await _maybe_await_tool_bg_idle_before_turn(
+        track=track,
+        tool_bg_idle_event=tool_bg_idle_event,
+        idle_wait_timeout_sec=idle_wait_timeout_sec,
+        scope_registry_key=store.scope.registry_key(),
+    )
+    return _resolve_companion_turn_user_tail_context(
+        store=store,
+        track=track,
+        runtime_flags=runtime_flags,
+        user_text=user_text,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+        input_batch=input_batch,
+        user_message_batch=user_message_batch,
+    )
+
+
 async def _prepare_companion_turn_execution(
     user_text: str,
     *,
@@ -610,9 +664,7 @@ async def _prepare_companion_turn_execution(
         implicit_signal_bundle=implicit_signal_bundle,
     )
     user_text = runtime_flags.effective_user_text
-    tick_proactive = runtime_flags.tick_proactive
     inner_tick_turn = runtime_flags.inner_tick_turn
-    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
 
     _log_companion_turn_prepare_start(
         store=store,
@@ -623,17 +675,11 @@ async def _prepare_companion_turn_execution(
         llm_client=llm_client,
     )
 
-    idle_wait_timeout_sec = _resolve_tool_bg_idle_wait_timeout_sec(llm_client)
-    await _maybe_await_tool_bg_idle_before_turn(
+    tail_ctx = await _resolve_companion_turn_idle_and_user_tail(
         track=track,
+        llm_client=llm_client,
         tool_bg_idle_event=tool_bg_idle_event,
-        idle_wait_timeout_sec=idle_wait_timeout_sec,
-        scope_registry_key=store.scope.registry_key(),
-    )
-
-    tail_ctx = _resolve_companion_turn_user_tail_context(
         store=store,
-        track=track,
         runtime_flags=runtime_flags,
         user_text=user_text,
         transcript_llm_window_max_messages=transcript_llm_window_max_messages,
@@ -649,16 +695,13 @@ async def _prepare_companion_turn_execution(
     user_message_batch = tail_ctx.user_message_batch
     ai_private_splice_plan = tail_ctx.ai_private_splice_plan
     ts_user = tail_ctx.ts_user
-    prompt_plan = build_companion_turn_prompt_plan(
+    prompt_plan = _build_companion_turn_prompt_plan_for_prepare(
         store=store,
-        loaded_state=loaded_state,
-        tail_user_messages=tail_user_messages,
+        tail_ctx=tail_ctx,
         track=track,
-        tick_proactive=tick_proactive,
-        implicit_sign_on_turn=implicit_sign_on_turn,
+        runtime_flags=runtime_flags,
         runtime_context=runtime_context,
         transcript_compaction=transcript_compaction,
-        tail_splice_thoughts=list(ai_private_splice_plan.thoughts),
     )
     in_turn_sync_persisted_transcript = (
         companion_turn_track_syncs_transcript_in_agentic_loop(track)

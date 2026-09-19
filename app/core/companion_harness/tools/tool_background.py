@@ -477,6 +477,17 @@ class ToolBgTurnCapture:
     capture_from_len: int
 
 
+@dataclass
+class _ToolBgOpenAiLoopHandlers:
+    """Callbacks and capture state for ``resolve_openai_tool_call_loop_async``."""
+
+    execute_tool_call: Callable[[str, str], Any]
+    continue_chat: Callable[[list[dict[str, Any]]], Any]
+    after_tool_messages_appended: Callable[[list[dict[str, Any]]], Any]
+    turn_capture: ToolBgTurnCapture
+    tools_for_rounds: list[Any]
+
+
 @dataclass(frozen=True)
 class ToolBgDeliveryPlan:
     """Resolved user-visible delivery for one background tool loop."""
@@ -873,31 +884,22 @@ class _ToolBgLoopRunContext:
     execute_tool_call_fn: Callable[..., Any]
 
 
-async def _tool_bg_run_openai_tool_call_loop(
+def _tool_bg_build_openai_loop_handlers(
     *,
     run_ctx: _ToolBgLoopRunContext,
-    initial_response: Any,
     working_messages: list[dict[str, Any]],
     progress: ToolBgLoopProgress,
-) -> tuple[Any, ToolBgTurnCapture] | None:
-    """Execute tool rounds; ``None`` when aborted or initial response has no tool calls."""
-    initial_tool_calls = (
-        getattr(initial_response.choices[0].message, "tool_calls", None) or []
-    )
-    if not initial_tool_calls:
-        _log_tool_bg_no_tool_calls_early_exit(
-            initial_response=initial_response,
-            trace_id=run_ctx.trace_id,
-            user_msg_uuid=run_ctx.user_msg_uuid,
-        )
-        return None
-    progress.total_tool_calls += len(initial_tool_calls)
-
+) -> _ToolBgOpenAiLoopHandlers:
     allow = (
         run_ctx.write_allowlist
         if run_ctx.write_allowlist is not None
         else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
     )
+    turn_capture = ToolBgTurnCapture(
+        appended_turn_msgs=[],
+        capture_from_len=len(working_messages),
+    )
+    tools_for_rounds = list(run_ctx.tools)
 
     async def execute_tool_call(
         name: str, raw_arguments: str
@@ -910,12 +912,6 @@ async def _tool_bg_run_openai_tool_call_loop(
             repository_only_store_text=run_ctx.repository_only_store_text,
         )
         return result, None
-
-    turn_capture = ToolBgTurnCapture(
-        appended_turn_msgs=[],
-        capture_from_len=len(working_messages),
-    )
-    tools_for_rounds = list(run_ctx.tools)
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
@@ -948,17 +944,33 @@ async def _tool_bg_run_openai_tool_call_loop(
             turn_capture=turn_capture,
         )
 
+    return _ToolBgOpenAiLoopHandlers(
+        execute_tool_call=execute_tool_call,
+        continue_chat=continue_chat,
+        after_tool_messages_appended=after_tool_messages_appended,
+        turn_capture=turn_capture,
+        tools_for_rounds=tools_for_rounds,
+    )
+
+
+async def _tool_bg_invoke_openai_tool_call_loop(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    initial_response: Any,
+    working_messages: list[dict[str, Any]],
+    handlers: _ToolBgOpenAiLoopHandlers,
+) -> Any | None:
     try:
-        loop_result = await resolve_openai_tool_call_loop_async(
+        return await resolve_openai_tool_call_loop_async(
             response=initial_response,
             openai_messages=working_messages,
             max_tool_call_rounds=_BG_TOOL_MAX_ROUNDS,
-            execute_tool_call=execute_tool_call,
-            continue_chat=continue_chat,
+            execute_tool_call=handlers.execute_tool_call,
+            continue_chat=handlers.continue_chat,
             build_assistant_tool_call_message=openai_assistant_message_dict,
             insert_system_message=insert_openai_system_message,
             initial_trace_id=None,
-            after_tool_messages_appended=after_tool_messages_appended,
+            after_tool_messages_appended=handlers.after_tool_messages_appended,
         )
     except BackgroundToolLoopAborted:
         logger.debug(
@@ -972,6 +984,41 @@ async def _tool_bg_run_openai_tool_call_loop(
             f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
         ) from exc
 
+
+async def _tool_bg_run_openai_tool_call_loop(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    initial_response: Any,
+    working_messages: list[dict[str, Any]],
+    progress: ToolBgLoopProgress,
+) -> tuple[Any, ToolBgTurnCapture] | None:
+    """Execute tool rounds; ``None`` when aborted or initial response has no tool calls."""
+    initial_tool_calls = (
+        getattr(initial_response.choices[0].message, "tool_calls", None) or []
+    )
+    if not initial_tool_calls:
+        _log_tool_bg_no_tool_calls_early_exit(
+            initial_response=initial_response,
+            trace_id=run_ctx.trace_id,
+            user_msg_uuid=run_ctx.user_msg_uuid,
+        )
+        return None
+    progress.total_tool_calls += len(initial_tool_calls)
+
+    handlers = _tool_bg_build_openai_loop_handlers(
+        run_ctx=run_ctx,
+        working_messages=working_messages,
+        progress=progress,
+    )
+    loop_result = await _tool_bg_invoke_openai_tool_call_loop(
+        run_ctx=run_ctx,
+        initial_response=initial_response,
+        working_messages=working_messages,
+        handlers=handlers,
+    )
+    if loop_result is None:
+        return None
+
     if is_tool_background_aborted(run_ctx.user_msg_uuid):
         logger.debug(
             "repl.turn.bg aborted before append trace_id={} user_msg_uuid={}",
@@ -979,7 +1026,7 @@ async def _tool_bg_run_openai_tool_call_loop(
             run_ctx.user_msg_uuid,
         )
         return None
-    return loop_result, turn_capture
+    return loop_result, handlers.turn_capture
 
 
 def _tool_bg_log_delivery_policy_summary(
@@ -1187,6 +1234,83 @@ def _emit_tool_bg_delivery_event(
     )
 
 
+def _tool_bg_new_loop_run_context(
+    *,
+    memory_store: MemoryStore,
+    scope_registry_key: str,
+    transcript_append_rel: str,
+    image_asset_baseline: int,
+    tool_api_id: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    resolved_client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    tools: list[Any],
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+    skip_finish_envelope_routing: bool,
+    suppress_user_delivery: bool,
+    on_event: Callable[[ToolOutputEvent], None],
+    activity_label: str | None,
+    execute_tool_call_fn: Callable[..., Any],
+) -> _ToolBgLoopRunContext:
+    return _ToolBgLoopRunContext(
+        memory_store=memory_store,
+        scope_registry_key=scope_registry_key,
+        transcript_append_rel=transcript_append_rel,
+        image_asset_baseline=image_asset_baseline,
+        tool_api_id=tool_api_id,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        resolved_client=resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+
+
+async def _tool_bg_run_loop_through_delivery(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    initial_response: Any,
+    working_messages: list[dict[str, Any]],
+    progress: ToolBgLoopProgress,
+    t0: float,
+) -> None:
+    loop_phase = await _tool_bg_run_openai_tool_call_loop(
+        run_ctx=run_ctx,
+        initial_response=initial_response,
+        working_messages=working_messages,
+        progress=progress,
+    )
+    if loop_phase is None:
+        return
+    loop_result, turn_capture = loop_phase
+    _tool_bg_apply_delivery_plan(
+        run_ctx=run_ctx,
+        loop_result=loop_result,
+        turn_capture=turn_capture,
+        progress=progress,
+        t0=t0,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1261,7 +1385,7 @@ async def run_tool_background_loop(
 
         progress.rounds_used = 1
         progress.active_round = progress.rounds_used
-        run_ctx = _ToolBgLoopRunContext(
+        run_ctx = _tool_bg_new_loop_run_context(
             memory_store=memory_store,
             scope_registry_key=scope_registry_key,
             transcript_append_rel=transcript_append_rel,
@@ -1285,19 +1409,10 @@ async def run_tool_background_loop(
             activity_label=activity_label,
             execute_tool_call_fn=execute_tool_call_fn,
         )
-        loop_phase = await _tool_bg_run_openai_tool_call_loop(
+        await _tool_bg_run_loop_through_delivery(
             run_ctx=run_ctx,
             initial_response=initial_response,
             working_messages=working_messages,
-            progress=progress,
-        )
-        if loop_phase is None:
-            return
-        loop_result, turn_capture = loop_phase
-        _tool_bg_apply_delivery_plan(
-            run_ctx=run_ctx,
-            loop_result=loop_result,
-            turn_capture=turn_capture,
             progress=progress,
             t0=t0,
         )
