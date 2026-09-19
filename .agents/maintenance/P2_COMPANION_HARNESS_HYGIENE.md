@@ -709,7 +709,7 @@ Open PRs checked: #3949 (`cursor/agent-maintenance-tasks-239a`), #3952 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-29e0`)
 
-- [ ] **HYGIENE-2026-408** `tools/image_gate.py` — generated-images index + core profile reads via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop `memory_store_scope` `*_MD_REL` re-exports).
-- [ ] **HYGIENE-2026-409** `tools/test_image_gate_generated_meta.py` — assert appended index rows land at `generated_images_index_jsonl` scope accessor rel.
-- [ ] **HYGIENE-2026-410** `companion/test_turn_invariants_parity.py` — `DREAMING_BATCH_CURATION_ENTRY` matches `lifecycle_invariants.DREAMING_MEMORY_CURATION_ENTRY`.
-- [ ] **HYGIENE-2026-411** `companion/test_turn_invariants_parity.py` — `FORBIDDEN_LEGACY_MEMORY_SYMBOLS` absent from production `companion_harness` modules (AST name scan).
+- [x] **HYGIENE-2026-408** `tools/image_gate.py` — generated-images index + core profile reads via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop `memory_store_scope` `*_MD_REL` re-exports). Fixed in `cursor/agent-maintenance-tasks-29e0` / pull/3955.
+- [x] **HYGIENE-2026-409** `tools/test_image_gate_generated_meta.py` — assert appended index rows land at `generated_images_index_jsonl` scope accessor rel. Fixed in `cursor/agent-maintenance-tasks-29e0` / pull/3955.
+- [x] **HYGIENE-2026-410** `companion/test_turn_invariants_parity.py` — `DREAMING_BATCH_CURATION_ENTRY` matches `lifecycle_invariants.DREAMING_MEMORY_CURATION_ENTRY`. Fixed in `cursor/agent-maintenance-tasks-29e0` / pull/3955.
+- [x] **HYGIENE-2026-411** `companion/test_turn_invariants_parity.py` — `FORBIDDEN_LEGACY_MEMORY_SYMBOLS` absent from production `companion_harness` modules (AST name scan). Fixed in `cursor/agent-maintenance-tasks-29e0` / pull/3955.
