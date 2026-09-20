@@ -724,6 +724,75 @@ def _parse_chat_only_assistant_message(
             )
 
 
+def _build_chat_only_prompt_plan_request(
+    context: AgenticLoopContext,
+) -> tuple[CompanionTurnTrack, list[dict[str, Any]], dict[str, Any]]:
+    """OpenAI request messages and LangSmith extra for chat-only tracks."""
+    assert context.prompt_plan is not None
+    track = context.companion_turn_track
+    execution = context.execution
+    request_messages = prompt_messages_to_openai_dicts(
+        context.prompt_plan.messages
+    )
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=context.user_text,
+    )
+    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
+        source=execution.foreground_source.value,
+        extra_metadata=None,
+    )
+    return track, request_messages, langsmith_extra
+
+
+async def _append_chat_only_visible_assistant_line(
+    *,
+    track: CompanionTurnTrack,
+    envelope: _ChatOnlyTrackEnvelope,
+    parsed: _ChatOnlyAssistantParse,
+    appender: _UserVisibleOutputAppender,
+    trace_id: str,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+) -> None:
+    if not parsed.assistant_text:
+        return
+    wire_source = (
+        WireAssistantSource.GREETING
+        if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+        else WireAssistantSource.CHAT
+    )
+    await appender.append_visible_message(
+        kind=envelope.downlink_kind,
+        text=parsed.assistant_text,
+        trace_id=trace_id,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        turn_recall=parsed.turn_recall,
+        wire_assistant_source=wire_source,
+    )
+
+
+def _chat_only_prompt_plan_loop_result(
+    parsed: _ChatOnlyAssistantParse,
+    *,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+) -> InTurnSyncToolLoopResult:
+    return InTurnSyncToolLoopResult(
+        assistant_text=parsed.assistant_text,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        skip_final_transcript_assistant_row=(
+            parsed.skip_final_transcript_assistant_row
+        ),
+        last_interim_assistant_msg_uuid=None,
+        loop_persisted_user_transcript=False,
+        significance_meta=parsed.significance_meta,
+        turn_recall=parsed.turn_recall,
+    )
+
+
 async def _run_chat_only_prompt_plan(
     context: AgenticLoopContext,
     *,
@@ -738,20 +807,11 @@ async def _run_chat_only_prompt_plan(
     the turn), matching each track's structured-output prompt contract.
     """
     assert context.prompt_plan is not None
-    track = context.companion_turn_track
+    track, request_messages, langsmith_extra = (
+        _build_chat_only_prompt_plan_request(context)
+    )
     execution = context.execution
-    request_messages = prompt_messages_to_openai_dicts(
-        context.prompt_plan.messages
-    )
-    apply_agentic_loop_runtime_system_clauses(
-        openai_messages=request_messages,
-        user_text=context.user_text,
-    )
     chat_model = llm_client.resolve_model("chat")
-    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
-        source=execution.foreground_source.value,
-        extra_metadata=None,
-    )
     envelope = _resolve_chat_only_track_envelope(track)
     t_api = time.perf_counter()
     resp = await _invoke_chat_only_prompt_plan_llm(
@@ -784,32 +844,19 @@ async def _run_chat_only_prompt_plan(
         context.trace_id,
         track.value,
     )
-    if parsed.assistant_text:
-        wire_source = (
-            WireAssistantSource.GREETING
-            if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            else WireAssistantSource.CHAT
-        )
-        await appender.append_visible_message(
-            kind=envelope.downlink_kind,
-            text=parsed.assistant_text,
-            trace_id=context.trace_id,
-            langsmith_trace_id=langsmith_trace_acc,
-            langsmith_run_id=langsmith_llm_run_acc,
-            turn_recall=parsed.turn_recall,
-            wire_assistant_source=wire_source,
-        )
-    return InTurnSyncToolLoopResult(
-        assistant_text=parsed.assistant_text,
+    await _append_chat_only_visible_assistant_line(
+        track=track,
+        envelope=envelope,
+        parsed=parsed,
+        appender=appender,
+        trace_id=context.trace_id,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row=(
-            parsed.skip_final_transcript_assistant_row
-        ),
-        last_interim_assistant_msg_uuid=None,
-        loop_persisted_user_transcript=False,
-        significance_meta=parsed.significance_meta,
-        turn_recall=parsed.turn_recall,
+    )
+    return _chat_only_prompt_plan_loop_result(
+        parsed,
+        langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
     )
 
 
