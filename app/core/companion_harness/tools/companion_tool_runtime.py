@@ -106,7 +106,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TECHNO_CORE_EVENTS_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.user_md_identity import (
     USER_PROFILE_SECTION,
@@ -245,10 +247,10 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
     Known template fields (name/gender/age/etc.) are filled inline; other labels are appended as dated bullets.
     items: each entry contains label and value (both non-empty short text).
     """
-    rel = USER_MD_REL
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md
     prev = store.read_document_if_exists(rel)
     if prev is None:
-        return f"ERROR: missing {USER_MD_REL!r}"
+        return f"ERROR: missing {rel!r}"
     today = date.today().isoformat()
     inline_values: dict[str, str] = {}
     append_bullets: list[str] = []
@@ -277,7 +279,7 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
         parts.append(f"filled {len(inline_values)} template slot(s)")
     if append_bullets:
         parts.append(f"appended {len(append_bullets)} line(s)")
-    return f"OK {'; '.join(parts)} in {USER_MD_REL}"
+    return f"OK {'; '.join(parts)} in {rel}"
 
 
 def tool_memory_store_list_paths(
