@@ -709,7 +709,7 @@ Open PRs checked: #3949, #3952, #3955, scope-listing + stale-harness maintenance
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-5ab1`)
 
-- [ ] **HYGIENE-2026-412** `memory/client_time_from_memory_store.py` — read USER.md via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`.
-- [ ] **HYGIENE-2026-413** `memory/retrieval.py` — `transcript_window_spec` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`.
-- [ ] **HYGIENE-2026-414** `tools/read_web_page.py` — MEMORY.md read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md`.
-- [ ] **HYGIENE-2026-415** `tools/companion_tool_runtime.py` — `tool_update_user_md` uses `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`.
+- [x] **HYGIENE-2026-412** `memory/client_time_from_memory_store.py` — read USER.md via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`. Fixed in `cursor/agent-maintenance-tasks-5ab1` / pull/3958.
+- [x] **HYGIENE-2026-413** `memory/retrieval.py` — `transcript_window_spec` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-5ab1` / pull/3958.
+- [x] **HYGIENE-2026-414** `tools/read_web_page.py` — MEMORY.md read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md`. Fixed in `cursor/agent-maintenance-tasks-5ab1` / pull/3958.
+- [x] **HYGIENE-2026-415** `tools/companion_tool_runtime.py` — `tool_update_user_md` uses `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md`. Fixed in `cursor/agent-maintenance-tasks-5ab1` / pull/3958.
