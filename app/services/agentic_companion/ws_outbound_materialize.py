@@ -8,16 +8,11 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.companion_harness.companion.models import CompanionTurnResult
 from app.core.agentic_companion.output_queue import (
-    OutputQueue,
-    OutputQueueAppendInput,
     ReadyOutputMessage,
 )
 from app.core.agentic_companion.types import (
     InputQueueRecord,
-    OutputMessageKind,
-    UserMessageBatch,
 )
 from app.core.companion_harness.tools.image_gate import (
     generated_image_meta_from_index_slice,
@@ -36,7 +31,6 @@ from app.services.agent_status_line import agent_status_line_for_chat_header
 from app.services.agentic_channel.provision import resolve_chat_model_for_scope
 from app.services.agentic_companion.ws_turn_support import (
     companion_ai_meta_from_queue_delivery,
-    companion_ai_meta_from_turn_result,
 )
 from app.services.chat_completion_wire import (
     build_chat_ws_queued_success_frame,
