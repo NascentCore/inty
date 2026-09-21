@@ -8,13 +8,20 @@ from app.core.companion_harness.companion.dreaming_observability import (
     INNER_TICK_DREAMING_RUNTIME_EVENT_KIND,
     DreamingBatchOutcome,
     build_inner_tick_dreaming_runtime_event_record,
+    record_dreaming_batch_observability,
 )
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     InnerTickActivity,
 )
+from app.core.companion_harness.companion.runtime_events import (
+    read_runtime_events,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 
 def _candidate() -> DreamingCandidate:
@@ -63,6 +70,34 @@ def test_build_inner_tick_dreaming_runtime_event_record_fields() -> None:
     assert record["boundary_uuid"] == "u1"
     assert record["row_count"] == 1
     assert record["langsmith_trace_id"] == "ls-trace"
+
+
+def test_record_dreaming_batch_observability_persists_runtime_events_jsonl(
+    tmp_path,
+) -> None:
+    store = MemoryStore(
+        scope=CompanionScope("u", "a", tmp_path.name),
+        repository=None,
+    )
+    session = _session(store)
+    record_dreaming_batch_observability(
+        session=session,
+        inty_trace_id="trace-dream-obs",
+        outcome=DreamingBatchOutcome.CHECKPOINT_SAVED,
+        candidate=_candidate(),
+        langsmith_root_run=None,
+    )
+    events_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl
+    raw = store.read_document_if_exists(events_rel)
+    assert raw is not None
+    rows = read_runtime_events(
+        store,
+        kinds={INNER_TICK_DREAMING_RUNTIME_EVENT_KIND},
+        limit=5,
+    )
+    assert len(rows) == 1
+    assert rows[0]["trace_id"] == "trace-dream-obs"
+    assert rows[0]["outcome"] == DreamingBatchOutcome.CHECKPOINT_SAVED.value
 
 
 @patch(
