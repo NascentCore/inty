@@ -709,7 +709,7 @@ Open PRs checked: maintenance batch PRs #3930–#3958 — no overlap with tasks 
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-7c21`)
 
-- [ ] **HYGIENE-2026-417** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
-- [ ] **HYGIENE-2026-418** `companion/runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`
-- [ ] **HYGIENE-2026-419** `companion/test_dreaming_observability.py` — `record_dreaming_batch_observability` persists at scope runtime-events accessor
-- [ ] **HYGIENE-2026-420** `companion/test_turn_pipeline_dreaming.py` — transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`
+- [x] **HYGIENE-2026-417** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-7c21` / pull/3961.
+- [x] **HYGIENE-2026-418** `companion/runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`. Fixed in `cursor/agent-maintenance-tasks-7c21` / pull/3961.
+- [x] **HYGIENE-2026-419** `companion/test_dreaming_observability.py` — `record_dreaming_batch_observability` persists at scope runtime-events accessor. Fixed in `cursor/agent-maintenance-tasks-7c21` / pull/3961.
+- [x] **HYGIENE-2026-420** `companion/test_turn_pipeline_dreaming.py` — transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-7c21` / pull/3961.
