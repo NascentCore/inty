@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-21 scan (cron)
+
+Source: open PR overlap check (HYGIENE-2026-182..415 claimed on open maintenance PRs); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — stale issue audit file still present; `runtime_events` + dreaming observability tests lack scope-path smoke coverage.
+
+Open PRs checked: maintenance batch PRs #3930–#3958 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-7c21`)
+
+- [ ] **HYGIENE-2026-417** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [ ] **HYGIENE-2026-418** `companion/runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`
+- [ ] **HYGIENE-2026-419** `companion/test_dreaming_observability.py` — `record_dreaming_batch_observability` persists at scope runtime-events accessor
+- [ ] **HYGIENE-2026-420** `companion/test_turn_pipeline_dreaming.py` — transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`
