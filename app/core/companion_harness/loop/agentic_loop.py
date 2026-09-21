@@ -424,26 +424,25 @@ async def _persist_prompt_plan_interim_assistant(
         )
 
 
-async def _run_prompt_plan_openai_tool_call_loop(
+async def _invoke_prompt_plan_openai_tool_call_loop(
     *,
-    context: AgenticLoopContext,
-    store: MemoryStore,
-    llm_client: AsyncLlmClient,
-    interim_output_sink: Any,
-    max_tool_call_rounds: int,
     initial_resp: Any,
     working_messages: list[dict[str, Any]],
+    max_tool_call_rounds: int,
     acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
     prompt_plan: Any,
     chat_model: str,
     langsmith_extra: dict[str, Any],
     execution: Any,
-) -> tuple[Any, _PromptPlanToolLoopAcc, _PromptPlanInterimPersistState]:
-    """OpenAI tool rounds for one in-turn prompt-plan loop."""
+) -> Any:
     transcript_rel = context.transcript_rel
     trace_id = context.trace_id
     user_msg_uuid = context.user_msg_uuid
-    interim_state = _PromptPlanInterimPersistState()
 
     async def execute_tool_call(
         name: str, raw_arguments: str
@@ -492,7 +491,7 @@ async def _run_prompt_plan_openai_tool_call_loop(
             state=interim_state,
         )
 
-    loop_result = await resolve_openai_tool_call_loop_async(
+    return await resolve_openai_tool_call_loop_async(
         response=initial_resp,
         openai_messages=working_messages,
         max_tool_call_rounds=max_tool_call_rounds,
@@ -503,6 +502,40 @@ async def _run_prompt_plan_openai_tool_call_loop(
         initial_trace_id=acc.langsmith_trace_id or None,
         after_tool_messages_appended=after_tool_messages_appended,
         on_assistant_message=on_assistant_message,
+    )
+
+
+async def _run_prompt_plan_openai_tool_call_loop(
+    *,
+    context: AgenticLoopContext,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    max_tool_call_rounds: int,
+    initial_resp: Any,
+    working_messages: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> tuple[Any, _PromptPlanToolLoopAcc, _PromptPlanInterimPersistState]:
+    """OpenAI tool rounds for one in-turn prompt-plan loop."""
+    interim_state = _PromptPlanInterimPersistState()
+    loop_result = await _invoke_prompt_plan_openai_tool_call_loop(
+        initial_resp=initial_resp,
+        working_messages=working_messages,
+        max_tool_call_rounds=max_tool_call_rounds,
+        acc=acc,
+        interim_state=interim_state,
+        store=store,
+        context=context,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
     )
     if loop_result.trace_id:
         acc.langsmith_trace_id = loop_result.trace_id

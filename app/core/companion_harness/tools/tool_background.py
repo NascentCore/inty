@@ -735,30 +735,27 @@ def _tool_bg_after_tool_messages_appended(
     return refreshed_tools
 
 
-def _resolve_tool_bg_delivery_plan(
+@dataclass(frozen=True)
+class _ToolBgDeliveryDisplayResolution:
+    """User-visible text and push flags after finish-envelope routing."""
+
+    display_text: str
+    deliver_output_to_user: bool
+    should_push: bool
+
+
+def _tool_bg_resolve_finish_envelope_routing(
     *,
     loop_result: Any,
-    appended_turn_msgs: list[dict[str, Any]],
-    total_tool_calls: int,
     skip_finish_envelope_routing: bool,
     resolved_client: Any,
     tool_api_id: str,
     chat_completion_sync: ChatCompletionsSyncPort,
     trace_id: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
-    suppress_user_delivery: bool,
-) -> ToolBgDeliveryPlan:
+) -> Any:
     raw_final = _assistant_text_from_completion_response(loop_result.response)
-    bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
-    bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
-    tool_call_names = _extract_tool_call_names(appended_turn_msgs)
-    image_paths = _local_paths_from_tool_messages(loop_result.messages)
-    generation_deliver = _generation_tool_execution_deliver(
-        appended_turn_msgs,
-        tool_call_names,
-        image_paths,
-    )
-    routing = resolve_tool_background_finish_envelope(
+    return resolve_tool_background_finish_envelope(
         skip_finish_envelope_routing=skip_finish_envelope_routing,
         client=resolved_client,
         model=tool_api_id,
@@ -768,6 +765,15 @@ def _resolve_tool_bg_delivery_plan(
         trace_id=trace_id,
         langsmith_slice=langsmith_slice,
     )
+
+
+def _tool_bg_resolve_delivery_display(
+    *,
+    routing: Any,
+    appended_turn_msgs: list[dict[str, Any]],
+    generation_deliver: bool,
+    suppress_user_delivery: bool,
+) -> _ToolBgDeliveryDisplayResolution:
     output_to_user_flag = routing.output_to_user
     should_push = tool_background_should_deliver_to_user(
         suppress_user_delivery=suppress_user_delivery,
@@ -775,8 +781,6 @@ def _resolve_tool_bg_delivery_plan(
         output_to_user=output_to_user_flag,
     )
     base_nl = (routing.user_facing_reply or "").strip()
-    significance_meta = envelope_to_assistant_metadata_dict(routing)
-    turn_recall = turn_recall_from_envelope(routing)
     if output_to_user_flag and not base_nl:
         filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
         if filler:
@@ -797,6 +801,56 @@ def _resolve_tool_bg_delivery_plan(
             deliver_output_to_user = True
     else:
         display_text = base_nl
+    return _ToolBgDeliveryDisplayResolution(
+        display_text=display_text,
+        deliver_output_to_user=deliver_output_to_user,
+        should_push=should_push,
+    )
+
+
+def _resolve_tool_bg_delivery_plan(
+    *,
+    loop_result: Any,
+    appended_turn_msgs: list[dict[str, Any]],
+    total_tool_calls: int,
+    skip_finish_envelope_routing: bool,
+    resolved_client: Any,
+    tool_api_id: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    trace_id: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    suppress_user_delivery: bool,
+) -> ToolBgDeliveryPlan:
+    bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
+    bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
+    tool_call_names = _extract_tool_call_names(appended_turn_msgs)
+    image_paths = _local_paths_from_tool_messages(loop_result.messages)
+    generation_deliver = _generation_tool_execution_deliver(
+        appended_turn_msgs,
+        tool_call_names,
+        image_paths,
+    )
+    routing = _tool_bg_resolve_finish_envelope_routing(
+        loop_result=loop_result,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        resolved_client=resolved_client,
+        tool_api_id=tool_api_id,
+        chat_completion_sync=chat_completion_sync,
+        trace_id=trace_id,
+        langsmith_slice=langsmith_slice,
+    )
+    output_to_user_flag = routing.output_to_user
+    significance_meta = envelope_to_assistant_metadata_dict(routing)
+    turn_recall = turn_recall_from_envelope(routing)
+    display_resolution = _tool_bg_resolve_delivery_display(
+        routing=routing,
+        appended_turn_msgs=appended_turn_msgs,
+        generation_deliver=generation_deliver,
+        suppress_user_delivery=suppress_user_delivery,
+    )
+    display_text = display_resolution.display_text
+    deliver_output_to_user = display_resolution.deliver_output_to_user
+    should_push = display_resolution.should_push
     transcript_body = build_tool_background_transcript_body(
         display_text=display_text,
         appended_turn_msgs=appended_turn_msgs,
@@ -1285,6 +1339,116 @@ def _tool_bg_new_loop_run_context(
     )
 
 
+@dataclass(frozen=True)
+class _ToolBgLoopKickoff:
+    """Initial LLM round + run context for one tool-background loop."""
+
+    run_ctx: _ToolBgLoopRunContext
+    initial_response: Any
+    working_messages: list[dict[str, Any]]
+    progress: ToolBgLoopProgress
+    t0: float
+
+
+async def _tool_bg_kickoff_loop_run(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    tool_api_id: str,
+    user_msg_uuid: str,
+    trace_id: str,
+    tools: list[Any],
+    client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    force_tools_first_round: bool,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+    skip_finish_envelope_routing: bool,
+    suppress_user_delivery: bool,
+    on_event: Callable[[ToolOutputEvent], None],
+    activity_label: str | None,
+    execute_tool_call_fn: Callable[..., Any],
+) -> _ToolBgLoopKickoff | None:
+    if is_tool_background_aborted(user_msg_uuid):
+        logger.debug(
+            "repl.turn.bg skip aborted before start trace_id={} user_msg_uuid={}",
+            trace_id,
+            user_msg_uuid,
+        )
+        return None
+
+    scope_registry_key = memory_store.scope.registry_key()
+    image_asset_baseline = len(list_image_asset_records(memory_store))
+    transcript_append_rel = transcript_relative_path_for_turn_persistence(
+        track=companion_turn_track,
+    )
+    resolved_client = client
+    t0 = time.perf_counter()
+    working_messages = deepcopy(request_messages)
+    progress = ToolBgLoopProgress(
+        rounds_used=0,
+        active_round=0,
+        total_tool_calls=0,
+    )
+
+    initial_fetch = await _fetch_tool_bg_initial_completion(
+        resolved_client=resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        working_messages=working_messages,
+        tools=tools,
+        tool_api_id=tool_api_id,
+        force_tools_first_round=force_tools_first_round,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        scope_registry_key=scope_registry_key,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        trace_hooks=trace_hooks,
+    )
+    if initial_fetch is None:
+        return None
+    initial_response, _initial_meta, _request_snapshot = initial_fetch
+
+    progress.rounds_used = 1
+    progress.active_round = progress.rounds_used
+    run_ctx = _tool_bg_new_loop_run_context(
+        memory_store=memory_store,
+        scope_registry_key=scope_registry_key,
+        transcript_append_rel=transcript_append_rel,
+        image_asset_baseline=image_asset_baseline,
+        tool_api_id=tool_api_id,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        resolved_client=resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+    return _ToolBgLoopKickoff(
+        run_ctx=run_ctx,
+        initial_response=initial_response,
+        working_messages=working_messages,
+        progress=progress,
+        t0=t0,
+    )
+
+
 async def _tool_bg_run_loop_through_delivery(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1341,61 +1505,18 @@ async def run_tool_background_loop(
     force_tools_first_round: bool = True,
 ) -> None:
     assert llm_round_timeout_sec > 0.0
-    scope_registry_key = memory_store.scope.registry_key()
-    image_asset_baseline = len(list_image_asset_records(memory_store))
-    transcript_append_rel = transcript_relative_path_for_turn_persistence(
-        track=companion_turn_track,
-    )
     tool_api_id = tool_model.id_on_provider
     try:
-        if is_tool_background_aborted(user_msg_uuid):
-            logger.debug(
-                "repl.turn.bg skip aborted before start trace_id={} user_msg_uuid={}",
-                trace_id,
-                user_msg_uuid,
-            )
-            return
-
-        resolved_client = client
-        t0 = time.perf_counter()
-        working_messages = deepcopy(request_messages)
-        progress = ToolBgLoopProgress(
-            rounds_used=0,
-            active_round=0,
-            total_tool_calls=0,
-        )
-
-        initial_fetch = await _fetch_tool_bg_initial_completion(
-            resolved_client=resolved_client,
-            chat_completion_sync=chat_completion_sync,
-            working_messages=working_messages,
-            tools=tools,
-            tool_api_id=tool_api_id,
-            force_tools_first_round=force_tools_first_round,
-            langsmith_slice=langsmith_slice,
-            llm_round_timeout_sec=llm_round_timeout_sec,
-            scope_registry_key=scope_registry_key,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
-            trace_hooks=trace_hooks,
-        )
-        if initial_fetch is None:
-            return
-        initial_response, _initial_meta, _request_snapshot = initial_fetch
-
-        progress.rounds_used = 1
-        progress.active_round = progress.rounds_used
-        run_ctx = _tool_bg_new_loop_run_context(
+        kickoff = await _tool_bg_kickoff_loop_run(
             memory_store=memory_store,
-            scope_registry_key=scope_registry_key,
-            transcript_append_rel=transcript_append_rel,
-            image_asset_baseline=image_asset_baseline,
+            request_messages=request_messages,
             tool_api_id=tool_api_id,
-            trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
-            resolved_client=resolved_client,
-            chat_completion_sync=chat_completion_sync,
+            trace_id=trace_id,
             tools=tools,
+            client=client,
+            chat_completion_sync=chat_completion_sync,
+            force_tools_first_round=force_tools_first_round,
             langsmith_slice=langsmith_slice,
             llm_round_timeout_sec=llm_round_timeout_sec,
             trace_hooks=trace_hooks,
@@ -1409,12 +1530,14 @@ async def run_tool_background_loop(
             activity_label=activity_label,
             execute_tool_call_fn=execute_tool_call_fn,
         )
+        if kickoff is None:
+            return
         await _tool_bg_run_loop_through_delivery(
-            run_ctx=run_ctx,
-            initial_response=initial_response,
-            working_messages=working_messages,
-            progress=progress,
-            t0=t0,
+            run_ctx=kickoff.run_ctx,
+            initial_response=kickoff.initial_response,
+            working_messages=kickoff.working_messages,
+            progress=kickoff.progress,
+            t0=kickoff.t0,
         )
     finally:
         clear_tool_background_abort_flag(user_msg_uuid)

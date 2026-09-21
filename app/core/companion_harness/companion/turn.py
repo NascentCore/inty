@@ -640,6 +640,40 @@ async def _resolve_companion_turn_idle_and_user_tail(
     )
 
 
+def _assemble_companion_turn_prepared(
+    *,
+    track: CompanionTurnTrack,
+    deps: CompanionTurnDeps,
+    store: Any,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    tail_ctx: _CompanionTurnUserTailContext,
+    prompt_plan: CompanionTurnPromptPlan,
+    trace_id: str,
+) -> _CompanionTurnPrepared:
+    in_turn_sync_persisted_transcript = (
+        companion_turn_track_syncs_transcript_in_agentic_loop(track)
+    )
+    return _CompanionTurnPrepared(
+        track=track,
+        deps=deps,
+        store=store,
+        runtime_flags=runtime_flags,
+        loaded_state=tail_ctx.loaded_state,
+        context=tail_ctx.context,
+        tail_user_messages=tail_ctx.tail_user_messages,
+        user_msg_uuid=tail_ctx.user_msg_uuid,
+        user_message_batch=tail_ctx.user_message_batch,
+        prompt_plan=prompt_plan,
+        trace_id=trace_id,
+        user_text=tail_ctx.user_text,
+        ts_user=tail_ctx.ts_user,
+        ai_private_splice_plan=tail_ctx.ai_private_splice_plan,
+        in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
+        messages=prompt_plan.messages,
+        tools_for_turn=prompt_plan.tools_for_turn,
+    )
+
+
 async def _prepare_companion_turn_execution(
     user_text: str,
     *,
@@ -687,14 +721,6 @@ async def _prepare_companion_turn_execution(
         input_batch=input_batch,
         user_message_batch=user_message_batch,
     )
-    loaded_state = tail_ctx.loaded_state
-    context = tail_ctx.context
-    user_text = tail_ctx.user_text
-    user_msg_uuid = tail_ctx.user_msg_uuid
-    tail_user_messages = tail_ctx.tail_user_messages
-    user_message_batch = tail_ctx.user_message_batch
-    ai_private_splice_plan = tail_ctx.ai_private_splice_plan
-    ts_user = tail_ctx.ts_user
     prompt_plan = _build_companion_turn_prompt_plan_for_prepare(
         store=store,
         tail_ctx=tail_ctx,
@@ -703,28 +729,15 @@ async def _prepare_companion_turn_execution(
         runtime_context=runtime_context,
         transcript_compaction=transcript_compaction,
     )
-    in_turn_sync_persisted_transcript = (
-        companion_turn_track_syncs_transcript_in_agentic_loop(track)
-    )
     trace_id = str(uuid.uuid4())
-    return _CompanionTurnPrepared(
+    return _assemble_companion_turn_prepared(
         track=track,
         deps=deps,
         store=store,
         runtime_flags=runtime_flags,
-        loaded_state=loaded_state,
-        context=context,
-        tail_user_messages=tail_user_messages,
-        user_msg_uuid=user_msg_uuid,
-        user_message_batch=user_message_batch,
+        tail_ctx=tail_ctx,
         prompt_plan=prompt_plan,
         trace_id=trace_id,
-        user_text=user_text,
-        ts_user=ts_user,
-        ai_private_splice_plan=ai_private_splice_plan,
-        in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
-        messages=prompt_plan.messages,
-        tools_for_turn=prompt_plan.tools_for_turn,
     )
 
 
