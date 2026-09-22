@@ -37,31 +37,24 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANION_USER_FEEDBACK_JSONL_REL,
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
 
 COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME = "companion_record_user_feedback"
 
-# Snapshot paths from canonical MemDoc path constants (canonical path constants).
+_scope_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+# Snapshot paths via scope accessors (canonical rel strings).
 SNAPSHOT_DOC_PATHS: tuple[str, ...] = (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    USER_MD_REL,
-    MEMORY_MD_REL,
+    _scope_paths.context_json,
+    _scope_paths.identity,
+    _scope_paths.soul,
+    _scope_paths.style_md,
+    _scope_paths.user_md,
+    _scope_paths.memory_md,
 )
-TRANSCRIPT_REL = TRANSCRIPT_JSONL_REL
 TRANSCRIPT_TAIL_MAX_CHARS = 12_000
 MEMORY_DOC_MAX_CHARS = 4_000
 
@@ -192,11 +185,13 @@ def build_harness_snapshot(
 ) -> HarnessSnapshot:
     feedback_id = str(uuid.uuid4())
     scope = store.scope
-    context_json = store.read_document_if_exists(CONTEXT_JSON_REL) or ""
-    transcript_raw = store.read_document_if_exists(TRANSCRIPT_REL) or ""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    context_rel = paths.context_json
+    context_json = store.read_document_if_exists(context_rel) or ""
+    transcript_raw = store.read_document_if_exists(paths.transcript) or ""
     memory_docs: dict[str, str] = {}
     for rel in SNAPSHOT_DOC_PATHS:
-        if rel == CONTEXT_JSON_REL:
+        if rel == context_rel:
             continue
         body = store.read_document_if_exists(rel)
         if body:
@@ -251,7 +246,10 @@ def _snapshot_to_record(snapshot: HarnessSnapshot) -> dict[str, Any]:
 def append_user_feedback_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
-    store.append_jsonl_record(COMPANION_USER_FEEDBACK_JSONL_REL, record)
+    store.append_jsonl_record(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl,
+        record,
+    )
 
 
 def append_github_issue_completion(
