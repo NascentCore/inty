@@ -709,7 +709,7 @@ Open PRs checked: #3952 (`HYGIENE-2026-405..407`), #3955 (`408..411`), #3958 (`4
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-f8a3`)
 
-- [ ] **HYGIENE-2026-421** `tools/companion_user_feedback.py` — snapshot reads + feedback append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
-- [ ] **HYGIENE-2026-422** `companion/ai_private_prompt.py` — read/append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`.
-- [ ] **HYGIENE-2026-423** `tools/tool_background.py` — `tool_background_done` log via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl`.
-- [ ] **HYGIENE-2026-424** `companion/manager.py` — session-init context read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`.
+- [x] **HYGIENE-2026-421** `tools/companion_user_feedback.py` — snapshot reads + feedback append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-f8a3` / pull/3963.
+- [x] **HYGIENE-2026-422** `companion/ai_private_prompt.py` — read/append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`. Fixed in `cursor/agent-maintenance-tasks-f8a3` / pull/3963.
+- [x] **HYGIENE-2026-423** `tools/tool_background.py` — `tool_background_done` log via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl`. Fixed in `cursor/agent-maintenance-tasks-f8a3` / pull/3963.
+- [x] **HYGIENE-2026-424** `companion/manager.py` — session-init context read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`. Fixed in `cursor/agent-maintenance-tasks-f8a3` / pull/3963.
