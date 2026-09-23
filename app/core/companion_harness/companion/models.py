@@ -471,7 +471,9 @@ def load_prompt_bundle(
 
 
 def load_context_meta(*, store: MemoryStore) -> ContextMeta:
-    body = store.read_document_if_exists(CONTEXT_JSON_REL)
+    body = store.read_document_if_exists(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+    )
     if body is not None and body.strip():
         try:
             raw = json.loads(body)
