@@ -709,8 +709,8 @@ Open PRs checked: #3955, #3958, #3961, #3963 (`cursor/agent-maintenance-tasks-*`
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-bd8f`)
 
-- [ ] **HYGIENE-2026-425** `companion/bootstrap.py` — bootstrap + experience-profile tools read/write `context.json` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`.
-- [ ] **HYGIENE-2026-426** `companion/inner_tick_schedule.py` — monolog gate transcript load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-427** `companion/proactive_chat.py` — proactive wait gate transcript load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-428** `companion/models.py` — `load_context_meta` uses `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`.
-- [ ] **HYGIENE-2026-429** `memory/living_sphere_curator.py` — LIVING_SPHERE.md read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_md`.
+- [x] **HYGIENE-2026-425** `companion/bootstrap.py` — bootstrap + experience-profile tools read/write `context.json` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`. Fixed in `cursor/agent-maintenance-tasks-bd8f` / pull/3966.
+- [x] **HYGIENE-2026-426** `companion/inner_tick_schedule.py` — monolog gate transcript load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-bd8f` / pull/3966.
+- [x] **HYGIENE-2026-427** `companion/proactive_chat.py` — proactive wait gate transcript load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-bd8f` / pull/3966.
+- [x] **HYGIENE-2026-428** `companion/models.py` — `load_context_meta` uses `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`. Fixed in `cursor/agent-maintenance-tasks-bd8f` / pull/3966.
+- [x] **HYGIENE-2026-429** `memory/living_sphere_curator.py` — LIVING_SPHERE.md read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_md`. Fixed in `cursor/agent-maintenance-tasks-bd8f` / pull/3966.
