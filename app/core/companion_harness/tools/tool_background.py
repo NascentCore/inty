@@ -1350,6 +1350,104 @@ class _ToolBgLoopKickoff:
     t0: float
 
 
+@dataclass(frozen=True)
+class _ToolBgKickoffSession:
+    """Per-loop scope paths, working messages, and progress before the first LLM round."""
+
+    scope_registry_key: str
+    image_asset_baseline: int
+    transcript_append_rel: str
+    resolved_client: Any
+    working_messages: list[dict[str, Any]]
+    progress: ToolBgLoopProgress
+    t0: float
+
+
+def _tool_bg_prepare_kickoff_session(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    companion_turn_track: CompanionTurnTrack,
+) -> _ToolBgKickoffSession:
+    scope_registry_key = memory_store.scope.registry_key()
+    image_asset_baseline = len(list_image_asset_records(memory_store))
+    transcript_append_rel = transcript_relative_path_for_turn_persistence(
+        track=companion_turn_track,
+    )
+    return _ToolBgKickoffSession(
+        scope_registry_key=scope_registry_key,
+        image_asset_baseline=image_asset_baseline,
+        transcript_append_rel=transcript_append_rel,
+        resolved_client=client,
+        working_messages=deepcopy(request_messages),
+        progress=ToolBgLoopProgress(
+            rounds_used=0,
+            active_round=0,
+            total_tool_calls=0,
+        ),
+        t0=time.perf_counter(),
+    )
+
+
+def _tool_bg_kickoff_from_initial_response(
+    *,
+    session: _ToolBgKickoffSession,
+    initial_response: Any,
+    memory_store: MemoryStore,
+    tool_api_id: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    tools: list[Any],
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+    skip_finish_envelope_routing: bool,
+    suppress_user_delivery: bool,
+    on_event: Callable[[ToolOutputEvent], None],
+    activity_label: str | None,
+    execute_tool_call_fn: Callable[..., Any],
+) -> _ToolBgLoopKickoff:
+    session.progress.rounds_used = 1
+    session.progress.active_round = session.progress.rounds_used
+    run_ctx = _tool_bg_new_loop_run_context(
+        memory_store=memory_store,
+        scope_registry_key=session.scope_registry_key,
+        transcript_append_rel=session.transcript_append_rel,
+        image_asset_baseline=session.image_asset_baseline,
+        tool_api_id=tool_api_id,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        resolved_client=session.resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+    return _ToolBgLoopKickoff(
+        run_ctx=run_ctx,
+        initial_response=initial_response,
+        working_messages=session.working_messages,
+        progress=session.progress,
+        t0=session.t0,
+    )
+
+
 async def _tool_bg_kickoff_loop_run(
     *,
     memory_store: MemoryStore,
@@ -1382,30 +1480,23 @@ async def _tool_bg_kickoff_loop_run(
         )
         return None
 
-    scope_registry_key = memory_store.scope.registry_key()
-    image_asset_baseline = len(list_image_asset_records(memory_store))
-    transcript_append_rel = transcript_relative_path_for_turn_persistence(
-        track=companion_turn_track,
-    )
-    resolved_client = client
-    t0 = time.perf_counter()
-    working_messages = deepcopy(request_messages)
-    progress = ToolBgLoopProgress(
-        rounds_used=0,
-        active_round=0,
-        total_tool_calls=0,
+    session = _tool_bg_prepare_kickoff_session(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        companion_turn_track=companion_turn_track,
     )
 
     initial_fetch = await _fetch_tool_bg_initial_completion(
-        resolved_client=resolved_client,
+        resolved_client=session.resolved_client,
         chat_completion_sync=chat_completion_sync,
-        working_messages=working_messages,
+        working_messages=session.working_messages,
         tools=tools,
         tool_api_id=tool_api_id,
         force_tools_first_round=force_tools_first_round,
         langsmith_slice=langsmith_slice,
         llm_round_timeout_sec=llm_round_timeout_sec,
-        scope_registry_key=scope_registry_key,
+        scope_registry_key=session.scope_registry_key,
         trace_id=trace_id,
         user_msg_uuid=user_msg_uuid,
         trace_hooks=trace_hooks,
@@ -1414,17 +1505,13 @@ async def _tool_bg_kickoff_loop_run(
         return None
     initial_response, _initial_meta, _request_snapshot = initial_fetch
 
-    progress.rounds_used = 1
-    progress.active_round = progress.rounds_used
-    run_ctx = _tool_bg_new_loop_run_context(
+    return _tool_bg_kickoff_from_initial_response(
+        session=session,
+        initial_response=initial_response,
         memory_store=memory_store,
-        scope_registry_key=scope_registry_key,
-        transcript_append_rel=transcript_append_rel,
-        image_asset_baseline=image_asset_baseline,
         tool_api_id=tool_api_id,
         trace_id=trace_id,
         user_msg_uuid=user_msg_uuid,
-        resolved_client=resolved_client,
         chat_completion_sync=chat_completion_sync,
         tools=tools,
         langsmith_slice=langsmith_slice,
@@ -1439,13 +1526,6 @@ async def _tool_bg_kickoff_loop_run(
         on_event=on_event,
         activity_label=activity_label,
         execute_tool_call_fn=execute_tool_call_fn,
-    )
-    return _ToolBgLoopKickoff(
-        run_ctx=run_ctx,
-        initial_response=initial_response,
-        working_messages=working_messages,
-        progress=progress,
-        t0=t0,
     )
 
 

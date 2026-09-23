@@ -13,6 +13,7 @@ import time
 import uuid
 from copy import deepcopy
 from dataclasses import dataclass, field
+from collections.abc import Callable
 from typing import Any
 
 from loguru import logger
@@ -424,22 +425,29 @@ async def _persist_prompt_plan_interim_assistant(
         )
 
 
-async def _invoke_prompt_plan_openai_tool_call_loop(
+@dataclass
+class _PromptPlanOpenAiLoopHandlers:
+    """Callbacks for ``resolve_openai_tool_call_loop_async`` in a prompt-plan tool loop."""
+
+    execute_tool_call: Callable[[str, str], Any]
+    continue_chat: Callable[[list[dict[str, Any]]], Any]
+    after_tool_messages_appended: Callable[[list[dict[str, Any]]], Any]
+    on_assistant_message: Callable[[Any], Any]
+
+
+def _prompt_plan_build_openai_tool_loop_handlers(
     *,
-    initial_resp: Any,
-    working_messages: list[dict[str, Any]],
-    max_tool_call_rounds: int,
-    acc: _PromptPlanToolLoopAcc,
-    interim_state: _PromptPlanInterimPersistState,
     store: MemoryStore,
     context: AgenticLoopContext,
     llm_client: AsyncLlmClient,
     interim_output_sink: Any,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
     prompt_plan: Any,
     chat_model: str,
     langsmith_extra: dict[str, Any],
     execution: Any,
-) -> Any:
+) -> _PromptPlanOpenAiLoopHandlers:
     transcript_rel = context.transcript_rel
     trace_id = context.trace_id
     user_msg_uuid = context.user_msg_uuid
@@ -491,17 +499,53 @@ async def _invoke_prompt_plan_openai_tool_call_loop(
             state=interim_state,
         )
 
+    return _PromptPlanOpenAiLoopHandlers(
+        execute_tool_call=execute_tool_call,
+        continue_chat=continue_chat,
+        after_tool_messages_appended=after_tool_messages_appended,
+        on_assistant_message=on_assistant_message,
+    )
+
+
+async def _invoke_prompt_plan_openai_tool_call_loop(
+    *,
+    initial_resp: Any,
+    working_messages: list[dict[str, Any]],
+    max_tool_call_rounds: int,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> Any:
+    handlers = _prompt_plan_build_openai_tool_loop_handlers(
+        store=store,
+        context=context,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
+        acc=acc,
+        interim_state=interim_state,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
+    )
     return await resolve_openai_tool_call_loop_async(
         response=initial_resp,
         openai_messages=working_messages,
         max_tool_call_rounds=max_tool_call_rounds,
-        execute_tool_call=execute_tool_call,
-        continue_chat=continue_chat,
+        execute_tool_call=handlers.execute_tool_call,
+        continue_chat=handlers.continue_chat,
         build_assistant_tool_call_message=openai_assistant_message_dict,
         insert_system_message=insert_openai_system_message,
         initial_trace_id=acc.langsmith_trace_id or None,
-        after_tool_messages_appended=after_tool_messages_appended,
-        on_assistant_message=on_assistant_message,
+        after_tool_messages_appended=handlers.after_tool_messages_appended,
+        on_assistant_message=handlers.on_assistant_message,
     )
 
 
@@ -542,6 +586,42 @@ async def _run_prompt_plan_openai_tool_call_loop(
     return loop_result, acc, interim_state
 
 
+def _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
+    *,
+    loop_result: Any,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    chat_model: str,
+    t_api: float,
+    trace_id: str,
+) -> InTurnSyncToolLoopResult:
+    final_msg = loop_result.response.choices[0].message
+    last_text = (final_msg.content or "").strip()
+    approx_ctx_chars = sum(
+        len(str(m.get("content") or "")) for m in loop_result.messages
+    )
+    logger.info(
+        "prompt_plan_tool_loop llm_done model={} chat_completions_ms={:.0f} "
+        "approx_ctx_chars={} trace_id={}",
+        chat_model,
+        (time.perf_counter() - t_api) * 1000.0,
+        approx_ctx_chars,
+        trace_id,
+    )
+    return InTurnSyncToolLoopResult(
+        assistant_text=last_text,
+        langsmith_trace_id=acc.langsmith_trace_id,
+        langsmith_run_id=acc.langsmith_run_id,
+        skip_final_transcript_assistant_row=(
+            interim_state.skip_final_transcript_assistant_row
+        ),
+        last_interim_assistant_msg_uuid=(
+            interim_state.last_interim_assistant_msg_uuid
+        ),
+        loop_persisted_user_transcript=True,
+    )
+
+
 async def _run_prompt_plan_tool_loop(
     context: AgenticLoopContext,
     *,
@@ -557,9 +637,7 @@ async def _run_prompt_plan_tool_loop(
     """
     assert context.prompt_plan is not None
     execution = context.execution
-    transcript_rel = context.transcript_rel
     trace_id = context.trace_id
-    user_msg_uuid = context.user_msg_uuid
     prompt_plan = context.prompt_plan
     chat_model = llm_client.resolve_model("chat")
     langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
@@ -596,30 +674,13 @@ async def _run_prompt_plan_tool_loop(
         langsmith_extra=langsmith_extra,
         execution=execution,
     )
-    final_msg = loop_result.response.choices[0].message
-    last_text = (final_msg.content or "").strip()
-    approx_ctx_chars = sum(
-        len(str(m.get("content") or "")) for m in loop_result.messages
-    )
-    logger.info(
-        "prompt_plan_tool_loop llm_done model={} chat_completions_ms={:.0f} "
-        "approx_ctx_chars={} trace_id={}",
-        chat_model,
-        (time.perf_counter() - t_api) * 1000.0,
-        approx_ctx_chars,
-        trace_id,
-    )
-    return InTurnSyncToolLoopResult(
-        assistant_text=last_text,
-        langsmith_trace_id=acc.langsmith_trace_id,
-        langsmith_run_id=acc.langsmith_run_id,
-        skip_final_transcript_assistant_row=(
-            interim_state.skip_final_transcript_assistant_row
-        ),
-        last_interim_assistant_msg_uuid=(
-            interim_state.last_interim_assistant_msg_uuid
-        ),
-        loop_persisted_user_transcript=True,
+    return _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
+        loop_result=loop_result,
+        acc=acc,
+        interim_state=interim_state,
+        chat_model=chat_model,
+        t_api=t_api,
+        trace_id=trace_id,
     )
 
 
