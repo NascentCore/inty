@@ -709,10 +709,10 @@ Open PRs checked: #3955 (`HYGIENE-408..411`), #3958 (`412..415`), #3961 (`417..4
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-1bba`)
 
-- [ ] **HYGIENE-2026-430** `memory/living_sphere_curator.py` — `_read_all_updates` + `compact_living_sphere_batch` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl` / `living_sphere_md`
-- [ ] **HYGIENE-2026-431** `tools/companion_tool_runtime.py` — techno_core / living_sphere tool appends via scope `techno_core_events_jsonl` / `living_sphere_updates_jsonl` accessors
-- [ ] **HYGIENE-2026-432** `companion/models.py` — `transcript_relative_path_for_turn_persistence` via scope `transcript` / `transcript_inner_tick` accessors
-- [ ] **HYGIENE-2026-433** `tools/companion_tool_runtime.py` — transcript write guard uses scope transcript accessor rel paths
-- [ ] **HYGIENE-2026-434** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_JSONL` kind matches `ai_private_jsonl` scope accessor
-- [ ] **HYGIENE-2026-435** `memory/test_companion_scope_listing.py` — `TOOL_BACKGROUND_JSONL` kind matches `tool_background_jsonl` scope accessor
-- [ ] **HYGIENE-2026-436** `memory/test_companion_scope_listing.py` — `COMPANION_RUNTIME_EVENTS_JSONL` kind matches `companion_runtime_events_jsonl` scope accessor
+- [x] **HYGIENE-2026-430** `memory/living_sphere_curator.py` — `_read_all_updates` + `compact_living_sphere_batch` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl` / `living_sphere_md`. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-431** `tools/companion_tool_runtime.py` — techno_core / living_sphere tool appends via scope `techno_core_events_jsonl` / `living_sphere_updates_jsonl` accessors. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-432** `companion/models.py` — `transcript_relative_path_for_turn_persistence` via scope `transcript` / `transcript_inner_tick` accessors. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-433** `tools/companion_tool_runtime.py` — transcript write guard uses scope transcript accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-434** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_JSONL` kind matches `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-435** `memory/test_companion_scope_listing.py` — `TOOL_BACKGROUND_JSONL` kind matches `tool_background_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
+- [x] **HYGIENE-2026-436** `memory/test_companion_scope_listing.py` — `COMPANION_RUNTIME_EVENTS_JSONL` kind matches `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1bba` / pull/3969.
