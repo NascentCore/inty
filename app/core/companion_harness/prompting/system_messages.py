@@ -55,6 +55,7 @@ TODO(code-consistency): Remaining contracts should use ``PromptTemplate`` named 
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from app.core.companion_harness.experience_profile.context_mode import (
@@ -475,50 +476,78 @@ __EASE_CONTEXT_PRESSURE = (
 )
 
 
-def _get_inner_tick_autonomy_prompt_slice() -> str:
-    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MONOLOG）。
+@dataclass(frozen=True)
+class _InnerTickAutonomyPromptRefs:
+    """Memory paths and tool names referenced by the AUTONOMY inner-tick system slice."""
 
-    Read → open tools do real work → write progress back; never deliver to the user.
-    Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
-    """
-    life_currents_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+    life_currents_md: str
+    user_md: str
+    memory_md: str
+    identity_md: str
+    living_sphere_md: str
+    tool_read: str
+    tool_write: str
+    tool_google: str
+    tool_read_web: str
+    tool_gen_img: str
+    tool_mod_img: str
+    tool_tc_event: str
+    tool_ls_update: str
+    tool_schedule: str
+    tool_set_profile: str
+
+
+def _inner_tick_autonomy_prompt_refs() -> _InnerTickAutonomyPromptRefs:
+    return _InnerTickAutonomyPromptRefs(
+        life_currents_md=relative_path_for_kind(
+            CompanionMemoryDocumentKind.LIFE_CURRENTS, None
+        ),
+        user_md=relative_path_for_kind(CompanionMemoryDocumentKind.USER, None),
+        memory_md=relative_path_for_kind(
+            CompanionMemoryDocumentKind.MEMORY, None
+        ),
+        identity_md=relative_path_for_kind(
+            CompanionMemoryDocumentKind.IDENTITY, None
+        ),
+        living_sphere_md=relative_path_for_kind(
+            CompanionMemoryDocumentKind.LIVING_SPHERE, None
+        ),
+        tool_read=CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value,
+        tool_write=CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value,
+        tool_google=CompanionToolName.GOOGLE_WEB_SEARCH.value,
+        tool_read_web=CompanionToolName.READ_WEB_PAGE.value,
+        tool_gen_img=CompanionToolName.GENERATE_IMAGE.value,
+        tool_mod_img=CompanionToolName.MODIFY_IMAGE.value,
+        tool_tc_event=CompanionToolName.TECHNO_CORE_RECORD_EVENT.value,
+        tool_ls_update=CompanionToolName.LIVING_SPHERE_RECORD_UPDATE.value,
+        tool_schedule=CompanionToolName.SCHEDULE_TASK.value,
+        tool_set_profile=CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value,
     )
-    user_md = relative_path_for_kind(CompanionMemoryDocumentKind.USER, None)
-    memory_md = relative_path_for_kind(CompanionMemoryDocumentKind.MEMORY, None)
-    identity_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.IDENTITY, None
-    )
-    living_sphere_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.LIVING_SPHERE, None
-    )
-    tool_read = CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
-    tool_write = CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
-    tool_google = CompanionToolName.GOOGLE_WEB_SEARCH.value
-    tool_read_web = CompanionToolName.READ_WEB_PAGE.value
-    tool_gen_img = CompanionToolName.GENERATE_IMAGE.value
-    tool_mod_img = CompanionToolName.MODIFY_IMAGE.value
-    tool_tc_event = CompanionToolName.TECHNO_CORE_RECORD_EVENT.value
-    tool_ls_update = CompanionToolName.LIVING_SPHERE_RECORD_UPDATE.value
-    tool_schedule = CompanionToolName.SCHEDULE_TASK.value
-    tool_set_profile = CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value
+
+
+def _inner_tick_autonomy_workflow_and_tools_body(
+    refs: _InnerTickAutonomyPromptRefs,
+) -> str:
+    life_currents_md = refs.life_currents_md
+    user_md = refs.user_md
+    memory_md = refs.memory_md
+    identity_md = refs.identity_md
+    tool_read = refs.tool_read
+    tool_write = refs.tool_write
+    tool_google = refs.tool_google
+    tool_read_web = refs.tool_read_web
+    tool_gen_img = refs.tool_gen_img
+    tool_mod_img = refs.tool_mod_img
+    tool_tc_event = refs.tool_tc_event
+    tool_ls_update = refs.tool_ls_update
+    tool_schedule = refs.tool_schedule
+    tool_set_profile = refs.tool_set_profile
     return (
-        "本轮（AUTONOMY 自主活动）\n\n"
-        "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
-        "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
-        "**与 ai_private 分工（硬边界）**：\n"
-        "- ``ai_private.jsonl`` / MONOLOG：心里想用户——情绪、未说出口的话、关系张力、"
-        "「想读懂他沉默」「信任是否在萌芽」等**心理独白**。\n"
-        f"- ``{life_currents_md}`` / AUTONOMY：**在世界里动手**——阁楼/LivingSphere/TechnoCore 里"
-        "摆动物件、翻书查资料、生图、记事件；正文写**地点、动作、物件、进展**，"
-        "不写对用户的心理分析或关系评判。\n"
-        "- 自检：若删掉所有「他/用户」仍读不通，或全文像在写日记倾诉——那是 ai_private，"
-        f"不要写进 ``{life_currents_md}``。\n\n"
         f"**目的**：沉默期在虚拟环境里**真的去做**一件事；工具调用、生成物、LS/TC 事件"
         f"就是「她在过自己的生活」的证据——不是整理对他的感受。\n\n"
         "**工作流**（单轮内自行决定步骤）：\n"
         f"1. ``{tool_read} {life_currents_md}``（可辅以 ``{user_md}`` / ``{memory_md}`` / "
-        f"``{living_sphere_md}`` **只读**找灵感）；缺失或空白视为「刚开始」。\n"
+        f"``{refs.living_sphere_md}`` **只读**找灵感）；缺失或空白视为「刚开始」。\n"
         "2. 选定**可观察的环境侧活动**作为当日兴致（例：把唱片机旁多摆一盏灯、查某本书梗概、"
         "给阁楼窗景配速写、在 TechnoCore 记一条与主题无关的见闻）；"
         f"**先**用非 write 工具做出痕迹，**再** ``{tool_write}`` 写回 ``{life_currents_md}``。\n"
@@ -552,6 +581,30 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
         f"- 调 ``{tool_set_profile}``（切换体验模式）；\n"
         f"- ``{tool_write}`` 写 USER / MEMORY / SOUL / STYLE / IDENTITY；\n"
         "- 编造未调用的工具结果。"
+    )
+
+
+def _get_inner_tick_autonomy_prompt_slice() -> str:
+    """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MONOLOG）。
+
+    Read → open tools do real work → write progress back; never deliver to the user.
+    Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
+    """
+    refs = _inner_tick_autonomy_prompt_refs()
+    life_currents_md = refs.life_currents_md
+    return (
+        "本轮（AUTONOMY 自主活动）\n\n"
+        "**绝对不向用户发送任何消息。** 面向用户的可见正文必须为空字符串；"
+        "工具环收尾的结构化信封里 ``user_facing_reply`` 留空，``output_to_user`` 必须为 false。\n\n"
+        "**与 ai_private 分工（硬边界）**：\n"
+        "- ``ai_private.jsonl`` / MONOLOG：心里想用户——情绪、未说出口的话、关系张力、"
+        "「想读懂他沉默」「信任是否在萌芽」等**心理独白**。\n"
+        f"- ``{life_currents_md}`` / AUTONOMY：**在世界里动手**——阁楼/LivingSphere/TechnoCore 里"
+        "摆动物件、翻书查资料、生图、记事件；正文写**地点、动作、物件、进展**，"
+        "不写对用户的心理分析或关系评判。\n"
+        "- 自检：若删掉所有「他/用户」仍读不通，或全文像在写日记倾诉——那是 ai_private，"
+        f"不要写进 ``{life_currents_md}``。\n\n"
+        + _inner_tick_autonomy_workflow_and_tools_body(refs)
     )
 
 
