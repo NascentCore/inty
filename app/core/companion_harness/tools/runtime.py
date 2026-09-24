@@ -84,6 +84,44 @@ def resolve_official_assistant_tool_loop(
     )
 
 
+async def _append_official_assistant_tool_round_async(
+    *,
+    current_message: Any,
+    tool_calls: list[Any],
+    messages_with_tool_results: list[dict[str, Any]],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+    after_tool_messages_appended: (
+        Callable[[list[dict[str, Any]]], Awaitable[None]] | None
+    ),
+) -> None:
+    messages_with_tool_results.append(
+        build_assistant_tool_call_message(current_message)
+    )
+    for tool_call in tool_calls:
+        tool_name = tool_call.function.name
+        raw_arguments = tool_call.function.arguments or ""
+        tool_result, injected_system_message = await execute_tool_call(
+            tool_name,
+            raw_arguments,
+        )
+        messages_with_tool_results.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": tool_result,
+            }
+        )
+        if injected_system_message:
+            insert_system_message(
+                messages_with_tool_results,
+                injected_system_message,
+            )
+    if after_tool_messages_appended is not None:
+        await after_tool_messages_appended(messages_with_tool_results)
+
+
 async def resolve_openai_tool_call_loop_async(
     *,
     response: Any,
@@ -127,30 +165,15 @@ async def resolve_openai_tool_call_loop_async(
                 trace_id=last_trace_id,
             )
 
-        messages_with_tool_results.append(
-            build_assistant_tool_call_message(current_message)
+        await _append_official_assistant_tool_round_async(
+            current_message=current_message,
+            tool_calls=tool_calls,
+            messages_with_tool_results=messages_with_tool_results,
+            build_assistant_tool_call_message=build_assistant_tool_call_message,
+            execute_tool_call=execute_tool_call,
+            insert_system_message=insert_system_message,
+            after_tool_messages_appended=after_tool_messages_appended,
         )
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            raw_arguments = tool_call.function.arguments or ""
-            tool_result, injected_system_message = await execute_tool_call(
-                tool_name,
-                raw_arguments,
-            )
-            messages_with_tool_results.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": tool_result,
-                }
-            )
-            if injected_system_message:
-                insert_system_message(
-                    messages_with_tool_results,
-                    injected_system_message,
-                )
-        if after_tool_messages_appended is not None:
-            await after_tool_messages_appended(messages_with_tool_results)
         current_response, last_trace_id = await continue_chat(
             messages_with_tool_results
         )
