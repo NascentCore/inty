@@ -48,8 +48,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
 
@@ -644,13 +642,14 @@ def transcript_relative_path_for_turn_persistence(
     track: CompanionTurnTrack,
 ) -> str:
     """Scope-relative JSONL path for run_turn user/assistant transcript appends."""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     match track:
         case (
             CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
             # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3817
-            return TRANSCRIPT_INNER_TICK_JSONL_REL
+            return paths.transcript_inner_tick
         case (
             CompanionTurnTrack.USER_CHAT
             | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
@@ -658,7 +657,7 @@ def transcript_relative_path_for_turn_persistence(
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
         ):
-            return TRANSCRIPT_JSONL_REL
+            return paths.transcript
         case _ as unexpected:
             raise AssertionError(
                 f"unexpected CompanionTurnTrack for transcript path: {unexpected!r}"
