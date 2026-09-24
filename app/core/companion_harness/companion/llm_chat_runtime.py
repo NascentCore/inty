@@ -167,6 +167,76 @@ def _companion_turn_langsmith_root_descriptor(
     return name, tags, lane, extra_in
 
 
+def _create_and_register_companion_turn_langsmith_root(
+    *,
+    RunTree: Any,
+    run_name: str,
+    run_tags: list[str],
+    turn_lane: str,
+    lane_inputs: dict[str, Any],
+    meta: dict[str, Any],
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    uid: str,
+    cid: str,
+    inner_tick_turn: bool,
+    transcript_newest_message_uuid: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any:
+    root_inputs: dict[str, Any] = {
+        "inty_trace_id": inty_trace_id,
+        "user_msg_uuid": user_msg_uuid,
+        "chat_model": chat_model.id_on_provider,
+        "tool_model": tool_model.id_on_provider,
+        "chat_model_catalog": genai_model_langsmith_meta_subset(chat_model),
+        "tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
+        "user_id": uid,
+        "companion_id": cid,
+        "inty_turn_lane": turn_lane,
+        **lane_inputs,
+        **langsmith_slice.parent_inputs_fragment(),
+    }
+    if inner_tick_turn:
+        tail_uuid = (transcript_newest_message_uuid or "").strip()
+        if tail_uuid:
+            root_inputs["transcript_newest_message_uuid"] = tail_uuid
+    merged_tags = [*run_tags, *langsmith_slice.parent_tags()]
+    root = RunTree(
+        name=run_name,
+        run_type="chain",
+        inputs=root_inputs,
+        extra={"metadata": meta},
+        tags=merged_tags,
+    )
+    initial_post_ok = True
+    initial_post_err = ""
+    try:
+        root.post()
+    except Exception as exc:
+        initial_post_ok = False
+        initial_post_err = repr(exc)
+        logger.debug(
+            "companion_turn_langsmith_parent initial post skipped: {}", exc
+        )
+    logger.debug(
+        "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
+        "user_id={} companion_id={} ls_trace_id={} ls_run_id={} "
+        "initial_post_ok={} initial_post_err={!r}",
+        inty_trace_id,
+        user_msg_uuid,
+        uid,
+        cid,
+        companion_turn_langsmith_parent_trace_id_str(root),
+        companion_turn_langsmith_parent_run_id_str(root),
+        initial_post_ok,
+        initial_post_err,
+    )
+    _register_open_langsmith_parent_run(root)
+    return root
+
+
 def create_companion_turn_root_run(
     *,
     inty_trace_id: str,
@@ -247,56 +317,23 @@ def create_companion_turn_root_run(
                 meta["transcript_newest_message_uuid"] = tail_uuid
         if implicit_user_signed_on:
             meta["implicit_signal"] = lane_inputs["implicit_signal"]
-        root_inputs: dict[str, Any] = {
-            "inty_trace_id": inty_trace_id,
-            "user_msg_uuid": user_msg_uuid,
-            "chat_model": chat_model.id_on_provider,
-            "tool_model": tool_model.id_on_provider,
-            "chat_model_catalog": genai_model_langsmith_meta_subset(chat_model),
-            "tool_model_catalog": genai_model_langsmith_meta_subset(tool_model),
-            "user_id": uid,
-            "companion_id": cid,
-            "inty_turn_lane": turn_lane,
-            **lane_inputs,
-            **langsmith_slice.parent_inputs_fragment(),
-        }
-        if inner_tick_turn:
-            tail_uuid = (transcript_newest_message_uuid or "").strip()
-            if tail_uuid:
-                root_inputs["transcript_newest_message_uuid"] = tail_uuid
-        run_tags = [*run_tags, *langsmith_slice.parent_tags()]
-        root = RunTree(
-            name=run_name,
-            run_type="chain",
-            inputs=root_inputs,
-            extra={"metadata": meta},
-            tags=run_tags,
+        return _create_and_register_companion_turn_langsmith_root(
+            RunTree=RunTree,
+            run_name=run_name,
+            run_tags=run_tags,
+            turn_lane=turn_lane,
+            lane_inputs=lane_inputs,
+            meta=meta,
+            inty_trace_id=inty_trace_id,
+            user_msg_uuid=user_msg_uuid,
+            chat_model=chat_model,
+            tool_model=tool_model,
+            uid=uid,
+            cid=cid,
+            inner_tick_turn=inner_tick_turn,
+            transcript_newest_message_uuid=transcript_newest_message_uuid,
+            langsmith_slice=langsmith_slice,
         )
-        initial_post_ok = True
-        initial_post_err = ""
-        try:
-            root.post()
-        except Exception as exc:
-            initial_post_ok = False
-            initial_post_err = repr(exc)
-            logger.debug(
-                "companion_turn_langsmith_parent initial post skipped: {}", exc
-            )
-        logger.debug(
-            "langsmith_companion_parent_run created inty_trace_id={} user_msg_uuid={} "
-            "user_id={} companion_id={} ls_trace_id={} ls_run_id={} "
-            "initial_post_ok={} initial_post_err={!r}",
-            inty_trace_id,
-            user_msg_uuid,
-            uid,
-            cid,
-            companion_turn_langsmith_parent_trace_id_str(root),
-            companion_turn_langsmith_parent_run_id_str(root),
-            initial_post_ok,
-            initial_post_err,
-        )
-        _register_open_langsmith_parent_run(root)
-        return root
     except Exception as exc:
         logger.warning("companion_turn_langsmith_parent create failed: {}", exc)
         return None
@@ -335,45 +372,29 @@ def _companion_turn_langsmith_parent_id_str(
         return ""
 
 
-def end_companion_turn_root_run_safe(
+def _end_langsmith_parent_run_tree(
     root_run: Any,
     *,
-    error: str | None = None,
-    outputs: dict[str, Any] | None = None,
-    ls_end_source: str = "",
+    error: str | None,
+    outputs: dict[str, Any] | None,
 ) -> None:
-    if root_run is None:
-        return
-    ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
-    ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
-    th_name = threading.current_thread().name
-    logger.debug(
-        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
-        "ls_trace_id={} ls_run_id={} has_error={}",
-        ls_end_source,
-        th_name,
-        ls_tid,
-        ls_rid,
-        error is not None,
-    )
-    try:
-        if error is not None:
-            root_run.end(error=error)
-        elif outputs is not None:
-            root_run.end(outputs=outputs)
-        else:
-            root_run.end()
-    except Exception as exc:
-        logger.warning(
-            "companion_turn_langsmith_parent end failed ls_end_source={!r} thread={} "
-            "ls_trace_id={} ls_run_id={} err={}",
-            ls_end_source,
-            th_name,
-            ls_tid,
-            ls_rid,
-            exc,
-        )
-        return
+    if error is not None:
+        root_run.end(error=error)
+    elif outputs is not None:
+        root_run.end(outputs=outputs)
+    else:
+        root_run.end()
+
+
+def _sync_langsmith_parent_run_after_end(
+    root_run: Any,
+    *,
+    ls_end_source: str,
+    ls_tid: str,
+    ls_rid: str,
+    th_name: str,
+    had_error: bool,
+) -> None:
     try:
         root_run.patch(exclude_inputs=True)
     except Exception as exc:
@@ -408,7 +429,53 @@ def end_companion_turn_root_run_safe(
         th_name,
         ls_tid,
         ls_rid,
+        had_error,
+    )
+
+
+def end_companion_turn_root_run_safe(
+    root_run: Any,
+    *,
+    error: str | None = None,
+    outputs: dict[str, Any] | None = None,
+    ls_end_source: str = "",
+) -> None:
+    if root_run is None:
+        return
+    ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
+    ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
+    th_name = threading.current_thread().name
+    logger.debug(
+        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
         error is not None,
+    )
+    try:
+        _end_langsmith_parent_run_tree(
+            root_run, error=error, outputs=outputs
+        )
+    except Exception as exc:
+        logger.warning(
+            "companion_turn_langsmith_parent end failed ls_end_source={!r} thread={} "
+            "ls_trace_id={} ls_run_id={} err={}",
+            ls_end_source,
+            th_name,
+            ls_tid,
+            ls_rid,
+            exc,
+        )
+        return
+    _sync_langsmith_parent_run_after_end(
+        root_run,
+        ls_end_source=ls_end_source,
+        ls_tid=ls_tid,
+        ls_rid=ls_rid,
+        th_name=th_name,
+        had_error=error is not None,
     )
 
 
