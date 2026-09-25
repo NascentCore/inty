@@ -13,6 +13,7 @@ import time
 import uuid
 from copy import deepcopy
 from dataclasses import dataclass, field
+from collections.abc import Callable
 from typing import Any
 
 from loguru import logger
@@ -32,6 +33,7 @@ from app.core.agentic_companion.types import (
 )
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
+    DualLlmForegroundChatResult,
     run_dual_llm_foreground_chat,
 )
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
@@ -252,177 +254,347 @@ class _DomainToolBackgroundAppendSink:
         self._drainer = None
 
 
-async def _run_prompt_plan_tool_loop(
-    context: AgenticLoopContext,
+@dataclass
+class _PromptPlanToolLoopAcc:
+    """Mutable LangSmith ids and tool list across prompt-plan tool rounds."""
+
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    loop_tools: list[Any]
+
+
+@dataclass
+class _PromptPlanInterimPersistState:
+    """Mutable in-turn interim assistant persist counters."""
+
+    round_index: int = 0
+    skip_final_transcript_assistant_row: bool = False
+    last_interim_assistant_msg_uuid: str | None = None
+
+
+def _prompt_plan_message_had_tool_calls(message: Any) -> bool:
+    tool_calls = (
+        message.get("tool_calls")
+        if isinstance(message, dict)
+        else getattr(message, "tool_calls", None)
+    )
+    return bool(tool_calls or [])
+
+
+async def _fetch_prompt_plan_initial_completion(
     *,
-    store: MemoryStore,
     llm_client: AsyncLlmClient,
-    interim_output_sink,
-    max_tool_call_rounds: int,
-) -> InTurnSyncToolLoopResult:
-    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
-
-    TODO(#3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
-    TODO(#3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
-    """
-    assert context.prompt_plan is not None
-    execution = context.execution
-    transcript_rel = context.transcript_rel
-    trace_id = context.trace_id
-    user_msg_uuid = context.user_msg_uuid
-    prompt_plan = context.prompt_plan
-    loop_tools = list(prompt_plan.tools)
-    chat_model = llm_client.resolve_model("chat")
-    allow = execution.write_allowlist
-    langsmith_slice = context.langsmith.turn_slice
-    langsmith_extra = langsmith_slice.foreground_invocation_extra(
-        source=execution.foreground_source.value,
-        extra_metadata=None,
-    )
-
-    request_messages = prompt_messages_to_openai_dicts(prompt_plan.messages)
-    apply_agentic_loop_runtime_system_clauses(
-        openai_messages=request_messages,
-        user_text=context.user_text,
-    )
+    request_messages: list[dict[str, Any]],
+    loop_tools: list[Any],
+    tool_choice: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    high_reasoning: bool,
+) -> tuple[Any, list[dict[str, Any]], _PromptPlanToolLoopAcc, float]:
+    """First chat completion for a prompt-plan tool loop."""
     t_api = time.perf_counter()
     initial_resp = await llm_client.chat_completion(
         messages=request_messages,
         tools=loop_tools,
-        tool_choice=prompt_plan.tool_choice,
+        tool_choice=tool_choice,
         model=chat_model,
         langsmith_extra=langsmith_extra,
-        high_reasoning=execution.high_reasoning,
+        high_reasoning=high_reasoning,
     )
     working_messages = deepcopy(request_messages)
-    langsmith_trace_acc = langsmith_trace_id_from_completion(initial_resp) or ""
-    langsmith_llm_run_acc = (
-        langsmith_llm_run_id_from_completion(initial_resp) or ""
+    acc = _PromptPlanToolLoopAcc(
+        langsmith_trace_id=langsmith_trace_id_from_completion(initial_resp) or "",
+        langsmith_run_id=langsmith_llm_run_id_from_completion(initial_resp) or "",
+        loop_tools=list(loop_tools),
     )
+    return initial_resp, working_messages, acc, t_api
+
+
+async def _prompt_plan_tool_execute(
+    store: MemoryStore,
+    name: str,
+    raw_arguments: str,
+    *,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+) -> tuple[str, str | None]:
+    result = await repl_execute_tool_call(
+        store,
+        name,
+        raw_arguments,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+    )
+    return result, None
+
+
+async def _prompt_plan_tool_continue_chat(
+    *,
+    llm_client: AsyncLlmClient,
+    messages_with_tool_results: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    tool_choice: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    high_reasoning: bool,
+) -> tuple[Any, str | None]:
+    next_resp = await llm_client.chat_completion(
+        messages=messages_with_tool_results,
+        tools=acc.loop_tools,
+        tool_choice=tool_choice,
+        model=chat_model,
+        langsmith_extra=langsmith_extra,
+        high_reasoning=high_reasoning,
+    )
+    tid = langsmith_trace_id_from_completion(next_resp)
+    rid = langsmith_llm_run_id_from_completion(next_resp)
+    if tid:
+        acc.langsmith_trace_id = tid
+    if rid:
+        acc.langsmith_run_id = rid
+    return next_resp, tid
+
+
+async def _prompt_plan_refresh_tools_after_append(
+    *,
+    messages_with_tool_results: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    after_tool_messages_appended: Any,
+) -> None:
+    if after_tool_messages_appended is None:
+        return
+    refreshed = await after_tool_messages_appended(messages_with_tool_results)
+    if refreshed is not None:
+        acc.loop_tools = refreshed
+
+
+async def _persist_prompt_plan_interim_assistant(
+    message: Any,
+    *,
+    store: MemoryStore,
+    transcript_rel: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+    interim_output_sink: Any,
+    emit_every_round: bool,
+    state: _PromptPlanInterimPersistState,
+) -> None:
+    state.round_index += 1
+    body = resolve_in_turn_assistant_visible_text(message)
+    if body is None:
+        if _prompt_plan_message_had_tool_calls(message):
+            logger.warning(
+                "in_turn_visible_text_missing trace_id={} round_index={}",
+                trace_id,
+                state.round_index,
+            )
+        return
+    had_tool_calls = _prompt_plan_message_had_tool_calls(message)
+    assistant_msg_uuid = str(uuid.uuid4())
+    store.append_jsonl_record(
+        transcript_rel,
+        {
+            "role": "assistant",
+            "content": body,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "reply_to": user_msg_uuid,
+            "source": "chat",
+            "trace_id": trace_id,
+        },
+    )
+    state.last_interim_assistant_msg_uuid = assistant_msg_uuid
+    if not had_tool_calls:
+        state.skip_final_transcript_assistant_row = True
+    if interim_output_sink is not None and (
+        emit_every_round or had_tool_calls
+    ):
+        await interim_output_sink(
+            InTurnInterimOutput(
+                text=body,
+                user_msg_uuid=user_msg_uuid,
+                trace_id=trace_id,
+                langsmith_trace_id=langsmith_trace_id,
+                langsmith_run_id=langsmith_run_id,
+                round_index=state.round_index,
+                had_tool_calls=had_tool_calls,
+                assistant_msg_uuid=assistant_msg_uuid,
+            )
+        )
+
+
+@dataclass
+class _PromptPlanOpenAiLoopHandlers:
+    """Callbacks for ``resolve_openai_tool_call_loop_async`` in a prompt-plan tool loop."""
+
+    execute_tool_call: Callable[[str, str], Any]
+    continue_chat: Callable[[list[dict[str, Any]]], Any]
+    after_tool_messages_appended: Callable[[list[dict[str, Any]]], Any]
+    on_assistant_message: Callable[[Any], Any]
+
+
+def _prompt_plan_build_openai_tool_loop_handlers(
+    *,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> _PromptPlanOpenAiLoopHandlers:
+    transcript_rel = context.transcript_rel
+    trace_id = context.trace_id
+    user_msg_uuid = context.user_msg_uuid
 
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        result = await repl_execute_tool_call(
+        return await _prompt_plan_tool_execute(
             store,
             name,
             raw_arguments,
-            write_allowlist=allow,
+            write_allowlist=execution.write_allowlist,
             repository_only_store_text=context.repository_only_store_text,
         )
-        return result, None
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
-        next_resp = await llm_client.chat_completion(
-            messages=messages_with_tool_results,
-            tools=loop_tools,
+        return await _prompt_plan_tool_continue_chat(
+            llm_client=llm_client,
+            messages_with_tool_results=messages_with_tool_results,
+            acc=acc,
             tool_choice=prompt_plan.tool_choice,
-            model=chat_model,
+            chat_model=chat_model,
             langsmith_extra=langsmith_extra,
             high_reasoning=execution.high_reasoning,
         )
-        nonlocal langsmith_trace_acc, langsmith_llm_run_acc
-        tid = langsmith_trace_id_from_completion(next_resp)
-        rid = langsmith_llm_run_id_from_completion(next_resp)
-        if tid:
-            langsmith_trace_acc = tid
-        if rid:
-            langsmith_llm_run_acc = rid
-        return next_resp, tid
 
-    async def _after_tool_messages_appended(
+    async def after_tool_messages_appended(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> None:
-        nonlocal loop_tools
-        if context.after_tool_messages_appended is not None:
-            refreshed = await context.after_tool_messages_appended(
-                messages_with_tool_results
-            )
-            if refreshed is not None:
-                loop_tools = refreshed
-
-    round_index = 0
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
-    emit_every_round = True
-
-    async def _on_assistant_message(message: Any) -> None:
-        nonlocal round_index
-        nonlocal langsmith_trace_acc
-        nonlocal langsmith_llm_run_acc
-        nonlocal skip_final_transcript_assistant_row
-        nonlocal last_interim_assistant_msg_uuid
-        round_index += 1
-        body = resolve_in_turn_assistant_visible_text(message)
-        if body is None:
-            had_tool_calls_early = bool(
-                getattr(message, "tool_calls", None) or []
-            )
-            if had_tool_calls_early:
-                logger.warning(
-                    "in_turn_visible_text_missing trace_id={} round_index={}",
-                    trace_id,
-                    round_index,
-                )
-            return
-        had_tool_calls = bool(
-            (
-                message.get("tool_calls")
-                if isinstance(message, dict)
-                else getattr(message, "tool_calls", None)
-            )
-            or []
+        await _prompt_plan_refresh_tools_after_append(
+            messages_with_tool_results=messages_with_tool_results,
+            acc=acc,
+            after_tool_messages_appended=context.after_tool_messages_appended,
         )
-        ls_trace = langsmith_trace_acc
-        ls_run = langsmith_llm_run_acc
-        assistant_msg_uuid = str(uuid.uuid4())
-        store.append_jsonl_record(
-            transcript_rel,
-            {
-                "role": "assistant",
-                "content": body,
-                "ts": utc_iso_ts(),
-                "uuid": assistant_msg_uuid,
-                "reply_to": user_msg_uuid,
-                "source": "chat",
-                "trace_id": trace_id,
-            },
-        )
-        last_interim_assistant_msg_uuid = assistant_msg_uuid
-        if not had_tool_calls:
-            skip_final_transcript_assistant_row = True
-        if interim_output_sink is not None and (
-            emit_every_round or had_tool_calls
-        ):
-            await interim_output_sink(
-                InTurnInterimOutput(
-                    text=body,
-                    user_msg_uuid=user_msg_uuid,
-                    trace_id=trace_id,
-                    langsmith_trace_id=ls_trace,
-                    langsmith_run_id=ls_run,
-                    round_index=round_index,
-                    had_tool_calls=had_tool_calls,
-                    assistant_msg_uuid=assistant_msg_uuid,
-                )
-            )
 
-    loop_result = await resolve_openai_tool_call_loop_async(
+    async def on_assistant_message(message: Any) -> None:
+        await _persist_prompt_plan_interim_assistant(
+            message,
+            store=store,
+            transcript_rel=transcript_rel,
+            trace_id=trace_id,
+            user_msg_uuid=user_msg_uuid,
+            langsmith_trace_id=acc.langsmith_trace_id,
+            langsmith_run_id=acc.langsmith_run_id,
+            interim_output_sink=interim_output_sink,
+            emit_every_round=True,
+            state=interim_state,
+        )
+
+    return _PromptPlanOpenAiLoopHandlers(
+        execute_tool_call=execute_tool_call,
+        continue_chat=continue_chat,
+        after_tool_messages_appended=after_tool_messages_appended,
+        on_assistant_message=on_assistant_message,
+    )
+
+
+async def _invoke_prompt_plan_openai_tool_call_loop(
+    *,
+    initial_resp: Any,
+    working_messages: list[dict[str, Any]],
+    max_tool_call_rounds: int,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> Any:
+    handlers = _prompt_plan_build_openai_tool_loop_handlers(
+        store=store,
+        context=context,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
+        acc=acc,
+        interim_state=interim_state,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
+    )
+    return await resolve_openai_tool_call_loop_async(
         response=initial_resp,
         openai_messages=working_messages,
         max_tool_call_rounds=max_tool_call_rounds,
-        execute_tool_call=execute_tool_call,
-        continue_chat=continue_chat,
+        execute_tool_call=handlers.execute_tool_call,
+        continue_chat=handlers.continue_chat,
         build_assistant_tool_call_message=openai_assistant_message_dict,
         insert_system_message=insert_openai_system_message,
-        initial_trace_id=langsmith_trace_acc or None,
-        after_tool_messages_appended=_after_tool_messages_appended,
-        on_assistant_message=_on_assistant_message,
+        initial_trace_id=acc.langsmith_trace_id or None,
+        after_tool_messages_appended=handlers.after_tool_messages_appended,
+        on_assistant_message=handlers.on_assistant_message,
+    )
+
+
+async def _run_prompt_plan_openai_tool_call_loop(
+    *,
+    context: AgenticLoopContext,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    interim_output_sink: Any,
+    max_tool_call_rounds: int,
+    initial_resp: Any,
+    working_messages: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    prompt_plan: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> tuple[Any, _PromptPlanToolLoopAcc, _PromptPlanInterimPersistState]:
+    """OpenAI tool rounds for one in-turn prompt-plan loop."""
+    interim_state = _PromptPlanInterimPersistState()
+    loop_result = await _invoke_prompt_plan_openai_tool_call_loop(
+        initial_resp=initial_resp,
+        working_messages=working_messages,
+        max_tool_call_rounds=max_tool_call_rounds,
+        acc=acc,
+        interim_state=interim_state,
+        store=store,
+        context=context,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
     )
     if loop_result.trace_id:
-        langsmith_trace_acc = loop_result.trace_id
+        acc.langsmith_trace_id = loop_result.trace_id
+    return loop_result, acc, interim_state
+
+
+def _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
+    *,
+    loop_result: Any,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    chat_model: str,
+    t_api: float,
+    trace_id: str,
+) -> InTurnSyncToolLoopResult:
     final_msg = loop_result.response.choices[0].message
     last_text = (final_msg.content or "").strip()
     approx_ctx_chars = sum(
@@ -438,11 +610,280 @@ async def _run_prompt_plan_tool_loop(
     )
     return InTurnSyncToolLoopResult(
         assistant_text=last_text,
-        langsmith_trace_id=langsmith_trace_acc,
-        langsmith_run_id=langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
-        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+        langsmith_trace_id=acc.langsmith_trace_id,
+        langsmith_run_id=acc.langsmith_run_id,
+        skip_final_transcript_assistant_row=(
+            interim_state.skip_final_transcript_assistant_row
+        ),
+        last_interim_assistant_msg_uuid=(
+            interim_state.last_interim_assistant_msg_uuid
+        ),
         loop_persisted_user_transcript=True,
+    )
+
+
+async def _run_prompt_plan_tool_loop(
+    context: AgenticLoopContext,
+    *,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    interim_output_sink,
+    max_tool_call_rounds: int,
+) -> InTurnSyncToolLoopResult:
+    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
+
+    TODO(#3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
+    TODO(#3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
+    """
+    assert context.prompt_plan is not None
+    execution = context.execution
+    trace_id = context.trace_id
+    prompt_plan = context.prompt_plan
+    chat_model = llm_client.resolve_model("chat")
+    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
+        source=execution.foreground_source.value,
+        extra_metadata=None,
+    )
+    request_messages = prompt_messages_to_openai_dicts(prompt_plan.messages)
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=context.user_text,
+    )
+    initial_resp, working_messages, acc, t_api = (
+        await _fetch_prompt_plan_initial_completion(
+            llm_client=llm_client,
+            request_messages=request_messages,
+            loop_tools=list(prompt_plan.tools),
+            tool_choice=prompt_plan.tool_choice,
+            chat_model=chat_model,
+            langsmith_extra=langsmith_extra,
+            high_reasoning=execution.high_reasoning,
+        )
+    )
+    loop_result, acc, interim_state = await _run_prompt_plan_openai_tool_call_loop(
+        context=context,
+        store=store,
+        llm_client=llm_client,
+        interim_output_sink=interim_output_sink,
+        max_tool_call_rounds=max_tool_call_rounds,
+        initial_resp=initial_resp,
+        working_messages=working_messages,
+        acc=acc,
+        prompt_plan=prompt_plan,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        execution=execution,
+    )
+    return _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
+        loop_result=loop_result,
+        acc=acc,
+        interim_state=interim_state,
+        chat_model=chat_model,
+        t_api=t_api,
+        trace_id=trace_id,
+    )
+
+
+@dataclass(frozen=True)
+class _ChatOnlyTrackEnvelope:
+    """Downlink kind and structured-output schema for one chat-only track."""
+
+    downlink_kind: OutputMessageKind
+    response_format: dict[str, Any] | None
+
+
+@dataclass(frozen=True)
+class _ChatOnlyAssistantParse:
+    """Parsed assistant body and transcript flags from one chat-only completion."""
+
+    assistant_text: str
+    skip_final_transcript_assistant_row: bool
+    significance_meta: dict[str, Any] | None
+    turn_recall: str | None
+
+
+def _resolve_chat_only_track_envelope(
+    track: CompanionTurnTrack,
+) -> _ChatOnlyTrackEnvelope:
+    match track:
+        case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
+            return _ChatOnlyTrackEnvelope(
+                downlink_kind=OutputMessageKind.PROACTIVE,
+                response_format=PROACTIVE_CHAT_RESPONSE_FORMAT,
+            )
+        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
+            return _ChatOnlyTrackEnvelope(
+                downlink_kind=OutputMessageKind.SCHEDULED,
+                response_format=PROACTIVE_CHAT_RESPONSE_FORMAT,
+            )
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            return _ChatOnlyTrackEnvelope(
+                downlink_kind=OutputMessageKind.USER_REPLY,
+                response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
+            )
+        case _:
+            return _ChatOnlyTrackEnvelope(
+                downlink_kind=OutputMessageKind.USER_REPLY,
+                response_format=None,
+            )
+
+
+async def _invoke_chat_only_prompt_plan_llm(
+    *,
+    llm_client: AsyncLlmClient,
+    track: CompanionTurnTrack,
+    request_messages: list[dict[str, Any]],
+    chat_model: str,
+    response_format: dict[str, Any] | None,
+    llm_scene: str,
+    langsmith_extra: dict[str, Any],
+    high_reasoning: bool,
+    trace_id: str,
+) -> Any:
+    match track:
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            greet_cfg = (
+                global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting
+            )
+            return await llm_client.chat_completion_with_retrial(
+                messages=request_messages,
+                model=chat_model,
+                tools=None,
+                tool_choice=None,
+                response_format=response_format,
+                scene=llm_scene,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=high_reasoning,
+                max_attempts=int(greet_cfg.llm_max_attempts),
+                per_attempt_timeout_sec=float(greet_cfg.llm_timeout_sec),
+                trace_id=trace_id,
+                attempt_log_label="implicit_sign_on_greeting",
+            )
+        case _:
+            return await llm_client.chat_completion(
+                messages=request_messages,
+                model=chat_model,
+                tools=None,
+                response_format=response_format,
+                langsmith_extra=langsmith_extra,
+                high_reasoning=high_reasoning,
+                scene=llm_scene,
+            )
+
+
+def _parse_chat_only_assistant_message(
+    track: CompanionTurnTrack,
+    msg: Any,
+    trace_id: str,
+) -> _ChatOnlyAssistantParse:
+    match track:
+        case (
+            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            proactive_split = split_proactive_chat_message(msg)
+            if proactive_split.output_to_user:
+                return _ChatOnlyAssistantParse(
+                    assistant_text=proactive_split.visible_text,
+                    skip_final_transcript_assistant_row=False,
+                    significance_meta=None,
+                    turn_recall=None,
+                )
+            return _ChatOnlyAssistantParse(
+                assistant_text="",
+                skip_final_transcript_assistant_row=True,
+                significance_meta=None,
+                turn_recall=None,
+            )
+        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+            dual_split = split_dual_llm_chat_branch_message(msg)
+            if dual_split.output_to_user is False:
+                logger.warning(
+                    "chat_only_prompt_plan dual_llm envelope output_to_user=false "
+                    "trace_id={} (expected true for greeting)",
+                    trace_id,
+                )
+            return _ChatOnlyAssistantParse(
+                assistant_text=dual_split.visible_text,
+                skip_final_transcript_assistant_row=False,
+                significance_meta=dual_split.significance_meta,
+                turn_recall=dual_split.turn_recall,
+            )
+        case _:
+            return _ChatOnlyAssistantParse(
+                assistant_text=(msg.content or "").strip(),
+                skip_final_transcript_assistant_row=False,
+                significance_meta=None,
+                turn_recall=None,
+            )
+
+
+def _build_chat_only_prompt_plan_request(
+    context: AgenticLoopContext,
+) -> tuple[CompanionTurnTrack, list[dict[str, Any]], dict[str, Any]]:
+    """OpenAI request messages and LangSmith extra for chat-only tracks."""
+    assert context.prompt_plan is not None
+    track = context.companion_turn_track
+    execution = context.execution
+    request_messages = prompt_messages_to_openai_dicts(
+        context.prompt_plan.messages
+    )
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=context.user_text,
+    )
+    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
+        source=execution.foreground_source.value,
+        extra_metadata=None,
+    )
+    return track, request_messages, langsmith_extra
+
+
+async def _append_chat_only_visible_assistant_line(
+    *,
+    track: CompanionTurnTrack,
+    envelope: _ChatOnlyTrackEnvelope,
+    parsed: _ChatOnlyAssistantParse,
+    appender: _UserVisibleOutputAppender,
+    trace_id: str,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+) -> None:
+    if not parsed.assistant_text:
+        return
+    wire_source = (
+        WireAssistantSource.GREETING
+        if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+        else WireAssistantSource.CHAT
+    )
+    await appender.append_visible_message(
+        kind=envelope.downlink_kind,
+        text=parsed.assistant_text,
+        trace_id=trace_id,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        turn_recall=parsed.turn_recall,
+        wire_assistant_source=wire_source,
+    )
+
+
+def _chat_only_prompt_plan_loop_result(
+    parsed: _ChatOnlyAssistantParse,
+    *,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+) -> InTurnSyncToolLoopResult:
+    return InTurnSyncToolLoopResult(
+        assistant_text=parsed.assistant_text,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        skip_final_transcript_assistant_row=(
+            parsed.skip_final_transcript_assistant_row
+        ),
+        last_interim_assistant_msg_uuid=None,
+        loop_persisted_user_transcript=False,
+        significance_meta=parsed.significance_meta,
+        turn_recall=parsed.turn_recall,
     )
 
 
@@ -460,97 +901,31 @@ async def _run_chat_only_prompt_plan(
     the turn), matching each track's structured-output prompt contract.
     """
     assert context.prompt_plan is not None
-    track = context.companion_turn_track
+    track, request_messages, langsmith_extra = (
+        _build_chat_only_prompt_plan_request(context)
+    )
     execution = context.execution
-    request_messages = prompt_messages_to_openai_dicts(
-        context.prompt_plan.messages
-    )
-    apply_agentic_loop_runtime_system_clauses(
-        openai_messages=request_messages,
-        user_text=context.user_text,
-    )
     chat_model = llm_client.resolve_model("chat")
-    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
-        source=execution.foreground_source.value,
-        extra_metadata=None,
-    )
-    llm_scene = execution.llm_scene.value
-    match track:
-        case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
-            downlink_kind = OutputMessageKind.PROACTIVE
-            response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
-        case CompanionTurnTrack.INNER_TICK_SCHEDULED:
-            downlink_kind = OutputMessageKind.SCHEDULED
-            response_format = PROACTIVE_CHAT_RESPONSE_FORMAT
-        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            downlink_kind = OutputMessageKind.USER_REPLY
-            response_format = DUAL_LLM_CHAT_RESPONSE_FORMAT
-        case _:
-            downlink_kind = OutputMessageKind.USER_REPLY
-            response_format = None
-
+    envelope = _resolve_chat_only_track_envelope(track)
     t_api = time.perf_counter()
-    match track:
-        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            greet_cfg = (
-                global_config_loaded_from_config_yaml.agent.companion_harness.implicit_sign_on_greeting
-            )
-            resp = await llm_client.chat_completion_with_retrial(
-                messages=request_messages,
-                model=chat_model,
-                tools=None,
-                tool_choice=None,
-                response_format=response_format,
-                scene=llm_scene,
-                langsmith_extra=langsmith_extra,
-                high_reasoning=execution.high_reasoning,
-                max_attempts=int(greet_cfg.llm_max_attempts),
-                per_attempt_timeout_sec=float(greet_cfg.llm_timeout_sec),
-                trace_id=context.trace_id,
-                attempt_log_label="implicit_sign_on_greeting",
-            )
-        case _:
-            resp = await llm_client.chat_completion(
-                messages=request_messages,
-                model=chat_model,
-                tools=None,
-                response_format=response_format,
-                langsmith_extra=langsmith_extra,
-                high_reasoning=execution.high_reasoning,
-                scene=llm_scene,
-            )
+    resp = await _invoke_chat_only_prompt_plan_llm(
+        llm_client=llm_client,
+        track=track,
+        request_messages=request_messages,
+        chat_model=chat_model,
+        response_format=envelope.response_format,
+        llm_scene=execution.llm_scene.value,
+        langsmith_extra=langsmith_extra,
+        high_reasoning=execution.high_reasoning,
+        trace_id=context.trace_id,
+    )
     langsmith_trace_acc = langsmith_trace_id_from_completion(resp) or ""
     langsmith_llm_run_acc = langsmith_llm_run_id_from_completion(resp) or ""
-    msg = resp.choices[0].message
-    skip_final_transcript_assistant_row = False
-    significance_meta: dict[str, Any] | None = None
-    turn_recall: str | None = None
-    match track:
-        case (
-            CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-            | CompanionTurnTrack.INNER_TICK_SCHEDULED
-        ):
-            proactive_split = split_proactive_chat_message(msg)
-            if proactive_split.output_to_user:
-                last_text = proactive_split.visible_text
-            else:
-                last_text = ""
-                skip_final_transcript_assistant_row = True
-        case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            dual_split = split_dual_llm_chat_branch_message(msg)
-            last_text = dual_split.visible_text
-            significance_meta = dual_split.significance_meta
-            turn_recall = dual_split.turn_recall
-            # Envelope contract: chat branch must set output_to_user true; false is
-            # for tool_background finish envelopes only. Non-fatal model drift.
-            if dual_split.output_to_user is False:
-                logger.warning(
-                    "chat_only_prompt_plan dual_llm envelope output_to_user=false "
-                    "trace_id={} (expected true for greeting)",
-                    context.trace_id,
-                )
-        case _:
-            last_text = (msg.content or "").strip()
+    parsed = _parse_chat_only_assistant_message(
+        track,
+        resp.choices[0].message,
+        context.trace_id,
+    )
     approx_ctx_chars = sum(
         len(str(m.get("content") or "")) for m in request_messages
     )
@@ -563,31 +938,111 @@ async def _run_chat_only_prompt_plan(
         context.trace_id,
         track.value,
     )
-    if last_text:
-        wire_source = (
-            WireAssistantSource.GREETING
-            if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            else WireAssistantSource.CHAT
-        )
-        await appender.append_visible_message(
-            kind=downlink_kind,
-            text=last_text,
-            trace_id=context.trace_id,
-            langsmith_trace_id=langsmith_trace_acc,
-            langsmith_run_id=langsmith_llm_run_acc,
-            turn_recall=turn_recall,
-            wire_assistant_source=wire_source,
-        )
-    return InTurnSyncToolLoopResult(
-        assistant_text=last_text,
+    await _append_chat_only_visible_assistant_line(
+        track=track,
+        envelope=envelope,
+        parsed=parsed,
+        appender=appender,
+        trace_id=context.trace_id,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
-        last_interim_assistant_msg_uuid=None,
-        loop_persisted_user_transcript=False,
-        significance_meta=significance_meta,
-        turn_recall=turn_recall,
     )
+    return _chat_only_prompt_plan_loop_result(
+        parsed,
+        langsmith_trace_id=langsmith_trace_acc,
+        langsmith_run_id=langsmith_llm_run_acc,
+    )
+
+
+async def _run_dual_llm_foreground_phase(
+    *,
+    context: AgenticLoopContext,
+    llm_client: LlmClient,
+    appender: _UserVisibleOutputAppender,
+) -> DualLlmForegroundChatResult:
+    """Foreground dual-LLM envelope chat and optional user-visible foreground line."""
+    assert (
+        context.dual_llm_chat_msgs is not None
+        and context.dual_llm_tool_msgs is not None
+    )
+    execution = context.execution
+    chat_msgs = list(context.dual_llm_chat_msgs)
+    tool_msgs = list(context.dual_llm_tool_msgs)
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=chat_msgs,
+        user_text=context.user_text,
+    )
+    chat_model = llm_client.resolve_model("chat")
+    fg_result = await run_dual_llm_foreground_chat(
+        DualLlmForegroundChatInput(
+            llm_client=llm_client,
+            chat_msgs=chat_msgs,
+            tool_msgs=tool_msgs,
+            chat_model=chat_model,
+            langsmith_slice=context.langsmith.turn_slice,
+            foreground_scene=execution.llm_scene.value,
+            high_reasoning=execution.high_reasoning,
+            trace_id=context.trace_id,
+            skip_foreground_envelope=execution.skip_foreground_envelope,
+            langsmith_trace_id=context.langsmith.trace_id,
+            langsmith_run_id=context.langsmith.run_id,
+        )
+    )
+    fg_text = fg_result.assistant_text.strip()
+    if fg_text:
+        await appender.append_visible_message(
+            kind=OutputMessageKind.USER_REPLY,
+            text=fg_text,
+            trace_id=context.trace_id,
+            langsmith_trace_id=fg_result.langsmith_trace_id,
+            langsmith_run_id=fg_result.langsmith_run_id,
+            turn_recall=fg_result.turn_recall,
+            tool_background_started=bool(fg_result.tool_msgs_for_bg),
+        )
+    return fg_result
+
+
+async def _run_dual_llm_tool_background_phase(
+    *,
+    store: MemoryStore,
+    context: AgenticLoopContext,
+    llm_client: LlmClient,
+    appender: _UserVisibleOutputAppender,
+    fg_result: DualLlmForegroundChatResult,
+) -> bool:
+    """Tool-path background loop; returns whether tool background was started."""
+    event_sink = _DomainToolBackgroundAppendSink(
+        appender=appender,
+        trace_id=context.trace_id,
+    )
+    assert context.companion_turn_track is not None
+    execution = context.execution
+    tool_model = llm_client.resolve_model("tool")
+    tool_background_started = bool(fg_result.tool_msgs_for_bg)
+    await run_tool_background_loop(
+        memory_store=store,
+        request_messages=list(fg_result.tool_msgs_for_bg),
+        tool_model=tool_model,
+        user_msg_uuid=context.user_msg_uuid,
+        trace_id=context.trace_id,
+        tools=list(context.openai_tools),
+        on_event=event_sink,
+        execute_tool_call_fn=execute_tool_call,
+        client=llm_client.sync_client_for_route("tool"),
+        chat_completion_sync=llm_client.chat_completions_sync,
+        write_allowlist=execution.write_allowlist,
+        repository_only_store_text=context.repository_only_store_text,
+        suppress_user_delivery=execution.suppresses_user_delivery,
+        skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
+        activity_label=execution.tool_bg_activity_label,
+        llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
+        runtime_context=context.runtime_context,
+        langsmith_slice=context.langsmith.turn_slice,
+        companion_turn_track=context.companion_turn_track,
+        force_tools_first_round=fg_result.force_tools_first_round,
+    )
+    await event_sink.flush()
+    return tool_background_started
 
 
 class AgenticLoop:
@@ -696,73 +1151,18 @@ class AgenticLoop:
             store=self.store,
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
-        llm_client = self.legacy_llm_client
-        execution = context.execution
-        chat_msgs = list(context.dual_llm_chat_msgs)
-        tool_msgs = list(context.dual_llm_tool_msgs)
-        apply_agentic_loop_runtime_system_clauses(
-            openai_messages=chat_msgs,
-            user_text=context.user_text,
-        )
-        chat_model = llm_client.resolve_model("chat")
-        tool_model = llm_client.resolve_model("tool")
-
-        fg_result = await run_dual_llm_foreground_chat(
-            DualLlmForegroundChatInput(
-                llm_client=llm_client,
-                chat_msgs=chat_msgs,
-                tool_msgs=tool_msgs,
-                chat_model=chat_model,
-                langsmith_slice=context.langsmith.turn_slice,
-                foreground_scene=execution.llm_scene.value,
-                high_reasoning=execution.high_reasoning,
-                trace_id=context.trace_id,
-                skip_foreground_envelope=execution.skip_foreground_envelope,
-                langsmith_trace_id=context.langsmith.trace_id,
-                langsmith_run_id=context.langsmith.run_id,
-            )
-        )
-        fg_text = fg_result.assistant_text.strip()
-        if fg_text:
-            await appender.append_visible_message(
-                kind=OutputMessageKind.USER_REPLY,
-                text=fg_text,
-                trace_id=context.trace_id,
-                langsmith_trace_id=fg_result.langsmith_trace_id,
-                langsmith_run_id=fg_result.langsmith_run_id,
-                turn_recall=fg_result.turn_recall,
-                tool_background_started=bool(fg_result.tool_msgs_for_bg),
-            )
-        event_sink = _DomainToolBackgroundAppendSink(
+        fg_result = await _run_dual_llm_foreground_phase(
+            context=context,
+            llm_client=self.legacy_llm_client,
             appender=appender,
-            trace_id=context.trace_id,
         )
-
-        assert context.companion_turn_track is not None
-        tool_background_started = bool(fg_result.tool_msgs_for_bg)
-        await run_tool_background_loop(
-            memory_store=self.store,
-            request_messages=list(fg_result.tool_msgs_for_bg),
-            tool_model=tool_model,
-            user_msg_uuid=context.user_msg_uuid,
-            trace_id=context.trace_id,
-            tools=list(context.openai_tools),
-            on_event=event_sink,
-            execute_tool_call_fn=execute_tool_call,
-            client=llm_client.sync_client_for_route("tool"),
-            chat_completion_sync=llm_client.chat_completions_sync,
-            write_allowlist=execution.write_allowlist,
-            repository_only_store_text=context.repository_only_store_text,
-            suppress_user_delivery=execution.suppresses_user_delivery,
-            skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
-            activity_label=execution.tool_bg_activity_label,
-            llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-            runtime_context=context.runtime_context,
-            langsmith_slice=context.langsmith.turn_slice,
-            companion_turn_track=context.companion_turn_track,
-            force_tools_first_round=fg_result.force_tools_first_round,
+        tool_background_started = await _run_dual_llm_tool_background_phase(
+            store=self.store,
+            context=context,
+            llm_client=self.legacy_llm_client,
+            appender=appender,
+            fg_result=fg_result,
         )
-        await event_sink.flush()
         return AgenticLoopOutput(
             assistant_text=fg_result.assistant_text,
             significance_meta=fg_result.significance_meta,
