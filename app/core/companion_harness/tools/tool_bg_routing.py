@@ -25,7 +25,7 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+    LangsmithLlmSource,
 )
 
 _UNIFIED_FALLBACK_SYSTEM_PROMPT = (
@@ -137,7 +137,7 @@ def resolve_tool_bg_routing_sync(
         tools=[],
         response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
         langsmith_extra=langsmith_slice.tool_call_extra(
-            phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+            phase_suffix=LangsmithLlmSource.TOOL_BACKGROUND_ROUTING_FALLBACK.value,
             extra_metadata=None,
         ),
     )

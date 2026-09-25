@@ -18,7 +18,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+    LangsmithLlmSource,
 )
 from app.utils.models_catalog import GenAIModel
 from .dual_llm_chat_branch_envelope import (
@@ -121,7 +121,7 @@ async def run_dual_llm_foreground_chat(
             response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
             scene=fg_input.foreground_scene,
             langsmith_extra=fg_input.langsmith_slice.foreground_invocation_extra(
-                source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+                source=LangsmithLlmSource.FOREGROUND_DUAL_LLM_ENVELOPE.value,
                 extra_metadata=None,
             ),
             high_reasoning=fg_input.high_reasoning,
