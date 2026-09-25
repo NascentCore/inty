@@ -77,41 +77,38 @@ class DualLlmForegroundChatResult:
     langsmith_run_id: str
 
 
-async def run_dual_llm_foreground_chat(
+def _dual_llm_foreground_skip_result(
     fg_input: DualLlmForegroundChatInput,
 ) -> DualLlmForegroundChatResult:
-    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
+    """Monolog inner tick: skip envelope chat and force tool-path first round."""
+    logger.info(
+        "run_dual_llm_foreground_chat skip foreground envelope "
+        "trace_id={} foreground_scene={} model_chat={}",
+        fg_input.trace_id,
+        fg_input.foreground_scene,
+        fg_input.chat_model,
+    )
+    return DualLlmForegroundChatResult(
+        assistant_text="",
+        significance_meta=None,
+        turn_recall=None,
+        tool_msgs_for_bg=tuple(deepcopy(list(fg_input.tool_msgs))),
+        force_tools_first_round=True,
+        langsmith_trace_id=fg_input.langsmith_trace_id,
+        langsmith_run_id=fg_input.langsmith_run_id,
+    )
 
-    When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
-    ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,
-    parses the envelope, and appends the chat-track handoff assistant row to tool messages when
-    foreground text is non-empty.
-    """
+
+async def _invoke_dual_llm_foreground_chat_completion(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> tuple[Any, str, str]:
+    """One foreground chat completion; returns response and accumulated LangSmith ids."""
     langsmith_trace_acc = fg_input.langsmith_trace_id
     langsmith_run_acc = fg_input.langsmith_run_id
-
-    if fg_input.skip_foreground_envelope:
-        logger.info(
-            "run_dual_llm_foreground_chat skip foreground envelope "
-            "trace_id={} foreground_scene={} model_chat={}",
-            fg_input.trace_id,
-            fg_input.foreground_scene,
-            fg_input.chat_model,
-        )
-        return DualLlmForegroundChatResult(
-            assistant_text="",
-            significance_meta=None,
-            turn_recall=None,
-            tool_msgs_for_bg=tuple(deepcopy(list(fg_input.tool_msgs))),
-            force_tools_first_round=True,
-            langsmith_trace_id=langsmith_trace_acc,
-            langsmith_run_id=langsmith_run_acc,
-        )
-
-    chat_msgs = list(fg_input.chat_msgs)
-    t_api = time.perf_counter()
     chat_model = fg_input.chat_model
     llm_client = fg_input.llm_client
+    t_api = time.perf_counter()
 
     def _chat_sync() -> Any:
         return llm_client.chat_completion(
@@ -160,13 +157,22 @@ async def run_dual_llm_foreground_chat(
         approx_ctx_chars,
         fg_input.foreground_scene,
     )
+    return resp, langsmith_trace_acc, langsmith_run_acc
+
+
+def _dual_llm_foreground_result_from_response(
+    fg_input: DualLlmForegroundChatInput,
+    resp: Any,
+    langsmith_trace_acc: str,
+    langsmith_run_acc: str,
+) -> DualLlmForegroundChatResult:
+    """Parse envelope completion and build tool-path handoff messages."""
     msg = resp.choices[0].message
     dual_split = split_dual_llm_chat_branch_message(msg)
     assistant_text = dual_split.visible_text
     significance_meta = dual_split.significance_meta
     turn_recall = dual_split.turn_recall
-    fg_output_to_user = dual_split.output_to_user
-    if fg_output_to_user is False:
+    if dual_split.output_to_user is False:
         logger.warning(
             "run_dual_llm_foreground_chat envelope output_to_user=false "
             "trace_id={} (expected true for chat branch)",
@@ -178,13 +184,37 @@ async def run_dual_llm_foreground_chat(
         tool_msgs_for_bg.append(
             build_chat_track_handoff_assistant_message(fg_text=fg_text)
         )
-    force_tools_first_round = not bool(fg_text)
     return DualLlmForegroundChatResult(
         assistant_text=assistant_text,
         significance_meta=significance_meta,
         turn_recall=turn_recall,
         tool_msgs_for_bg=tuple(tool_msgs_for_bg),
-        force_tools_first_round=force_tools_first_round,
+        force_tools_first_round=not bool(fg_text),
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_run_acc,
+    )
+
+
+async def run_dual_llm_foreground_chat(
+    fg_input: DualLlmForegroundChatInput,
+) -> DualLlmForegroundChatResult:
+    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
+
+    When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
+    ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,
+    parses the envelope, and appends the chat-track handoff assistant row to tool messages when
+    foreground text is non-empty.
+    """
+    if fg_input.skip_foreground_envelope:
+        return _dual_llm_foreground_skip_result(fg_input)
+
+    chat_msgs = list(fg_input.chat_msgs)
+    resp, langsmith_trace_acc, langsmith_run_acc = (
+        await _invoke_dual_llm_foreground_chat_completion(fg_input, chat_msgs)
+    )
+    return _dual_llm_foreground_result_from_response(
+        fg_input,
+        resp,
+        langsmith_trace_acc,
+        langsmith_run_acc,
     )

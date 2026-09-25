@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -239,56 +240,88 @@ async def run_generate_image_z_image_turbo(
     return "\n\n".join(blocks)
 
 
-async def run_modify_image_z_image_turbo(
-    store: MemoryStore,
-    *,
-    prompt: str,
+@dataclass(frozen=True)
+class _ModifyImageSourceResolution:
+    """Resolved modify-image source for Fal i2i and asset index provenance."""
+
+    image_url_for_fal: str
+    source_asset_id: str | None
+    source_persona_revision_id: str | None
+    source_rel_for_index: str | None
+
+
+def _validate_modify_image_source(
     source_path: Path | None,
     source_image_url: str | None,
-    image_size: str | None = None,
-    num_inference_steps: int | None = None,
-    strength: float | None = None,
-    persona_revision_id: str,
-) -> str:
-    from app.utils.image import ImageFormat
-
-    _load_dotenv_if_present()
-
+) -> str | None:
+    """Return an error string when source args are invalid; otherwise None."""
     has_path = source_path is not None
     has_url = source_image_url is not None and source_image_url.strip() != ""
     if has_path and has_url:
-        return "ERROR: use only one of source_image_relative_path or source_image_url, not both"
+        return (
+            "ERROR: use only one of source_image_relative_path or "
+            "source_image_url, not both"
+        )
     if not has_path and not has_url:
         return (
-            "ERROR: modify_image requires source_image_relative_path (workspace image file) "
-            "or source_image_url (https)"
+            "ERROR: modify_image requires source_image_relative_path "
+            "(workspace image file) or source_image_url (https)"
         )
+    if has_url:
+        u = source_image_url.strip()
+        if not (u.startswith("https://") or u.startswith("http://")):
+            return "ERROR: source_image_url must be an http(s) URL"
+    return None
 
-    gcs_base = _gcs_uri_base_for_store(store)
-    source_asset_id: str | None = None
-    source_persona_revision_id: str | None = None
-    source_rel_for_index: str | None = None
-    if has_path:
-        path = source_path
-        if path is None:
-            raise ValueError("source_path is required when has_path is true")
-        source_rel_for_index = relative_path_under_workspace(store, path)
+
+def _resolve_modify_image_source(
+    store: MemoryStore,
+    *,
+    source_path: Path | None,
+    source_image_url: str | None,
+    gcs_base: str,
+) -> _ModifyImageSourceResolution:
+    """Map workspace path or external URL to Fal image_url and index provenance."""
+    if source_path is not None:
+        source_rel_for_index = relative_path_under_workspace(store, source_path)
         source_asset = find_latest_asset_by_local_relative_path(
             store, source_rel_for_index
         )
+        source_asset_id: str | None = None
+        source_persona_revision_id: str | None = None
         if source_asset is not None:
             source_asset_id = str(source_asset.get("asset_id") or "") or None
             source_persona_revision_id = (
                 str(source_asset.get("persona_revision_id") or "") or None
             )
         image_url_for_fal = _upload_local_image_file_to_gcs_for_fal(
-            path, gcs_base
+            source_path, gcs_base
         )
-    else:
-        u = source_image_url.strip()
-        if not (u.startswith("https://") or u.startswith("http://")):
-            return "ERROR: source_image_url must be an http(s) URL"
-        image_url_for_fal = u
+        return _ModifyImageSourceResolution(
+            image_url_for_fal=image_url_for_fal,
+            source_asset_id=source_asset_id,
+            source_persona_revision_id=source_persona_revision_id,
+            source_rel_for_index=source_rel_for_index,
+        )
+    assert source_image_url is not None
+    return _ModifyImageSourceResolution(
+        image_url_for_fal=source_image_url.strip(),
+        source_asset_id=None,
+        source_persona_revision_id=None,
+        source_rel_for_index=None,
+    )
+
+
+def _build_modify_image_i2i_kwargs(
+    *,
+    prompt: str,
+    image_url_for_fal: str,
+    image_size: str | None,
+    num_inference_steps: int | None,
+    strength: float | None,
+) -> dict[str, Any]:
+    """Build Fal z-image-turbo image-to-image request kwargs."""
+    from app.utils.image import ImageFormat
 
     size_kw: Any = (
         image_size.strip()
@@ -306,30 +339,75 @@ async def run_modify_image_z_image_turbo(
     }
     if strength is not None:
         kwargs["strength"] = strength
+    return kwargs
 
+
+async def _invoke_modify_image_i2i(
+    kwargs: dict[str, Any],
+    gcs_base: str,
+) -> Any:
+    """Call Fal z-image-turbo image-to-image (sync or async provider wrapper)."""
     z_in = _build_image_to_image_input(kwargs)
     skip_gcs = env_flag_enabled("INTY_V2_PROTO_Z_IMAGE_SKIP_GCS")
     maybe_result = _z_image_turbo_i2i_call(
         z_in, gcs_base, skip_gcs_upload=skip_gcs
     )
     if asyncio.iscoroutine(maybe_result):
-        result = await maybe_result
-    else:
-        result = maybe_result
+        return await maybe_result
+    return maybe_result
 
-    _record_image_asset(
-        store,
-        result,
-        tool_name="modify_image",
-        persona_revision_id=persona_revision_id,
-        source_asset_id=source_asset_id,
-        source_persona_revision_id=source_persona_revision_id,
-        source_image_relative_path=source_rel_for_index,
-        source_image_url=source_image_url,
-    )
+
+def _format_modify_image_success(prompt: str) -> str:
+    """Human-readable success summary for modify_image tool output."""
     blocks = [
         f"Edit prompt:\n{_prompt_for_tool_display(prompt)}",
         _success_tool_banner_compact("modify_image"),
         "Generated 1 image(s).",
     ]
     return "\n\n".join(blocks)
+
+
+async def run_modify_image_z_image_turbo(
+    store: MemoryStore,
+    *,
+    prompt: str,
+    source_path: Path | None,
+    source_image_url: str | None,
+    image_size: str | None = None,
+    num_inference_steps: int | None = None,
+    strength: float | None = None,
+    persona_revision_id: str,
+) -> str:
+    _load_dotenv_if_present()
+
+    source_error = _validate_modify_image_source(source_path, source_image_url)
+    if source_error is not None:
+        return source_error
+
+    gcs_base = _gcs_uri_base_for_store(store)
+    source_resolution = _resolve_modify_image_source(
+        store,
+        source_path=source_path,
+        source_image_url=source_image_url,
+        gcs_base=gcs_base,
+    )
+    kwargs = _build_modify_image_i2i_kwargs(
+        prompt=prompt,
+        image_url_for_fal=source_resolution.image_url_for_fal,
+        image_size=image_size,
+        num_inference_steps=num_inference_steps,
+        strength=strength,
+    )
+    result = await _invoke_modify_image_i2i(kwargs, gcs_base)
+
+    _record_image_asset(
+        store,
+        result,
+        tool_name="modify_image",
+        persona_revision_id=persona_revision_id,
+        source_asset_id=source_resolution.source_asset_id,
+        source_persona_revision_id=source_resolution.source_persona_revision_id,
+        source_image_relative_path=source_resolution.source_rel_for_index,
+        source_image_url=source_image_url,
+    )
+    return _format_modify_image_success(prompt)
