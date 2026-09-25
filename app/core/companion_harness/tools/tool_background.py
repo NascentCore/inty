@@ -33,8 +33,7 @@ from app.utils.models_catalog import GenAIModel
 
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_TOOL_BG_ROUND_METADATA_KEY,
-    SOURCE_TOOL_BACKGROUND_CONTINUE,
-    SOURCE_TOOL_BACKGROUND_INITIAL,
+    LangsmithLlmSource,
     tool_choice_attempt_metadata,
 )
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
@@ -374,7 +373,7 @@ def _initial_tool_bg_completion_with_fallbacks(
                 tool_choice=tc,
                 response_format=None,
                 langsmith_extra=langsmith_slice.tool_call_extra(
-                    phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
+                    phase_suffix=LangsmithLlmSource.TOOL_BACKGROUND_INITIAL.value,
                     extra_metadata=tool_choice_attempt_metadata(tc),
                 ),
                 high_reasoning=True,
@@ -676,7 +675,7 @@ async def run_tool_background_loop(
                         messages_payload=inner_payload,
                         tools=tools,
                         langsmith_extra=langsmith_slice.tool_call_extra(
-                            phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                            phase_suffix=LangsmithLlmSource.TOOL_BACKGROUND_CONTINUE.value,
                             extra_metadata={
                                 INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
                             },
