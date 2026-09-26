@@ -16,7 +16,6 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     build_turn_compose_context,
-    turn_compose_context_from_legacy_flags,
 )
 from app.core.companion_harness.prompting.compose_trigger import (
     PromptComposeTrigger,
@@ -110,23 +109,26 @@ def test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap() -> None:
     )
 
 
-def test_legacy_flags_use_track_pinned_bootstrap_phase(tmp_path) -> None:
-    """``USER_CHAT_BOOTSTRAP`` stays bootstrap when legacy bool flag is false."""
-    ctx = turn_compose_context_from_legacy_flags(
+def test_user_chat_bootstrap_phase_follows_track_not_settled_meta(tmp_path) -> None:
+    """``USER_CHAT_BOOTSTRAP`` composes bootstrap phase even when workspace bootstrap completed."""
+    settled_context = ContextMeta(
+        workspace_bootstrap_user_interactive_completed=True,
+    )
+    ctx = build_turn_compose_context(
         bundle=_bundle(),
-        context_meta=ContextMeta(
-            workspace_bootstrap_user_interactive_completed=True,
-        ),
+        context_meta=settled_context,
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
         store=_store(tmp_path),
         track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
+        phase=resolve_phase_for_compose(
+            CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            settled_context,
+        ),
+        leg_kind=PromptLegKind.SINGLE_LLM,
         ai_private_text="",
         proactive_life_currents_block=None,
-        interactive_bootstrap_active=False,
     )
     assert ctx.phase == Phase.BOOTSTRAP
