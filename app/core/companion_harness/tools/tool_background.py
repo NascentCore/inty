@@ -535,33 +535,28 @@ def _append_background_log(
     )
 
 
-async def _fetch_tool_bg_initial_completion(
+async def _await_initial_tool_bg_completion_round(
     *,
     resolved_client: Any,
     chat_completion_sync: ChatCompletionsSyncPort,
-    working_messages: list[dict[str, Any]],
+    messages_payload: list[dict[str, Any]],
     tools: list[Any],
     tool_api_id: str,
-    force_tools_first_round: bool,
+    force_tools: bool,
     langsmith_slice: CompanionTurnLangsmithSlice,
     llm_round_timeout_sec: float,
-    scope_registry_key: str,
     trace_id: str,
     user_msg_uuid: str,
-    trace_hooks: ToolBackgroundTraceHooks | None,
-) -> tuple[Any, _InitialToolBgCompletionMeta, list[dict[str, Any]]] | None:
-    """First LLM round; ``None`` when aborted or timed out."""
-    request_snapshot = deepcopy(working_messages)
-    payload = _openai_messages_payload(working_messages)
-    force_tools = bool(tools) and force_tools_first_round
+) -> tuple[Any, _InitialToolBgCompletionMeta] | None:
+    """First LLM round thread call; ``None`` when timed out."""
     try:
-        initial_response, initial_meta = await asyncio.wait_for(
+        return await asyncio.wait_for(
             asyncio.to_thread(
                 _initial_tool_bg_completion_with_fallbacks,
                 resolved_client,
                 chat_completion_sync,
                 model=tool_api_id,
-                messages_payload=payload,
+                messages_payload=messages_payload,
                 tools=tools,
                 force_tools=force_tools,
                 langsmith_slice=langsmith_slice,
@@ -582,6 +577,42 @@ async def _fetch_tool_bg_initial_completion(
             llm_round_timeout_sec,
         )
         return None
+
+
+async def _fetch_tool_bg_initial_completion(
+    *,
+    resolved_client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    working_messages: list[dict[str, Any]],
+    tools: list[Any],
+    tool_api_id: str,
+    force_tools_first_round: bool,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    scope_registry_key: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+) -> tuple[Any, _InitialToolBgCompletionMeta, list[dict[str, Any]]] | None:
+    """First LLM round; ``None`` when aborted or timed out."""
+    request_snapshot = deepcopy(working_messages)
+    payload = _openai_messages_payload(working_messages)
+    force_tools = bool(tools) and force_tools_first_round
+    initial_round = await _await_initial_tool_bg_completion_round(
+        resolved_client=resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        messages_payload=payload,
+        tools=tools,
+        tool_api_id=tool_api_id,
+        force_tools=force_tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+    )
+    if initial_round is None:
+        return None
+    initial_response, initial_meta = initial_round
 
     if is_tool_background_aborted(user_msg_uuid):
         logger.debug(
@@ -640,6 +671,54 @@ def _log_tool_bg_no_tool_calls_early_exit(
         )
 
 
+async def _await_tool_bg_continue_completion_round(
+    *,
+    resolved_client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    messages_payload: list[dict[str, Any]],
+    tool_api_id: str,
+    tools: list[Any],
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    active_round: int,
+    trace_id: str,
+    user_msg_uuid: str,
+) -> Any:
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                chat_completion_sync,
+                resolved_client,
+                model=tool_api_id,
+                messages_payload=messages_payload,
+                tools=tools,
+                langsmith_extra=langsmith_slice.tool_call_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                    extra_metadata={
+                        INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
+                    },
+                ),
+                high_reasoning=True,
+            ),
+            timeout=llm_round_timeout_sec,
+        )
+    except TimeoutError as exc:
+        record_llm_inference_failure(
+            model=tool_api_id,
+            exc=exc,
+            foreground_timeout_sec=llm_round_timeout_sec,
+        )
+        logger.warning(
+            "repl.turn.bg continue round timed out trace_id={} "
+            "user_msg_uuid={} round={} timeout_sec={}",
+            trace_id,
+            user_msg_uuid,
+            active_round,
+            llm_round_timeout_sec,
+        )
+        raise BackgroundToolLoopAborted from exc
+
+
 async def _tool_bg_continue_chat_round(
     *,
     messages_with_tool_results: list[dict[str, Any]],
@@ -665,39 +744,18 @@ async def _tool_bg_continue_chat_round(
     progress.active_round = progress.rounds_used
     request_snapshot_inner = deepcopy(messages_with_tool_results)
     inner_payload = _openai_messages_payload(messages_with_tool_results)
-    try:
-        next_resp = await asyncio.wait_for(
-            asyncio.to_thread(
-                chat_completion_sync,
-                resolved_client,
-                model=tool_api_id,
-                messages_payload=inner_payload,
-                tools=tools,
-                langsmith_extra=langsmith_slice.tool_call_extra(
-                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
-                    extra_metadata={
-                        INTY_TOOL_BG_ROUND_METADATA_KEY: progress.active_round,
-                    },
-                ),
-                high_reasoning=True,
-            ),
-            timeout=llm_round_timeout_sec,
-        )
-    except TimeoutError as exc:
-        record_llm_inference_failure(
-            model=tool_api_id,
-            exc=exc,
-            foreground_timeout_sec=llm_round_timeout_sec,
-        )
-        logger.warning(
-            "repl.turn.bg continue round timed out trace_id={} "
-            "user_msg_uuid={} round={} timeout_sec={}",
-            trace_id,
-            user_msg_uuid,
-            progress.active_round,
-            llm_round_timeout_sec,
-        )
-        raise BackgroundToolLoopAborted from exc
+    next_resp = await _await_tool_bg_continue_completion_round(
+        resolved_client=resolved_client,
+        chat_completion_sync=chat_completion_sync,
+        messages_payload=inner_payload,
+        tool_api_id=tool_api_id,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        active_round=progress.active_round,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+    )
     _log_bg_llm_round_result(
         round_idx=progress.active_round,
         model=tool_api_id,
