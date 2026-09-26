@@ -586,17 +586,21 @@ def _log_companion_turn_prepare_start(
     )
 
 
-def _resolve_companion_turn_user_tail_context(
+@dataclass(frozen=True)
+class _CompanionTurnTailLoadedBundle:
+    loaded_state: CompanionTurnLoadedState
+    user_text: str
+    ai_private_splice_plan: AiPrivateSplicePlan
+
+
+def _load_companion_turn_tail_loaded_bundle(
     *,
     store: Any,
     track: CompanionTurnTrack,
     runtime_flags: CompanionTurnRuntimeFlags,
     user_text: str,
     transcript_llm_window_max_messages: int,
-    preset_user_msg_uuid: str | None,
-    input_batch: Any,
-    user_message_batch: UserMessageBatch | None,
-) -> _CompanionTurnUserTailContext:
+) -> _CompanionTurnTailLoadedBundle:
     loaded_state = load_companion_turn_state(
         store=store,
         track=track,
@@ -613,6 +617,55 @@ def _resolve_companion_turn_user_tail_context(
         ai_private_splice_plan = build_ai_private_splice_plan(
             store, loaded_state.loaded_transcript
         )
+    return _CompanionTurnTailLoadedBundle(
+        loaded_state=loaded_state,
+        user_text=user_text,
+        ai_private_splice_plan=ai_private_splice_plan,
+    )
+
+
+def _resolve_companion_turn_user_message_batch(
+    *,
+    track: CompanionTurnTrack,
+    user_msg_uuid: str,
+    user_message_batch: UserMessageBatch | None,
+) -> UserMessageBatch | None:
+    if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP and (
+        user_message_batch is None
+        or user_message_batch_is_agent_initiated_synthetic(user_message_batch)
+    ):
+        raise RuntimeError(
+            "USER_CHAT_BOOTSTRAP requires queue-serving InputQueue batch "
+            "correlation; direct synthetic batch is not supported (#3466)."
+        )
+    if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
+        return synthetic_user_message_batch(
+            user_msg_uuid=user_msg_uuid,
+            track_label=track.value,
+        )
+    return user_message_batch
+
+
+def _resolve_companion_turn_user_tail_context(
+    *,
+    store: Any,
+    track: CompanionTurnTrack,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    user_text: str,
+    transcript_llm_window_max_messages: int,
+    preset_user_msg_uuid: str | None,
+    input_batch: Any,
+    user_message_batch: UserMessageBatch | None,
+) -> _CompanionTurnUserTailContext:
+    tail_bundle = _load_companion_turn_tail_loaded_bundle(
+        store=store,
+        track=track,
+        runtime_flags=runtime_flags,
+        user_text=user_text,
+        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
+    )
+    loaded_state = tail_bundle.loaded_state
+    user_text = tail_bundle.user_text
     context = loaded_state.context
     ts_user = utc_now()
     user_msg_uuid = (
@@ -632,19 +685,11 @@ def _resolve_companion_turn_user_tail_context(
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
     user_msg_uuid = tail_user_messages[-1].message_id
-    if track == CompanionTurnTrack.USER_CHAT_BOOTSTRAP and (
-        user_message_batch is None
-        or user_message_batch_is_agent_initiated_synthetic(user_message_batch)
-    ):
-        raise RuntimeError(
-            "USER_CHAT_BOOTSTRAP requires queue-serving InputQueue batch "
-            "correlation; direct synthetic batch is not supported (#3466)."
-        )
-    if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
-        user_message_batch = synthetic_user_message_batch(
-            user_msg_uuid=user_msg_uuid,
-            track_label=track.value,
-        )
+    user_message_batch = _resolve_companion_turn_user_message_batch(
+        track=track,
+        user_msg_uuid=user_msg_uuid,
+        user_message_batch=user_message_batch,
+    )
     return _CompanionTurnUserTailContext(
         loaded_state=loaded_state,
         context=context,
@@ -652,7 +697,7 @@ def _resolve_companion_turn_user_tail_context(
         user_msg_uuid=user_msg_uuid,
         tail_user_messages=tail_user_messages,
         user_message_batch=user_message_batch,
-        ai_private_splice_plan=ai_private_splice_plan,
+        ai_private_splice_plan=tail_bundle.ai_private_splice_plan,
         ts_user=ts_user,
     )
 
@@ -812,6 +857,65 @@ async def _prepare_companion_turn_execution(
     )
 
 
+def _companion_turn_transcript_rel_for_loop(
+    track: CompanionTurnTrack,
+) -> str:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
+        return paths.transcript
+    return transcript_relative_path_for_turn_persistence(track=track)
+
+
+def _companion_turn_llm_runtime_bind_enter(
+    *,
+    store: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    inner_tick_turn: bool,
+) -> contextvars.Token[LlmRuntimeEventBind | None]:
+    _llm_ev_phase = "inner_tick" if inner_tick_turn else "foreground_chat"
+    return companion_llm_runtime_event_bind_ctx.set(
+        LlmRuntimeEventBind(
+            memory_store=store,
+            trace_id=trace_id,
+            user_msg_uuid=user_msg_uuid,
+            phase=_llm_ev_phase,
+            scene=None,
+        )
+    )
+
+
+def _build_companion_turn_loop_input(
+    prepared: _CompanionTurnPrepared,
+) -> CompanionTurnLoopInput:
+    deps = prepared.deps
+    runtime_flags = prepared.runtime_flags
+    return CompanionTurnLoopInput(
+        store=prepared.store,
+        llm_client=deps.llm_client,
+        track=prepared.track,
+        runtime_flags=runtime_flags,
+        loaded_state=prepared.loaded_state,
+        prompt_plan=prepared.prompt_plan,
+        tail_user_messages=prepared.tail_user_messages,
+        messages=prepared.messages,
+        tools_for_turn=prepared.tools_for_turn,
+        trace_id=prepared.trace_id,
+        langsmith_slice=deps.langsmith_slice,
+        runtime_context=deps.runtime_context,
+        agentic_output_queue=deps.agentic_output_queue,
+        user_message_batch=prepared.user_message_batch,
+        user_text=prepared.user_text,
+        ts_user=prepared.ts_user,
+        user_msg_uuid=prepared.user_msg_uuid,
+        ai_private_splice_plan=prepared.ai_private_splice_plan,
+        repository_only_store_text=deps.repository_only_store_text,
+        langsmith_trace_id="",
+        langsmith_run_id="",
+        transcript_rel=_companion_turn_transcript_rel_for_loop(prepared.track),
+    )
+
+
 async def _run_companion_turn_agentic_phase(
     *,
     prepared: _CompanionTurnPrepared,
@@ -822,52 +926,17 @@ async def _run_companion_turn_agentic_phase(
     inner_tick_turn = runtime_flags.inner_tick_turn
     route_inner_activity = runtime_flags.route_inner_activity
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    langsmith_trace_acc = ""
-    langsmith_llm_run_acc = ""
     llm_runtime_bind_token: (
         contextvars.Token[LlmRuntimeEventBind | None] | None
     ) = None
     try:
-        _llm_ev_phase = "inner_tick" if inner_tick_turn else "foreground_chat"
-        llm_runtime_bind_token = companion_llm_runtime_event_bind_ctx.set(
-            LlmRuntimeEventBind(
-                memory_store=prepared.store,
-                trace_id=prepared.trace_id,
-                user_msg_uuid=prepared.user_msg_uuid,
-                phase=_llm_ev_phase,
-                scene=None,
-            )
-        )
-        transcript_rel = (
-            paths.transcript
-            if prepared.track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            else transcript_relative_path_for_turn_persistence(track=prepared.track)
-        )
-        loop_input = CompanionTurnLoopInput(
+        llm_runtime_bind_token = _companion_turn_llm_runtime_bind_enter(
             store=prepared.store,
-            llm_client=deps.llm_client,
-            track=prepared.track,
-            runtime_flags=runtime_flags,
-            loaded_state=prepared.loaded_state,
-            prompt_plan=prepared.prompt_plan,
-            tail_user_messages=prepared.tail_user_messages,
-            messages=prepared.messages,
-            tools_for_turn=prepared.tools_for_turn,
             trace_id=prepared.trace_id,
-            langsmith_slice=deps.langsmith_slice,
-            runtime_context=deps.runtime_context,
-            agentic_output_queue=deps.agentic_output_queue,
-            user_message_batch=prepared.user_message_batch,
-            user_text=prepared.user_text,
-            ts_user=prepared.ts_user,
             user_msg_uuid=prepared.user_msg_uuid,
-            ai_private_splice_plan=prepared.ai_private_splice_plan,
-            repository_only_store_text=deps.repository_only_store_text,
-            langsmith_trace_id=langsmith_trace_acc,
-            langsmith_run_id=langsmith_llm_run_acc,
-            transcript_rel=transcript_rel,
+            inner_tick_turn=inner_tick_turn,
         )
+        loop_input = _build_companion_turn_loop_input(prepared)
         return await _run_companion_turn_agentic_loop(
             prepared=loop_input,
             langsmith_parent_run_enabled=deps.langsmith_parent_run_enabled,

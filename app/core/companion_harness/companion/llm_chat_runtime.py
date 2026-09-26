@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import atexit
 import threading
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
@@ -167,6 +168,92 @@ def _companion_turn_langsmith_root_descriptor(
     return name, tags, lane, extra_in
 
 
+@dataclass(frozen=True)
+class _LangsmithParentTurnContext:
+    """Resolved LangSmith parent run naming, lane, and lane-specific inputs."""
+
+    inner_tick_turn: bool
+    inner_tick_activity: InnerTickActivity | None
+    implicit_user_signed_on: bool
+    turn_lane: str
+    run_name: str
+    run_tags: list[str]
+    lane_inputs: dict[str, Any]
+
+
+def _resolve_langsmith_parent_turn_context(
+    *,
+    user_id: str,
+    companion_id: str,
+    companion_turn_track: CompanionTurnTrack | None,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity | None,
+    implicit_user_signed_on: bool,
+    transcript_newest_message_uuid: str | None,
+) -> _LangsmithParentTurnContext:
+    uid = (user_id or "").strip()
+    cid = (companion_id or "").strip()
+    if companion_turn_track is not None:
+        kind = inner_tick_kind_for_track(companion_turn_track)
+        inner_tick_turn = kind is not None
+        inner_tick_activity = (
+            inner_tick_spec(kind).activity if kind is not None else None
+        )
+        implicit_user_signed_on = (
+            companion_turn_track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+        )
+    run_name, run_tags, turn_lane, lane_inputs = (
+        _companion_turn_langsmith_root_descriptor(
+            user_id=uid,
+            companion_id=cid,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            implicit_user_signed_on=implicit_user_signed_on,
+        )
+    )
+    if companion_turn_track is not None:
+        turn_lane = langsmith_inty_turn_lane_for_companion_track(
+            companion_turn_track
+        )
+    return _LangsmithParentTurnContext(
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_activity=inner_tick_activity,
+        implicit_user_signed_on=implicit_user_signed_on,
+        turn_lane=turn_lane,
+        run_name=run_name,
+        run_tags=run_tags,
+        lane_inputs=lane_inputs,
+    )
+
+
+def _langsmith_parent_meta_for_turn(
+    *,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    user_id: str,
+    companion_id: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    turn_ctx: _LangsmithParentTurnContext,
+    transcript_newest_message_uuid: str | None,
+) -> dict[str, Any]:
+    meta = _langsmith_parent_run_extra_metadata(
+        chat_model=chat_model,
+        tool_model=tool_model,
+        user_id=user_id,
+        companion_id=companion_id,
+        langsmith_slice=langsmith_slice,
+    )
+    meta["inty_turn_lane"] = turn_ctx.turn_lane
+    if turn_ctx.inner_tick_turn:
+        meta["inner_tick_activity"] = turn_ctx.lane_inputs["inner_tick_activity"]
+        tail_uuid = (transcript_newest_message_uuid or "").strip()
+        if tail_uuid:
+            meta["transcript_newest_message_uuid"] = tail_uuid
+    if turn_ctx.implicit_user_signed_on:
+        meta["implicit_signal"] = turn_ctx.lane_inputs["implicit_signal"]
+    return meta
+
+
 def _create_and_register_companion_turn_langsmith_root(
     *,
     RunTree: Any,
@@ -279,50 +366,30 @@ def create_companion_turn_root_run(
 
         uid = (user_id or "").strip()
         cid = (companion_id or "").strip()
-        if companion_turn_track is not None:
-            kind = inner_tick_kind_for_track(companion_turn_track)
-            inner_tick_turn = kind is not None
-            inner_tick_activity = (
-                inner_tick_spec(kind).activity if kind is not None else None
-            )
-            implicit_user_signed_on = (
-                companion_turn_track
-                == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            )
-        run_name, run_tags, turn_lane, lane_inputs = (
-            _companion_turn_langsmith_root_descriptor(
-                user_id=uid,
-                companion_id=cid,
-                inner_tick_turn=inner_tick_turn,
-                inner_tick_activity=inner_tick_activity,
-                implicit_user_signed_on=implicit_user_signed_on,
-            )
+        turn_ctx = _resolve_langsmith_parent_turn_context(
+            user_id=uid,
+            companion_id=cid,
+            companion_turn_track=companion_turn_track,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            implicit_user_signed_on=implicit_user_signed_on,
+            transcript_newest_message_uuid=transcript_newest_message_uuid,
         )
-        if companion_turn_track is not None:
-            turn_lane = langsmith_inty_turn_lane_for_companion_track(
-                companion_turn_track
-            )
-        meta = _langsmith_parent_run_extra_metadata(
+        meta = _langsmith_parent_meta_for_turn(
             chat_model=chat_model,
             tool_model=tool_model,
             user_id=uid,
             companion_id=cid,
             langsmith_slice=langsmith_slice,
+            turn_ctx=turn_ctx,
+            transcript_newest_message_uuid=transcript_newest_message_uuid,
         )
-        meta["inty_turn_lane"] = turn_lane
-        if inner_tick_turn:
-            meta["inner_tick_activity"] = lane_inputs["inner_tick_activity"]
-            tail_uuid = (transcript_newest_message_uuid or "").strip()
-            if tail_uuid:
-                meta["transcript_newest_message_uuid"] = tail_uuid
-        if implicit_user_signed_on:
-            meta["implicit_signal"] = lane_inputs["implicit_signal"]
         return _create_and_register_companion_turn_langsmith_root(
             RunTree=RunTree,
-            run_name=run_name,
-            run_tags=run_tags,
-            turn_lane=turn_lane,
-            lane_inputs=lane_inputs,
+            run_name=turn_ctx.run_name,
+            run_tags=turn_ctx.run_tags,
+            turn_lane=turn_ctx.turn_lane,
+            lane_inputs=turn_ctx.lane_inputs,
             meta=meta,
             inty_trace_id=inty_trace_id,
             user_msg_uuid=user_msg_uuid,
@@ -330,7 +397,7 @@ def create_companion_turn_root_run(
             tool_model=tool_model,
             uid=uid,
             cid=cid,
-            inner_tick_turn=inner_tick_turn,
+            inner_tick_turn=turn_ctx.inner_tick_turn,
             transcript_newest_message_uuid=transcript_newest_message_uuid,
             langsmith_slice=langsmith_slice,
         )
