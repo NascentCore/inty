@@ -709,11 +709,11 @@ Open PRs checked: #3955 (`408..411`), #3958 (`412..415`), #3961 (`417..420`), #3
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-c9e1`)
 
-- [ ] **HYGIENE-2026-437** `memory/test_companion_scope_listing.py` — `TECHNO_CORE_EVENTS_JSONL` kind matches `techno_core_events_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-438** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE_UPDATES_JSONL` kind matches `living_sphere_updates_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-439** `memory/test_companion_scope_listing.py` — `COMPANION_USER_FEEDBACK_JSONL` kind matches `companion_user_feedback_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-440** `memory/test_companion_scope_listing.py` — `GENERATED_IMAGES_INDEX_JSONL` kind matches `generated_images_index_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-441** `memory/test_companion_scope_listing.py` — `TRANSCRIPT` kind matches `transcript` scope accessor.
-- [ ] **HYGIENE-2026-442** `memory/test_companion_scope_listing.py` — `TRANSCRIPT_INNER_TICK` kind matches `transcript_inner_tick` scope accessor.
-- [ ] **HYGIENE-2026-443** `memory/test_companion_scope_listing.py` — `CONTEXT_JSON` kind matches `context_json` scope accessor.
-- [ ] **HYGIENE-2026-444** `companion/lifecycle_invariants.py` — `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop duplicate `*_REL` imports).
+- [x] **HYGIENE-2026-437** `memory/test_companion_scope_listing.py` — `TECHNO_CORE_EVENTS_JSONL` kind matches `techno_core_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-438** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE_UPDATES_JSONL` kind matches `living_sphere_updates_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-439** `memory/test_companion_scope_listing.py` — `COMPANION_USER_FEEDBACK_JSONL` kind matches `companion_user_feedback_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-440** `memory/test_companion_scope_listing.py` — `GENERATED_IMAGES_INDEX_JSONL` kind matches `generated_images_index_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-441** `memory/test_companion_scope_listing.py` — `TRANSCRIPT` kind matches `transcript` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-442** `memory/test_companion_scope_listing.py` — `TRANSCRIPT_INNER_TICK` kind matches `transcript_inner_tick` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-443** `memory/test_companion_scope_listing.py` — `CONTEXT_JSON` kind matches `context_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
+- [x] **HYGIENE-2026-444** `companion/lifecycle_invariants.py` — `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop duplicate `*_REL` imports). Fixed in `cursor/agent-maintenance-tasks-c9e1` / pull/3974.
