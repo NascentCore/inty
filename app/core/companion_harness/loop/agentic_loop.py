@@ -435,6 +435,82 @@ class _PromptPlanOpenAiLoopHandlers:
     on_assistant_message: Callable[[Any], Any]
 
 
+async def _prompt_plan_openai_loop_execute_tool_call(
+    *,
+    store: MemoryStore,
+    name: str,
+    raw_arguments: str,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+) -> tuple[str, str | None]:
+    return await _prompt_plan_tool_execute(
+        store,
+        name,
+        raw_arguments,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+    )
+
+
+async def _prompt_plan_openai_loop_continue_chat(
+    *,
+    llm_client: AsyncLlmClient,
+    messages_with_tool_results: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    tool_choice: Any,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    high_reasoning: bool,
+) -> tuple[Any, str | None]:
+    return await _prompt_plan_tool_continue_chat(
+        llm_client=llm_client,
+        messages_with_tool_results=messages_with_tool_results,
+        acc=acc,
+        tool_choice=tool_choice,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        high_reasoning=high_reasoning,
+    )
+
+
+async def _prompt_plan_openai_loop_after_tool_append(
+    *,
+    messages_with_tool_results: list[dict[str, Any]],
+    acc: _PromptPlanToolLoopAcc,
+    after_tool_messages_appended: Callable[[list[dict[str, Any]]], Any] | None,
+) -> None:
+    await _prompt_plan_refresh_tools_after_append(
+        messages_with_tool_results=messages_with_tool_results,
+        acc=acc,
+        after_tool_messages_appended=after_tool_messages_appended,
+    )
+
+
+async def _prompt_plan_openai_loop_on_assistant_message(
+    message: Any,
+    *,
+    store: MemoryStore,
+    transcript_rel: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    acc: _PromptPlanToolLoopAcc,
+    interim_output_sink: Any,
+    interim_state: _PromptPlanInterimPersistState,
+) -> None:
+    await _persist_prompt_plan_interim_assistant(
+        message,
+        store=store,
+        transcript_rel=transcript_rel,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        langsmith_trace_id=acc.langsmith_trace_id,
+        langsmith_run_id=acc.langsmith_run_id,
+        interim_output_sink=interim_output_sink,
+        emit_every_round=True,
+        state=interim_state,
+    )
+
+
 def _prompt_plan_build_openai_tool_loop_handlers(
     *,
     store: MemoryStore,
@@ -451,52 +527,55 @@ def _prompt_plan_build_openai_tool_loop_handlers(
     transcript_rel = context.transcript_rel
     trace_id = context.trace_id
     user_msg_uuid = context.user_msg_uuid
+    write_allowlist = execution.write_allowlist
+    repository_only_store_text = context.repository_only_store_text
+    tool_choice = prompt_plan.tool_choice
+    high_reasoning = execution.high_reasoning
+    after_append_hook = context.after_tool_messages_appended
 
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        return await _prompt_plan_tool_execute(
-            store,
-            name,
-            raw_arguments,
-            write_allowlist=execution.write_allowlist,
-            repository_only_store_text=context.repository_only_store_text,
+        return await _prompt_plan_openai_loop_execute_tool_call(
+            store=store,
+            name=name,
+            raw_arguments=raw_arguments,
+            write_allowlist=write_allowlist,
+            repository_only_store_text=repository_only_store_text,
         )
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
-        return await _prompt_plan_tool_continue_chat(
+        return await _prompt_plan_openai_loop_continue_chat(
             llm_client=llm_client,
             messages_with_tool_results=messages_with_tool_results,
             acc=acc,
-            tool_choice=prompt_plan.tool_choice,
+            tool_choice=tool_choice,
             chat_model=chat_model,
             langsmith_extra=langsmith_extra,
-            high_reasoning=execution.high_reasoning,
+            high_reasoning=high_reasoning,
         )
 
     async def after_tool_messages_appended(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> None:
-        await _prompt_plan_refresh_tools_after_append(
+        await _prompt_plan_openai_loop_after_tool_append(
             messages_with_tool_results=messages_with_tool_results,
             acc=acc,
-            after_tool_messages_appended=context.after_tool_messages_appended,
+            after_tool_messages_appended=after_append_hook,
         )
 
     async def on_assistant_message(message: Any) -> None:
-        await _persist_prompt_plan_interim_assistant(
+        await _prompt_plan_openai_loop_on_assistant_message(
             message,
             store=store,
             transcript_rel=transcript_rel,
             trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
-            langsmith_trace_id=acc.langsmith_trace_id,
-            langsmith_run_id=acc.langsmith_run_id,
+            acc=acc,
             interim_output_sink=interim_output_sink,
-            emit_every_round=True,
-            state=interim_state,
+            interim_state=interim_state,
         )
 
     return _PromptPlanOpenAiLoopHandlers(
