@@ -43,7 +43,6 @@ def test_scope_listing_context_json_filter_matches_scope_accessor() -> None:
     kind, calendar_date = parse_memory_store_relative_path(rel)
     assert kind == CompanionMemoryDocumentKind.CONTEXT_JSON
     assert calendar_date is None
-    assert kind.value == CompanionMemoryDocumentKind.CONTEXT_JSON.value
 
 
 def test_companion_memory_document_kind_values_are_unique() -> None:
