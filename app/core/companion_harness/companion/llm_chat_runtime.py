@@ -254,24 +254,20 @@ def _langsmith_parent_meta_for_turn(
     return meta
 
 
-def _create_and_register_companion_turn_langsmith_root(
+def _companion_turn_langsmith_root_inputs(
     *,
-    RunTree: Any,
-    run_name: str,
-    run_tags: list[str],
-    turn_lane: str,
-    lane_inputs: dict[str, Any],
-    meta: dict[str, Any],
     inty_trace_id: str,
     user_msg_uuid: str,
     chat_model: GenAIModel,
     tool_model: GenAIModel,
     uid: str,
     cid: str,
+    turn_lane: str,
+    lane_inputs: dict[str, Any],
     inner_tick_turn: bool,
     transcript_newest_message_uuid: str | None,
     langsmith_slice: CompanionTurnLangsmithSlice,
-) -> Any:
+) -> dict[str, Any]:
     root_inputs: dict[str, Any] = {
         "inty_trace_id": inty_trace_id,
         "user_msg_uuid": user_msg_uuid,
@@ -289,14 +285,17 @@ def _create_and_register_companion_turn_langsmith_root(
         tail_uuid = (transcript_newest_message_uuid or "").strip()
         if tail_uuid:
             root_inputs["transcript_newest_message_uuid"] = tail_uuid
-    merged_tags = [*run_tags, *langsmith_slice.parent_tags()]
-    root = RunTree(
-        name=run_name,
-        run_type="chain",
-        inputs=root_inputs,
-        extra={"metadata": meta},
-        tags=merged_tags,
-    )
+    return root_inputs
+
+
+def _post_and_register_companion_turn_langsmith_root(
+    root: Any,
+    *,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    uid: str,
+    cid: str,
+) -> None:
     initial_post_ok = True
     initial_post_err = ""
     try:
@@ -321,6 +320,54 @@ def _create_and_register_companion_turn_langsmith_root(
         initial_post_err,
     )
     _register_open_langsmith_parent_run(root)
+
+
+def _create_and_register_companion_turn_langsmith_root(
+    *,
+    RunTree: Any,
+    run_name: str,
+    run_tags: list[str],
+    turn_lane: str,
+    lane_inputs: dict[str, Any],
+    meta: dict[str, Any],
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    uid: str,
+    cid: str,
+    inner_tick_turn: bool,
+    transcript_newest_message_uuid: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any:
+    root_inputs = _companion_turn_langsmith_root_inputs(
+        inty_trace_id=inty_trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_model=chat_model,
+        tool_model=tool_model,
+        uid=uid,
+        cid=cid,
+        turn_lane=turn_lane,
+        lane_inputs=lane_inputs,
+        inner_tick_turn=inner_tick_turn,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+        langsmith_slice=langsmith_slice,
+    )
+    merged_tags = [*run_tags, *langsmith_slice.parent_tags()]
+    root = RunTree(
+        name=run_name,
+        run_type="chain",
+        inputs=root_inputs,
+        extra={"metadata": meta},
+        tags=merged_tags,
+    )
+    _post_and_register_companion_turn_langsmith_root(
+        root,
+        inty_trace_id=inty_trace_id,
+        user_msg_uuid=user_msg_uuid,
+        uid=uid,
+        cid=cid,
+    )
     return root
 
 

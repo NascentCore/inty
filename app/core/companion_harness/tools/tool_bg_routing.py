@@ -90,33 +90,15 @@ def resolve_tool_background_finish_envelope(
     )
 
 
-def resolve_tool_bg_routing_sync(
+def _tool_bg_routing_fallback_completion_envelope(
     *,
     client: Any,
     model: str,
     create_completion_sync: Any,
     conversation_messages: list[dict[str, Any]],
-    final_assistant_content: str,
-    trace_id: str | None = None,
+    tid: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
 ) -> DualLlmChatBranchEnvelope:
-    """
-    Prefer unified envelope JSON from the model's final assistant message; if missing/invalid,
-    run one extra completion (no tools, same ``response_format`` as foreground chat).
-
-    trace_id: optional correlation id for DEBUG logs (tool_bg_routing / repl.turn.bg policy).
-    """
-    tid = trace_id or "-"
-    parsed = parse_dual_llm_chat_envelope_json(final_assistant_content)
-    if parsed is not None:
-        logger.debug(
-            "tool_bg_routing trace_id={} source=final_assistant_message "
-            "output_to_user={} user_facing_reply_chars={}",
-            tid,
-            parsed.output_to_user,
-            len(parsed.user_facing_reply or ""),
-        )
-        return parsed
     logger.debug(
         "tool_bg_routing trace_id={} source=extra_completion_request "
         "(final_assistant_not_valid_unified_envelope_json)",
@@ -158,3 +140,40 @@ def resolve_tool_bg_routing_sync(
         tid,
     )
     return _conservative_tool_finish_envelope()
+
+
+def resolve_tool_bg_routing_sync(
+    *,
+    client: Any,
+    model: str,
+    create_completion_sync: Any,
+    conversation_messages: list[dict[str, Any]],
+    final_assistant_content: str,
+    trace_id: str | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> DualLlmChatBranchEnvelope:
+    """
+    Prefer unified envelope JSON from the model's final assistant message; if missing/invalid,
+    run one extra completion (no tools, same ``response_format`` as foreground chat).
+
+    trace_id: optional correlation id for DEBUG logs (tool_bg_routing / repl.turn.bg policy).
+    """
+    tid = trace_id or "-"
+    parsed = parse_dual_llm_chat_envelope_json(final_assistant_content)
+    if parsed is not None:
+        logger.debug(
+            "tool_bg_routing trace_id={} source=final_assistant_message "
+            "output_to_user={} user_facing_reply_chars={}",
+            tid,
+            parsed.output_to_user,
+            len(parsed.user_facing_reply or ""),
+        )
+        return parsed
+    return _tool_bg_routing_fallback_completion_envelope(
+        client=client,
+        model=model,
+        create_completion_sync=create_completion_sync,
+        conversation_messages=conversation_messages,
+        tid=tid,
+        langsmith_slice=langsmith_slice,
+    )
