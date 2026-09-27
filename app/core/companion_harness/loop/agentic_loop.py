@@ -435,6 +435,25 @@ class _PromptPlanOpenAiLoopHandlers:
     on_assistant_message: Callable[[Any], Any]
 
 
+@dataclass(frozen=True)
+class _PromptPlanOpenAiLoopBindContext:
+    """Immutable closure inputs for one prompt-plan OpenAI tool loop."""
+
+    store: MemoryStore
+    transcript_rel: str
+    trace_id: str
+    user_msg_uuid: str
+    write_allowlist: frozenset[str] | None
+    repository_only_store_text: bool
+    tool_choice: Any
+    high_reasoning: bool
+    after_append_hook: Callable[[list[dict[str, Any]]], Any] | None
+    llm_client: AsyncLlmClient
+    chat_model: str
+    langsmith_extra: dict[str, Any]
+    interim_output_sink: Any
+
+
 async def _prompt_plan_openai_loop_execute_tool_call(
     *,
     store: MemoryStore,
@@ -511,50 +530,62 @@ async def _prompt_plan_openai_loop_on_assistant_message(
     )
 
 
-def _prompt_plan_build_openai_tool_loop_handlers(
+def _prompt_plan_openai_loop_bind_context(
     *,
     store: MemoryStore,
     context: AgenticLoopContext,
     llm_client: AsyncLlmClient,
     interim_output_sink: Any,
-    acc: _PromptPlanToolLoopAcc,
-    interim_state: _PromptPlanInterimPersistState,
     prompt_plan: Any,
     chat_model: str,
     langsmith_extra: dict[str, Any],
     execution: Any,
-) -> _PromptPlanOpenAiLoopHandlers:
-    transcript_rel = context.transcript_rel
-    trace_id = context.trace_id
-    user_msg_uuid = context.user_msg_uuid
-    write_allowlist = execution.write_allowlist
-    repository_only_store_text = context.repository_only_store_text
-    tool_choice = prompt_plan.tool_choice
-    high_reasoning = execution.high_reasoning
-    after_append_hook = context.after_tool_messages_appended
+) -> _PromptPlanOpenAiLoopBindContext:
+    return _PromptPlanOpenAiLoopBindContext(
+        store=store,
+        transcript_rel=context.transcript_rel,
+        trace_id=context.trace_id,
+        user_msg_uuid=context.user_msg_uuid,
+        write_allowlist=execution.write_allowlist,
+        repository_only_store_text=context.repository_only_store_text,
+        tool_choice=prompt_plan.tool_choice,
+        high_reasoning=execution.high_reasoning,
+        after_append_hook=context.after_tool_messages_appended,
+        llm_client=llm_client,
+        chat_model=chat_model,
+        langsmith_extra=langsmith_extra,
+        interim_output_sink=interim_output_sink,
+    )
 
+
+def _prompt_plan_build_openai_tool_loop_handlers(
+    *,
+    bind: _PromptPlanOpenAiLoopBindContext,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+) -> _PromptPlanOpenAiLoopHandlers:
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
         return await _prompt_plan_openai_loop_execute_tool_call(
-            store=store,
+            store=bind.store,
             name=name,
             raw_arguments=raw_arguments,
-            write_allowlist=write_allowlist,
-            repository_only_store_text=repository_only_store_text,
+            write_allowlist=bind.write_allowlist,
+            repository_only_store_text=bind.repository_only_store_text,
         )
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
         return await _prompt_plan_openai_loop_continue_chat(
-            llm_client=llm_client,
+            llm_client=bind.llm_client,
             messages_with_tool_results=messages_with_tool_results,
             acc=acc,
-            tool_choice=tool_choice,
-            chat_model=chat_model,
-            langsmith_extra=langsmith_extra,
-            high_reasoning=high_reasoning,
+            tool_choice=bind.tool_choice,
+            chat_model=bind.chat_model,
+            langsmith_extra=bind.langsmith_extra,
+            high_reasoning=bind.high_reasoning,
         )
 
     async def after_tool_messages_appended(
@@ -563,18 +594,18 @@ def _prompt_plan_build_openai_tool_loop_handlers(
         await _prompt_plan_openai_loop_after_tool_append(
             messages_with_tool_results=messages_with_tool_results,
             acc=acc,
-            after_tool_messages_appended=after_append_hook,
+            after_tool_messages_appended=bind.after_append_hook,
         )
 
     async def on_assistant_message(message: Any) -> None:
         await _prompt_plan_openai_loop_on_assistant_message(
             message,
-            store=store,
-            transcript_rel=transcript_rel,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
+            store=bind.store,
+            transcript_rel=bind.transcript_rel,
+            trace_id=bind.trace_id,
+            user_msg_uuid=bind.user_msg_uuid,
             acc=acc,
-            interim_output_sink=interim_output_sink,
+            interim_output_sink=bind.interim_output_sink,
             interim_state=interim_state,
         )
 
@@ -602,17 +633,20 @@ async def _invoke_prompt_plan_openai_tool_call_loop(
     langsmith_extra: dict[str, Any],
     execution: Any,
 ) -> Any:
-    handlers = _prompt_plan_build_openai_tool_loop_handlers(
+    bind = _prompt_plan_openai_loop_bind_context(
         store=store,
         context=context,
         llm_client=llm_client,
         interim_output_sink=interim_output_sink,
-        acc=acc,
-        interim_state=interim_state,
         prompt_plan=prompt_plan,
         chat_model=chat_model,
         langsmith_extra=langsmith_extra,
         execution=execution,
+    )
+    handlers = _prompt_plan_build_openai_tool_loop_handlers(
+        bind=bind,
+        acc=acc,
+        interim_state=interim_state,
     )
     return await resolve_openai_tool_call_loop_async(
         response=initial_resp,
