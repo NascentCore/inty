@@ -582,6 +582,100 @@ def _parse_user_feedback_tool_arguments(
     )
 
 
+def _user_feedback_tool_result_from_outcome(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_issue_url: str,
+    github_issue_number: int,
+    github_skipped_reason: str | None,
+) -> str:
+    return format_user_feedback_tool_result(
+        UserFeedbackToolOutcome(
+            feedback_id=snapshot.feedback_id,
+            disclosure=disclosure,
+            github_issue_url=github_issue_url,
+            github_issue_number=github_issue_number,
+            github_skipped_reason=github_skipped_reason,
+        )
+    )
+
+
+def _finalize_user_feedback_without_github_token(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    store: MemoryStore,
+) -> str:
+    append_github_issue_skipped(
+        store,
+        feedback_id=snapshot.feedback_id,
+        reason="skipped_no_token",
+    )
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url="",
+        github_issue_number=0,
+        github_skipped_reason="skipped_no_token",
+    )
+
+
+def _finalize_user_feedback_visible_github(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_repo: str,
+    github_token: str,
+    store: MemoryStore,
+) -> str:
+    try:
+        result = file_github_issue_for_snapshot(
+            snapshot,
+            store,
+            github_repo=github_repo,
+            github_token=github_token,
+        )
+    except RuntimeError as exc:
+        return _user_feedback_tool_result_from_outcome(
+            snapshot,
+            disclosure=disclosure,
+            github_issue_url="",
+            github_issue_number=0,
+            github_skipped_reason=str(exc),
+        )
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url=result.url,
+        github_issue_number=result.number,
+        github_skipped_reason=None,
+    )
+
+
+def _finalize_user_feedback_hidden_github(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_repo: str,
+    github_token: str,
+    store: MemoryStore,
+) -> str:
+    start_github_issue_job(
+        snapshot,
+        store,
+        github_repo=github_repo,
+        github_token=github_token,
+    )
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url="",
+        github_issue_number=0,
+        github_skipped_reason=None,
+    )
+
+
 def _finalize_user_feedback_tool_result(
     snapshot: HarnessSnapshot,
     *,
@@ -592,64 +686,28 @@ def _finalize_user_feedback_tool_result(
 ) -> str:
     """File or schedule GitHub issue creation and format the tool return string."""
     if not github_token.strip():
-        append_github_issue_skipped(
-            store,
-            feedback_id=snapshot.feedback_id,
-            reason="skipped_no_token",
-        )
-        return format_user_feedback_tool_result(
-            UserFeedbackToolOutcome(
-                feedback_id=snapshot.feedback_id,
-                disclosure=disclosure,
-                github_issue_url="",
-                github_issue_number=0,
-                github_skipped_reason="skipped_no_token",
-            )
+        return _finalize_user_feedback_without_github_token(
+            snapshot,
+            disclosure=disclosure,
+            store=store,
         )
 
     match disclosure:
         case UserFeedbackDisclosureMode.VISIBLE:
-            try:
-                result = file_github_issue_for_snapshot(
-                    snapshot,
-                    store,
-                    github_repo=github_repo,
-                    github_token=github_token,
-                )
-            except RuntimeError as exc:
-                return format_user_feedback_tool_result(
-                    UserFeedbackToolOutcome(
-                        feedback_id=snapshot.feedback_id,
-                        disclosure=disclosure,
-                        github_issue_url="",
-                        github_issue_number=0,
-                        github_skipped_reason=str(exc),
-                    )
-                )
-            return format_user_feedback_tool_result(
-                UserFeedbackToolOutcome(
-                    feedback_id=snapshot.feedback_id,
-                    disclosure=disclosure,
-                    github_issue_url=result.url,
-                    github_issue_number=result.number,
-                    github_skipped_reason=None,
-                )
-            )
-        case UserFeedbackDisclosureMode.HIDDEN:
-            start_github_issue_job(
+            return _finalize_user_feedback_visible_github(
                 snapshot,
-                store,
+                disclosure=disclosure,
                 github_repo=github_repo,
                 github_token=github_token,
+                store=store,
             )
-            return format_user_feedback_tool_result(
-                UserFeedbackToolOutcome(
-                    feedback_id=snapshot.feedback_id,
-                    disclosure=disclosure,
-                    github_issue_url="",
-                    github_issue_number=0,
-                    github_skipped_reason=None,
-                )
+        case UserFeedbackDisclosureMode.HIDDEN:
+            return _finalize_user_feedback_hidden_github(
+                snapshot,
+                disclosure=disclosure,
+                github_repo=github_repo,
+                github_token=github_token,
+                store=store,
             )
 
 

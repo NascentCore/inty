@@ -1421,6 +1421,29 @@ class _ToolBgKickoffSession:
     t0: float
 
 
+@dataclass(frozen=True)
+class _ToolBgKickoffLoopConfig:
+    """Shared tool-background loop inputs after kickoff session prep."""
+
+    tool_api_id: str
+    trace_id: str
+    user_msg_uuid: str
+    chat_completion_sync: ChatCompletionsSyncPort
+    tools: list[Any]
+    langsmith_slice: CompanionTurnLangsmithSlice
+    llm_round_timeout_sec: float
+    trace_hooks: ToolBackgroundTraceHooks | None
+    companion_turn_track: CompanionTurnTrack
+    runtime_context: TurnRuntimeContext
+    write_allowlist: frozenset[str] | None
+    repository_only_store_text: bool
+    skip_finish_envelope_routing: bool
+    suppress_user_delivery: bool
+    on_event: Callable[[ToolOutputEvent], None]
+    activity_label: str | None
+    execute_tool_call_fn: Callable[..., Any]
+
+
 def _tool_bg_prepare_kickoff_session(
     *,
     memory_store: MemoryStore,
@@ -1453,23 +1476,7 @@ def _tool_bg_kickoff_from_initial_response(
     session: _ToolBgKickoffSession,
     initial_response: Any,
     memory_store: MemoryStore,
-    tool_api_id: str,
-    trace_id: str,
-    user_msg_uuid: str,
-    chat_completion_sync: ChatCompletionsSyncPort,
-    tools: list[Any],
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    llm_round_timeout_sec: float,
-    trace_hooks: ToolBackgroundTraceHooks | None,
-    companion_turn_track: CompanionTurnTrack,
-    runtime_context: TurnRuntimeContext,
-    write_allowlist: frozenset[str] | None,
-    repository_only_store_text: bool,
-    skip_finish_envelope_routing: bool,
-    suppress_user_delivery: bool,
-    on_event: Callable[[ToolOutputEvent], None],
-    activity_label: str | None,
-    execute_tool_call_fn: Callable[..., Any],
+    config: _ToolBgKickoffLoopConfig,
 ) -> _ToolBgLoopKickoff:
     session.progress.rounds_used = 1
     session.progress.active_round = session.progress.rounds_used
@@ -1478,24 +1485,24 @@ def _tool_bg_kickoff_from_initial_response(
         scope_registry_key=session.scope_registry_key,
         transcript_append_rel=session.transcript_append_rel,
         image_asset_baseline=session.image_asset_baseline,
-        tool_api_id=tool_api_id,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
+        tool_api_id=config.tool_api_id,
+        trace_id=config.trace_id,
+        user_msg_uuid=config.user_msg_uuid,
         resolved_client=session.resolved_client,
-        chat_completion_sync=chat_completion_sync,
-        tools=tools,
-        langsmith_slice=langsmith_slice,
-        llm_round_timeout_sec=llm_round_timeout_sec,
-        trace_hooks=trace_hooks,
-        companion_turn_track=companion_turn_track,
-        runtime_context=runtime_context,
-        write_allowlist=write_allowlist,
-        repository_only_store_text=repository_only_store_text,
-        skip_finish_envelope_routing=skip_finish_envelope_routing,
-        suppress_user_delivery=suppress_user_delivery,
-        on_event=on_event,
-        activity_label=activity_label,
-        execute_tool_call_fn=execute_tool_call_fn,
+        chat_completion_sync=config.chat_completion_sync,
+        tools=config.tools,
+        langsmith_slice=config.langsmith_slice,
+        llm_round_timeout_sec=config.llm_round_timeout_sec,
+        trace_hooks=config.trace_hooks,
+        companion_turn_track=config.companion_turn_track,
+        runtime_context=config.runtime_context,
+        write_allowlist=config.write_allowlist,
+        repository_only_store_text=config.repository_only_store_text,
+        skip_finish_envelope_routing=config.skip_finish_envelope_routing,
+        suppress_user_delivery=config.suppress_user_delivery,
+        on_event=config.on_event,
+        activity_label=config.activity_label,
+        execute_tool_call_fn=config.execute_tool_call_fn,
     )
     return _ToolBgLoopKickoff(
         run_ctx=run_ctx,
@@ -1510,31 +1517,15 @@ async def _tool_bg_kickoff_loop_run(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
-    tool_api_id: str,
-    user_msg_uuid: str,
-    trace_id: str,
-    tools: list[Any],
     client: Any,
-    chat_completion_sync: ChatCompletionsSyncPort,
     force_tools_first_round: bool,
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    llm_round_timeout_sec: float,
-    trace_hooks: ToolBackgroundTraceHooks | None,
-    companion_turn_track: CompanionTurnTrack,
-    runtime_context: TurnRuntimeContext,
-    write_allowlist: frozenset[str] | None,
-    repository_only_store_text: bool,
-    skip_finish_envelope_routing: bool,
-    suppress_user_delivery: bool,
-    on_event: Callable[[ToolOutputEvent], None],
-    activity_label: str | None,
-    execute_tool_call_fn: Callable[..., Any],
+    config: _ToolBgKickoffLoopConfig,
 ) -> _ToolBgLoopKickoff | None:
-    if is_tool_background_aborted(user_msg_uuid):
+    if is_tool_background_aborted(config.user_msg_uuid):
         logger.debug(
             "repl.turn.bg skip aborted before start trace_id={} user_msg_uuid={}",
-            trace_id,
-            user_msg_uuid,
+            config.trace_id,
+            config.user_msg_uuid,
         )
         return None
 
@@ -1542,22 +1533,22 @@ async def _tool_bg_kickoff_loop_run(
         memory_store=memory_store,
         request_messages=request_messages,
         client=client,
-        companion_turn_track=companion_turn_track,
+        companion_turn_track=config.companion_turn_track,
     )
 
     initial_fetch = await _fetch_tool_bg_initial_completion(
         resolved_client=session.resolved_client,
-        chat_completion_sync=chat_completion_sync,
+        chat_completion_sync=config.chat_completion_sync,
         working_messages=session.working_messages,
-        tools=tools,
-        tool_api_id=tool_api_id,
+        tools=config.tools,
+        tool_api_id=config.tool_api_id,
         force_tools_first_round=force_tools_first_round,
-        langsmith_slice=langsmith_slice,
-        llm_round_timeout_sec=llm_round_timeout_sec,
+        langsmith_slice=config.langsmith_slice,
+        llm_round_timeout_sec=config.llm_round_timeout_sec,
         scope_registry_key=session.scope_registry_key,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
-        trace_hooks=trace_hooks,
+        trace_id=config.trace_id,
+        user_msg_uuid=config.user_msg_uuid,
+        trace_hooks=config.trace_hooks,
     )
     if initial_fetch is None:
         return None
@@ -1567,23 +1558,7 @@ async def _tool_bg_kickoff_loop_run(
         session=session,
         initial_response=initial_response,
         memory_store=memory_store,
-        tool_api_id=tool_api_id,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
-        chat_completion_sync=chat_completion_sync,
-        tools=tools,
-        langsmith_slice=langsmith_slice,
-        llm_round_timeout_sec=llm_round_timeout_sec,
-        trace_hooks=trace_hooks,
-        companion_turn_track=companion_turn_track,
-        runtime_context=runtime_context,
-        write_allowlist=write_allowlist,
-        repository_only_store_text=repository_only_store_text,
-        skip_finish_envelope_routing=skip_finish_envelope_routing,
-        suppress_user_delivery=suppress_user_delivery,
-        on_event=on_event,
-        activity_label=activity_label,
-        execute_tool_call_fn=execute_tool_call_fn,
+        config=config,
     )
 
 
@@ -1645,16 +1620,12 @@ async def run_tool_background_loop(
     assert llm_round_timeout_sec > 0.0
     tool_api_id = tool_model.id_on_provider
     try:
-        kickoff = await _tool_bg_kickoff_loop_run(
-            memory_store=memory_store,
-            request_messages=request_messages,
+        kickoff_config = _ToolBgKickoffLoopConfig(
             tool_api_id=tool_api_id,
-            user_msg_uuid=user_msg_uuid,
             trace_id=trace_id,
-            tools=tools,
-            client=client,
+            user_msg_uuid=user_msg_uuid,
             chat_completion_sync=chat_completion_sync,
-            force_tools_first_round=force_tools_first_round,
+            tools=tools,
             langsmith_slice=langsmith_slice,
             llm_round_timeout_sec=llm_round_timeout_sec,
             trace_hooks=trace_hooks,
@@ -1667,6 +1638,13 @@ async def run_tool_background_loop(
             on_event=on_event,
             activity_label=activity_label,
             execute_tool_call_fn=execute_tool_call_fn,
+        )
+        kickoff = await _tool_bg_kickoff_loop_run(
+            memory_store=memory_store,
+            request_messages=request_messages,
+            client=client,
+            force_tools_first_round=force_tools_first_round,
+            config=kickoff_config,
         )
         if kickoff is None:
             return
