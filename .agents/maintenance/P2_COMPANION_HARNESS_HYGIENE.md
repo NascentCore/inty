@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-27 scan (cron)
+
+Source: open PR overlap check (#3935–#3974 maintenance batches — `HYGIENE-2026-435`/`436` claimed via `434..436` range on pull/3969; no other gaps in 182–444); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; follow-up — `list_companion_memory_scopes` CONTEXT_JSON filter lacks explicit accessor/kind parity test; stale issue audit snapshot still on disk.
+
+Open PRs checked: #3935–#3974 (`agent-maintenance-tasks-*` hygiene batches), #3955–#3974 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-c463`)
+
+- [x] **HYGIENE-2026-445** `memory/test_companion_scope_listing.py` — `list_companion_memory_scopes` CONTEXT_JSON discriminator matches `parse_memory_store_relative_path(DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json)`. Fixed in `cursor/agent-maintenance-tasks-c463`.
+- [x] **HYGIENE-2026-446** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-c463`.
+- [x] **HYGIENE-2026-447** `memory/test_companion_scope_listing.py` — `CompanionMemoryDocumentKind` enum values are unique (listing / ORM discriminator safety). Fixed in `cursor/agent-maintenance-tasks-c463`.
