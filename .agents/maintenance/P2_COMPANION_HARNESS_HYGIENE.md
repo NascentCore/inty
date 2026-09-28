@@ -700,3 +700,20 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-28 scan (cron)
+
+Source: open PR overlap check (maintenance batches #3958–#3977 claim HYGIENE-412..447; stale-code / #3835 decomposition PRs — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — `parse_memory_store_relative_path` listing smoke still missing several `MemoryStoreScopePaths` accessors (MD + state JSON + daily gist).
+
+Open PRs checked: #3958–#3977 (maintenance HYGIENE-412..447), #3974 (#437..444), #3977 (#445..447) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-1a5f`)
+
+- [x] **HYGIENE-2026-448** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-449** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-450** `memory/test_companion_scope_listing.py` — `INTY_V2_SCHEDULE_TASKS_JSON` kind matches `.inty_v2` `schedule_queue_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-451** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-452** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-453** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-454** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind + calendar date via `memory_daily_gist` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-455** `memory/test_companion_scope_listing.py` — `INTY_V2_DREAMING_STATE_JSON` kind matches `.inty_v2` `dreaming_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
