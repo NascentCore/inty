@@ -371,6 +371,61 @@ def _create_and_register_companion_turn_langsmith_root(
     return root
 
 
+def _instantiate_companion_turn_langsmith_root(
+    *,
+    RunTree: Any,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    user_id: str,
+    companion_id: str,
+    companion_turn_track: CompanionTurnTrack | None,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity | None,
+    implicit_user_signed_on: bool,
+    transcript_newest_message_uuid: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any:
+    uid = (user_id or "").strip()
+    cid = (companion_id or "").strip()
+    turn_ctx = _resolve_langsmith_parent_turn_context(
+        user_id=uid,
+        companion_id=cid,
+        companion_turn_track=companion_turn_track,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_activity=inner_tick_activity,
+        implicit_user_signed_on=implicit_user_signed_on,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+    )
+    meta = _langsmith_parent_meta_for_turn(
+        chat_model=chat_model,
+        tool_model=tool_model,
+        user_id=uid,
+        companion_id=cid,
+        langsmith_slice=langsmith_slice,
+        turn_ctx=turn_ctx,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+    )
+    return _create_and_register_companion_turn_langsmith_root(
+        RunTree=RunTree,
+        run_name=turn_ctx.run_name,
+        run_tags=turn_ctx.run_tags,
+        turn_lane=turn_ctx.turn_lane,
+        lane_inputs=turn_ctx.lane_inputs,
+        meta=meta,
+        inty_trace_id=inty_trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_model=chat_model,
+        tool_model=tool_model,
+        uid=uid,
+        cid=cid,
+        inner_tick_turn=turn_ctx.inner_tick_turn,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+        langsmith_slice=langsmith_slice,
+    )
+
+
 def create_companion_turn_root_run(
     *,
     inty_trace_id: str,
@@ -411,40 +466,18 @@ def create_companion_turn_root_run(
     try:
         from langsmith.run_trees import RunTree
 
-        uid = (user_id or "").strip()
-        cid = (companion_id or "").strip()
-        turn_ctx = _resolve_langsmith_parent_turn_context(
-            user_id=uid,
-            companion_id=cid,
-            companion_turn_track=companion_turn_track,
-            inner_tick_turn=inner_tick_turn,
-            inner_tick_activity=inner_tick_activity,
-            implicit_user_signed_on=implicit_user_signed_on,
-            transcript_newest_message_uuid=transcript_newest_message_uuid,
-        )
-        meta = _langsmith_parent_meta_for_turn(
-            chat_model=chat_model,
-            tool_model=tool_model,
-            user_id=uid,
-            companion_id=cid,
-            langsmith_slice=langsmith_slice,
-            turn_ctx=turn_ctx,
-            transcript_newest_message_uuid=transcript_newest_message_uuid,
-        )
-        return _create_and_register_companion_turn_langsmith_root(
+        return _instantiate_companion_turn_langsmith_root(
             RunTree=RunTree,
-            run_name=turn_ctx.run_name,
-            run_tags=turn_ctx.run_tags,
-            turn_lane=turn_ctx.turn_lane,
-            lane_inputs=turn_ctx.lane_inputs,
-            meta=meta,
             inty_trace_id=inty_trace_id,
             user_msg_uuid=user_msg_uuid,
             chat_model=chat_model,
             tool_model=tool_model,
-            uid=uid,
-            cid=cid,
-            inner_tick_turn=turn_ctx.inner_tick_turn,
+            user_id=user_id,
+            companion_id=companion_id,
+            companion_turn_track=companion_turn_track,
+            inner_tick_turn=inner_tick_turn,
+            inner_tick_activity=inner_tick_activity,
+            implicit_user_signed_on=implicit_user_signed_on,
             transcript_newest_message_uuid=transcript_newest_message_uuid,
             langsmith_slice=langsmith_slice,
         )
