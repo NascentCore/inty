@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -9,6 +10,14 @@ import pytest
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.companion_scope_listing import (
     list_companion_memory_scopes,
+)
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+    parse_memory_store_relative_path,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    MemoryStoreScopePaths,
 )
 
 
@@ -29,3 +38,64 @@ async def test_list_companion_memory_scopes_distinct_triples() -> None:
         CompanionScope("user-1", "agent-1", "chat-1"),
         CompanionScope("user-2", "agent-2", "chat-2"),
     ]
+
+
+def test_scope_listing_significance_perception_kind_matches_accessor() -> None:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.significance_perception_md
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION
+    assert calendar_date is None
+
+
+def test_scope_listing_ai_private_md_kind_matches_accessor() -> None:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_md
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.AI_PRIVATE_MD
+    assert calendar_date is None
+
+
+def test_scope_listing_inty_v2_schedule_tasks_json_kind_matches_accessor() -> None:
+    paths = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
+    rel = paths.schedule_queue_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON
+    assert calendar_date is None
+
+
+def test_scope_listing_companion_context_compaction_state_json_kind_matches_accessor() -> (
+    None
+):
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_compaction_state_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.COMPANION_CONTEXT_COMPACTION_STATE_JSON
+    assert calendar_date is None
+
+
+def test_scope_listing_companion_schedule_tasks_json_kind_matches_accessor() -> None:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON
+    assert calendar_date is None
+
+
+def test_scope_listing_companion_dreaming_state_json_kind_matches_accessor() -> None:
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.COMPANION_DREAMING_STATE_JSON
+    assert calendar_date is None
+
+
+def test_scope_listing_memory_daily_raw_kind_matches_accessor() -> None:
+    day_iso = "2099-06-15"
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day_iso)
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.MEMORY_DAILY_RAW
+    assert calendar_date == date.fromisoformat(day_iso)
+
+
+def test_scope_listing_inty_v2_dreaming_state_json_kind_matches_accessor() -> None:
+    paths = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
+    rel = paths.dreaming_state_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.INTY_V2_DREAMING_STATE_JSON
+    assert calendar_date is None

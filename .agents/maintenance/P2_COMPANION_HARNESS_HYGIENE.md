@@ -709,10 +709,11 @@ Open PRs checked: #3958–#3977 (maintenance HYGIENE-412..447), #3974 (#437..444
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-1a5f`)
 
-- [ ] **HYGIENE-2026-448** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor
-- [ ] **HYGIENE-2026-449** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor
-- [ ] **HYGIENE-2026-450** `memory/test_companion_scope_listing.py` — `CHAT_HISTORY` / chat history MD kind matches `chat_history_md` scope accessor (if mapped; else document mapping parity)
-- [ ] **HYGIENE-2026-451** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` accessor
-- [ ] **HYGIENE-2026-452** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` accessor
-- [ ] **HYGIENE-2026-453** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` accessor
-- [ ] **HYGIENE-2026-454** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind + calendar date via `memory_daily_gist` accessor
+- [x] **HYGIENE-2026-448** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-449** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-450** `memory/test_companion_scope_listing.py` — `INTY_V2_SCHEDULE_TASKS_JSON` kind matches `.inty_v2` `schedule_queue_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-451** `memory/test_companion_scope_listing.py` — `COMPANION_CONTEXT_COMPACTION_STATE_JSON` kind matches `context_compaction_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-452** `memory/test_companion_scope_listing.py` — `COMPANION_SCHEDULE_TASKS_JSON` kind matches `schedule_queue_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-453** `memory/test_companion_scope_listing.py` — `COMPANION_DREAMING_STATE_JSON` kind matches `dreaming_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-454** `memory/test_companion_scope_listing.py` — `MEMORY_DAILY_RAW` kind + calendar date via `memory_daily_gist` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
+- [x] **HYGIENE-2026-455** `memory/test_companion_scope_listing.py` — `INTY_V2_DREAMING_STATE_JSON` kind matches `.inty_v2` `dreaming_state_json` accessor. Fixed in `cursor/agent-maintenance-tasks-1a5f` / pull/3980.
