@@ -996,6 +996,32 @@ class _ToolBgLoopRunContext:
     execute_tool_call_fn: Callable[..., Any]
 
 
+async def _tool_bg_loop_execute_tool_call(
+    run_ctx: _ToolBgLoopRunContext,
+    *,
+    write_allowlist: frozenset[str],
+    name: str,
+    raw_arguments: str,
+) -> tuple[str, str | None]:
+    result = await run_ctx.execute_tool_call_fn(
+        run_ctx.memory_store,
+        name,
+        raw_arguments,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=run_ctx.repository_only_store_text,
+    )
+    return result, None
+
+
+def _tool_bg_new_turn_capture(
+    working_messages: list[dict[str, Any]],
+) -> ToolBgTurnCapture:
+    return ToolBgTurnCapture(
+        appended_turn_msgs=[],
+        capture_from_len=len(working_messages),
+    )
+
+
 def _tool_bg_build_openai_loop_handlers(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1007,23 +1033,18 @@ def _tool_bg_build_openai_loop_handlers(
         if run_ctx.write_allowlist is not None
         else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
     )
-    turn_capture = ToolBgTurnCapture(
-        appended_turn_msgs=[],
-        capture_from_len=len(working_messages),
-    )
+    turn_capture = _tool_bg_new_turn_capture(working_messages)
     tools_for_rounds = list(run_ctx.tools)
 
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        result = await run_ctx.execute_tool_call_fn(
-            run_ctx.memory_store,
-            name,
-            raw_arguments,
+        return await _tool_bg_loop_execute_tool_call(
+            run_ctx,
             write_allowlist=allow,
-            repository_only_store_text=run_ctx.repository_only_store_text,
+            name=name,
+            raw_arguments=raw_arguments,
         )
-        return result, None
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],

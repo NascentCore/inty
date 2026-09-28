@@ -394,35 +394,37 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
 # feed autonomy experience back into companion hidden state (epic #3700).
 
 
-def tool_techno_core_record_event(
+def _techno_core_record_event_ev_kwargs(
     store: MemoryStore, arguments: dict[str, Any]
-) -> str:
-    """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
+) -> tuple[str | None, dict[str, Any] | None]:
     raw_sphere = arguments.get("sphere")
     raw_summary = arguments.get("summary")
     if not isinstance(raw_sphere, str):
-        return "ERROR: sphere must be a string"
+        return "ERROR: sphere must be a string", None
     if not isinstance(raw_summary, str):
-        return "ERROR: summary must be a string"
+        return "ERROR: summary must be a string", None
     try:
         sphere = Sphere(raw_sphere.strip())
     except ValueError:
-        return f"ERROR: invalid sphere {raw_sphere!r}"
+        return f"ERROR: invalid sphere {raw_sphere!r}", None
 
     raw_vis = arguments.get("visibility")
     visibility: Visibility = Visibility.PRIVATE
     if raw_vis is not None:
         if not isinstance(raw_vis, str):
-            return "ERROR: visibility must be a string or omitted"
+            return "ERROR: visibility must be a string or omitted", None
         try:
             visibility = Visibility(raw_vis.strip())
         except ValueError:
-            return f"ERROR: invalid visibility {raw_vis!r}"
+            return f"ERROR: invalid visibility {raw_vis!r}", None
 
     uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
-        return f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}"
+        return (
+            f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}",
+            None,
+        )
 
     ev_kwargs: dict[str, Any] = {
         "sphere": sphere,
@@ -436,21 +438,32 @@ def tool_techno_core_record_event(
     raw_ev = arguments.get("emotional_valence")
     if raw_ev is not None:
         if not isinstance(raw_ev, str):
-            return "ERROR: emotional_valence must be a string or omitted"
+            return "ERROR: emotional_valence must be a string or omitted", None
         ev_kwargs["emotional_valence"] = raw_ev
 
     raw_sal = arguments.get("salience")
     if raw_sal is not None:
         if type(raw_sal) is not int or isinstance(raw_sal, bool):
-            return "ERROR: salience must be an integer 1..10 or omitted"
+            return "ERROR: salience must be an integer 1..10 or omitted", None
         ev_kwargs["salience"] = raw_sal
 
     raw_ls = arguments.get("related_living_sphere")
     if raw_ls is not None:
         if not isinstance(raw_ls, str):
-            return "ERROR: related_living_sphere must be a string or omitted"
+            return "ERROR: related_living_sphere must be a string or omitted", None
         ev_kwargs["related_living_sphere"] = raw_ls
 
+    return None, ev_kwargs
+
+
+def tool_techno_core_record_event(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> str:
+    """Append one ``TechnoCoreEvent`` line to ``techno_core_events.jsonl`` (LivingSphere / TechnoCore autonomy)."""
+    err, ev_kwargs = _techno_core_record_event_ev_kwargs(store, arguments)
+    if err is not None:
+        return err
+    assert ev_kwargs is not None
     try:
         event = TechnoCoreEvent.model_validate(ev_kwargs)
     except ValidationError as exc:
