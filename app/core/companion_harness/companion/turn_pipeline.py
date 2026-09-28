@@ -220,31 +220,24 @@ def load_companion_turn_state(
     )
 
 
-def build_companion_turn_prompt_plan(
+@dataclass(frozen=True)
+class _TurnToolsSystemResolve:
+    """Tools and system prompt slices resolved for one companion turn track."""
+
+    tools_for_turn: list[dict[str, Any]]
+    system_messages: list[dict[str, Any]]
+
+
+def _resolve_turn_tools_and_system_messages(
     *,
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     track: CompanionTurnTrack,
-    tick_proactive: bool,
     implicit_sign_on_turn: bool,
     runtime_context: TurnRuntimeContext,
-    transcript_compaction: TranscriptCompactionConfig | None,
-    tail_splice_thoughts: list[AiPrivateThought],
-) -> CompanionTurnPromptPlan:
-    """Assemble system messages and final request messages."""
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+) -> _TurnToolsSystemResolve:
     match track:
-        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            return CompanionTurnPromptPlan(
-                tools_for_turn=companion_tools_for_turn(
-                    track=track,
-                    implicit_user_signed_on_turn=implicit_sign_on_turn,
-                ),
-                system_messages=[],
-                messages=[],
-                transcript_compaction=None,
-            )
         case (
             CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
@@ -292,71 +285,99 @@ def build_companion_turn_prompt_plan(
                     runtime_context=runtime_context,
                 )
             )
-    use_ai_private_splice = track_uses_ai_private_splice(track)
+    return _TurnToolsSystemResolve(
+        tools_for_turn=tools_for_turn,
+        system_messages=system_messages,
+    )
 
-    def _transcript_dialogue() -> list[dict[str, Any]]:
-        if use_ai_private_splice:
-            return transcript_window_to_llm_dialogue(
-                store,
-                loaded_state.transcript_window,
-                tail_splice_thoughts=tail_splice_thoughts,
-            )
-        from app.core.companion_harness.memory.transcript_compaction import (
-            transcript_rows_to_openai_dialogue,
+
+def _transcript_dialogue_for_turn(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    track: CompanionTurnTrack,
+    tail_splice_thoughts: list[AiPrivateThought],
+) -> list[dict[str, Any]]:
+    if track_uses_ai_private_splice(track):
+        return transcript_window_to_llm_dialogue(
+            store,
+            loaded_state.transcript_window,
+            tail_splice_thoughts=tail_splice_thoughts,
         )
+    from app.core.companion_harness.memory.transcript_compaction import (
+        transcript_rows_to_openai_dialogue,
+    )
 
-        return transcript_rows_to_openai_dialogue(
-            loaded_state.transcript_window
-        )
+    return transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
 
-    transcript_compaction_meta: dict[str, Any] | None = None
+
+def _build_turn_messages_with_compaction(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    track: CompanionTurnTrack,
+    system_messages: list[dict[str, Any]],
+    transcript_dialogue: list[dict[str, Any]],
+    transcript_compaction: TranscriptCompactionConfig | None,
+    compaction_state_rel: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     if (
-        transcript_compaction is not None
-        and inner_tick_kind_for_track(track) is None
+        transcript_compaction is None
+        or inner_tick_kind_for_track(track) is not None
     ):
-        rel_compact = paths.context_compaction_state_json
-        prior_state = load_compaction_state_from_store(store, rel_compact)
-        compactor = ConversationCompactor(
-            transcript_compaction,
-            initial_state=prior_state,
-        )
-        pre_user: list[dict[str, Any]] = [
-            *system_messages,
-            *_transcript_dialogue(),
-        ]
-        outcome = compactor.maybe_compact(
-            messages=pre_user,
-            turn=loaded_state.compaction_turn_idx,
-        )
-        messages = list(outcome.messages)
-        max_cc = transcript_compaction.max_context_chars
-        transcript_compaction_meta = transcript_compaction_meta_from_outcome(
-            outcome, max_context_chars=max_cc
-        )
-        logger.debug(
-            "run_turn transcript_compaction_eval did_compact={} reason={} before={} "
-            "after={} max_context_chars={} compaction_count={}",
-            outcome.did_compact,
+        messages = list(system_messages)
+        messages.extend(transcript_dialogue)
+        return messages, None
+
+    prior_state = load_compaction_state_from_store(store, compaction_state_rel)
+    compactor = ConversationCompactor(
+        transcript_compaction,
+        initial_state=prior_state,
+    )
+    pre_user: list[dict[str, Any]] = [
+        *system_messages,
+        *transcript_dialogue,
+    ]
+    outcome = compactor.maybe_compact(
+        messages=pre_user,
+        turn=loaded_state.compaction_turn_idx,
+    )
+    messages = list(outcome.messages)
+    max_cc = transcript_compaction.max_context_chars
+    transcript_compaction_meta = transcript_compaction_meta_from_outcome(
+        outcome, max_context_chars=max_cc
+    )
+    logger.debug(
+        "run_turn transcript_compaction_eval did_compact={} reason={} before={} "
+        "after={} max_context_chars={} compaction_count={}",
+        outcome.did_compact,
+        outcome.reason,
+        outcome.approx_chars_before,
+        outcome.approx_chars_after,
+        max_cc,
+        outcome.state.compaction_count,
+    )
+    if outcome.did_compact:
+        save_compaction_state_to_store(store, compaction_state_rel, outcome.state)
+        logger.info(
+            "run_turn transcript_compaction did_compact=true reason={} before={} after={} "
+            "compaction_count={}",
             outcome.reason,
             outcome.approx_chars_before,
             outcome.approx_chars_after,
-            max_cc,
             outcome.state.compaction_count,
         )
-        if outcome.did_compact:
-            save_compaction_state_to_store(store, rel_compact, outcome.state)
-            logger.info(
-                "run_turn transcript_compaction did_compact=true reason={} before={} after={} "
-                "compaction_count={}",
-                outcome.reason,
-                outcome.approx_chars_before,
-                outcome.approx_chars_after,
-                outcome.state.compaction_count,
-            )
-    else:
-        messages = list(system_messages)
-        messages.extend(_transcript_dialogue())
+    return messages, transcript_compaction_meta
 
+
+def _append_prompt_plan_tail_system_slices(
+    messages: list[dict[str, Any]],
+    *,
+    tick_proactive: bool,
+    runtime_context: TurnRuntimeContext,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    implicit_sign_on_turn: bool,
+) -> None:
     if tick_proactive:
         messages.append(
             {
@@ -375,9 +396,66 @@ def build_companion_turn_prompt_plan(
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
 
+
+def build_companion_turn_prompt_plan(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    track: CompanionTurnTrack,
+    tick_proactive: bool,
+    implicit_sign_on_turn: bool,
+    runtime_context: TurnRuntimeContext,
+    transcript_compaction: TranscriptCompactionConfig | None,
+    tail_splice_thoughts: list[AiPrivateThought],
+) -> CompanionTurnPromptPlan:
+    """Assemble system messages and final request messages."""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            return CompanionTurnPromptPlan(
+                tools_for_turn=companion_tools_for_turn(
+                    track=track,
+                    implicit_user_signed_on_turn=implicit_sign_on_turn,
+                ),
+                system_messages=[],
+                messages=[],
+                transcript_compaction=None,
+            )
+        case _:
+            resolved = _resolve_turn_tools_and_system_messages(
+                store=store,
+                loaded_state=loaded_state,
+                tail_user_messages=tail_user_messages,
+                track=track,
+                implicit_sign_on_turn=implicit_sign_on_turn,
+                runtime_context=runtime_context,
+            )
+    transcript_dialogue = _transcript_dialogue_for_turn(
+        store=store,
+        loaded_state=loaded_state,
+        track=track,
+        tail_splice_thoughts=tail_splice_thoughts,
+    )
+    messages, transcript_compaction_meta = _build_turn_messages_with_compaction(
+        store=store,
+        loaded_state=loaded_state,
+        track=track,
+        system_messages=resolved.system_messages,
+        transcript_dialogue=transcript_dialogue,
+        transcript_compaction=transcript_compaction,
+        compaction_state_rel=paths.context_compaction_state_json,
+    )
+    _append_prompt_plan_tail_system_slices(
+        messages,
+        tick_proactive=tick_proactive,
+        runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
     return CompanionTurnPromptPlan(
-        tools_for_turn=tools_for_turn,
-        system_messages=system_messages,
+        tools_for_turn=resolved.tools_for_turn,
+        system_messages=resolved.system_messages,
         messages=messages,
         transcript_compaction=transcript_compaction_meta,
     )
