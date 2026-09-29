@@ -347,7 +347,8 @@ def _rewrite_memory_md(
             day_summary_ctx = ds[: _MEMORY_DAILY_GIST_CTX_MAX - 1] + "…"
         else:
             day_summary_ctx = ds
-    memory_body = store.read_document(MEMORY_MD_REL)
+    memory_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md
+    memory_body = store.read_document(memory_rel)
     user_block = (
         f"Current day gist ({rel}):\n\n{day_summary_ctx}\n\n---\n\n"
         f"Current MEMORY.md:\n\n{memory_body}\n\n---\n\n"
@@ -358,7 +359,7 @@ def _rewrite_memory_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "memory")
-    store.write_document(MEMORY_MD_REL, new_body.strip() + "\n")
+    store.write_document(memory_rel, new_body.strip() + "\n")
 
 
 def _rewrite_user_md(
@@ -368,8 +369,11 @@ def _rewrite_user_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    user_body = store.read_document(USER_MD_REL)
-    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    user_rel = paths.user_md
+    memory_rel = paths.memory_md
+    user_body = store.read_document(user_rel)
+    memory_ctx = _truncate_memory_ctx(store.read_document(memory_rel))
     user_block = (
         f"Current USER.md:\n\n{user_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -380,7 +384,7 @@ def _rewrite_user_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "user")
-    store.write_document(USER_MD_REL, new_body.strip() + "\n")
+    store.write_document(user_rel, new_body.strip() + "\n")
 
 
 def _rewrite_style_md(
@@ -390,8 +394,11 @@ def _rewrite_style_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    style_body = store.read_document(STYLE_MD_REL)
-    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    style_rel = paths.style_md
+    memory_rel = paths.memory_md
+    style_body = store.read_document(style_rel)
+    memory_ctx = _truncate_memory_ctx(store.read_document(memory_rel))
     user_block = (
         f"Current STYLE.md:\n\n{style_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -402,7 +409,7 @@ def _rewrite_style_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "style")
-    store.write_document(STYLE_MD_REL, new_body.strip() + "\n")
+    store.write_document(style_rel, new_body.strip() + "\n")
 
 
 def _rewrite_soul_md(
@@ -412,9 +419,12 @@ def _rewrite_soul_md(
     assistant_text: str,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
-    soul_body = store.read_document(SOUL_MD_REL)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    soul_rel = paths.soul
+    memory_rel = paths.memory_md
+    soul_body = store.read_document(soul_rel)
     curator_doc, frozen_appearance = _split_soul_appearance_section(soul_body)
-    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
+    memory_ctx = _truncate_memory_ctx(store.read_document(memory_rel))
     user_block = (
         f"Current SOUL.md:\n\n{curator_doc}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -428,7 +438,7 @@ def _rewrite_soul_md(
     new_body = new_body.strip()
     if frozen_appearance is not None:
         new_body = _merge_soul_frozen_appearance(new_body, frozen_appearance)
-    store.write_document(SOUL_MD_REL, new_body.strip() + "\n")
+    store.write_document(soul_rel, new_body.strip() + "\n")
 
 
 def _rewrite_companionship_md(
@@ -439,10 +449,13 @@ def _rewrite_companionship_md(
     complete_fn: Callable[[list[dict[str, Any]], str], str],
 ) -> None:
     # assistant_text unused: bond curation reads the full dreaming slice via user_text.
-    companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    companionship_rel = paths.companionship_md
+    memory_rel = paths.memory_md
+    companionship_body = store.read_document_if_exists(companionship_rel)
     if companionship_body is None:
-        companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
-    memory_ctx = _truncate_memory_ctx(store.read_document(MEMORY_MD_REL))
+        companionship_body = load_template_seed_text(companionship_rel)
+    memory_ctx = _truncate_memory_ctx(store.read_document(memory_rel))
     user_block = (
         f"Current COMPANIONSHIP.md:\n\n{companionship_body}\n\n---\n\n"
         f"Current MEMORY.md (long-term, for consistency):\n\n{memory_ctx}\n\n---\n\n"
@@ -453,7 +466,7 @@ def _rewrite_companionship_md(
         {"role": "user", "content": user_block},
     ]
     new_body = complete_fn(messages, "companionship")
-    store.write_document(COMPANIONSHIP_MD_REL, new_body.strip() + "\n")
+    store.write_document(companionship_rel, new_body.strip() + "\n")
 
 
 def _truncate_memory_ctx(body: str) -> str:
@@ -480,30 +493,36 @@ def _build_dreaming_curator_input(
         DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day)
         for day in sorted(by_day.keys())
     )
-    soul_body = store.read_document(SOUL_MD_REL)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    memory_rel = paths.memory_md
+    user_rel = paths.user_md
+    style_rel = paths.style_md
+    soul_rel = paths.soul
+    companionship_rel = paths.companionship_md
+    soul_body = store.read_document(soul_rel)
     soul_curator_doc, soul_frozen = _split_soul_appearance_section(soul_body)
-    companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
+    companionship_body = store.read_document_if_exists(companionship_rel)
     if companionship_body is None:
-        companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
+        companionship_body = load_template_seed_text(companionship_rel)
     day_blocks = [
         _dreaming_transcript_block(store, day_rows, day_iso=day)
         for day, day_rows in sorted(by_day.items())
     ]
     required_paths = daily_paths + (
-        MEMORY_MD_REL,
-        USER_MD_REL,
-        STYLE_MD_REL,
-        SOUL_MD_REL,
-        COMPANIONSHIP_MD_REL,
+        memory_rel,
+        user_rel,
+        style_rel,
+        soul_rel,
+        companionship_rel,
     )
     current_bodies = {
         rel: store.read_document_if_exists(rel) or "" for rel in daily_paths
     }
-    current_bodies[MEMORY_MD_REL] = store.read_document(MEMORY_MD_REL)
-    current_bodies[USER_MD_REL] = store.read_document(USER_MD_REL)
-    current_bodies[STYLE_MD_REL] = store.read_document(STYLE_MD_REL)
-    current_bodies[SOUL_MD_REL] = soul_curator_doc
-    current_bodies[COMPANIONSHIP_MD_REL] = companionship_body
+    current_bodies[memory_rel] = store.read_document(memory_rel)
+    current_bodies[user_rel] = store.read_document(user_rel)
+    current_bodies[style_rel] = store.read_document(style_rel)
+    current_bodies[soul_rel] = soul_curator_doc
+    current_bodies[companionship_rel] = companionship_body
     return DreamingCuratorInput(
         required_paths=required_paths,
         current_bodies=current_bodies,
@@ -657,7 +676,7 @@ def _apply_dreaming_document_updates(
             continue
         body = update.body.strip()
         if (
-            rel == SOUL_MD_REL
+            rel == DEFAULT_MEMORY_STORE_SCOPE_PATHS.soul
             and curator_input.soul_frozen_appearance is not None
         ):
             body = _merge_soul_frozen_appearance(
