@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-29 scan (cron)
+
+Source: open PR overlap check (maintenance batches #3958–#3980 claim HYGIENE-412..455; #3878 system_messages scope accessors — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — `dreaming_consolidation.py` sequential curator rewrites still read/write MemDoc via bare `*_MD_REL` imports instead of `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
+
+Open PRs checked: #3958–#3980 (HYGIENE-412..455), #3878 (HYGIENE-221..224) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-9f2e`)
+
+- [x] **HYGIENE-2026-456** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-9f2e`.
+- [x] **HYGIENE-2026-457** `memory/dreaming_consolidation.py` — `_rewrite_memory_md` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md`. Fixed in `cursor/agent-maintenance-tasks-9f2e`.
+- [x] **HYGIENE-2026-458** `memory/dreaming_consolidation.py` — `_rewrite_user_md` via scope `user_md` / `memory_md` accessors. Fixed in `cursor/agent-maintenance-tasks-9f2e`.
+- [x] **HYGIENE-2026-459** `memory/dreaming_consolidation.py` — `_rewrite_style_md` + `_rewrite_soul_md` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-9f2e`.
+- [x] **HYGIENE-2026-460** `memory/dreaming_consolidation.py` — `_rewrite_companionship_md` + `_build_dreaming_curator_input` required paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-9f2e`.
