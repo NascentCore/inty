@@ -1609,6 +1609,47 @@ async def _tool_bg_run_loop_through_delivery(
     )
 
 
+def _tool_bg_kickoff_loop_config_from_run_args(
+    *,
+    tool_api_id: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    tools: list[Any],
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+    skip_finish_envelope_routing: bool,
+    suppress_user_delivery: bool,
+    on_event: Callable[[ToolOutputEvent], None],
+    activity_label: str | None,
+    execute_tool_call_fn: Callable[..., Any],
+) -> _ToolBgKickoffLoopConfig:
+    return _ToolBgKickoffLoopConfig(
+        tool_api_id=tool_api_id,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1641,7 +1682,7 @@ async def run_tool_background_loop(
     assert llm_round_timeout_sec > 0.0
     tool_api_id = tool_model.id_on_provider
     try:
-        kickoff_config = _ToolBgKickoffLoopConfig(
+        kickoff_config = _tool_bg_kickoff_loop_config_from_run_args(
             tool_api_id=tool_api_id,
             trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
