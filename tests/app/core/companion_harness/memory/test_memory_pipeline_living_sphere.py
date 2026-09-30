@@ -14,16 +14,8 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
     consolidate_memory_during_dreaming,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
-    IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.living_sphere.models import LivingSphereUpdate
 from app.living_sphere.seeding import seed_living_sphere_markdown
@@ -40,16 +32,17 @@ def _idle_tool_bg() -> threading.Event:
 
 
 def _seed_store(store: MemoryStore) -> None:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for name, body in (
-        (IDENTITY_MD_REL, "id\n"),
-        (SOUL_MD_REL, "soul\n"),
-        (STYLE_MD_REL, "style\n"),
-        (USER_MD_REL, "u\n"),
-        (MEMORY_MD_REL, "m\n"),
-        (COMPANIONSHIP_MD_REL, "companionship\n"),
+        (paths.identity, "id\n"),
+        (paths.soul, "soul\n"),
+        (paths.style_md, "style\n"),
+        (paths.user_md, "u\n"),
+        (paths.memory_md, "m\n"),
+        (paths.companionship_md, "companionship\n"),
     ):
         store.write_document(name, body)
-    store.write_document(LIVING_SPHERE_MD_REL, seed_living_sphere_markdown())
+    store.write_document(paths.living_sphere_md, seed_living_sphere_markdown())
 
 
 def _valid_md() -> str:
@@ -84,8 +77,9 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
     )
     _seed_store(store)
     update = LivingSphereUpdate(change_request="窗边加绿植")
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_REL,
+        paths.living_sphere_updates_jsonl,
         update.model_dump(mode="json"),
     )
     roles: list[str] = []
@@ -109,9 +103,9 @@ def test_dreaming_consolidation_compacts_living_sphere_when_pending(
         is True
     )
     assert "memory" in roles
-    assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
+    assert "合并" in store.read_document(paths.living_sphere_md)
     state = json.loads(
-        store.read_document(COMPANION_LIVING_SPHERE_CURATOR_JSON_REL)
+        store.read_document(paths.living_sphere_curator_state_json)
     )
     assert state["living_sphere_curated_through_update_id"] == update.update_id
 
@@ -126,7 +120,8 @@ def test_dreaming_consolidation_skips_living_sphere_curator_without_pending(
         repository=None,
     )
     _seed_store(store)
-    original = store.read_document(LIVING_SPHERE_MD_REL)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    original = store.read_document(paths.living_sphere_md)
 
     def fake_complete(msgs: list[dict[str, Any]], model_role: str) -> str:
         return "noop\n"
@@ -140,7 +135,7 @@ def test_dreaming_consolidation_skips_living_sphere_curator_without_pending(
         langsmith_extra={},
         tool_bg_idle_event=_idle_tool_bg(),
     )
-    assert store.read_document(LIVING_SPHERE_MD_REL) == original
+    assert store.read_document(paths.living_sphere_md) == original
 
 
 def test_dreaming_consolidation_waits_for_tool_background_before_compact(
@@ -155,8 +150,9 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
     )
     _seed_store(store)
     update = LivingSphereUpdate(change_request="tool_background 已写入")
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     store.append_jsonl_record(
-        LIVING_SPHERE_UPDATES_JSONL_REL,
+        paths.living_sphere_updates_jsonl,
         update.model_dump(mode="json"),
     )
     ev = threading.Event()
@@ -187,7 +183,7 @@ def test_dreaming_consolidation_waits_for_tool_background_before_compact(
         tool_bg_idle_event=ev,
     )
     state = json.loads(
-        store.read_document(COMPANION_LIVING_SPHERE_CURATOR_JSON_REL)
+        store.read_document(paths.living_sphere_curator_state_json)
     )
     assert state["living_sphere_curated_through_update_id"] == update.update_id
-    assert "合并" in store.read_document(LIVING_SPHERE_MD_REL)
+    assert "合并" in store.read_document(paths.living_sphere_md)

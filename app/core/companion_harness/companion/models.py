@@ -34,20 +34,16 @@ from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
     CONTEXT_JSON_REL,
-    HARNESS_MD_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
-    SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
-    TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
@@ -419,6 +415,7 @@ def load_prompt_bundle(
     ``MEMORY.md`` semantic 语义记忆。
     未启用私人记忆的体验配置时不读取日程路径且将 ``MEMORY.md`` 注入留空。"""
     ensure_template_seeded_core_documents_in_store(store)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
@@ -428,7 +425,7 @@ def load_prompt_bundle(
     if inject_private:
         daily_md = _read_memory_document_optional(
             store,
-            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
+            paths.memory_daily_gist(day),
             max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
         )
     else:
@@ -447,23 +444,23 @@ def load_prompt_bundle(
             store, LIVING_SPHERE_MD_REL
         ),
         tools_md=_template_doc_truncated(
-            TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.tools_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         harness_md=_template_doc_truncated(
-            HARNESS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.harness_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         about_md=_template_doc_truncated(
-            ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.about_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
         companionship_md=_read_memory_document_required(
             store, COMPANIONSHIP_MD_REL
         ),
         significance_perception_md=_template_doc_truncated(
-            SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+            paths.significance_perception_md, max_chars=_OPTIONAL_DOC_MAX_CHARS
         ),
         output_format_im_dm_md=_template_doc_truncated(
-            OUTPUT_FORMAT_IM_DM_MD_REL,
+            paths.output_format_im_dm_md,
             max_chars=_OPTIONAL_DOC_MAX_CHARS,
         ),
         memory_daily_today_md=daily_md,
