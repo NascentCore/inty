@@ -104,9 +104,10 @@ from .companion_tool_definitions import (
 from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_UPDATES_JSONL_REL,
     TECHNO_CORE_EVENTS_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.user_md_identity import (
     USER_PROFILE_SECTION,
@@ -377,7 +378,10 @@ def tool_memory_store_write_document(
     st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
-    if rel in (TRANSCRIPT_JSONL_REL, TRANSCRIPT_INNER_TICK_JSONL_REL):
+    if rel in (
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript_inner_tick,
+    ):
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err
