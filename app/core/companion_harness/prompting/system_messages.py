@@ -61,10 +61,6 @@ from app.core.companion_harness.experience_profile.context_mode import (
     experience_profile_injects_private_memory,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_document_mapping import (
-    CompanionMemoryDocumentKind,
-    relative_path_for_kind,
-)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
     IDENTITY_MD_REL,
@@ -72,6 +68,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     SOUL_MD_REL,
     STYLE_MD_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.prompting.template import (
     BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
@@ -397,9 +396,7 @@ def _assemble_proactive_chat_life_currents_hint_prompt(
     store: MemoryStore,
 ) -> str | None:
     """Return the LIFE_CURRENTS.md injection block for PROACTIVE_CHAT, or None when absent/empty."""
-    rel = relative_path_for_kind(
-        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
-    )
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md
     body = store.read_document_if_exists(rel)
     if body is None:
         return None
@@ -479,19 +476,14 @@ def _get_inner_tick_autonomy_prompt_slice() -> str:
     """AUTONOMY：虚拟空间/环境中的自主活动（``LIFE_CURRENTS.md``），不是对用户的心理独白（``ai_private.jsonl`` / MONOLOG）。
 
     Read → open tools do real work → write progress back; never deliver to the user.
-    Memory doc filenames: ``relative_path_for_kind``; tool names: ``CompanionToolName.*.value``.
+    Memory doc filenames: ``MemoryStoreScopePaths`` accessors; tool names: ``CompanionToolName.*.value``.
     """
-    life_currents_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.LIFE_CURRENTS, None
-    )
-    user_md = relative_path_for_kind(CompanionMemoryDocumentKind.USER, None)
-    memory_md = relative_path_for_kind(CompanionMemoryDocumentKind.MEMORY, None)
-    identity_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.IDENTITY, None
-    )
-    living_sphere_md = relative_path_for_kind(
-        CompanionMemoryDocumentKind.LIVING_SPHERE, None
-    )
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    life_currents_md = paths.life_currents_md
+    user_md = paths.user_md
+    memory_md = paths.memory_md
+    identity_md = paths.identity
+    living_sphere_md = paths.living_sphere_md
     tool_read = CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value
     tool_write = CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
     tool_google = CompanionToolName.GOOGLE_WEB_SEARCH.value
