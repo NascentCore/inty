@@ -9,8 +9,8 @@ from sqlalchemy import delete, select
 
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.user_md_identity import (
     UserIdentityFieldLabel,
@@ -48,7 +48,8 @@ async def test_companion_record_user_profile_dispatch_ok(tmp_path) -> None:
         user_id = user.id
 
     st = _store(tmp_path, user_id)
-    st.write_document(USER_MD_REL, load_user_md_template_text())
+    user_md = DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md
+    st.write_document(user_md, load_user_md_template_text())
     args = json.dumps(
         {
             "gender": "FEMALE",
@@ -61,7 +62,7 @@ async def test_companion_record_user_profile_dispatch_ok(tmp_path) -> None:
         st,
         "companion_record_user_profile",
         args,
-        write_allowlist=frozenset({USER_MD_REL}),
+        write_allowlist=frozenset({user_md}),
     )
     assert out.startswith("OK recorded user profile")
 
@@ -74,7 +75,7 @@ async def test_companion_record_user_profile_dispatch_ok(tmp_path) -> None:
         await db.execute(delete(User).where(User.id == user_id))
         await db.commit()
 
-    lines = st.read_document(USER_MD_REL).splitlines()
+    lines = st.read_document(user_md).splitlines()
     assert f"- {UserIdentityFieldLabel.GENDER}：女" in lines
     assert f"- {UserIdentityFieldLabel.AGE}：18-25" in lines
     assert f"- {UserIdentityFieldLabel.LOCATION}：London" in lines
