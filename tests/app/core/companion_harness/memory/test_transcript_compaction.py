@@ -3,10 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
+from app.core.companion_harness.companion.models import ChatMessage
+from app.core.companion_harness.companion.utc import (
+    format_transcript_ts_for_llm,
+    strip_leading_transcript_timestamp_prefixes,
+    transcript_message_content_for_llm,
+    utc_iso_ts,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.memory.transcript_compaction import (
     COMPACTION_SYSTEM_TAG,
     CompactionConfig,
@@ -15,13 +22,6 @@ from app.core.companion_harness.memory.transcript_compaction import (
     load_compaction_state_from_store,
     save_compaction_state_to_store,
     transcript_rows_to_openai_dialogue,
-)
-from app.core.companion_harness.companion.models import ChatMessage
-from app.core.companion_harness.companion.utc import (
-    format_transcript_ts_for_llm,
-    strip_leading_transcript_timestamp_prefixes,
-    transcript_message_content_for_llm,
-    utc_iso_ts,
 )
 
 
@@ -106,7 +106,7 @@ def test_compaction_state_roundtrip_via_memory_store(tmp_path: Path) -> None:
         scope=CompanionScope("tc", "a", tmp_path.name),
         repository=None,
     )
-    rel = COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_compaction_state_json
     state = CompactionState(
         running_summary="a",
         episodic_memory=[],

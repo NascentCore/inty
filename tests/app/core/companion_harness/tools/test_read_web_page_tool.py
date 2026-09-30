@@ -3,9 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import MEMORY_MD_REL
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.tools.read_web_page import (
     run_read_web_page_sync,
 )
@@ -45,9 +47,9 @@ def test_run_read_web_page_writes_memory_and_returns_markdown(
     assert not out.startswith("ERROR:")
     assert "# Example Article" in out
     assert "- " in out
-    assert MEMORY_MD_REL in out
+    assert DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md in out
 
-    mem = store.read_document_if_exists(MEMORY_MD_REL)
+    mem = store.read_document_if_exists(DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_md)
     assert mem is not None
     assert "read_web_page" in mem
     assert "https://example.com/page" in mem
