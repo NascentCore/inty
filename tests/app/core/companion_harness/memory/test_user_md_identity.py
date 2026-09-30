@@ -13,10 +13,8 @@ from app.core.companion_harness.memory.user_md_identity import (
     list_unfilled_identity_labels,
     load_user_md_template_text,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    USER_MD_REL,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.models.user import Gender
@@ -28,7 +26,9 @@ def _template_body() -> str:
 
 
 def test_load_user_md_template_text_matches_canonical_seed() -> None:
-    assert load_user_md_template_text() == load_template_seed_text(USER_MD_REL)
+    assert load_user_md_template_text() == load_template_seed_text(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md
+    )
 
 
 def test_is_identity_slot_unfilled_empty_and_hint_only() -> None:
