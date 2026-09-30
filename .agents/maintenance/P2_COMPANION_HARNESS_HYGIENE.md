@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-10 scan (cron)
+
+Source: open PR overlap check (#3869–#3873 scope-path accessor follow-ups — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — `system_messages.py` bootstrap output contract and `ensure_template_seeded_core_documents_in_store` still read `*_MD_REL` constants directly.
+
+Open PRs checked: #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/agent-maintenance-tasks-8790`), #3871 (`cursor/agent-maintenance-tasks-01ce`), #3872 (`cursor/agent-maintenance-tasks-e945`), #3873 (`cursor/agent-maintenance-tasks-3b33`), #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-8456`)
+
+- [x] **HYGIENE-2026-207** #3413: `system_messages.py` — bootstrap output contract template vars via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-208** #3413: `memory_store_scope.py` — `ensure_template_seeded_core_documents_in_store` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-209** `prompting/test_system_messages.py` — smoke assert bootstrap contract doc paths match scope accessors. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
+- [x] **HYGIENE-2026-210** `memory/test_memory_store_scope.py` — assert `_CORE_COMPANION_TEMPLATE_ATTRS` matches core template accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-8456` / pull/3875.
