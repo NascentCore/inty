@@ -14,10 +14,8 @@ from app.core.companion_harness.companion.turn_pipeline import (
     load_companion_turn_state,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
-)
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     ensure_minimal_documents_in_store,
 )
 
@@ -51,7 +49,7 @@ def test_load_companion_turn_state_applies_dreaming_checkpoint(
         },
     ]
     store.write_document(
-        TRANSCRIPT_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
     )
     save_dreaming_state(

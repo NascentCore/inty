@@ -46,8 +46,8 @@ from app.core.companion_harness.loop.context import (
     AgenticLoopLangsmithContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.turn_routes import (
     InTurnInterimOutput,
@@ -102,12 +102,14 @@ def _loop_store() -> MemoryStore:
         scope=CompanionScope("user-1", "agent-1", "chat-1"),
         repository=None,
     )
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript, "")
     return store
 
 
 def _assert_user_transcript_row(store: MemoryStore) -> None:
-    transcript_lines = store.read_document(TRANSCRIPT_JSONL_REL).splitlines()
+    transcript_lines = store.read_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
+    ).splitlines()
     assert len(transcript_lines) == 1
     transcript_row = json.loads(transcript_lines[0])
     assert transcript_row["role"] == "user"
@@ -160,7 +162,7 @@ def _loop_context(
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         tail_user_messages=_tail(),
-        transcript_rel=TRANSCRIPT_JSONL_REL,
+        transcript_rel=DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             trace_id="",
@@ -199,7 +201,7 @@ def _dual_llm_loop_context(
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="user-msg-1",
         tail_user_messages=_tail(),
-        transcript_rel=TRANSCRIPT_JSONL_REL,
+        transcript_rel=DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript,
         langsmith=AgenticLoopLangsmithContext(
             turn_slice=_langsmith_slice(),
             trace_id="",
