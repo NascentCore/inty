@@ -126,7 +126,6 @@ def _common_context_kwargs(store: MemoryStore) -> dict:
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="hi",
-        ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="uid-1",
         transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith_slice=_langsmith_slice(),

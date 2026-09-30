@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
 from app.core.agentic_companion.output_queue import (
@@ -34,7 +33,6 @@ from app.core.companion_harness.companion.langsmith_turn_slice import (
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
-    ContextMeta,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
@@ -43,8 +41,6 @@ from app.core.companion_harness.loop.track_policy import LoopExecutionPolicy
 from app.core.companion_harness.prompt_builder import (
     PromptPlan,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
-
 AfterToolMessagesHook = Callable[
     [list[dict[str, Any]]],
     Awaitable[list[dict[str, Any]] | None],
@@ -92,8 +88,6 @@ class AgenticLoopContext:
     trace_id: str
     # Primary user-visible utterance; drives reply-language runtime clauses.
     user_text: str
-    # UTC timestamp of primary user message; legacy scalar companion to tail_user_messages (#3516).
-    ts_user: datetime
     # Primary user message id; assistant transcript reply_to and outbound batch alignment.
     user_msg_uuid: str
     # Tail user rows for prompt assembly and transcript persistence at loop start.
@@ -110,8 +104,6 @@ class AgenticLoopContext:
     output_queue: OutputQueue
     # InputQueue batch claimed for this turn; synthetic for greeting/inner tick without a claim.
     user_message_batch: UserMessageBatch
-    # Experience profile and secondary channel context; dual-LLM settled user chat, consumed upstream.
-    context_meta: ContextMeta | None = None
     # Ordered InputQueue records for multi-message turns; reserved, not yet passed by builders.
     input_batch: AgenticLoopInputBatch | None = None
     # Primary prompt carrier for single-LLM; required for SINGLE_LLM, absent for dual-LLM user chat.
@@ -122,8 +114,6 @@ class AgenticLoopContext:
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None
     # Dual-LLM background tool wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None = None
-    # Memory-doc bodies for dual-LLM prompt assembly; carried for correlation, consumed upstream.
-    prompt_bundle: PromptBundle | None = None
 
 
 @dataclass(frozen=True)
@@ -156,7 +146,6 @@ def build_implicit_sign_on_greeting_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -181,7 +170,6 @@ def build_implicit_sign_on_greeting_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
@@ -206,7 +194,6 @@ def build_inner_tick_chat_only_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -235,7 +222,6 @@ def build_inner_tick_chat_only_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
@@ -261,7 +247,6 @@ def build_inner_tick_tool_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -290,7 +275,6 @@ def build_inner_tick_tool_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
@@ -315,7 +299,6 @@ def build_settled_user_chat_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -342,7 +325,6 @@ def build_settled_user_chat_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
@@ -355,7 +337,6 @@ def build_settled_user_chat_loop_context(
         after_tool_messages_appended=after_tool_messages_appended,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
-        context_meta=None,
         prompt_plan=prompt_plan,
         stack_depth=stack_depth,
     )
@@ -368,7 +349,6 @@ def build_settled_dual_llm_user_chat_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -381,8 +361,6 @@ def build_settled_dual_llm_user_chat_loop_context(
     tail_user_messages: tuple[TurnTailUserMessage, ...],
     dual_llm_chat_msgs: tuple[dict[str, Any], ...],
     dual_llm_tool_msgs: tuple[dict[str, Any], ...],
-    prompt_bundle: PromptBundle,
-    context_meta: ContextMeta,
     execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for dual-LLM ``AgenticLoop``."""
@@ -399,7 +377,6 @@ def build_settled_dual_llm_user_chat_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(
@@ -412,11 +389,9 @@ def build_settled_dual_llm_user_chat_loop_context(
         after_tool_messages_appended=None,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
-        context_meta=context_meta,
         stack_depth=stack_depth,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
         dual_llm_tool_msgs=dual_llm_tool_msgs,
-        prompt_bundle=prompt_bundle,
     )
 
 
@@ -427,7 +402,6 @@ def build_bootstrap_user_chat_loop_context(
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
-    ts_user: datetime,
     user_msg_uuid: str,
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
@@ -454,7 +428,6 @@ def build_bootstrap_user_chat_loop_context(
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
-        ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=AgenticLoopLangsmithContext(

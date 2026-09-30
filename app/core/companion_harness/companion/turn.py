@@ -427,7 +427,6 @@ async def _run_companion_turn_core(
                     agentic_output_queue=agentic_output_queue,
                     user_message_batch=user_message_batch,
                     user_text=user_text,
-                    ts_user=ts_user,
                     user_msg_uuid=user_msg_uuid,
                     ai_private_splice_plan=ai_private_splice_plan,
                     repository_only_store_text=repository_only_store_text,
