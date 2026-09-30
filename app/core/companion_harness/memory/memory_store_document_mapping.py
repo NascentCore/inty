@@ -8,38 +8,7 @@ from enum import Enum
 from typing import Final
 
 from .memory_store_path_constants import (
-    AI_PRIVATE_JSONL_REL,
-    AI_PRIVATE_MD_REL,
-    CHANNELS_MD_REL,
-    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL,
-    COMPANION_DREAMING_STATE_JSON_REL,
-    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL,
-    COMPANION_RUNTIME_EVENTS_JSONL_REL,
-    COMPANION_SCHEDULE_TASKS_JSON_REL,
-    COMPANION_USER_FEEDBACK_JSONL_REL,
-    COMPANIONSHIP_MD_REL,
-    CONTEXT_JSON_REL,
-    GENERATED_IMAGES_INDEX_JSONL_REL,
-    IDENTITY_MD_REL,
-    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL,
-    INTY_V2_DREAMING_STATE_JSON_REL,
-    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL,
-    INTY_V2_SCHEDULE_TASKS_JSON_REL,
-    LIFE_CURRENTS_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
     MEMORY_DAILY_GIST_DIR_REL,
-    MEMORY_MD_REL,
-    SIGNIFICANCE_PERCEPTION_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TECHNO_CORE_EVENTS_JSONL_REL,
-    TECHNO_CORE_MD_REL,
-    TOOL_BACKGROUND_JSONL_REL,
-    TOOLS_MD_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
     memory_daily_gist_rel,
 )
 
@@ -102,92 +71,128 @@ class CompanionMemoryDocumentKind(str, Enum):
     INTY_V2_DREAMING_STATE_JSON = "inty_v2_dreaming_state_json"
 
 
-_REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] = {
-    IDENTITY_MD_REL: (CompanionMemoryDocumentKind.IDENTITY, None),
-    SOUL_MD_REL: (CompanionMemoryDocumentKind.SOUL, None),
-    STYLE_MD_REL: (CompanionMemoryDocumentKind.STYLE, None),
-    USER_MD_REL: (CompanionMemoryDocumentKind.USER, None),
-    MEMORY_MD_REL: (CompanionMemoryDocumentKind.MEMORY, None),
-    # Virtual-space activity state (AUTONOMY): what Inty is doing in the world—not inner thoughts about the user.
-    LIFE_CURRENTS_MD_REL: (CompanionMemoryDocumentKind.LIFE_CURRENTS, None),
-    CHANNELS_MD_REL: (CompanionMemoryDocumentKind.CHANNELS, None),
-    COMPANIONSHIP_MD_REL: (CompanionMemoryDocumentKind.COMPANIONSHIP, None),
-    TECHNO_CORE_MD_REL: (CompanionMemoryDocumentKind.TECHNO_CORE, None),
-    TECHNO_CORE_EVENTS_JSONL_REL: (
-        CompanionMemoryDocumentKind.TECHNO_CORE_EVENTS_JSONL,
-        None,
-    ),
-    LIVING_SPHERE_MD_REL: (CompanionMemoryDocumentKind.LIVING_SPHERE, None),
-    LIVING_SPHERE_UPDATES_JSONL_REL: (
-        CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
-        None,
-    ),
-    TOOLS_MD_REL: (CompanionMemoryDocumentKind.TOOLS, None),
-    SIGNIFICANCE_PERCEPTION_MD_REL: (
-        CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION,
-        None,
-    ),
-    TRANSCRIPT_JSONL_REL: (CompanionMemoryDocumentKind.TRANSCRIPT, None),
-    # TODO(rename-memory-doc): transcript_inner_tick_monolog.jsonl (with scope path + migration). — #3817
-    TRANSCRIPT_INNER_TICK_JSONL_REL: (
-        CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
-        None,
-    ),
-    CONTEXT_JSON_REL: (CompanionMemoryDocumentKind.CONTEXT_JSON, None),
-    # TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md (with migration). — #3817
-    AI_PRIVATE_MD_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_MD, None),
-    # Inner thoughts about the user (MONOLOG)—not LIFE_CURRENTS virtual-world activity.
-    # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
-    AI_PRIVATE_JSONL_REL: (CompanionMemoryDocumentKind.AI_PRIVATE_JSONL, None),
-    TOOL_BACKGROUND_JSONL_REL: (
-        CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
-        None,
-    ),
-    GENERATED_IMAGES_INDEX_JSONL_REL: (
-        CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
-        None,
-    ),
-    COMPANION_LIVING_SPHERE_CURATOR_JSON_REL: (
-        CompanionMemoryDocumentKind.COMPANION_LIVING_SPHERE_CURATOR_JSON,
-        None,
-    ),
-    COMPANION_CONTEXT_COMPACTION_STATE_JSON_REL: (
-        CompanionMemoryDocumentKind.COMPANION_CONTEXT_COMPACTION_STATE_JSON,
-        None,
-    ),
-    COMPANION_SCHEDULE_TASKS_JSON_REL: (
-        CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON,
-        None,
-    ),
-    COMPANION_RUNTIME_EVENTS_JSONL_REL: (
-        CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
-        None,
-    ),
-    COMPANION_USER_FEEDBACK_JSONL_REL: (
-        CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
-        None,
-    ),
-    COMPANION_DREAMING_STATE_JSON_REL: (
-        CompanionMemoryDocumentKind.COMPANION_DREAMING_STATE_JSON,
-        None,
-    ),
-    INTY_V2_LIVING_SPHERE_CURATOR_JSON_REL: (
-        CompanionMemoryDocumentKind.INTY_V2_LIVING_SPHERE_CURATOR_JSON,
-        None,
-    ),
-    INTY_V2_CONTEXT_COMPACTION_STATE_JSON_REL: (
-        CompanionMemoryDocumentKind.INTY_V2_CONTEXT_COMPACTION_STATE_JSON,
-        None,
-    ),
-    INTY_V2_SCHEDULE_TASKS_JSON_REL: (
-        CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON,
-        None,
-    ),
-    INTY_V2_DREAMING_STATE_JSON_REL: (
-        CompanionMemoryDocumentKind.INTY_V2_DREAMING_STATE_JSON,
-        None,
-    ),
-}
+_REL_TO_KIND: dict[str, tuple[CompanionMemoryDocumentKind, date | None]] | None = (
+    None
+)
+
+
+def _rel_to_kind_map() -> dict[str, tuple[CompanionMemoryDocumentKind, date | None]]:
+    """Lazily build ORM path map from scope accessors (avoids import cycle with memory_store_scope)."""
+    global _REL_TO_KIND
+    if _REL_TO_KIND is not None:
+        return _REL_TO_KIND
+    from .memory_store_scope import DEFAULT_MEMORY_STORE_SCOPE_PATHS, MemoryStoreScopePaths
+
+    companion_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    inty_v2_paths = MemoryStoreScopePaths(state_file_prefix=".inty_v2")
+    _REL_TO_KIND = {
+        companion_paths.identity: (CompanionMemoryDocumentKind.IDENTITY, None),
+        companion_paths.soul: (CompanionMemoryDocumentKind.SOUL, None),
+        companion_paths.style_md: (CompanionMemoryDocumentKind.STYLE, None),
+        companion_paths.user_md: (CompanionMemoryDocumentKind.USER, None),
+        companion_paths.memory_md: (CompanionMemoryDocumentKind.MEMORY, None),
+        # Virtual-space activity state (AUTONOMY): what Inty is doing in the world—not inner thoughts about the user.
+        companion_paths.life_currents_md: (
+            CompanionMemoryDocumentKind.LIFE_CURRENTS,
+            None,
+        ),
+        companion_paths.channels_md: (CompanionMemoryDocumentKind.CHANNELS, None),
+        companion_paths.companionship_md: (
+            CompanionMemoryDocumentKind.COMPANIONSHIP,
+            None,
+        ),
+        companion_paths.techno_core_md: (
+            CompanionMemoryDocumentKind.TECHNO_CORE,
+            None,
+        ),
+        companion_paths.techno_core_events_jsonl: (
+            CompanionMemoryDocumentKind.TECHNO_CORE_EVENTS_JSONL,
+            None,
+        ),
+        companion_paths.living_sphere_md: (
+            CompanionMemoryDocumentKind.LIVING_SPHERE,
+            None,
+        ),
+        companion_paths.living_sphere_updates_jsonl: (
+            CompanionMemoryDocumentKind.LIVING_SPHERE_UPDATES_JSONL,
+            None,
+        ),
+        companion_paths.tools_md: (CompanionMemoryDocumentKind.TOOLS, None),
+        companion_paths.significance_perception_md: (
+            CompanionMemoryDocumentKind.SIGNIFICANCE_PERCEPTION,
+            None,
+        ),
+        companion_paths.transcript: (CompanionMemoryDocumentKind.TRANSCRIPT, None),
+        # TODO(rename-memory-doc): transcript_inner_tick_monolog.jsonl (with scope path + migration). — #3817
+        companion_paths.transcript_inner_tick: (
+            CompanionMemoryDocumentKind.TRANSCRIPT_INNER_TICK,
+            None,
+        ),
+        companion_paths.context_json: (
+            CompanionMemoryDocumentKind.CONTEXT_JSON,
+            None,
+        ),
+        # TODO(rename-memory-doc): Rename ai_private.md to AI_PRIVATE.md (with migration). — #3817
+        companion_paths.ai_private_md: (
+            CompanionMemoryDocumentKind.AI_PRIVATE_MD,
+            None,
+        ),
+        # Inner thoughts about the user (MONOLOG)—not LIFE_CURRENTS virtual-world activity.
+        # TODO(ai-private-jsonl-write): append-only write; not in write allowlist today (#3375, #3341).
+        companion_paths.ai_private_jsonl: (
+            CompanionMemoryDocumentKind.AI_PRIVATE_JSONL,
+            None,
+        ),
+        companion_paths.tool_background_jsonl: (
+            CompanionMemoryDocumentKind.TOOL_BACKGROUND_JSONL,
+            None,
+        ),
+        companion_paths.generated_images_index_jsonl: (
+            CompanionMemoryDocumentKind.GENERATED_IMAGES_INDEX_JSONL,
+            None,
+        ),
+        companion_paths.living_sphere_curator_state_json: (
+            CompanionMemoryDocumentKind.COMPANION_LIVING_SPHERE_CURATOR_JSON,
+            None,
+        ),
+        companion_paths.context_compaction_state_json: (
+            CompanionMemoryDocumentKind.COMPANION_CONTEXT_COMPACTION_STATE_JSON,
+            None,
+        ),
+        companion_paths.schedule_queue_json: (
+            CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON,
+            None,
+        ),
+        companion_paths.companion_runtime_events_jsonl: (
+            CompanionMemoryDocumentKind.COMPANION_RUNTIME_EVENTS_JSONL,
+            None,
+        ),
+        companion_paths.companion_user_feedback_jsonl: (
+            CompanionMemoryDocumentKind.COMPANION_USER_FEEDBACK_JSONL,
+            None,
+        ),
+        companion_paths.dreaming_state_json: (
+            CompanionMemoryDocumentKind.COMPANION_DREAMING_STATE_JSON,
+            None,
+        ),
+        inty_v2_paths.living_sphere_curator_state_json: (
+            CompanionMemoryDocumentKind.INTY_V2_LIVING_SPHERE_CURATOR_JSON,
+            None,
+        ),
+        inty_v2_paths.context_compaction_state_json: (
+            CompanionMemoryDocumentKind.INTY_V2_CONTEXT_COMPACTION_STATE_JSON,
+            None,
+        ),
+        inty_v2_paths.schedule_queue_json: (
+            CompanionMemoryDocumentKind.INTY_V2_SCHEDULE_TASKS_JSON,
+            None,
+        ),
+        inty_v2_paths.dreaming_state_json: (
+            CompanionMemoryDocumentKind.INTY_V2_DREAMING_STATE_JSON,
+            None,
+        ),
+    }
+    return _REL_TO_KIND
 
 
 def parse_memory_store_relative_path(
@@ -196,8 +201,9 @@ def parse_memory_store_relative_path(
     rel = (relative_path or "").strip().replace("\\", "/")
     if not rel:
         raise ValueError("relative_path must be non-empty")
-    if rel in _REL_TO_KIND:
-        return _REL_TO_KIND[rel]
+    rel_to_kind = _rel_to_kind_map()
+    if rel in rel_to_kind:
+        return rel_to_kind[rel]
     m_daily = _MEMORY_DAILY_RE.match(rel)
     if m_daily:
         d = date.fromisoformat(m_daily.group(1))
@@ -214,7 +220,7 @@ def relative_path_for_kind(
         return memory_daily_gist_rel(calendar_date.isoformat())
     if calendar_date is not None:
         raise ValueError(f"calendar_date must be null for {kind}")
-    for rel, (k, cd) in _REL_TO_KIND.items():
+    for rel, (k, cd) in _rel_to_kind_map().items():
         if k == kind and cd is None:
             return rel
     raise ValueError(f"no relative path mapping for {kind}")

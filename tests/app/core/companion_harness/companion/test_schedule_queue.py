@@ -7,6 +7,9 @@ from pathlib import Path
 import pytest
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     _schedule_document_rel,
@@ -20,6 +23,13 @@ def _store(tmp: Path):
     return MemoryStore(
         scope=CompanionScope("sq", "a", tmp.name),
         repository=None,
+    )
+
+
+def test_schedule_document_rel_matches_scope_accessor() -> None:
+    assert (
+        _schedule_document_rel()
+        == DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json
     )
 
 

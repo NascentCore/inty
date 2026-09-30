@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-27 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator, #3900..#3905 scope-accessor batches — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `memory_store_document_mapping._REL_TO_KIND` still duplicates path constants; schedule/runtime-event tests lack scope-path smoke assertions.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3900..#3905 (HYGIENE-2026-275..288) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-13f2`)
+
+- [x] **HYGIENE-2026-289** `companion/test_schedule_queue.py` — smoke `_schedule_document_rel()` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json`. Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
+- [x] **HYGIENE-2026-290** `companion/test_ws_channel_runtime_events.py` + `companion/test_llm_runtime_events.py` — smoke runtime events JSONL path via `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
+- [x] **HYGIENE-2026-291** `memory_store_document_mapping.py` — build `_REL_TO_KIND` keys from `MemoryStoreScopePaths` accessors (companion + `.inty_v2` prefix variants). Fixed in `cursor/agent-maintenance-tasks-13f2` / pull/3907.
