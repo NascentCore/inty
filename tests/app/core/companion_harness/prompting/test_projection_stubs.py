@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -10,15 +10,8 @@ from pydantic import ValidationError
 from app.core.companion_harness.memory.memdoc_frontmatter import (
     MemDocFrontmatter,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.retrieval import RetrievalTier
 from app.core.companion_harness.prompting.projection import ordering, slot_rank
@@ -40,16 +33,17 @@ def test_slot_rank_values_are_integers() -> None:
         assert isinstance(rank, int)
 
 
-def test_slot_rank_keys_use_canonical_memdoc_path_constants() -> None:
+def test_slot_rank_keys_match_scope_path_accessors() -> None:
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     expected = {
-        IDENTITY_MD_REL,
-        SOUL_MD_REL,
-        USER_MD_REL,
-        STYLE_MD_REL,
-        COMPANIONSHIP_MD_REL,
-        MEMORY_MD_REL,
-        LIVING_SPHERE_MD_REL,
-        TECHNO_CORE_MD_REL,
+        p.identity,
+        p.soul,
+        p.user_md,
+        p.style_md,
+        p.companionship_md,
+        p.memory_md,
+        p.living_sphere_md,
+        p.techno_core_md,
     }
     assert set(slot_rank.SLOT_RANK) == expected
 

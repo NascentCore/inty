@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-14 scan (cron)
+
+Source: open PR overlap check (#3834 Phase 2 TrackSystemRecipe, #3837 long-term user simulator, #3869–#3878 maintenance scope-path batches — HYGIENE-2026-182..224 claimed); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `companion_user_feedback.py` snapshot profile paths, `bootstrap.py` template seed rels, and `slot_rank.py` keys still import `*_MD_REL` directly.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3869–#3878 (HYGIENE-2026-182..224 scope-path accessor batches) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-e96a`)
+
+- [x] **HYGIENE-2026-225** `companion_user_feedback.py` — `SNAPSHOT_DOC_PATHS` profile MemDoc paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-226** `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` via `memory_md` / `soul` scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-227** `prompting/projection/slot_rank.py` — `SLOT_RANK` keys via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-228** `tools/test_companion_user_feedback_tool.py` — assert `SNAPSHOT_DOC_PATHS` matches scope accessors. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
+- [x] **HYGIENE-2026-229** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys match scope accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-e96a` / pull/3879.
