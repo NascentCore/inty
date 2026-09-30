@@ -709,8 +709,8 @@ Open PRs checked: maintenance hygiene batches through HYGIENE-2026-460 — no ov
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-a7c3`)
 
-- [ ] **HYGIENE-2026-461** `tools/image_gate.py` — core profile + generated-images index via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop `memory_store_scope` `*_MD_REL` re-exports)
-- [ ] **HYGIENE-2026-462** `memory/retrieval.py` — `transcript_window_spec` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`
-- [ ] **HYGIENE-2026-463** `memory/living_sphere_curator.py` — updates JSONL + `LIVING_SPHERE.md` reads/writes via scope accessors
-- [ ] **HYGIENE-2026-464** `tools/test_image_gate_generated_meta.py` — assert index JSONL rel matches `generated_images_index_jsonl` accessor
-- [ ] **HYGIENE-2026-465** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`
+- [x] **HYGIENE-2026-461** `tools/image_gate.py` — core profile + generated-images index via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop `memory_store_scope` `*_MD_REL` re-exports). Fixed in `cursor/agent-maintenance-tasks-a7c3` / pull/3986.
+- [x] **HYGIENE-2026-462** `memory/retrieval.py` — `transcript_window_spec` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-a7c3` / pull/3986.
+- [x] **HYGIENE-2026-463** `memory/living_sphere_curator.py` — updates JSONL + `LIVING_SPHERE.md` reads/writes via scope accessors. Fixed in `cursor/agent-maintenance-tasks-a7c3` / pull/3986.
+- [x] **HYGIENE-2026-464** `tools/test_image_gate_generated_meta.py` — assert index JSONL rel matches `generated_images_index_jsonl` accessor. Fixed in `cursor/agent-maintenance-tasks-a7c3` / pull/3986.
+- [x] **HYGIENE-2026-465** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-a7c3` / pull/3986.
