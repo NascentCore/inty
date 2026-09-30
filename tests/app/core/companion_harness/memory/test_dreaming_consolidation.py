@@ -188,6 +188,37 @@ def _seed_memory_docs(store: MemoryStore) -> None:
         store.write_document(rel, f"{rel} seed\n")
 
 
+def test_build_dreaming_curator_input_required_paths_use_scope_accessors(
+    tmp_path: Path,
+) -> None:
+    from app.core.companion_harness.memory.dreaming_consolidation import (
+        _build_dreaming_curator_input,
+    )
+
+    store = MemoryStore(
+        scope=CompanionScope("dream-paths", "agent", tmp_path.name),
+        repository=None,
+    )
+    _seed_memory_docs(store)
+    rows = [
+        ChatMessage(
+            role="user",
+            content="quiet morning",
+            ts="2026-01-02T09:00:00+00:00",
+            uuid="u-paths",
+        ),
+    ]
+    curator_input = _build_dreaming_curator_input(store, rows)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert curator_input.required_paths[-5:] == (
+        paths.memory_md,
+        paths.user_md,
+        paths.style_md,
+        paths.soul,
+        paths.companionship_md,
+    )
+
+
 def test_consolidate_memory_during_dreaming_curates_applicable_docs(
     tmp_path: Path,
 ) -> None:
