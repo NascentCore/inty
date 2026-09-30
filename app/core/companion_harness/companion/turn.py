@@ -724,6 +724,37 @@ def _build_companion_turn_prompt_plan_for_prepare(
     )
 
 
+async def _companion_turn_prepare_loaded_plan(
+    *,
+    track: CompanionTurnTrack,
+    deps: CompanionTurnDeps,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    user_text: str,
+) -> tuple[_CompanionTurnUserTailContext, CompanionTurnPromptPlan]:
+    """Idle-wait, user-tail load, and prompt-plan assembly for turn prepare."""
+    tail_ctx = await _resolve_companion_turn_idle_and_user_tail(
+        track=track,
+        llm_client=deps.llm_client,
+        tool_bg_idle_event=deps.tool_bg_idle_event,
+        store=deps.store,
+        runtime_flags=runtime_flags,
+        user_text=user_text,
+        transcript_llm_window_max_messages=deps.transcript_llm_window_max_messages,
+        preset_user_msg_uuid=deps.preset_user_msg_uuid,
+        input_batch=deps.input_batch,
+        user_message_batch=deps.user_message_batch,
+    )
+    prompt_plan = _build_companion_turn_prompt_plan_for_prepare(
+        store=deps.store,
+        tail_ctx=tail_ctx,
+        track=track,
+        runtime_flags=runtime_flags,
+        runtime_context=deps.runtime_context,
+        transcript_compaction=deps.transcript_compaction,
+    )
+    return tail_ctx, prompt_plan
+
+
 async def _resolve_companion_turn_idle_and_user_tail(
     *,
     track: CompanionTurnTrack,
@@ -797,16 +828,7 @@ async def _prepare_companion_turn_execution(
     deps: CompanionTurnDeps,
 ) -> _CompanionTurnPrepared:
     deps = _enrich_companion_turn_deps_client_time(deps)
-    store = deps.store
-    llm_client = deps.llm_client
-    transcript_compaction = deps.transcript_compaction
-    transcript_llm_window_max_messages = deps.transcript_llm_window_max_messages
-    runtime_context = deps.runtime_context
-    preset_user_msg_uuid = deps.preset_user_msg_uuid
-    tool_bg_idle_event = deps.tool_bg_idle_event
-    user_message_batch = deps.user_message_batch
-    input_batch = deps.input_batch
-    implicit_signal_bundle = runtime_context.implicit_signal_bundle
+    implicit_signal_bundle = deps.runtime_context.implicit_signal_bundle
 
     runtime_flags = resolve_turn_runtime_flags(
         track=track,
@@ -817,39 +839,25 @@ async def _prepare_companion_turn_execution(
     inner_tick_turn = runtime_flags.inner_tick_turn
 
     _log_companion_turn_prepare_start(
-        store=store,
+        store=deps.store,
         track=track,
         user_text=user_text,
         inner_tick_turn=inner_tick_turn,
         route_inner_activity=runtime_flags.route_inner_activity,
-        llm_client=llm_client,
+        llm_client=deps.llm_client,
     )
 
-    tail_ctx = await _resolve_companion_turn_idle_and_user_tail(
+    tail_ctx, prompt_plan = await _companion_turn_prepare_loaded_plan(
         track=track,
-        llm_client=llm_client,
-        tool_bg_idle_event=tool_bg_idle_event,
-        store=store,
+        deps=deps,
         runtime_flags=runtime_flags,
         user_text=user_text,
-        transcript_llm_window_max_messages=transcript_llm_window_max_messages,
-        preset_user_msg_uuid=preset_user_msg_uuid,
-        input_batch=input_batch,
-        user_message_batch=user_message_batch,
-    )
-    prompt_plan = _build_companion_turn_prompt_plan_for_prepare(
-        store=store,
-        tail_ctx=tail_ctx,
-        track=track,
-        runtime_flags=runtime_flags,
-        runtime_context=runtime_context,
-        transcript_compaction=transcript_compaction,
     )
     trace_id = str(uuid.uuid4())
     return _assemble_companion_turn_prepared(
         track=track,
         deps=deps,
-        store=store,
+        store=deps.store,
         runtime_flags=runtime_flags,
         tail_ctx=tail_ctx,
         prompt_plan=prompt_plan,
