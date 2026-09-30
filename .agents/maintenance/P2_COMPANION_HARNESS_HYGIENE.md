@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-12 scan (cron)
+
+Source: open PR overlap check (#3930 HYGIENE-359..363, #3932 HYGIENE-364..370 — scope-listing JSONL/MD kinds below not claimed); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; `google_web_search.py` still imports missing `app.utils.simple_http` (pytest collection blocker, fix bundled here not separately claimed).
+
+Open PRs checked: #3930 (`cursor/agent-maintenance-tasks-a648`), #3932 (`cursor/agent-maintenance-tasks-7def`), #3912 (`HYGIENE-308..311`), #3871 (`HYGIENE-192..197`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-21bc`)
+
+- [x] **HYGIENE-2026-371** `memory/test_companion_scope_listing.py` — `COMPANION_USER_FEEDBACK_JSONL` kind matches `companion_user_feedback_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-372** `memory/test_companion_scope_listing.py` — `SIGNIFICANCE_PERCEPTION` kind matches `significance_perception_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-373** `memory/test_companion_scope_listing.py` — `GENERATED_IMAGES_INDEX_JSONL` kind matches `generated_images_index_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-374** `memory/test_companion_scope_listing.py` — `LIVING_SPHERE_UPDATES_JSONL` kind matches `living_sphere_updates_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-375** `memory/test_companion_scope_listing.py` — `TECHNO_CORE_EVENTS_JSONL` kind matches `techno_core_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
+- [x] **HYGIENE-2026-376** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_MD` kind matches `ai_private_md` scope accessor. Fixed in `cursor/agent-maintenance-tasks-21bc` / pull/3935.
