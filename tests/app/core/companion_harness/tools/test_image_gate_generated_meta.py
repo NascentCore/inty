@@ -5,15 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-import app.core.config as config_mod
 import pytest
 
-from app.core.companion_harness.tools.image_gate import (
-    append_image_asset_record,
-    generated_image_meta_from_asset_record,
-    generated_image_meta_from_index_slice,
-    list_image_asset_records,
-)
+import app.core.config as config_mod
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
@@ -21,6 +15,12 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+from app.core.companion_harness.tools.image_gate import (
+    append_image_asset_record,
+    generated_image_meta_from_asset_record,
+    generated_image_meta_from_index_slice,
+    list_image_asset_records,
 )
 
 
