@@ -13,7 +13,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    USER_MD_REL as USER_MD_REL,
+    USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     load_template_seed_text,
