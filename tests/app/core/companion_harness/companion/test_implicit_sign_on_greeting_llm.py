@@ -30,12 +30,8 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.schemas.implicit_signals import ImplicitSignalBundle
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
@@ -129,12 +125,13 @@ class _SlowLLMClient(_FakeLLMClient):
 
 
 def _seed_workspace(store: MemoryStore) -> None:
-    store.write_document(IDENTITY_MD_REL, "identity")
-    store.write_document(SOUL_MD_REL, "soul")
-    store.write_document(USER_MD_REL, "user")
-    store.write_document(MEMORY_MD_REL, "memory")
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    store.write_document(p.identity, "identity")
+    store.write_document(p.soul, "soul")
+    store.write_document(p.user_md, "user")
+    store.write_document(p.memory_md, "memory")
     store.write_document(
-        CONTEXT_JSON_REL,
+        p.context_json,
         json.dumps({"context_mode": "intimate"}, indent=2) + "\n",
     )
 
