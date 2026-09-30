@@ -16,7 +16,6 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     build_turn_compose_context,
-    turn_compose_context_from_legacy_flags,
 )
 from app.core.companion_harness.prompting.compose_trigger import (
     PromptComposeTrigger,
@@ -108,25 +107,3 @@ def test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap() -> None:
         )
         == Phase.BOOTSTRAP
     )
-
-
-def test_legacy_flags_use_track_pinned_bootstrap_phase(tmp_path) -> None:
-    """``USER_CHAT_BOOTSTRAP`` stays bootstrap when legacy bool flag is false."""
-    ctx = turn_compose_context_from_legacy_flags(
-        bundle=_bundle(),
-        context_meta=ContextMeta(
-            workspace_bootstrap_user_interactive_completed=True,
-        ),
-        runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
-            implicit_signal_bundle=None,
-        ),
-        store=_store(tmp_path),
-        track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        inner_tick_turn=False,
-        inner_tick_activity=InnerTickActivity.MONOLOG,
-        ai_private_text="",
-        proactive_life_currents_block=None,
-        interactive_bootstrap_active=False,
-    )
-    assert ctx.phase == Phase.BOOTSTRAP

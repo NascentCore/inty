@@ -700,3 +700,13 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-17 scan (stale code review)
+
+Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean, `--min-confidence 60` hits all false positives (Pydantic `model_config`, StrEnum values, invariant helpers, manager/service/`chat_ws` production refs). One superseded legacy function found kept alive only by its own test.
+
+Open PRs checked: none open — no overlap.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** #3453: remove stale `turn_compose_context_from_legacy_flags` in `prompting/compose_context.py` — bridge for the removed `build_system_messages` bool-flag entrypoint; every track now composes via `build_system_messages_for_*` + `PromptBuilder`, so it was dead production code referenced only by its own test. Deleted function + orphaned `test_compose_context.py::test_legacy_flags_use_track_pinned_bootstrap_phase` (bootstrap-phase pinning already covered by `test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap`) and now-unused import. Fixed in `cursor/stale-companion-harness-code-8040`.
