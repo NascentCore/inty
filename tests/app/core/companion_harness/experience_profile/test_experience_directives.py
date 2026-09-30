@@ -14,13 +14,13 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.experience_profile.experience_directives import (
-    ExperienceDirectiveTone,
     ExperienceDirectives,
+    ExperienceDirectiveTone,
     ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
@@ -88,7 +88,7 @@ def test_load_context_meta_repairs_intent_context_mode_drift(
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "roleplay",
@@ -112,7 +112,10 @@ def test_load_context_meta_legacy_json_without_directives(
         scope=CompanionScope("ed", "a", tmp_path.name),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        '{"context_mode": "intimate"}\n',
+    )
     meta = load_context_meta(store=store)
     assert meta.experience_directives.tone is None
 

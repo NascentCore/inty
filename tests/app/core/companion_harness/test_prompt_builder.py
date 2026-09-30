@@ -6,37 +6,30 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from app.core.companion_harness.companion.proactive_chat import (
-    BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
-)
 from app.core.companion_harness.companion.bootstrap import (
     load_bootstrap_spec_text,
     load_bootstrap_telegram_profile_slice_text,
 )
 from app.core.companion_harness.companion.models import ChatMessage, ContextMeta
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
-)
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_tool_track,
+from app.core.companion_harness.companion.proactive_chat import (
+    BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
+from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.memory.user_md_identity import (
     UserIdentityFieldLabel,
     fill_user_md_identity_fields,
     load_user_md_template_text,
-)
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    LIFE_CURRENTS_MD_REL,
-    USER_MD_REL,
 )
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
@@ -48,15 +41,19 @@ from app.core.companion_harness.prompt_builder import (
     refresh_single_llm_user_chat_prompt_prefix,
 )
 from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.tools.companion_tool_runtime import (
-    build_openai_bootstrap_track_tools,
-    build_openai_repl_tools,
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
 )
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
-from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    build_openai_bootstrap_track_tools,
+    build_openai_repl_tools,
+)
 
 
 def _bundle() -> PromptBundle:
@@ -263,7 +260,7 @@ def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -272,8 +269,8 @@ def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
             }
         ),
     )
-    store.write_document(IDENTITY_MD_REL, "id")
-    store.write_document(USER_MD_REL, load_user_md_template_text())
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity, "id")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, load_user_md_template_text())
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -310,7 +307,7 @@ def test_refresh_bootstrap_prefix_updates_probe_hint_after_partial_user_md() -> 
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -319,8 +316,8 @@ def test_refresh_bootstrap_prefix_updates_probe_hint_after_partial_user_md() -> 
             }
         ),
     )
-    store.write_document(IDENTITY_MD_REL, "id")
-    store.write_document(USER_MD_REL, partial_user_md)
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity, "id")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, partial_user_md)
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -357,7 +354,7 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -366,8 +363,8 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
             }
         ),
     )
-    store.write_document(IDENTITY_MD_REL, "id")
-    store.write_document(USER_MD_REL, load_user_md_template_text())
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity, "id")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, load_user_md_template_text())
     runtime = TurnRuntimeContext(
         channel=ChannelKind.TELEGRAM,
         implicit_signal_bundle=None,
@@ -516,10 +513,10 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL, '{"context_mode":"emotional_companion"}'
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json, '{"context_mode":"emotional_companion"}'
     )
-    store.write_document(IDENTITY_MD_REL, "id")
-    store.write_document(USER_MD_REL, "user")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity, "id")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, "user")
     runtime = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
@@ -565,9 +562,12 @@ def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() ->
         scope=CompanionScope("user-boot", "agent-boot", "chat-boot"),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"bootstrap"}')
-    store.write_document(IDENTITY_MD_REL, "id")
-    store.write_document(USER_MD_REL, "user")
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+        '{"context_mode":"bootstrap"}',
+    )
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity, "id")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md, "user")
     runtime = TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
@@ -813,7 +813,9 @@ def test_proactive_life_currents_preserved(tmp_path) -> None:
         "## 今天（当日兴致）\n"
         "翻一翻他上次提到的那本《xxx》\n"
     )
-    store.write_document(LIFE_CURRENTS_MD_REL, life_currents)
+    store.write_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.life_currents_md, life_currents
+    )
     builder = PromptBuilder(
         bundle=_bundle(),
         context=ContextMeta(),
