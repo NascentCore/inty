@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-24 scan (cron)
+
+Source: open PR overlap check (#3834 TrackSystemRecipe, #3837 user simulator, #3892..#3900 maintenance scope accessors — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — three JSONL tool tests still read via path constants instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3834, #3837, #3892..#3900 (maintenance HYGIENE-2026-256..277) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-4e06`)
+
+- [x] **HYGIENE-2026-278** `tools/test_ai_private_append_tool.py` — `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-279** `tools/test_living_sphere_record_update_tool.py` — `living_sphere_updates_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-280** `tools/test_techno_core_record_event_tool.py` — `techno_core_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
+- [x] **HYGIENE-2026-281** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-4e06` / pull/3902.
