@@ -284,7 +284,6 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
             langsmith_run_id="run-1",
             skip_final_transcript_assistant_row=True,
             last_interim_assistant_msg_uuid="assistant-1",
-            loop_persisted_user_transcript=True,
         )
 
     with patch(
@@ -338,7 +337,6 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
             langsmith_run_id="",
             skip_final_transcript_assistant_row=False,
             last_interim_assistant_msg_uuid=None,
-            loop_persisted_user_transcript=True,
         )
 
     with patch(
@@ -382,7 +380,6 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
             langsmith_run_id="",
             skip_final_transcript_assistant_row=False,
             last_interim_assistant_msg_uuid=None,
-            loop_persisted_user_transcript=True,
         )
 
     with patch(
@@ -439,7 +436,6 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
             langsmith_run_id="",
             skip_final_transcript_assistant_row=True,
             last_interim_assistant_msg_uuid=None,
-            loop_persisted_user_transcript=True,
         )
 
     with patch(
