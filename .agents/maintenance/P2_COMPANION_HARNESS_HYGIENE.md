@@ -700,3 +700,19 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-11 scan (cron)
+
+Source: open PR overlap check (#3869..#3930 scope-path accessors + google_web_search — no overlap with tasks below); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; `google_web_search` import still broken on `main`; scope listing / inner-tick transcript tests lack remaining accessor↔document-kind smoke coverage.
+
+Open PRs checked: #3869..#3930 (`cursor/agent-maintenance-tasks-*` batches) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-7def`)
+
+- [x] **HYGIENE-2026-364** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-365** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-366** `memory/test_companion_scope_listing.py` — `TOOL_BACKGROUND_JSONL` kind matches `tool_background_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-367** `memory/test_companion_scope_listing.py` — `AI_PRIVATE_JSONL` kind matches `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-368** `memory/test_companion_scope_listing.py` — `COMPANION_RUNTIME_EVENTS_JSONL` kind matches `companion_runtime_events_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-369** `companion/test_transcript_inner_tick_streams.py` — transcript rel params + seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-7def`.
+- [x] **HYGIENE-2026-370** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-7def`.
