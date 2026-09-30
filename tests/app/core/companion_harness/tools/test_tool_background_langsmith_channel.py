@@ -26,13 +26,8 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
 )
 from app.utils.models_catalog import resolve_chat_text_model
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.tool_background import (
     _initial_tool_bg_completion_with_fallbacks,
@@ -160,12 +155,13 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
         scope=CompanionScope("u", "a", str(tmp_path.resolve())),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode": "intimate"}\n')
-    store.write_document(IDENTITY_MD_REL, "id\n")
-    store.write_document(SOUL_MD_REL, "soul\n")
-    store.write_document(USER_MD_REL, "user\n")
-    store.write_document(MEMORY_MD_REL, "memory\n")
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    store.write_document(p.context_json, '{"context_mode": "intimate"}\n')
+    store.write_document(p.identity, "id\n")
+    store.write_document(p.soul, "soul\n")
+    store.write_document(p.user_md, "user\n")
+    store.write_document(p.memory_md, "memory\n")
+    store.write_document(p.transcript, "")
 
     await run_tool_background_loop(
         memory_store=store,
@@ -246,7 +242,7 @@ async def test_run_background_tool_loop_initial_round_timeout_returns(
         scope=CompanionScope("u", "a", str(tmp_path.resolve())),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, "{}\n")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json, "{}\n")
     await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],
@@ -316,7 +312,7 @@ async def test_run_background_tool_loop_continue_round_timeout_returns(
         scope=CompanionScope("u", "a", str(tmp_path.resolve())),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, "{}\n")
+    store.write_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json, "{}\n")
     await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],

@@ -22,15 +22,8 @@ from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
 )
 from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CHANNELS_MD_REL,
-    CONTEXT_JSON_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    TRANSCRIPT_JSONL_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
@@ -49,18 +42,19 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         scope=CompanionScope("manifest", "a", tmp_path.name),
         repository=None,
     )
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     for rel in (
-        IDENTITY_MD_REL,
-        SOUL_MD_REL,
-        STYLE_MD_REL,
-        USER_MD_REL,
-        MEMORY_MD_REL,
-        CHANNELS_MD_REL,
+        p.identity,
+        p.soul,
+        p.style_md,
+        p.user_md,
+        p.memory_md,
+        p.channels_md,
     ):
         store.write_document(rel, f"{rel}\n")
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
+    store.write_document(p.context_json, '{"context_mode":"intimate"}\n')
     store.append_jsonl_record(
-        TRANSCRIPT_JSONL_REL,
+        p.transcript,
         {
             "role": "user",
             "content": "earlier",
@@ -88,7 +82,7 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
     assert built.expected_foreground_reply is not None
     assert result.assistant_text == built.expected_foreground_reply
     assert load_ai_private_thoughts(store) == []
-    body = store.read_document(TRANSCRIPT_JSONL_REL)
+    body = store.read_document(p.transcript)
     lines = [json.loads(line) for line in body.strip().splitlines()]
     manifest_rows = [
         row

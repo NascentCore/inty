@@ -700,3 +700,19 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-21 scan (cron)
+
+Source: open PR overlap check (#3880..#3892 maintenance scope-path batches — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — harness tests still seed/read MemDoc paths via `memory_store_path_constants` instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3880..#3892 (HYGIENE-2026-182..261 claimed) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-c55b`)
+
+- [x] **HYGIENE-2026-262** `tools/test_tool_background_langsmith_channel.py` — workspace seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-263** `companion/test_bootstrap_transcript_order.py` — bootstrap workspace seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-264** `companion/test_ai_private_manifest_persist.py` — workspace seed + transcript via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-265** `companion/test_living_sphere_runtime.py` — workspace seed + JSONL append via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-266** `companion/test_harness_orchestration_scripted_llm.py` — `context_json` read + `life_currents_md` assertion via scope accessors. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-267** `companion/test_techno_core_runtime.py` — `techno_core_md` read via scope accessor. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
+- [x] **HYGIENE-2026-268** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-c55b` / pull/3893.
