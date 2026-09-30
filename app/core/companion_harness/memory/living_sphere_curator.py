@@ -9,10 +9,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    LIVING_SPHERE_MD_REL,
-    LIVING_SPHERE_UPDATES_JSONL_REL,
-)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
@@ -119,7 +115,8 @@ def _curator_curated_through_update_id(state: dict[str, object]) -> str:
 
 
 def _read_all_updates(store: MemoryStore) -> list[LivingSphereUpdate]:
-    raw = store.read_document_if_exists(LIVING_SPHERE_UPDATES_JSONL_REL)
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl
+    raw = store.read_document_if_exists(rel)
     if raw is None or not raw.strip():
         return []
     out: list[LivingSphereUpdate] = []
@@ -170,7 +167,8 @@ def compact_living_sphere_batch(
 ) -> str:
     """Run curator LLM for one batch; write LIVING_SPHERE.md; return last merged update_id."""
     ensure_living_sphere_seeded(store)
-    current_md = store.read_document(LIVING_SPHERE_MD_REL)
+    rel_md = DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_md
+    current_md = store.read_document(rel_md)
     requests_block = "\n".join(
         f"- [{u.update_id}] {u.change_request}" for u in batch
     )
@@ -186,7 +184,7 @@ def compact_living_sphere_batch(
     reject = living_sphere_curator_output_rejection_reason(new_body)
     if reject is not None:
         raise LivingSphereCuratorOutputRejected(reject)
-    store.write_document(LIVING_SPHERE_MD_REL, new_body + "\n")
+    store.write_document(rel_md, new_body + "\n")
     return batch[-1].update_id
 
 

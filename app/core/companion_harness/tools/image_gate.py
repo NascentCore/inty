@@ -12,9 +12,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     GENERATED_IMAGES_INDEX_JSONL_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
-    IDENTITY_MD_REL,
-    SOUL_MD_REL,
-    USER_MD_REL,
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
@@ -26,10 +24,11 @@ def _read_profile_doc(store: MemoryStore, relative_path: str) -> str:
 
 
 def _core_profile_payload(store: MemoryStore) -> dict[str, str]:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     return {
-        IDENTITY_MD_REL: _read_profile_doc(store, IDENTITY_MD_REL),
-        SOUL_MD_REL: _read_profile_doc(store, SOUL_MD_REL),
-        USER_MD_REL: _read_profile_doc(store, USER_MD_REL),
+        paths.identity: _read_profile_doc(store, paths.identity),
+        paths.soul: _read_profile_doc(store, paths.soul),
+        paths.user_md: _read_profile_doc(store, paths.user_md),
     }
 
 
