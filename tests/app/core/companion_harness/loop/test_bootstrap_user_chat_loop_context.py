@@ -69,7 +69,6 @@ def test_bootstrap_loop_context_passes_openai_dict_messages() -> None:
 def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
     kwargs = base_user_chat_loop_builder_kwargs()
     kwargs["messages"] = [{"role": "user", "content": "hi"}]
-    kwargs["stack_depth"] = 0
     kwargs["langsmith_trace_id"] = ""
     kwargs["langsmith_run_id"] = ""
     prompt_plan = _bootstrap_prompt_plan()

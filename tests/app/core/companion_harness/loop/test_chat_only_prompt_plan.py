@@ -131,7 +131,6 @@ def _common_context_kwargs(store: MemoryStore) -> dict:
         transcript_rel=TRANSCRIPT_JSONL_REL,
         langsmith_slice=_langsmith_slice(),
         runtime_context=_runtime_context(),
-        stack_depth=1,
         langsmith_trace_id="",
         langsmith_run_id="",
         output_queue=MagicMock(spec=OutputQueue),

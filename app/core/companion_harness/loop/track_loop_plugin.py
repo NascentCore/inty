@@ -45,7 +45,6 @@ from app.core.companion_harness.loop.track_policy import (
 )
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
-    PromptPlan,
     prompt_messages_to_openai_dicts,
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
@@ -59,16 +58,6 @@ class AgenticLoopTurnPlugin(Protocol):
 
     async def run(self, prepared: CompanionTurnLoopInput) -> AgenticLoopOutput:
         """Execute one companion turn through AgenticLoop + OutputQueue."""
-
-
-def _stack_depth_openai_messages(messages: list[dict[str, Any]]) -> int:
-    return sum(1 for message in messages if message.get("role") == "system")
-
-
-def _system_stack_depth_from_prompt_plan(prompt_plan: PromptPlan) -> int:
-    return sum(
-        1 for message in prompt_plan.messages if message.role.value == "system"
-    )
 
 
 def _user_message_batch_or_synthetic(
@@ -155,9 +144,6 @@ class BootstrapUserChatPlugin:
             transcript_rel=p.transcript_rel,
             langsmith_slice=p.langsmith_slice,
             runtime_context=runtime_context,
-            stack_depth=_system_stack_depth_from_prompt_plan(
-                bootstrap_prompt_plan
-            ),
             langsmith_trace_id=p.langsmith_trace_id,
             langsmith_run_id=p.langsmith_run_id,
             after_tool_messages_appended=_after_tool_round,
@@ -217,9 +203,6 @@ class SettledUserChatPlugin:
                     transcript_rel=p.transcript_rel,
                     langsmith_slice=p.langsmith_slice,
                     runtime_context=runtime_context,
-                    stack_depth=_system_stack_depth_from_prompt_plan(
-                        single_llm_prompt_plan
-                    ),
                     langsmith_trace_id=p.langsmith_trace_id,
                     langsmith_run_id=p.langsmith_run_id,
                     after_tool_messages_appended=_after_tool_round,
@@ -270,7 +253,6 @@ class SettledUserChatPlugin:
                     transcript_rel=p.transcript_rel,
                     langsmith_slice=p.langsmith_slice,
                     runtime_context=runtime_context,
-                    stack_depth=stack_depth,
                     langsmith_trace_id=p.langsmith_trace_id,
                     langsmith_run_id=p.langsmith_run_id,
                     output_queue=p.agentic_output_queue,
@@ -308,7 +290,6 @@ class ImplicitSignOnGreetingPlugin:
             transcript_rel=p.transcript_rel,
             langsmith_slice=p.langsmith_slice,
             runtime_context=p.runtime_context,
-            stack_depth=_stack_depth_openai_messages(p.messages),
             langsmith_trace_id=p.langsmith_trace_id,
             langsmith_run_id=p.langsmith_run_id,
             output_queue=p.agentic_output_queue,
@@ -342,7 +323,6 @@ class InnerTickChatOnlyPlugin:
             transcript_rel=p.transcript_rel,
             langsmith_slice=p.langsmith_slice,
             runtime_context=p.runtime_context,
-            stack_depth=_stack_depth_openai_messages(p.messages),
             langsmith_trace_id=p.langsmith_trace_id,
             langsmith_run_id=p.langsmith_run_id,
             output_queue=p.agentic_output_queue,
@@ -377,7 +357,6 @@ class InnerTickToolLoopPlugin:
             transcript_rel=p.transcript_rel,
             langsmith_slice=p.langsmith_slice,
             runtime_context=p.runtime_context,
-            stack_depth=_stack_depth_openai_messages(p.messages),
             langsmith_trace_id=p.langsmith_trace_id,
             langsmith_run_id=p.langsmith_run_id,
             output_queue=p.agentic_output_queue,

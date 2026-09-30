@@ -85,7 +85,6 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
             channel=ChannelKind.APP_WS,
             implicit_signal_bundle=None,
         ),
-        stack_depth=1,
         langsmith_trace_id="",
         langsmith_run_id="",
         output_queue=object(),  # type: ignore[arg-type]

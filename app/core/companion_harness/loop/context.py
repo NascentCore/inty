@@ -22,10 +22,7 @@ from typing import Any
 from app.core.agentic_companion.output_queue import (
     OutputQueue,
 )
-from app.core.agentic_companion.types import (
-    AgenticLoopInputBatch,
-    UserMessageBatch,
-)
+from app.core.agentic_companion.types import UserMessageBatch
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
 )
@@ -112,12 +109,8 @@ class AgenticLoopContext:
     user_message_batch: UserMessageBatch
     # Experience profile and secondary channel context; dual-LLM settled user chat, consumed upstream.
     context_meta: ContextMeta | None = None
-    # Ordered InputQueue records for multi-message turns; reserved, not yet passed by builders.
-    input_batch: AgenticLoopInputBatch | None = None
     # Primary prompt carrier for single-LLM; required for SINGLE_LLM, absent for dual-LLM user chat.
     prompt_plan: PromptPlan | None = None
-    # Leading system message count; used when assembling dual-LLM stacks, not read in loop execution.
-    stack_depth: int = 0
     # Dual-LLM foreground chat wire stack; settled USER_CHAT dual-LLM only (#3460).
     dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None = None
     # Dual-LLM background tool wire stack; settled USER_CHAT dual-LLM only (#3460).
@@ -161,7 +154,6 @@ def build_implicit_sign_on_greeting_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     output_queue: OutputQueue,
@@ -195,7 +187,6 @@ def build_implicit_sign_on_greeting_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
     )
 
 
@@ -211,7 +202,6 @@ def build_inner_tick_chat_only_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     output_queue: OutputQueue,
@@ -249,7 +239,6 @@ def build_inner_tick_chat_only_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
     )
 
 
@@ -266,7 +255,6 @@ def build_inner_tick_tool_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     output_queue: OutputQueue,
@@ -304,7 +292,6 @@ def build_inner_tick_tool_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
     )
 
 
@@ -320,7 +307,6 @@ def build_settled_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     after_tool_messages_appended: AfterToolMessagesHook,
@@ -357,7 +343,6 @@ def build_settled_user_chat_loop_context(
         user_message_batch=user_message_batch,
         context_meta=None,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
     )
 
 
@@ -373,7 +358,6 @@ def build_settled_dual_llm_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     output_queue: OutputQueue,
@@ -413,7 +397,6 @@ def build_settled_dual_llm_user_chat_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         context_meta=context_meta,
-        stack_depth=stack_depth,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
         dual_llm_tool_msgs=dual_llm_tool_msgs,
         prompt_bundle=prompt_bundle,
@@ -432,7 +415,6 @@ def build_bootstrap_user_chat_loop_context(
     transcript_rel: str,
     langsmith_slice: CompanionTurnLangsmithSlice,
     runtime_context: TurnRuntimeContext,
-    stack_depth: int,
     langsmith_trace_id: str,
     langsmith_run_id: str,
     after_tool_messages_appended: AfterToolMessagesHook,
@@ -468,5 +450,4 @@ def build_bootstrap_user_chat_loop_context(
         output_queue=output_queue,
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
     )
