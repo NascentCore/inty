@@ -9,12 +9,12 @@ from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    GENERATED_IMAGES_INDEX_JSONL_REL,
-)
-from app.core.companion_harness.memory.memory_store_scope import (
     IDENTITY_MD_REL,
     SOUL_MD_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
@@ -48,11 +48,13 @@ def current_persona_revision_id(store: MemoryStore) -> str:
 def append_image_asset_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
-    store.append_jsonl_record(GENERATED_IMAGES_INDEX_JSONL_REL, record)
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl
+    store.append_jsonl_record(rel, record)
 
 
 def list_image_asset_records(store: MemoryStore) -> list[dict[str, Any]]:
-    body = store.read_document_if_exists(GENERATED_IMAGES_INDEX_JSONL_REL)
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl
+    body = store.read_document_if_exists(rel)
     if body is None or not body.strip():
         return []
     out: list[dict[str, Any]] = []

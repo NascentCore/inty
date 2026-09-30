@@ -18,6 +18,9 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 
 
 def _store(tmp_path: Path) -> MemoryStore:
@@ -289,6 +292,8 @@ def test_dreaming_state_roundtrip_uses_datetime(tmp_path: Path) -> None:
     save_dreaming_state(store, state)
     loaded = load_dreaming_state(store)
     assert loaded == state
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.dreaming_state_json
+    assert store.read_document_if_exists(rel) is not None
 
 
 def test_apply_dreaming_checkpoint_to_prompt_rows() -> None:
