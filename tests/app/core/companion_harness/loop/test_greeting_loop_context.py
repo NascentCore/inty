@@ -73,7 +73,6 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         tools=(),
     )
     ctx = build_implicit_sign_on_greeting_loop_context(
-        messages=[{"role": "system", "content": "greet"}],
         repository_only_store_text=False,
         trace_id="trace-1",
         user_text="",

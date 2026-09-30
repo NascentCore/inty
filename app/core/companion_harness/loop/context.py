@@ -78,8 +78,6 @@ class AgenticLoopContext:
     ``execution``; loop does not look up ``TRACK_POLICY``.
     """
 
-    # Legacy OpenAI wire message stack from turn prep; single-LLM reads prompt_plan (#3629).
-    openai_messages: tuple[dict[str, Any], ...]
     # Tool schemas in OpenAI wire form; dual-LLM background loop reads this, single-LLM uses prompt_plan.tools.
     openai_tools: tuple[dict[str, Any], ...]
     # Production routing track; transcript/logging key only at loop runtime.
@@ -152,7 +150,6 @@ class AgenticLoopOutput:
 
 def build_implicit_sign_on_greeting_loop_context(
     *,
-    messages: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
@@ -174,7 +171,6 @@ def build_implicit_sign_on_greeting_loop_context(
     assert transcript_rel != ""
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=(),
         companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
         execution=execution,
@@ -202,7 +198,6 @@ def build_implicit_sign_on_greeting_loop_context(
 def build_inner_tick_chat_only_loop_context(
     *,
     track: CompanionTurnTrack,
-    messages: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
     user_text: str,
@@ -228,7 +223,6 @@ def build_inner_tick_chat_only_loop_context(
     )
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=(),
         companion_turn_track=track,
         execution=execution,
@@ -256,7 +250,6 @@ def build_inner_tick_chat_only_loop_context(
 def build_inner_tick_tool_loop_context(
     *,
     track: CompanionTurnTrack,
-    messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
@@ -283,7 +276,6 @@ def build_inner_tick_tool_loop_context(
     )
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
         companion_turn_track=track,
         execution=execution,
@@ -310,7 +302,6 @@ def build_inner_tick_tool_loop_context(
 
 def build_settled_user_chat_loop_context(
     *,
-    messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
@@ -335,7 +326,6 @@ def build_settled_user_chat_loop_context(
     assert transcript_rel != ""
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
         execution=execution,
@@ -363,7 +353,6 @@ def build_settled_user_chat_loop_context(
 
 def build_settled_dual_llm_user_chat_loop_context(
     *,
-    messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
@@ -392,7 +381,6 @@ def build_settled_dual_llm_user_chat_loop_context(
     assert dual_llm_tool_msgs
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
         companion_turn_track=CompanionTurnTrack.USER_CHAT,
         execution=execution,
@@ -422,7 +410,6 @@ def build_settled_dual_llm_user_chat_loop_context(
 
 def build_bootstrap_user_chat_loop_context(
     *,
-    messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
     trace_id: str,
@@ -447,7 +434,6 @@ def build_bootstrap_user_chat_loop_context(
     assert transcript_rel != ""
 
     return AgenticLoopContext(
-        openai_messages=tuple(messages),
         openai_tools=tuple(tools_for_turn),
         companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
         execution=execution,

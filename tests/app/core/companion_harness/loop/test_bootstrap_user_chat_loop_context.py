@@ -41,34 +41,8 @@ def _bootstrap_prompt_plan() -> PromptPlan:
     )
 
 
-def test_bootstrap_loop_context_passes_openai_dict_messages() -> None:
-    """``turn.py`` still passes legacy ``messages`` for correlation; execution uses ``prompt_plan``."""
-    openai_messages = [
-        {"role": "system", "content": "bootstrap sys"},
-        {"role": "user", "content": "hello"},
-    ]
-    kwargs = base_user_chat_loop_builder_kwargs()
-    kwargs["messages"] = openai_messages
-    prompt_plan = _bootstrap_prompt_plan()
-
-    context = build_bootstrap_user_chat_loop_context(
-        **kwargs,
-        after_tool_messages_appended=MagicMock(),
-        prompt_plan=prompt_plan,
-        execution=loop_execution_for_track(
-            track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-            user_text="hello",
-            has_openai_tools=False,
-        ),
-    )
-
-    assert context.openai_messages == tuple(openai_messages)
-    assert context.prompt_plan is prompt_plan
-
-
 def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
     kwargs = base_user_chat_loop_builder_kwargs()
-    kwargs["messages"] = [{"role": "user", "content": "hi"}]
     kwargs["stack_depth"] = 0
     kwargs["langsmith_trace_id"] = ""
     kwargs["langsmith_run_id"] = ""

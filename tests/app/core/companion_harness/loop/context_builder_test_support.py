@@ -81,7 +81,6 @@ def base_user_chat_loop_builder_kwargs() -> dict:
     """Minimal kwargs shared by bootstrap and settled context builder tests."""
     ts_user = datetime(2026, 1, 1, tzinfo=UTC)
     return {
-        "messages": [{"role": "user", "content": "hi"}],
         "tools_for_turn": [],
         "repository_only_store_text": False,
         "trace_id": "trace-1",
