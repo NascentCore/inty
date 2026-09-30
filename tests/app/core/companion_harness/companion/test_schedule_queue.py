@@ -7,6 +7,13 @@ from pathlib import Path
 import pytest
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_document_mapping import (
+    CompanionMemoryDocumentKind,
+    parse_memory_store_relative_path,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
     _schedule_document_rel,
@@ -21,6 +28,14 @@ def _store(tmp: Path):
         scope=CompanionScope("sq", "a", tmp.name),
         repository=None,
     )
+
+
+def test_schedule_document_rel_matches_scope_accessor_and_kind() -> None:
+    rel = _schedule_document_rel()
+    assert rel == DEFAULT_MEMORY_STORE_SCOPE_PATHS.schedule_queue_json
+    kind, calendar_date = parse_memory_store_relative_path(rel)
+    assert kind == CompanionMemoryDocumentKind.COMPANION_SCHEDULE_TASKS_JSON
+    assert calendar_date is None
 
 
 def test_add_and_next_due_task(tmp_path: Path) -> None:
