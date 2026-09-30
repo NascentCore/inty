@@ -1000,38 +1000,17 @@ def _chat_only_prompt_plan_loop_result(
     )
 
 
-async def _run_chat_only_prompt_plan(
-    context: AgenticLoopContext,
+async def _finalize_chat_only_prompt_plan_after_llm(
     *,
-    llm_client: AsyncLlmClient,
+    context: AgenticLoopContext,
+    track: CompanionTurnTrack,
+    request_messages: list[dict[str, Any]],
+    chat_model: str,
+    envelope: _ChatOnlyTrackEnvelope,
+    resp: Any,
+    t_api: float,
     appender: _UserVisibleOutputAppender,
 ) -> InTurnSyncToolLoopResult:
-    """Single chat completion (no tools) for greeting and inner-tick chat-only tracks.
-
-    Mirrors the legacy single-shot contract per track: greeting completes under the
-    dual-LLM structured envelope (significance + turn_recall), proactive and
-    scheduled complete under the proactive envelope (``output_to_user`` may silence
-    the turn), matching each track's structured-output prompt contract.
-    """
-    assert context.prompt_plan is not None
-    track, request_messages, langsmith_extra = (
-        _build_chat_only_prompt_plan_request(context)
-    )
-    execution = context.execution
-    chat_model = llm_client.resolve_model("chat")
-    envelope = _resolve_chat_only_track_envelope(track)
-    t_api = time.perf_counter()
-    resp = await _invoke_chat_only_prompt_plan_llm(
-        llm_client=llm_client,
-        track=track,
-        request_messages=request_messages,
-        chat_model=chat_model,
-        response_format=envelope.response_format,
-        llm_scene=execution.llm_scene.value,
-        langsmith_extra=langsmith_extra,
-        high_reasoning=execution.high_reasoning,
-        trace_id=context.trace_id,
-    )
     langsmith_trace_acc = langsmith_trace_id_from_completion(resp) or ""
     langsmith_llm_run_acc = langsmith_llm_run_id_from_completion(resp) or ""
     parsed = _parse_chat_only_assistant_message(
@@ -1064,6 +1043,50 @@ async def _run_chat_only_prompt_plan(
         parsed,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
+    )
+
+
+async def _run_chat_only_prompt_plan(
+    context: AgenticLoopContext,
+    *,
+    llm_client: AsyncLlmClient,
+    appender: _UserVisibleOutputAppender,
+) -> InTurnSyncToolLoopResult:
+    """Single chat completion (no tools) for greeting and inner-tick chat-only tracks.
+
+    Mirrors the legacy single-shot contract per track: greeting completes under the
+    dual-LLM structured envelope (significance + turn_recall), proactive and
+    scheduled complete under the proactive envelope (``output_to_user`` may silence
+    the turn), matching each track's structured-output prompt contract.
+    """
+    assert context.prompt_plan is not None
+    track, request_messages, langsmith_extra = (
+        _build_chat_only_prompt_plan_request(context)
+    )
+    execution = context.execution
+    chat_model = llm_client.resolve_model("chat")
+    envelope = _resolve_chat_only_track_envelope(track)
+    t_api = time.perf_counter()
+    resp = await _invoke_chat_only_prompt_plan_llm(
+        llm_client=llm_client,
+        track=track,
+        request_messages=request_messages,
+        chat_model=chat_model,
+        response_format=envelope.response_format,
+        llm_scene=execution.llm_scene.value,
+        langsmith_extra=langsmith_extra,
+        high_reasoning=execution.high_reasoning,
+        trace_id=context.trace_id,
+    )
+    return await _finalize_chat_only_prompt_plan_after_llm(
+        context=context,
+        track=track,
+        request_messages=request_messages,
+        chat_model=chat_model,
+        envelope=envelope,
+        resp=resp,
+        t_api=t_api,
+        appender=appender,
     )
 
 
