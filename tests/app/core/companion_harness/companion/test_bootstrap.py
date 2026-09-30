@@ -106,7 +106,9 @@ def test_tool_companion_set_experience_profile_updates_context(
         ),
     )
     assert ok.startswith("OK ")
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    context_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+    assert st.read_document_if_exists(context_rel) is not None
+    data = json.loads(st.read_document(context_rel))
     assert data["context_mode"] == "roleplay"
     assert data["experience_directives"]["intent"] == "roleplay"
     assert data["experience_change_note"] == "user asked"

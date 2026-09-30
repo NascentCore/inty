@@ -34,8 +34,8 @@ from app.core.companion_harness.memory.memory_registry import (
     get_memory_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from .models import CompanionTurnResult, CompanionTurnTrack
 from app.core.companion_harness.companion.runtime_channel import (
@@ -172,7 +172,9 @@ class CompanionManager:
                 raise ValueError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
             store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
 
-            existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
+            existing_ctx = store.read_document_if_exists(
+                DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+            )
             parsed_ctx: dict[str, object] | None = None
             write_full_context = False
             if existing_ctx is None:
@@ -209,7 +211,10 @@ class CompanionManager:
                     json.dumps(context_data, indent=2, ensure_ascii=False)
                     + "\n"
                 )
-                store.write_document(CONTEXT_JSON_REL, context_json)
+                store.write_document(
+                    DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json,
+                    context_json,
+                )
             ensure_minimal_documents_in_store(store)
             ensure_techno_core_seeded(store)
             ensure_living_sphere_seeded(store)

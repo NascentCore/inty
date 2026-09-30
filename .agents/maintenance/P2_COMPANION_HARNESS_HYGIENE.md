@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-07 scan (cron)
+
+Source: open PR overlap check (#3869 HYGIENE-2026-182..186, #3870 HYGIENE-2026-187..191 — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — `context.json` / `transcript*.jsonl` readers still import `*_REL` constants in core companion modules.
+
+Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`cursor/long-term-user-simulator-4deb`), #3869 (`cursor/agent-maintenance-tasks-0c4a`), #3870 (`cursor/agent-maintenance-tasks-8790`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-01ce`)
+
+- [x] **HYGIENE-2026-192** `manager.py` — `context_json` accessor
+- [x] **HYGIENE-2026-193** `bootstrap.py` — `context_json` accessor
+- [x] **HYGIENE-2026-194** `models.py` — `context_json` + transcript path accessors
+- [x] **HYGIENE-2026-195** `inner_tick_schedule.py` — `transcript` accessor
+- [x] **HYGIENE-2026-196** `proactive_chat.py` — `transcript` accessor
+- [x] **HYGIENE-2026-197** `test_bootstrap.py` — `context_json` accessor smoke assertion

@@ -37,7 +37,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     CHANNELS_MD_REL,
     COMPANIONSHIP_MD_REL,
-    CONTEXT_JSON_REL,
     HARNESS_MD_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
@@ -48,8 +47,6 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     STYLE_MD_REL,
     TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
 
@@ -471,7 +468,9 @@ def load_prompt_bundle(
 
 
 def load_context_meta(*, store: MemoryStore) -> ContextMeta:
-    body = store.read_document_if_exists(CONTEXT_JSON_REL)
+    body = store.read_document_if_exists(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json
+    )
     if body is not None and body.strip():
         try:
             raw = json.loads(body)
@@ -650,7 +649,7 @@ def transcript_relative_path_for_turn_persistence(
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
             # TODO(rename-memory-doc): split monolog vs autonomy JSONL paths (see memory_store_scope). — #3817
-            return TRANSCRIPT_INNER_TICK_JSONL_REL
+            return DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript_inner_tick
         case (
             CompanionTurnTrack.USER_CHAT
             | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
@@ -658,7 +657,7 @@ def transcript_relative_path_for_turn_persistence(
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
         ):
-            return TRANSCRIPT_JSONL_REL
+            return DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
         case _ as unexpected:
             raise AssertionError(
                 f"unexpected CompanionTurnTrack for transcript path: {unexpected!r}"
