@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-08-28 scan (cron)
+
+Source: open PR overlap check (HYGIENE-2026-182..291 claimed in open maintenance PRs); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `image_gate.py` still imports profile paths from `memory_store_scope` re-exports and `generated_images_index_jsonl` from path constants; `test_image_gate_generated_meta.py` lacks scope-path smoke coverage.
+
+Open PRs checked: maintenance PRs through HYGIENE-2026-291 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-d315`)
+
+- [x] **HYGIENE-2026-292** `tools/image_gate.py` — profile reads + generated images index JSONL via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors
+- [x] **HYGIENE-2026-293** `tools/test_image_gate_generated_meta.py` — smoke `append_image_asset_record` writes `generated_images_index_jsonl` accessor path
+- [x] **HYGIENE-2026-294** `loop/test_track_policy.py` — assert autonomy `write_allowlist` matches `life_currents_md` scope accessor
+- [x] **HYGIENE-2026-295** `memory/test_dreaming_transcript_block_ai_private.py` — smoke `append_ai_private_thought` appends to `ai_private_jsonl` scope accessor path
+- [x] **HYGIENE-2026-296** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`

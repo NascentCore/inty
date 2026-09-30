@@ -15,6 +15,9 @@ from app.core.companion_harness.tools.image_gate import (
     list_image_asset_records,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 
 
@@ -23,6 +26,25 @@ def _store(tmp: Path) -> MemoryStore:
         scope=CompanionScope("img-meta", "a", str(tmp.resolve())),
         repository=None,
     )
+
+
+def test_append_image_asset_record_uses_generated_images_index_scope_path(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl
+    append_image_asset_record(
+        store,
+        {
+            "asset_id": "scope-smoke",
+            "gcs_uri": "gs://bucket/scope-smoke.png",
+            "width": 1,
+            "height": 2,
+        },
+    )
+    body = store.read_document(rel)
+    assert "scope-smoke" in body
+    assert len(list_image_asset_records(store)) == 1
 
 
 def test_generated_image_meta_from_slice_prefers_gs_uri(
