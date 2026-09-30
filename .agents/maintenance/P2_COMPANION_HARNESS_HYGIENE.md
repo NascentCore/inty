@@ -700,3 +700,17 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-09-08 scan (cron)
+
+Source: open PR overlap check (#3920..#3923 scope-path accessors — no overlap with tasks below); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; #3413 follow-up — `living_sphere_curator.py` still reads/writes `LIVING_SPHERE.md` / `living_sphere_updates.jsonl` via direct `*_REL` imports; `google_web_search.py` import still broken on `main`.
+
+Open PRs checked: #3920 (`cursor/agent-maintenance-tasks-6a7f`), #3921 (`cursor/agent-maintenance-tasks-7e4a`), #3922 (`cursor/agent-maintenance-tasks-70b4`), #3923 (`cursor/stale-companion-harness-code-759f`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-69fe`)
+
+- [x] **HYGIENE-2026-349** #3413: `living_sphere_curator.py` — `living_sphere_md` + `living_sphere_updates_jsonl` scope accessors. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-350** #3413: `memory/test_living_sphere_curator.py` — seed/read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-351** `tools/google_web_search.py` — restore `app.core.simple_http` import (pytest collection blocker). Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-352** `tools/test_google_web_search.py` — import smoke for `google_web_search` module. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
+- [x] **HYGIENE-2026-353** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-69fe` / pull/3924.
