@@ -21,34 +21,30 @@ import re
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
-from collections.abc import Callable
 from typing import Any, Protocol
 
 from loguru import logger
 from openai import BadRequestError
 
-from app.utils.models_catalog import GenAIModel
-
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    INTY_TOOL_BG_ROUND_METADATA_KEY,
-    SOURCE_TOOL_BACKGROUND_CONTINUE,
-    SOURCE_TOOL_BACKGROUND_INITIAL,
-    tool_choice_attempt_metadata,
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    envelope_to_assistant_metadata_dict,
+    turn_recall_from_envelope,
 )
-from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
-from app.core.companion_harness.tools.runtime import (
-    insert_openai_system_message,
-    resolve_openai_tool_call_loop_async,
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
-
 from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
 from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
+)
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -57,29 +53,31 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
-)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
-)
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
-    envelope_to_assistant_metadata_dict,
-    turn_recall_from_envelope,
 )
 from app.core.companion_harness.companion.transcript_assistant_row import (
     TranscriptAssistantRowBuildInput,
     append_transcript_assistant_row,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
-from app.core.companion_harness.companion.message_format import (
-    openai_assistant_message_dict,
+from app.core.companion_harness.llm.langsmith_invocation_extra import (
+    INTY_TOOL_BG_ROUND_METADATA_KEY,
+    SOURCE_TOOL_BACKGROUND_CONTINUE,
+    SOURCE_TOOL_BACKGROUND_INITIAL,
+    tool_choice_attempt_metadata,
 )
+from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TOOL_BACKGROUND_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+from app.core.companion_harness.tools.runtime import (
+    insert_openai_system_message,
+    resolve_openai_tool_call_loop_async,
+)
+from app.utils.models_catalog import GenAIModel
 
 from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
@@ -484,7 +482,7 @@ def _append_background_log(
     if trace_id.strip():
         row["trace_id"] = trace_id
     store.append_jsonl_record(
-        TOOL_BACKGROUND_JSONL_REL,
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl,
         row,
     )
 
