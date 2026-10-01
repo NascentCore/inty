@@ -170,6 +170,19 @@ def append_jsonl_literal_paths(relative_path: str) -> list[str]:
             continue
         if isinstance(first, ast.Name) and first.id in _MEMDOC_PATH_CONSTANT_NAMES:
             paths.append(getattr(_memdoc_path_constants, first.id))
+            continue
+        if (
+            isinstance(first, ast.Attribute)
+            and isinstance(first.value, ast.Name)
+            and first.value.id == "DEFAULT_MEMORY_STORE_SCOPE_PATHS"
+        ):
+            from app.core.companion_harness.memory.memory_store_scope import (
+                DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+            )
+
+            scope_attr = first.attr
+            if hasattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, scope_attr):
+                paths.append(getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, scope_attr))
     return paths
 
 
