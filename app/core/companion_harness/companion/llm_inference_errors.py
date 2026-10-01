@@ -88,6 +88,80 @@ def _provider_http_status_from_chat_completion_error_body(
     return http_status, msg_tail
 
 
+def _companion_inference_error_from_api_status_error(
+    exc: Any,
+) -> CompanionLLMInferenceBackendError:
+    code = int(exc.status_code)
+    logger.warning(
+        "companion llm inference provider error status={} type={} message={!r} body={!r}",
+        code,
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+        getattr(exc, "body", None),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_client_message_for_provider_status(code),
+        provider_http_status=code,
+    )
+
+
+def _companion_inference_error_from_openai_timeout(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference timeout type={} message={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_TIMEOUT,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_openai_connection(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference connection error type={} message={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_UNREACHABLE,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_openai_api_error(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference api error type={} message={!r} body={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+        getattr(exc, "body", None),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_GENERIC,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_unexpected_openai_exc(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference unexpected exc_type={} exc={!r}",
+        type(exc).__name__,
+        exc,
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_GENERIC,
+        provider_http_status=None,
+    )
+
+
 def companion_llm_inference_backend_error_from_openai(
     exc: Exception,
 ) -> CompanionLLMInferenceBackendError:
@@ -101,59 +175,15 @@ def companion_llm_inference_backend_error_from_openai(
 
     match exc:
         case APIStatusError():
-            code = int(exc.status_code)
-            logger.warning(
-                "companion llm inference provider error status={} type={} message={!r} body={!r}",
-                code,
-                type(exc).__name__,
-                getattr(exc, "message", ""),
-                getattr(exc, "body", None),
-            )
-            return CompanionLLMInferenceBackendError(
-                client_message_en=_client_message_for_provider_status(code),
-                provider_http_status=code,
-            )
+            return _companion_inference_error_from_api_status_error(exc)
         case APITimeoutError():
-            logger.warning(
-                "companion llm inference timeout type={} message={!r}",
-                type(exc).__name__,
-                getattr(exc, "message", ""),
-            )
-            return CompanionLLMInferenceBackendError(
-                client_message_en=_MSG_PROVIDER_TIMEOUT,
-                provider_http_status=None,
-            )
+            return _companion_inference_error_from_openai_timeout(exc)
         case APIConnectionError():
-            logger.warning(
-                "companion llm inference connection error type={} message={!r}",
-                type(exc).__name__,
-                getattr(exc, "message", ""),
-            )
-            return CompanionLLMInferenceBackendError(
-                client_message_en=_MSG_PROVIDER_UNREACHABLE,
-                provider_http_status=None,
-            )
+            return _companion_inference_error_from_openai_connection(exc)
         case APIError():
-            logger.warning(
-                "companion llm inference api error type={} message={!r} body={!r}",
-                type(exc).__name__,
-                getattr(exc, "message", ""),
-                getattr(exc, "body", None),
-            )
-            return CompanionLLMInferenceBackendError(
-                client_message_en=_MSG_PROVIDER_GENERIC,
-                provider_http_status=None,
-            )
+            return _companion_inference_error_from_openai_api_error(exc)
         case _:
-            logger.warning(
-                "companion llm inference unexpected exc_type={} exc={!r}",
-                type(exc).__name__,
-                exc,
-            )
-            return CompanionLLMInferenceBackendError(
-                client_message_en=_MSG_PROVIDER_GENERIC,
-                provider_http_status=None,
-            )
+            return _companion_inference_error_from_unexpected_openai_exc(exc)
 
 
 def log_and_build_inference_error(
