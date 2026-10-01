@@ -397,7 +397,7 @@ def _append_prompt_plan_tail_system_slices(
     )
 
 
-def build_companion_turn_prompt_plan(
+def _build_companion_turn_prompt_plan_from_resolved_tools(
     *,
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
@@ -408,29 +408,9 @@ def build_companion_turn_prompt_plan(
     runtime_context: TurnRuntimeContext,
     transcript_compaction: TranscriptCompactionConfig | None,
     tail_splice_thoughts: list[AiPrivateThought],
+    resolved: _TurnToolsSystemResolve,
 ) -> CompanionTurnPromptPlan:
-    """Assemble system messages and final request messages."""
     paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    match track:
-        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            return CompanionTurnPromptPlan(
-                tools_for_turn=companion_tools_for_turn(
-                    track=track,
-                    implicit_user_signed_on_turn=implicit_sign_on_turn,
-                ),
-                system_messages=[],
-                messages=[],
-                transcript_compaction=None,
-            )
-        case _:
-            resolved = _resolve_turn_tools_and_system_messages(
-                store=store,
-                loaded_state=loaded_state,
-                tail_user_messages=tail_user_messages,
-                track=track,
-                implicit_sign_on_turn=implicit_sign_on_turn,
-                runtime_context=runtime_context,
-            )
     transcript_dialogue = _transcript_dialogue_for_turn(
         store=store,
         loaded_state=loaded_state,
@@ -459,3 +439,50 @@ def build_companion_turn_prompt_plan(
         messages=messages,
         transcript_compaction=transcript_compaction_meta,
     )
+
+
+def build_companion_turn_prompt_plan(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    track: CompanionTurnTrack,
+    tick_proactive: bool,
+    implicit_sign_on_turn: bool,
+    runtime_context: TurnRuntimeContext,
+    transcript_compaction: TranscriptCompactionConfig | None,
+    tail_splice_thoughts: list[AiPrivateThought],
+) -> CompanionTurnPromptPlan:
+    """Assemble system messages and final request messages."""
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            return CompanionTurnPromptPlan(
+                tools_for_turn=companion_tools_for_turn(
+                    track=track,
+                    implicit_user_signed_on_turn=implicit_sign_on_turn,
+                ),
+                system_messages=[],
+                messages=[],
+                transcript_compaction=None,
+            )
+        case _:
+            resolved = _resolve_turn_tools_and_system_messages(
+                store=store,
+                loaded_state=loaded_state,
+                tail_user_messages=tail_user_messages,
+                track=track,
+                implicit_sign_on_turn=implicit_sign_on_turn,
+                runtime_context=runtime_context,
+            )
+            return _build_companion_turn_prompt_plan_from_resolved_tools(
+                store=store,
+                loaded_state=loaded_state,
+                tail_user_messages=tail_user_messages,
+                track=track,
+                tick_proactive=tick_proactive,
+                implicit_sign_on_turn=implicit_sign_on_turn,
+                runtime_context=runtime_context,
+                transcript_compaction=transcript_compaction,
+                tail_splice_thoughts=tail_splice_thoughts,
+                resolved=resolved,
+            )
