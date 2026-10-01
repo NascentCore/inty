@@ -709,8 +709,8 @@ Open PRs checked: #3969, #3974, #3977, #3980, #3983, #3986 — no overlap with t
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-ae66`)
 
-- [ ] **HYGIENE-2026-466** `companion/runtime_events.py` — runtime JSONL append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`
-- [ ] **HYGIENE-2026-467** `companion/ai_private_prompt.py` — monolog JSONL via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`
-- [ ] **HYGIENE-2026-468** `tools/read_web_page.py` — MEMORY.md read/write via scope `memory_md` accessor
-- [ ] **HYGIENE-2026-469** `memory/client_time_from_memory_store.py` — USER.md read via scope `user_md` accessor
-- [ ] **HYGIENE-2026-470** `tools/tool_background.py` — tool-background done row via scope `tool_background_jsonl` accessor
+- [x] **HYGIENE-2026-466** `companion/runtime_events.py` — runtime JSONL append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`. Fixed in `cursor/agent-maintenance-tasks-ae66` / pull/3989.
+- [x] **HYGIENE-2026-467** `companion/ai_private_prompt.py` — monolog JSONL via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`. Fixed in `cursor/agent-maintenance-tasks-ae66` / pull/3989.
+- [x] **HYGIENE-2026-468** `tools/read_web_page.py` — MEMORY.md read/write via scope `memory_md` accessor. Fixed in `cursor/agent-maintenance-tasks-ae66` / pull/3989.
+- [x] **HYGIENE-2026-469** `memory/client_time_from_memory_store.py` — USER.md read via scope `user_md` accessor. Fixed in `cursor/agent-maintenance-tasks-ae66` / pull/3989.
+- [x] **HYGIENE-2026-470** `tools/tool_background.py` — tool-background done row via scope `tool_background_jsonl` accessor. Fixed in `cursor/agent-maintenance-tasks-ae66` / pull/3989.
