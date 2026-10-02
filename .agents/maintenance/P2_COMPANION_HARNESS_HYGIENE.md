@@ -709,6 +709,6 @@ Open PRs checked: maintenance #3958–#3989, stale-harness cleanup #3956–#3990
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-b4e2`)
 
-- [ ] **HYGIENE-2026-471** #3413: `prompting/system_messages.py` — bootstrap output contract template MemDoc slots via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop direct `*_MD_REL` imports used only there).
-- [ ] **HYGIENE-2026-472** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by GitHub issues; duplicate claims on other branches).
-- [ ] **HYGIENE-2026-473** `prompting/test_template.py` — smoke `_bootstrap_output_contract_template_variables` MemDoc slot values match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` core accessors.
+- [x] **HYGIENE-2026-471** #3413: `prompting/system_messages.py` — bootstrap output contract template MemDoc slots via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop direct `*_MD_REL` imports used only there). Fixed in `cursor/agent-maintenance-tasks-b4e2` / pull/3992.
+- [x] **HYGIENE-2026-472** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by GitHub issues; duplicate claims on other branches). Fixed in `cursor/agent-maintenance-tasks-b4e2` / pull/3992.
+- [x] **HYGIENE-2026-473** `prompting/test_template.py` — smoke `_bootstrap_output_contract_template_variables` MemDoc slot values match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` core accessors. Fixed in `cursor/agent-maintenance-tasks-b4e2` / pull/3992.
