@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-02 scan (cron)
+
+Source: open PR overlap check (maintenance batches HYGIENE-2026-412..470 on agent-maintenance branches; stale-code PRs on `turn_compose_context_from_legacy_flags` — no overlap with tasks below); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — bootstrap output contract still names MemDoc paths via raw `*_REL` imports in `system_messages.py`; stale issue audit snapshot still in maintenance dir.
+
+Open PRs checked: maintenance #3958–#3989, stale-harness cleanup #3956–#3990, large-function #3957–#3991 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-b4e2`)
+
+- [ ] **HYGIENE-2026-471** #3413: `prompting/system_messages.py` — bootstrap output contract template MemDoc slots via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors (drop direct `*_MD_REL` imports used only there).
+- [ ] **HYGIENE-2026-472** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by GitHub issues; duplicate claims on other branches).
+- [ ] **HYGIENE-2026-473** `prompting/test_template.py` — smoke `_bootstrap_output_contract_template_variables` MemDoc slot values match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` core accessors.
