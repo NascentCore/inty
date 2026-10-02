@@ -65,13 +65,8 @@ from app.core.companion_harness.memory.memory_store_document_mapping import (
     CompanionMemoryDocumentKind,
     relative_path_for_kind,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANIONSHIP_MD_REL,
-    IDENTITY_MD_REL,
-    MEMORY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    USER_MD_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.prompting.template import (
     BOOTSTRAP_OUTPUT_CONTRACT_TEMPLATE,
@@ -322,15 +317,16 @@ def _output_contract_text_with_tools(
 
 def _bootstrap_output_contract_template_variables() -> dict[str, str]:
     """Named-slot values for bootstrap output contract rendering (#3453)."""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
     return {
         "in_turn_tool_round_content_contract_zh": _in_turn_tool_round_content_contract_zh(),
         "memorystore_path_tools_intro_zh": _MEMORYSTORE_PATH_TOOLS_INTRO_ZH,
-        "companionship_doc": COMPANIONSHIP_MD_REL,
-        "identity_doc": IDENTITY_MD_REL,
-        "style_doc": STYLE_MD_REL,
-        "user_doc": USER_MD_REL,
-        "soul_doc": SOUL_MD_REL,
-        "memory_doc": MEMORY_MD_REL,
+        "companionship_doc": paths.companionship_md,
+        "identity_doc": paths.identity,
+        "style_doc": paths.style_md,
+        "user_doc": paths.user_md,
+        "soul_doc": paths.soul,
+        "memory_doc": paths.memory_md,
         "tool_memory_store_write_document": (
             CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value
         ),
