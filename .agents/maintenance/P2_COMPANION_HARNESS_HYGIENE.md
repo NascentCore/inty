@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-02 scan (cron stale-code review)
+
+Source: `docs/imate/companion_harness/DESIGN.md` + vulture `--min-confidence 80` clean; avoided compose_context / models inner-tick trap (open PR overlap). Ruff F401 on ws materialize path.
+
+Open PRs checked: #3984 (partial overlap — this run adds HYGIENE-432 persona wrapper); trap PRs unchanged.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-427** #3413: Drop `models.OUTPUT_FORMAT_IM_DM_MD` alias; telegram test imports `OUTPUT_FORMAT_IM_DM_MD_REL`.
+- [x] **HYGIENE-2026-428** #3375: `ai_private_prompt` module doc — remove reference to deleted `get_ai_private_text_for_prompt`.
+- [x] **HYGIENE-2026-429** #3413: `companion_user_feedback` — `TRANSCRIPT_JSONL_REL` directly (drop `TRANSCRIPT_REL` alias).
+- [x] **HYGIENE-2026-430**: Ruff F401 — unused imports in `ws_outbound_materialize` / `ws_turn_support`.
+- [x] **HYGIENE-2026-431**: `chat_ws_companion_support` — drop unused `_companion_ai_meta_from_turn_result` re-export.
+- [x] **HYGIENE-2026-432** #3413: `image_gate` — drop `current_persona_revision_id` one-liner; `companion_tool_runtime` calls `compute_persona_revision_id`.
