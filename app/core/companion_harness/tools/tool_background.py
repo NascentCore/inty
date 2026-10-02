@@ -506,6 +506,29 @@ class ToolBgDeliveryPlan:
     bg_ls_llm_run: str
 
 
+@dataclass(frozen=True)
+class _ToolBgLoopArtifactSummary:
+    """Tool-round artifacts extracted before finish-envelope routing."""
+
+    tool_call_names: list[str]
+    image_paths: list[str]
+    generation_deliver: bool
+    bg_ls_trace: str
+    bg_ls_llm_run: str
+
+
+@dataclass(frozen=True)
+class _ToolBgFinishEnvelopeDeliveryFields:
+    """User-visible fields derived from finish-envelope routing."""
+
+    output_to_user_flag: bool
+    significance_meta: dict[str, Any] | None
+    turn_recall: str | None
+    display_text: str
+    deliver_output_to_user: bool
+    should_push: bool
+
+
 def _append_background_log(
     *,
     store: MemoryStore,
@@ -622,6 +645,32 @@ async def _fetch_tool_bg_initial_completion(
         )
         return None
 
+    _log_tool_bg_initial_completion_round(
+        tool_api_id=tool_api_id,
+        initial_response=initial_response,
+        request_snapshot=request_snapshot,
+        scope_registry_key=scope_registry_key,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        trace_hooks=trace_hooks,
+        force_tools=force_tools,
+        initial_meta=initial_meta,
+    )
+    return initial_response, initial_meta, request_snapshot
+
+
+def _log_tool_bg_initial_completion_round(
+    *,
+    tool_api_id: str,
+    initial_response: Any,
+    request_snapshot: list[dict[str, Any]],
+    scope_registry_key: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    force_tools: bool,
+    initial_meta: _InitialToolBgCompletionMeta,
+) -> None:
     _log_bg_llm_round_result(
         round_idx=1,
         model=tool_api_id,
@@ -639,7 +688,6 @@ async def _fetch_tool_bg_initial_completion(
         force_tools,
         initial_meta.tool_choice,
     )
-    return initial_response, initial_meta, request_snapshot
 
 
 def _log_tool_bg_no_tool_calls_early_exit(
@@ -866,6 +914,65 @@ def _tool_bg_resolve_delivery_display(
     )
 
 
+def _tool_bg_loop_artifact_summary(
+    *,
+    loop_result: Any,
+    appended_turn_msgs: list[dict[str, Any]],
+) -> _ToolBgLoopArtifactSummary:
+    tool_call_names = _extract_tool_call_names(appended_turn_msgs)
+    image_paths = _local_paths_from_tool_messages(loop_result.messages)
+    generation_deliver = _generation_tool_execution_deliver(
+        appended_turn_msgs,
+        tool_call_names,
+        image_paths,
+    )
+    return _ToolBgLoopArtifactSummary(
+        tool_call_names=tool_call_names,
+        image_paths=image_paths,
+        generation_deliver=generation_deliver,
+        bg_ls_trace=langsmith_trace_id_from_completion(loop_result.response),
+        bg_ls_llm_run=langsmith_llm_run_id_from_completion(loop_result.response),
+    )
+
+
+def _tool_bg_finish_envelope_delivery_fields(
+    *,
+    loop_result: Any,
+    appended_turn_msgs: list[dict[str, Any]],
+    generation_deliver: bool,
+    skip_finish_envelope_routing: bool,
+    resolved_client: Any,
+    tool_api_id: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    trace_id: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    suppress_user_delivery: bool,
+) -> _ToolBgFinishEnvelopeDeliveryFields:
+    routing = _tool_bg_resolve_finish_envelope_routing(
+        loop_result=loop_result,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        resolved_client=resolved_client,
+        tool_api_id=tool_api_id,
+        chat_completion_sync=chat_completion_sync,
+        trace_id=trace_id,
+        langsmith_slice=langsmith_slice,
+    )
+    display_resolution = _tool_bg_resolve_delivery_display(
+        routing=routing,
+        appended_turn_msgs=appended_turn_msgs,
+        generation_deliver=generation_deliver,
+        suppress_user_delivery=suppress_user_delivery,
+    )
+    return _ToolBgFinishEnvelopeDeliveryFields(
+        output_to_user_flag=routing.output_to_user,
+        significance_meta=envelope_to_assistant_metadata_dict(routing),
+        turn_recall=turn_recall_from_envelope(routing),
+        display_text=display_resolution.display_text,
+        deliver_output_to_user=display_resolution.deliver_output_to_user,
+        should_push=display_resolution.should_push,
+    )
+
+
 def _resolve_tool_bg_delivery_plan(
     *,
     loop_result: Any,
@@ -879,54 +986,40 @@ def _resolve_tool_bg_delivery_plan(
     langsmith_slice: CompanionTurnLangsmithSlice,
     suppress_user_delivery: bool,
 ) -> ToolBgDeliveryPlan:
-    bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
-    bg_ls_llm_run = langsmith_llm_run_id_from_completion(loop_result.response)
-    tool_call_names = _extract_tool_call_names(appended_turn_msgs)
-    image_paths = _local_paths_from_tool_messages(loop_result.messages)
-    generation_deliver = _generation_tool_execution_deliver(
-        appended_turn_msgs,
-        tool_call_names,
-        image_paths,
-    )
-    routing = _tool_bg_resolve_finish_envelope_routing(
+    artifacts = _tool_bg_loop_artifact_summary(
         loop_result=loop_result,
+        appended_turn_msgs=appended_turn_msgs,
+    )
+    delivery = _tool_bg_finish_envelope_delivery_fields(
+        loop_result=loop_result,
+        appended_turn_msgs=appended_turn_msgs,
+        generation_deliver=artifacts.generation_deliver,
         skip_finish_envelope_routing=skip_finish_envelope_routing,
         resolved_client=resolved_client,
         tool_api_id=tool_api_id,
         chat_completion_sync=chat_completion_sync,
         trace_id=trace_id,
         langsmith_slice=langsmith_slice,
-    )
-    output_to_user_flag = routing.output_to_user
-    significance_meta = envelope_to_assistant_metadata_dict(routing)
-    turn_recall = turn_recall_from_envelope(routing)
-    display_resolution = _tool_bg_resolve_delivery_display(
-        routing=routing,
-        appended_turn_msgs=appended_turn_msgs,
-        generation_deliver=generation_deliver,
         suppress_user_delivery=suppress_user_delivery,
     )
-    display_text = display_resolution.display_text
-    deliver_output_to_user = display_resolution.deliver_output_to_user
-    should_push = display_resolution.should_push
     transcript_body = build_tool_background_transcript_body(
-        display_text=display_text,
+        display_text=delivery.display_text,
         appended_turn_msgs=appended_turn_msgs,
         total_tool_calls=total_tool_calls,
     )
     return ToolBgDeliveryPlan(
-        should_push=should_push,
-        deliver_output_to_user=deliver_output_to_user,
-        display_text=display_text,
+        should_push=delivery.should_push,
+        deliver_output_to_user=delivery.deliver_output_to_user,
+        display_text=delivery.display_text,
         transcript_body=transcript_body,
-        significance_meta=significance_meta,
-        turn_recall=turn_recall,
-        output_to_user_flag=output_to_user_flag,
-        generation_deliver=generation_deliver,
-        tool_call_names=tool_call_names,
-        image_paths=image_paths,
-        bg_ls_trace=bg_ls_trace,
-        bg_ls_llm_run=bg_ls_llm_run,
+        significance_meta=delivery.significance_meta,
+        turn_recall=delivery.turn_recall,
+        output_to_user_flag=delivery.output_to_user_flag,
+        generation_deliver=artifacts.generation_deliver,
+        tool_call_names=artifacts.tool_call_names,
+        image_paths=artifacts.image_paths,
+        bg_ls_trace=artifacts.bg_ls_trace,
+        bg_ls_llm_run=artifacts.bg_ls_llm_run,
     )
 
 
@@ -1022,17 +1115,21 @@ def _tool_bg_new_turn_capture(
     )
 
 
+def _tool_bg_memory_store_write_allowlist(
+    write_allowlist: frozenset[str] | None,
+) -> frozenset[str]:
+    if write_allowlist is not None:
+        return write_allowlist
+    return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
+
+
 def _tool_bg_build_openai_loop_handlers(
     *,
     run_ctx: _ToolBgLoopRunContext,
     working_messages: list[dict[str, Any]],
     progress: ToolBgLoopProgress,
 ) -> _ToolBgOpenAiLoopHandlers:
-    allow = (
-        run_ctx.write_allowlist
-        if run_ctx.write_allowlist is not None
-        else MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
-    )
+    allow = _tool_bg_memory_store_write_allowlist(run_ctx.write_allowlist)
     turn_capture = _tool_bg_new_turn_capture(working_messages)
     tools_for_rounds = list(run_ctx.tools)
 
