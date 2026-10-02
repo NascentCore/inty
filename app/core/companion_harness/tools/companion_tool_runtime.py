@@ -394,65 +394,93 @@ def tool_memory_store_mkdir(store: MemoryStore, relative_path: str) -> str:
 # feed autonomy experience back into companion hidden state (epic #3700).
 
 
-def _techno_core_record_event_ev_kwargs(
+def _techno_core_record_event_parse_required(
     store: MemoryStore, arguments: dict[str, Any]
-) -> tuple[str | None, dict[str, Any] | None]:
+) -> tuple[str | None, Sphere | None, str | None, Visibility | None]:
     raw_sphere = arguments.get("sphere")
     raw_summary = arguments.get("summary")
     if not isinstance(raw_sphere, str):
-        return "ERROR: sphere must be a string", None
+        return "ERROR: sphere must be a string", None, None, None
     if not isinstance(raw_summary, str):
-        return "ERROR: summary must be a string", None
+        return "ERROR: summary must be a string", None, None, None
     try:
         sphere = Sphere(raw_sphere.strip())
     except ValueError:
-        return f"ERROR: invalid sphere {raw_sphere!r}", None
+        return f"ERROR: invalid sphere {raw_sphere!r}", None, None, None
 
     raw_vis = arguments.get("visibility")
     visibility: Visibility = Visibility.PRIVATE
     if raw_vis is not None:
         if not isinstance(raw_vis, str):
-            return "ERROR: visibility must be a string or omitted", None
+            return "ERROR: visibility must be a string or omitted", None, None, None
         try:
             visibility = Visibility(raw_vis.strip())
         except ValueError:
-            return f"ERROR: invalid visibility {raw_vis!r}", None
+            return f"ERROR: invalid visibility {raw_vis!r}", None, None, None
 
-    uid = store.scope.user_id.strip()
     cid = store.scope.companion_id.strip()
     if not cid:
         return (
             f"ERROR: missing companion scope for {TECHNO_CORE_RECORD_EVENT_TOOL_NAME}",
             None,
+            None,
+            None,
         )
+    return None, sphere, raw_summary, visibility
 
-    ev_kwargs: dict[str, Any] = {
-        "sphere": sphere,
-        "actor_companion_id": cid,
-        "summary": raw_summary,
-        "visibility": visibility,
-        "source": "inner_tick",
-        "related_user_id": uid or None,
-    }
 
+def _techno_core_record_event_optional_fields(
+    arguments: dict[str, Any],
+) -> tuple[str | None, dict[str, Any]]:
+    optional: dict[str, Any] = {}
     raw_ev = arguments.get("emotional_valence")
     if raw_ev is not None:
         if not isinstance(raw_ev, str):
-            return "ERROR: emotional_valence must be a string or omitted", None
-        ev_kwargs["emotional_valence"] = raw_ev
+            return "ERROR: emotional_valence must be a string or omitted", optional
+        optional["emotional_valence"] = raw_ev
 
     raw_sal = arguments.get("salience")
     if raw_sal is not None:
         if type(raw_sal) is not int or isinstance(raw_sal, bool):
-            return "ERROR: salience must be an integer 1..10 or omitted", None
-        ev_kwargs["salience"] = raw_sal
+            return "ERROR: salience must be an integer 1..10 or omitted", optional
+        optional["salience"] = raw_sal
 
     raw_ls = arguments.get("related_living_sphere")
     if raw_ls is not None:
         if not isinstance(raw_ls, str):
-            return "ERROR: related_living_sphere must be a string or omitted", None
-        ev_kwargs["related_living_sphere"] = raw_ls
+            return "ERROR: related_living_sphere must be a string or omitted", optional
+        optional["related_living_sphere"] = raw_ls
 
+    return None, optional
+
+
+def _techno_core_record_event_ev_kwargs(
+    store: MemoryStore, arguments: dict[str, Any]
+) -> tuple[str | None, dict[str, Any] | None]:
+    err, sphere, raw_summary, visibility = _techno_core_record_event_parse_required(
+        store,
+        arguments,
+    )
+    if err is not None:
+        return err, None
+    assert sphere is not None
+    assert raw_summary is not None
+    assert visibility is not None
+
+    err, optional = _techno_core_record_event_optional_fields(arguments)
+    if err is not None:
+        return err, None
+
+    uid = store.scope.user_id.strip()
+    ev_kwargs: dict[str, Any] = {
+        "sphere": sphere,
+        "actor_companion_id": store.scope.companion_id.strip(),
+        "summary": raw_summary,
+        "visibility": visibility,
+        "source": "inner_tick",
+        "related_user_id": uid or None,
+        **optional,
+    }
     return None, ev_kwargs
 
 

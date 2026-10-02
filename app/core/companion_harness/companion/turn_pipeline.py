@@ -228,6 +228,53 @@ class _TurnToolsSystemResolve:
     system_messages: list[dict[str, Any]]
 
 
+def _proactive_inner_tick_track_tools_and_system_messages(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    track: CompanionTurnTrack,
+    implicit_sign_on_turn: bool,
+    runtime_context: TurnRuntimeContext,
+) -> _TurnToolsSystemResolve:
+    """Greeting / proactive inner-tick tracks use ``TrackPromptComposer`` (not legacy stack)."""
+    from app.core.companion_harness.prompting.compose_context import (
+        build_turn_compose_context,
+    )
+    from app.core.companion_harness.prompting.leg_kind import PromptLegKind
+    from app.core.companion_harness.prompting.track_composer import (
+        TrackPromptComposer,
+    )
+    from app.core.companion_harness.prompting.phase import (
+        resolve_phase_for_compose,
+    )
+
+    assert tail_user_messages
+    turn_ctx = build_turn_compose_context(
+        bundle=loaded_state.bundle,
+        context_meta=loaded_state.context,
+        runtime_context=runtime_context,
+        store=store,
+        track=track,
+        phase=resolve_phase_for_compose(track, loaded_state.context),
+        leg_kind=PromptLegKind.SINGLE_LLM,
+        ai_private_text="",
+        proactive_life_currents_block=None,
+    )
+    system_messages = TrackPromptComposer().system_dicts_for_track(
+        track,
+        turn_ctx,
+    )
+    tools_for_turn = companion_tools_for_turn(
+        track=track,
+        implicit_user_signed_on_turn=implicit_sign_on_turn,
+    )
+    return _TurnToolsSystemResolve(
+        tools_for_turn=tools_for_turn,
+        system_messages=system_messages,
+    )
+
+
 def _resolve_turn_tools_and_system_messages(
     *,
     store: MemoryStore,
@@ -243,36 +290,13 @@ def _resolve_turn_tools_and_system_messages(
             | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
         ):
-            from app.core.companion_harness.prompting.compose_context import (
-                build_turn_compose_context,
-            )
-            from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-            from app.core.companion_harness.prompting.track_composer import (
-                TrackPromptComposer,
-            )
-            from app.core.companion_harness.prompting.phase import (
-                resolve_phase_for_compose,
-            )
-
-            assert tail_user_messages
-            turn_ctx = build_turn_compose_context(
-                bundle=loaded_state.bundle,
-                context_meta=loaded_state.context,
-                runtime_context=runtime_context,
+            return _proactive_inner_tick_track_tools_and_system_messages(
                 store=store,
+                loaded_state=loaded_state,
+                tail_user_messages=tail_user_messages,
                 track=track,
-                phase=resolve_phase_for_compose(track, loaded_state.context),
-                leg_kind=PromptLegKind.SINGLE_LLM,
-                ai_private_text="",
-                proactive_life_currents_block=None,
-            )
-            system_messages = TrackPromptComposer().system_dicts_for_track(
-                track,
-                turn_ctx,
-            )
-            tools_for_turn = companion_tools_for_turn(
-                track=track,
-                implicit_user_signed_on_turn=implicit_sign_on_turn,
+                implicit_sign_on_turn=implicit_sign_on_turn,
+                runtime_context=runtime_context,
             )
         case _:
             tools_for_turn, system_messages = (
