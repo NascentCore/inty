@@ -404,6 +404,27 @@ class ContextMeta(BaseModel):
         return self
 
 
+def _read_prompt_bundle_memory_injection_slices(
+    store: MemoryStore,
+    *,
+    meta: ContextMeta,
+    day: str,
+) -> tuple[str, str]:
+    """Return ``(memory_md, memory_daily_today_md)`` honoring private-memory injection rules."""
+    inject_private = experience_profile_injects_private_memory(meta.context_mode)
+    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
+    daily_md = ""
+    if inject_private:
+        daily_md = _read_memory_document_optional(
+            store,
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
+            max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
+        )
+    else:
+        memory_long = ""
+    return memory_long, daily_md
+
+
 def load_prompt_bundle(
     store: MemoryStore,
     *,
@@ -421,18 +442,11 @@ def load_prompt_bundle(
     ensure_template_seeded_core_documents_in_store(store)
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
-    inject_private = experience_profile_injects_private_memory(m.context_mode)
-
-    daily_md = ""
-    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
-    if inject_private:
-        daily_md = _read_memory_document_optional(
-            store,
-            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
-            max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
-        )
-    else:
-        memory_long = ""
+    memory_long, daily_md = _read_prompt_bundle_memory_injection_slices(
+        store,
+        meta=m,
+        day=day,
+    )
 
     return PromptBundle(
         identity=_read_memory_document_required(store, IDENTITY_MD_REL),
