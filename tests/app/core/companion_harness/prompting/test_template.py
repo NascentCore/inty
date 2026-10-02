@@ -5,7 +5,11 @@ from __future__ import annotations
 import pytest
 from jinja2 import UndefinedError
 
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.prompting.system_messages import (
+    _bootstrap_output_contract_template_variables,
     _output_contract_text_interactive_bootstrap_tools,
 )
 from app.core.companion_harness.prompting.template import (
@@ -79,3 +83,16 @@ def test_bootstrap_output_contract_template_renders_with_required_slots() -> Non
     )
     assert "<tool_memory_store_write_document>" in rendered
     assert "<companionship_doc>" in rendered
+
+
+def test_bootstrap_output_contract_template_variables_use_scope_path_accessors() -> (
+    None
+):
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    variables = _bootstrap_output_contract_template_variables()
+    assert variables["companionship_doc"] == paths.companionship_md
+    assert variables["identity_doc"] == paths.identity
+    assert variables["style_doc"] == paths.style_md
+    assert variables["user_doc"] == paths.user_md
+    assert variables["soul_doc"] == paths.soul
+    assert variables["memory_doc"] == paths.memory_md
