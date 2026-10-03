@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from app.core.agentic_companion.types import (
@@ -226,12 +227,19 @@ async def _run_settled_user_chat_single_llm(
     return await _agentic_loop(prepared).run_single_llm_turn(context=loop_context)
 
 
-async def _run_settled_user_chat_dual_llm(
+@dataclass(frozen=True)
+class _SettledDualLlmOpenAiWire:
+    """OpenAI wire messages for settled dual-LLM user chat (chat leg + tool leg)."""
+
+    chat_msgs: tuple[dict[str, Any], ...]
+    tool_msgs: tuple[dict[str, Any], ...]
+    stack_depth: int
+
+
+def _settled_dual_llm_openai_wire(
     prepared: CompanionTurnLoopInput,
-    *,
-    execution: Any,
-) -> AgenticLoopOutput:
-    assert prepared.user_message_batch is not None
+) -> _SettledDualLlmOpenAiWire:
+    """Build chat/tool wire message tuples and stack depth for dual-LLM user chat."""
     store = prepared.store
     runtime_context = prepared.runtime_context
     bundle = prepared.loaded_state.bundle
@@ -262,6 +270,23 @@ async def _run_settled_user_chat_dual_llm(
         tools=tuple(prepared.tools_for_turn),
     )
     tool_msgs = prompt_messages_to_openai_dicts(tool_plan.messages)
+    return _SettledDualLlmOpenAiWire(
+        chat_msgs=tuple(chat_msgs),
+        tool_msgs=tuple(tool_msgs),
+        stack_depth=stack_depth,
+    )
+
+
+async def _run_settled_user_chat_dual_llm(
+    prepared: CompanionTurnLoopInput,
+    *,
+    execution: Any,
+) -> AgenticLoopOutput:
+    assert prepared.user_message_batch is not None
+    runtime_context = prepared.runtime_context
+    bundle = prepared.loaded_state.bundle
+    context = prepared.loaded_state.context
+    wire = _settled_dual_llm_openai_wire(prepared)
     loop_context = build_settled_dual_llm_user_chat_loop_context(
         messages=prepared.messages,
         tools_for_turn=prepared.tools_for_turn,
@@ -273,14 +298,14 @@ async def _run_settled_user_chat_dual_llm(
         transcript_rel=prepared.transcript_rel,
         langsmith_slice=prepared.langsmith_slice,
         runtime_context=runtime_context,
-        stack_depth=stack_depth,
+        stack_depth=wire.stack_depth,
         langsmith_trace_id=prepared.langsmith_trace_id,
         langsmith_run_id=prepared.langsmith_run_id,
         output_queue=prepared.agentic_output_queue,
         user_message_batch=prepared.user_message_batch,
         tail_user_messages=prepared.tail_user_messages,
-        dual_llm_chat_msgs=tuple(chat_msgs),
-        dual_llm_tool_msgs=tuple(tool_msgs),
+        dual_llm_chat_msgs=wire.chat_msgs,
+        dual_llm_tool_msgs=wire.tool_msgs,
         prompt_bundle=bundle,
         context_meta=context,
         execution=execution,
