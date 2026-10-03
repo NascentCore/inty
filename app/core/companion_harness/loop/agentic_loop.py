@@ -74,6 +74,7 @@ from app.core.companion_harness.loop.in_turn_visible_text import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.prompt_builder import (
+    PromptPlan,
     prompt_messages_to_openai_dicts,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
@@ -735,6 +736,19 @@ def _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
     )
 
 
+def _prompt_plan_tool_loop_wired_request_messages(
+    prompt_plan: PromptPlan,
+    user_text: str,
+) -> list[dict[str, Any]]:
+    """OpenAI wire messages for a prompt-plan tool loop, with runtime system clauses."""
+    request_messages = prompt_messages_to_openai_dicts(prompt_plan.messages)
+    apply_agentic_loop_runtime_system_clauses(
+        openai_messages=request_messages,
+        user_text=user_text,
+    )
+    return request_messages
+
+
 async def _run_prompt_plan_tool_loop(
     context: AgenticLoopContext,
     *,
@@ -757,10 +771,9 @@ async def _run_prompt_plan_tool_loop(
         source=execution.foreground_source.value,
         extra_metadata=None,
     )
-    request_messages = prompt_messages_to_openai_dicts(prompt_plan.messages)
-    apply_agentic_loop_runtime_system_clauses(
-        openai_messages=request_messages,
-        user_text=context.user_text,
+    request_messages = _prompt_plan_tool_loop_wired_request_messages(
+        prompt_plan,
+        context.user_text,
     )
     initial_resp, working_messages, acc, t_api = (
         await _fetch_prompt_plan_initial_completion(

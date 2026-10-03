@@ -1747,6 +1747,33 @@ def _tool_bg_kickoff_loop_config_from_run_args(
     )
 
 
+async def _tool_bg_kickoff_and_run_through_delivery(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    config: _ToolBgKickoffLoopConfig,
+) -> None:
+    """Kick off tool-background OpenAI loop and run through user delivery."""
+    kickoff = await _tool_bg_kickoff_loop_run(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        config=config,
+    )
+    if kickoff is None:
+        return
+    await _tool_bg_run_loop_through_delivery(
+        run_ctx=kickoff.run_ctx,
+        initial_response=kickoff.initial_response,
+        working_messages=kickoff.working_messages,
+        progress=kickoff.progress,
+        t0=kickoff.t0,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1798,21 +1825,12 @@ async def run_tool_background_loop(
             activity_label=activity_label,
             execute_tool_call_fn=execute_tool_call_fn,
         )
-        kickoff = await _tool_bg_kickoff_loop_run(
+        await _tool_bg_kickoff_and_run_through_delivery(
             memory_store=memory_store,
             request_messages=request_messages,
             client=client,
             force_tools_first_round=force_tools_first_round,
             config=kickoff_config,
-        )
-        if kickoff is None:
-            return
-        await _tool_bg_run_loop_through_delivery(
-            run_ctx=kickoff.run_ctx,
-            initial_response=kickoff.initial_response,
-            working_messages=kickoff.working_messages,
-            progress=kickoff.progress,
-            t0=kickoff.t0,
         )
     finally:
         clear_tool_background_abort_flag(user_msg_uuid)

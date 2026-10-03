@@ -945,19 +945,11 @@ def build_system_messages_for_tool_track(
     return out
 
 
-def build_system_messages_for_inner_tick_monolog(
+def _inner_tick_monolog_static_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
-    store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC monolog inner tick: plan prefix and tool leg (no foreground envelope).
-
-    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
-    tool-side compact) → persona → output (inner-tick, tool-side compact) → contextual
-    with ai_private and monolog slices. This assembly is the source of truth for
-    this track.
-    """
-    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
+    """Doctrine through output slices for INNER_TICK_MONOLOG (before contextual)."""
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
     out.extend(_auxiliary_system_messages())
@@ -993,6 +985,23 @@ def build_system_messages_for_inner_tick_monolog(
             chat_branch_no_tool_api=False,
         )
     )
+    return out
+
+
+def build_system_messages_for_inner_tick_monolog(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """ASYNC monolog inner tick: plan prefix and tool leg (no foreground envelope).
+
+    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
+    tool-side compact) → persona → output (inner-tick, tool-side compact) → contextual
+    with ai_private and monolog slices. This assembly is the source of truth for
+    this track.
+    """
+    ai_private_text = get_ai_private_jsonl_text_for_prompt(store)
+    out = _inner_tick_monolog_static_system_messages(bundle, context)
     extend_contextual_system_slices(
         out,
         turn_compose_context_for_self_contained_track(
