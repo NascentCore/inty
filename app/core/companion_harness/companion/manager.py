@@ -131,6 +131,52 @@ class CompanionSession:
         return get_scope_turn_lock(self.scope)
 
 
+def _companion_session_context_write_full(
+    existing_ctx: str | None,
+) -> bool:
+    """Whether ``context.json`` must be replaced with the default bootstrap document."""
+    if existing_ctx is None:
+        return True
+    stripped = str(existing_ctx).strip()
+    if not stripped:
+        return True
+    try:
+        loaded = json.loads(stripped)
+    except json.JSONDecodeError:
+        return True
+    if not isinstance(loaded, dict):
+        return True
+    return len(loaded) == 0
+
+
+def _write_companion_default_context_json(
+    store: MemoryStore,
+    *,
+    user_id: str,
+    companion_id: str,
+    chat_id: str,
+) -> None:
+    context_data: dict[str, object] = {
+        "user_id": user_id,
+        "companion_id": companion_id,
+        "chat_id": chat_id,
+        "context_mode": ExperienceContextMode.UNSPECIFIC.value,
+        "workspace_bootstrap_user_interactive_completed": False,
+        "companion_ws_session_system_written": False,
+    }
+    context_json = (
+        json.dumps(context_data, indent=2, ensure_ascii=False) + "\n"
+    )
+    store.write_document(CONTEXT_JSON_REL, context_json)
+
+
+def _bootstrap_companion_memory_store(store: MemoryStore) -> None:
+    ensure_minimal_documents_in_store(store)
+    ensure_techno_core_seeded(store)
+    ensure_living_sphere_seeded(store)
+    # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init (#3476 deferred).
+
+
 class CompanionManager:
     """管理所有活跃 companion session 的生命周期。
 
@@ -173,47 +219,14 @@ class CompanionManager:
             store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
 
             existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
-            parsed_ctx: dict[str, object] | None = None
-            write_full_context = False
-            if existing_ctx is None:
-                write_full_context = True
-            else:
-                stripped = str(existing_ctx).strip()
-                if not stripped:
-                    write_full_context = True
-                else:
-                    try:
-                        loaded = json.loads(stripped)
-                    except json.JSONDecodeError:
-                        write_full_context = True
-                    else:
-                        if isinstance(loaded, dict):
-                            parsed_ctx = loaded
-                        else:
-                            write_full_context = True
-                        if (
-                            isinstance(parsed_ctx, dict)
-                            and len(parsed_ctx) == 0
-                        ):
-                            write_full_context = True
-            if write_full_context:
-                context_data: dict[str, object] = {
-                    "user_id": user_id,
-                    "companion_id": companion_id,
-                    "chat_id": chat_id,
-                    "context_mode": ExperienceContextMode.UNSPECIFIC.value,
-                    "workspace_bootstrap_user_interactive_completed": False,
-                    "companion_ws_session_system_written": False,
-                }
-                context_json = (
-                    json.dumps(context_data, indent=2, ensure_ascii=False)
-                    + "\n"
+            if _companion_session_context_write_full(existing_ctx):
+                _write_companion_default_context_json(
+                    store,
+                    user_id=user_id,
+                    companion_id=companion_id,
+                    chat_id=chat_id,
                 )
-                store.write_document(CONTEXT_JSON_REL, context_json)
-            ensure_minimal_documents_in_store(store)
-            ensure_techno_core_seeded(store)
-            ensure_living_sphere_seeded(store)
-            # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init (#3476 deferred).
+            _bootstrap_companion_memory_store(store)
 
             session = CompanionSession(
                 scope=scope,

@@ -100,33 +100,11 @@ def build_github_issue_title(snapshot: HarnessSnapshot) -> str:
     return title[:256]
 
 
-def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
+def _github_issue_correlation_section(snapshot: HarnessSnapshot) -> str:
     corr = snapshot.correlation
     ls_id = corr.langsmith_trace_id.strip() or "unavailable"
-    context_excerpt = truncate_text(
-        snapshot.context_json,
-        GITHUB_BODY_MEMORY_DOC_MAX_CHARS,
-    )
-    transcript_excerpt = tail_text(
-        snapshot.transcript_tail,
-        GITHUB_BODY_TRANSCRIPT_MAX_CHARS,
-    )
-    memory_lines: list[str] = []
-    for rel, body in sorted(snapshot.memory_docs.items()):
-        excerpt = truncate_text(body, GITHUB_BODY_MEMORY_DOC_MAX_CHARS)
-        memory_lines.append(f"#### {rel}\n```\n{excerpt}\n```")
-    memory_block = "\n\n".join(memory_lines) if memory_lines else "_none_"
-    runtime_block = (
-        json.dumps(snapshot.runtime_events, ensure_ascii=False, indent=2)
-        if snapshot.runtime_events
-        else "_none_"
-    )
     return "\n".join(
         [
-            "## Summary",
-            "",
-            snapshot.complaint_summary,
-            "",
             "## Context (trace back to original session)",
             "",
             "| Field | Value |",
@@ -149,7 +127,31 @@ def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
             "> Automated report from `companion_record_user_feedback` tool.",
             "> Full harness snapshot in MemoryStore "
             "`.companion_user_feedback.jsonl` (feedback_id above).",
-            "",
+        ]
+    )
+
+
+def _github_issue_harness_excerpt_section(snapshot: HarnessSnapshot) -> str:
+    context_excerpt = truncate_text(
+        snapshot.context_json,
+        GITHUB_BODY_MEMORY_DOC_MAX_CHARS,
+    )
+    transcript_excerpt = tail_text(
+        snapshot.transcript_tail,
+        GITHUB_BODY_TRANSCRIPT_MAX_CHARS,
+    )
+    memory_lines: list[str] = []
+    for rel, body in sorted(snapshot.memory_docs.items()):
+        excerpt = truncate_text(body, GITHUB_BODY_MEMORY_DOC_MAX_CHARS)
+        memory_lines.append(f"#### {rel}\n```\n{excerpt}\n```")
+    memory_block = "\n\n".join(memory_lines) if memory_lines else "_none_"
+    runtime_block = (
+        json.dumps(snapshot.runtime_events, ensure_ascii=False, indent=2)
+        if snapshot.runtime_events
+        else "_none_"
+    )
+    return "\n".join(
+        [
             "## Harness snapshot excerpt (GitHub body caps: transcript 2k, memory 500/doc)",
             "",
             "### context.json",
@@ -169,6 +171,20 @@ def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
             "```json",
             runtime_block,
             "```",
+        ]
+    )
+
+
+def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
+    return "\n".join(
+        [
+            "## Summary",
+            "",
+            snapshot.complaint_summary,
+            "",
+            _github_issue_correlation_section(snapshot),
+            "",
+            _github_issue_harness_excerpt_section(snapshot),
             "",
             "## Acceptance criteria",
             "",
