@@ -709,6 +709,6 @@ Open PRs checked: maintenance #3969–#3992, stale-harness cleanup — no overla
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-0090`)
 
-- [ ] **HYGIENE-2026-474** `companion/proactive_chat.py` — transcript projection load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-475** `companion/inner_tick_schedule.py` — monolog gate transcript via scope `transcript` accessor.
-- [ ] **HYGIENE-2026-476** `tools/companion_user_feedback.py` — snapshot paths + feedback JSONL append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
+- [x] **HYGIENE-2026-474** `companion/proactive_chat.py` — transcript projection load via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-0090` / pull/3995.
+- [x] **HYGIENE-2026-475** `companion/inner_tick_schedule.py` — monolog gate transcript via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-0090` / pull/3995.
+- [x] **HYGIENE-2026-476** `tools/companion_user_feedback.py` — snapshot paths + feedback JSONL append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-0090` / pull/3995.
