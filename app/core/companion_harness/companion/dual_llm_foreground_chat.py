@@ -99,16 +99,15 @@ def _dual_llm_foreground_skip_result(
     )
 
 
-async def _invoke_dual_llm_foreground_chat_completion(
+async def _dual_llm_foreground_await_envelope_completion(
     fg_input: DualLlmForegroundChatInput,
     chat_msgs: list[dict[str, Any]],
 ) -> tuple[Any, str, str]:
-    """One foreground chat completion; returns response and accumulated LangSmith ids."""
+    """Run sync envelope chat on a worker thread with timeout; return LangSmith ids."""
     langsmith_trace_acc = fg_input.langsmith_trace_id
     langsmith_run_acc = fg_input.langsmith_run_id
     chat_model = fg_input.chat_model
     llm_client = fg_input.llm_client
-    t_api = time.perf_counter()
 
     def _chat_sync() -> Any:
         return llm_client.chat_completion(
@@ -129,12 +128,6 @@ async def _invoke_dual_llm_foreground_chat_completion(
             asyncio.to_thread(_chat_sync),
             timeout=llm_client.config.async_chat_front_timeout_sec,
         )
-        tid = langsmith_trace_id_from_completion(resp)
-        if tid:
-            langsmith_trace_acc = tid
-        ls_lr = langsmith_llm_run_id_from_completion(resp)
-        if ls_lr:
-            langsmith_run_acc = ls_lr
     except TimeoutError as exc:
         record_llm_inference_failure(
             model=chat_model.id_on_provider,
@@ -147,16 +140,42 @@ async def _invoke_dual_llm_foreground_chat_completion(
             f"(trace_id={fg_input.trace_id})"
         ) from exc
 
+    tid = langsmith_trace_id_from_completion(resp)
+    if tid:
+        langsmith_trace_acc = tid
+    ls_lr = langsmith_llm_run_id_from_completion(resp)
+    if ls_lr:
+        langsmith_run_acc = ls_lr
+    return resp, langsmith_trace_acc, langsmith_run_acc
+
+
+def _log_dual_llm_foreground_envelope_round(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+    t_api: float,
+) -> None:
     approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in chat_msgs)
     logger.info(
         "run_dual_llm_foreground_chat llm_round={} model={} chat_completions_ms={:.0f} "
         "approx_ctx_chars={} async_chat_tool_background foreground_chat scene={}",
         1,
-        chat_model,
+        fg_input.chat_model,
         (time.perf_counter() - t_api) * 1000.0,
         approx_ctx_chars,
         fg_input.foreground_scene,
     )
+
+
+async def _invoke_dual_llm_foreground_chat_completion(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> tuple[Any, str, str]:
+    """One foreground chat completion; returns response and accumulated LangSmith ids."""
+    t_api = time.perf_counter()
+    resp, langsmith_trace_acc, langsmith_run_acc = (
+        await _dual_llm_foreground_await_envelope_completion(fg_input, chat_msgs)
+    )
+    _log_dual_llm_foreground_envelope_round(fg_input, chat_msgs, t_api)
     return resp, langsmith_trace_acc, langsmith_run_acc
 
 

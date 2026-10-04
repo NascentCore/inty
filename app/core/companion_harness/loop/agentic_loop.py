@@ -749,28 +749,19 @@ def _prompt_plan_tool_loop_wired_request_messages(
     return request_messages
 
 
-async def _run_prompt_plan_tool_loop(
+async def _prompt_plan_tool_loop_through_openai_rounds(
     context: AgenticLoopContext,
     *,
     store: MemoryStore,
     llm_client: AsyncLlmClient,
-    interim_output_sink,
+    interim_output_sink: Any,
     max_tool_call_rounds: int,
-) -> InTurnSyncToolLoopResult:
-    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
-
-    TODO(#3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
-    TODO(#3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
-    """
-    assert context.prompt_plan is not None
-    execution = context.execution
-    trace_id = context.trace_id
-    prompt_plan = context.prompt_plan
-    chat_model = llm_client.resolve_model("chat")
-    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
-        source=execution.foreground_source.value,
-        extra_metadata=None,
-    )
+    prompt_plan: PromptPlan,
+    chat_model: str,
+    langsmith_extra: dict[str, Any],
+    execution: Any,
+) -> tuple[Any, _PromptPlanToolLoopAcc, _PromptPlanInterimPersistState, float]:
+    """Initial completion plus OpenAI tool rounds for one prompt-plan in-turn loop."""
     request_messages = _prompt_plan_tool_loop_wired_request_messages(
         prompt_plan,
         context.user_text,
@@ -799,6 +790,44 @@ async def _run_prompt_plan_tool_loop(
         chat_model=chat_model,
         langsmith_extra=langsmith_extra,
         execution=execution,
+    )
+    return loop_result, acc, interim_state, t_api
+
+
+async def _run_prompt_plan_tool_loop(
+    context: AgenticLoopContext,
+    *,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    interim_output_sink,
+    max_tool_call_rounds: int,
+) -> InTurnSyncToolLoopResult:
+    """Single-LLM tool loop using ``PromptPlan`` wire messages owned by this loop.
+
+    TODO(#3629): Stop converting PromptPlan to wire dicts here; pass plan into AsyncLlmClient.
+    TODO(#3630): Build langsmith_extra from LlmInvocationContext, not call-site dicts.
+    """
+    assert context.prompt_plan is not None
+    execution = context.execution
+    trace_id = context.trace_id
+    prompt_plan = context.prompt_plan
+    chat_model = llm_client.resolve_model("chat")
+    langsmith_extra = context.langsmith.turn_slice.foreground_invocation_extra(
+        source=execution.foreground_source.value,
+        extra_metadata=None,
+    )
+    loop_result, acc, interim_state, t_api = (
+        await _prompt_plan_tool_loop_through_openai_rounds(
+            context,
+            store=store,
+            llm_client=llm_client,
+            interim_output_sink=interim_output_sink,
+            max_tool_call_rounds=max_tool_call_rounds,
+            prompt_plan=prompt_plan,
+            chat_model=chat_model,
+            langsmith_extra=langsmith_extra,
+            execution=execution,
+        )
     )
     return _in_turn_sync_tool_loop_result_from_prompt_plan_loop(
         loop_result=loop_result,

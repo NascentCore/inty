@@ -1367,6 +1367,43 @@ def _tool_bg_persist_and_emit_user_delivery(
     )
 
 
+def _tool_bg_finalize_delivery_from_plan(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    plan: ToolBgDeliveryPlan,
+    progress: ToolBgLoopProgress,
+    elapsed_ms: int,
+) -> None:
+    """Persist transcript rows and emit user-visible output from a resolved plan."""
+    if not plan.should_push:
+        _tool_bg_persist_when_should_not_push(
+            run_ctx=run_ctx,
+            plan=plan,
+            progress=progress,
+            elapsed_ms=elapsed_ms,
+        )
+        return
+
+    if not plan.transcript_body.strip() and not plan.generation_deliver:
+        logger.debug(
+            "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
+            "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
+            run_ctx.trace_id,
+            run_ctx.user_msg_uuid,
+            plan.generation_deliver,
+            plan.output_to_user_flag,
+            ",".join(plan.tool_call_names),
+        )
+        return
+
+    _tool_bg_persist_and_emit_user_delivery(
+        run_ctx=run_ctx,
+        plan=plan,
+        progress=progress,
+        elapsed_ms=elapsed_ms,
+    )
+
+
 def _tool_bg_apply_delivery_plan(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1399,28 +1436,7 @@ def _tool_bg_apply_delivery_plan(
         )
         return
 
-    if not plan.should_push:
-        _tool_bg_persist_when_should_not_push(
-            run_ctx=run_ctx,
-            plan=plan,
-            progress=progress,
-            elapsed_ms=elapsed_ms,
-        )
-        return
-
-    if not plan.transcript_body.strip() and not plan.generation_deliver:
-        logger.debug(
-            "repl.turn.bg suppress_user_visible_output empty_transcript trace_id={} "
-            "user_msg_uuid={} generation_deliver={} output_to_user={} tools={}",
-            run_ctx.trace_id,
-            run_ctx.user_msg_uuid,
-            plan.generation_deliver,
-            plan.output_to_user_flag,
-            ",".join(plan.tool_call_names),
-        )
-        return
-
-    _tool_bg_persist_and_emit_user_delivery(
+    _tool_bg_finalize_delivery_from_plan(
         run_ctx=run_ctx,
         plan=plan,
         progress=progress,

@@ -819,6 +819,38 @@ def _consolidate_memory_sequential(
     return any_curation
 
 
+def _one_shot_dreaming_curator_llm_round(
+    store: MemoryStore,
+    curator_input: DreamingCuratorInput,
+    llm_client: LlmClient,
+    langsmith_extra: dict[str, Any],
+    ws: str,
+) -> bool:
+    """Single required-tool-call LLM round that applies parallel MemoryDoc updates."""
+    messages = _build_one_shot_dreaming_messages(curator_input)
+    tools = [
+        _dreaming_document_update_tool_schema(curator_input.required_paths)
+    ]
+    t = time.perf_counter()
+    response = llm_client.chat_completion_unified(
+        messages=messages,
+        model=llm_client.resolve_model("memory"),
+        tools=tools,
+        tool_choice="required",
+        langsmith_extra=langsmith_extra,
+    )
+    updates = _parse_dreaming_tool_calls(response)
+    any_curation = _apply_dreaming_document_updates(
+        store, curator_input, updates
+    )
+    _log_dreaming_consolidation_curated(
+        step=DREAMING_ONE_SHOT_LLM_ROLE,
+        ws=ws,
+        ms=(time.perf_counter() - t) * 1000.0,
+    )
+    return any_curation
+
+
 def _consolidate_memory_one_shot(
     store: MemoryStore,
     rows: list[ChatMessage],
@@ -841,26 +873,12 @@ def _consolidate_memory_one_shot(
         len(curator_input.transcript_block),
     )
 
-    messages = _build_one_shot_dreaming_messages(curator_input)
-    tools = [
-        _dreaming_document_update_tool_schema(curator_input.required_paths)
-    ]
-    t = time.perf_counter()
-    response = llm_client.chat_completion_unified(
-        messages=messages,
-        model=llm_client.resolve_model("memory"),
-        tools=tools,
-        tool_choice="required",
-        langsmith_extra=langsmith_extra,
-    )
-    updates = _parse_dreaming_tool_calls(response)
-    any_curation = _apply_dreaming_document_updates(
-        store, curator_input, updates
-    )
-    _log_dreaming_consolidation_curated(
-        step=DREAMING_ONE_SHOT_LLM_ROLE,
-        ws=ws,
-        ms=(time.perf_counter() - t) * 1000.0,
+    any_curation = _one_shot_dreaming_curator_llm_round(
+        store,
+        curator_input,
+        llm_client,
+        langsmith_extra,
+        ws,
     )
 
     if _maybe_compact_living_sphere_during_dreaming(
