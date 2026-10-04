@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-04 scan (cron)
+
+Source: open PR overlap check (#3995 HYGIENE-474..476 proactive/inner_tick/user_feedback scope accessors, #3992 HYGIENE-471..473 system_messages — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `slot_rank.SLOT_RANK` still keys off raw `*_MD_REL` imports instead of `MemoryStoreScopePaths` accessors.
+
+Open PRs checked: #3995 (`cursor/agent-maintenance-tasks-0090`), #3992 (`cursor/agent-maintenance-tasks-b4e2`), #3989 (`cursor/agent-maintenance-tasks-ae66`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-0139`)
+
+- [x] **HYGIENE-2026-477** #3413: `prompting/projection/slot_rank.py` — `SLOT_RANK` keys from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` persona/core accessors (drop direct `*_MD_REL` imports). Fixed in `cursor/agent-maintenance-tasks-0139`.
+- [x] **HYGIENE-2026-478** `prompting/test_projection_stubs.py` — assert `SLOT_RANK` keys match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-0139`.
+- [x] **HYGIENE-2026-479** `memory/test_memory_store_scope.py` — smoke `slot_rank.SLOT_RANK` keys ⊆ scope-path accessor rel set for ranked MemDocs. Fixed in `cursor/agent-maintenance-tasks-0139`.

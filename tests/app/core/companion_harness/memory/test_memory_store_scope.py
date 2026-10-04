@@ -49,6 +49,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     _CORE_COMPANION_TEMPLATE_REL_PATHS,
     _PACKAGE_PROMPT_SEED_FILES,
     _REQUIRED_FILES_ATTR,
@@ -253,3 +254,20 @@ def test_ensure_minimal_documents_in_store(tmp_path: Path) -> None:
     assert "Channels are medium" in store.read_document(CHANNELS_MD_REL)
     ensure_minimal_documents_in_store(store)
     assert is_scope_initialized_in_store(store) is True
+
+
+def test_slot_rank_keys_match_scope_path_accessors() -> None:
+    from app.core.companion_harness.prompting.projection import slot_rank
+
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    ranked_scope_paths = {
+        paths.identity,
+        paths.soul,
+        paths.user_md,
+        paths.style_md,
+        paths.companionship_md,
+        paths.memory_md,
+        paths.living_sphere_md,
+        paths.techno_core_md,
+    }
+    assert set(slot_rank.SLOT_RANK) == ranked_scope_paths
