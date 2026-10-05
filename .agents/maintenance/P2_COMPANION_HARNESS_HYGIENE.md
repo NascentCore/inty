@@ -709,6 +709,6 @@ Open PRs checked: #3998 (`cursor/agent-maintenance-tasks-2d3f`), #3989 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct5-480`)
 
-- [ ] **HYGIENE-2026-480** #3413: `system_messages.py` — `_bootstrap_output_contract_template_variables` persona doc paths from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `*_MD_REL` imports).
-- [ ] **HYGIENE-2026-481** `prompting/test_system_messages.py` — assert bootstrap output-contract template persona paths match `MemoryStoreScopePaths` accessor rel paths.
-- [ ] **HYGIENE-2026-482** #3413: `memory_store_scope.py` — derive `_CORE_COMPANION_TEMPLATE_REL_PATHS` from `MemoryStoreScopePaths` core-template accessors (single source with HYGIENE-2026-176 parity test).
+- [x] **HYGIENE-2026-480** #3413: `system_messages.py` — `_bootstrap_output_contract_template_variables` persona doc paths from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `*_MD_REL` imports). Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
+- [x] **HYGIENE-2026-481** `prompting/test_system_messages.py` — assert bootstrap output-contract template persona paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
+- [x] **HYGIENE-2026-482** #3413: `memory_store_scope.py` — derive `_CORE_COMPANION_TEMPLATE_REL_PATHS` from `MemoryStoreScopePaths` core-template accessors (single source with HYGIENE-2026-176 parity test). Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
