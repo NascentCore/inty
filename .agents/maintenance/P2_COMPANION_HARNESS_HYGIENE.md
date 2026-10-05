@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-05 scan (cron)
+
+Source: open PR overlap check (#3998 HYGIENE-477..479 slot_rank, #3989 HYGIENE-466..470 production accessors — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — bootstrap output contract template still embeds direct `*_MD_REL`; `_CORE_COMPANION_TEMPLATE_REL_PATHS` duplicates accessor rels without deriving from `MemoryStoreScopePaths`.
+
+Open PRs checked: #3998 (`cursor/agent-maintenance-tasks-2d3f`), #3989 (`cursor/agent-maintenance-tasks-ae66`), #3992 (`cursor/agent-maintenance-tasks-b4e2`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct5-480`)
+
+- [x] **HYGIENE-2026-480** #3413: `system_messages.py` — `_bootstrap_output_contract_template_variables` persona doc paths from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `*_MD_REL` imports). Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
+- [x] **HYGIENE-2026-481** `prompting/test_system_messages.py` — assert bootstrap output-contract template persona paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
+- [x] **HYGIENE-2026-482** #3413: `memory_store_scope.py` — derive `_CORE_COMPANION_TEMPLATE_REL_PATHS` from `MemoryStoreScopePaths` core-template accessors (single source with HYGIENE-2026-176 parity test). Fixed in `cursor/agent-maintenance-tasks-oct5-480` / pull/4001.
