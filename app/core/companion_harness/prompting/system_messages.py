@@ -885,17 +885,11 @@ def append_profile_collection_system_messages(
     return out
 
 
-def build_system_messages_for_tool_track(
+def _tool_track_static_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
 ) -> list[dict[str, Any]]:
-    """ASYNC user round: ``tool_background`` and refresh on the tool-model path.
-
-    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
-    tool-side compact) → persona (skip memory blocks) → output (tool-side compact)
-    → contextual (user-message turn). This assembly is the source of truth for
-    the tool-background track.
-    """
+    """Doctrine through output slices for tool-background track (before contextual)."""
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
     out.extend(_auxiliary_system_messages())
@@ -931,6 +925,21 @@ def build_system_messages_for_tool_track(
             chat_branch_no_tool_api=False,
         )
     )
+    return out
+
+
+def build_system_messages_for_tool_track(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """ASYNC user round: ``tool_background`` and refresh on the tool-model path.
+
+    The track is fully self-contained: doctrine → auxiliary → capability (tools on,
+    tool-side compact) → persona (skip memory blocks) → output (tool-side compact)
+    → contextual (user-message turn). This assembly is the source of truth for
+    the tool-background track.
+    """
+    out = _tool_track_static_system_messages(bundle, context)
     extend_contextual_system_slices(
         out,
         turn_compose_context_for_self_contained_track(
@@ -1016,18 +1025,11 @@ def build_system_messages_for_inner_tick_monolog(
     return out
 
 
-def build_system_messages_for_inner_tick_autonomy(
+def _inner_tick_autonomy_static_system_messages(
     bundle: PromptBundle,
     context: ContextMeta,
-    store: MemoryStore,
 ) -> list[dict[str, Any]]:
-    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply).
-
-    The track is fully self-contained: doctrine → capability (tools on, tool-side
-    compact) → persona → output (inner-tick, tool-side compact) → contextual with
-    the dedicated autonomy slice. This assembly is the source of truth for
-    this track.
-    """
+    """Doctrine through output slices for INNER_TICK_AUTONOMY (before contextual)."""
     out: list[dict[str, Any]] = []
     out.extend(_doctrine_system_messages())
     out.extend(
@@ -1062,6 +1064,22 @@ def build_system_messages_for_inner_tick_autonomy(
             chat_branch_no_tool_api=False,
         )
     )
+    return out
+
+
+def build_system_messages_for_inner_tick_autonomy(
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """ASYNC autonomy inner tick: open tool set, silent (no user-visible reply).
+
+    The track is fully self-contained: doctrine → capability (tools on, tool-side
+    compact) → persona → output (inner-tick, tool-side compact) → contextual with
+    the dedicated autonomy slice. This assembly is the source of truth for
+    this track.
+    """
+    out = _inner_tick_autonomy_static_system_messages(bundle, context)
     extend_contextual_system_slices(
         out,
         turn_compose_context_for_self_contained_track(

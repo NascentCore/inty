@@ -1223,6 +1223,43 @@ async def _run_dual_llm_tool_background_phase(
     return tool_background_started
 
 
+async def _run_single_llm_turn_sync_loop(
+    context: AgenticLoopContext,
+    *,
+    store: MemoryStore,
+    llm_client: AsyncLlmClient,
+    appender: _UserVisibleOutputAppender,
+) -> InTurnSyncToolLoopResult:
+    """Run chat-only or tool-loop path for one single-LLM agentic turn."""
+
+    execution = context.execution
+
+    async def _emit_user_reply(interim: InTurnInterimOutput) -> None:
+        await appender.append_visible_message(
+            kind=OutputMessageKind.USER_REPLY,
+            text=interim.text,
+            trace_id=interim.trace_id,
+            langsmith_trace_id=interim.langsmith_trace_id,
+            langsmith_run_id=interim.langsmith_run_id,
+        )
+
+    if execution.max_tool_call_rounds == 0:
+        return await _run_chat_only_prompt_plan(
+            context,
+            llm_client=llm_client,
+            appender=appender,
+        )
+    return await _run_prompt_plan_tool_loop(
+        context,
+        store=store,
+        llm_client=llm_client,
+        interim_output_sink=(
+            None if execution.suppresses_user_delivery else _emit_user_reply
+        ),
+        max_tool_call_rounds=execution.max_tool_call_rounds,
+    )
+
+
 class AgenticLoop:
     """Executes one queue-served user turn for bootstrap or settled chat.
 
@@ -1267,39 +1304,17 @@ class AgenticLoop:
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
 
-        async def _emit_user_reply(interim: InTurnInterimOutput) -> None:
-            await appender.append_visible_message(
-                kind=OutputMessageKind.USER_REPLY,
-                text=interim.text,
-                trace_id=interim.trace_id,
-                langsmith_trace_id=interim.langsmith_trace_id,
-                langsmith_run_id=interim.langsmith_run_id,
-            )
-
         if context.prompt_plan is None:
             raise RuntimeError(
                 "run_single_llm_turn requires prompt_plan; "
                 "build context via PromptBuilder before invoking AgenticLoop"
             )
-        execution = context.execution
-        if execution.max_tool_call_rounds == 0:
-            sync_result = await _run_chat_only_prompt_plan(
-                context,
-                llm_client=self.llm_client,
-                appender=appender,
-            )
-        else:
-            sync_result = await _run_prompt_plan_tool_loop(
-                context,
-                store=self.store,
-                llm_client=self.llm_client,
-                interim_output_sink=(
-                    None
-                    if execution.suppresses_user_delivery
-                    else _emit_user_reply
-                ),
-                max_tool_call_rounds=execution.max_tool_call_rounds,
-            )
+        sync_result = await _run_single_llm_turn_sync_loop(
+            context,
+            store=self.store,
+            llm_client=self.llm_client,
+            appender=appender,
+        )
         return AgenticLoopOutput(
             assistant_text=sync_result.assistant_text,
             significance_meta=sync_result.significance_meta,

@@ -88,6 +88,16 @@ def _langsmith_parent_models_are_kernel_test_placeholders(
     )
 
 
+def _resolve_companion_turn_langsmith_parent_enabled(
+    parent_run_enabled: bool | None,
+) -> bool:
+    return (
+        companion_turn_langsmith_parent_enabled()
+        if parent_run_enabled is None
+        else parent_run_enabled
+    )
+
+
 def companion_turn_langsmith_parent_enabled() -> bool:
     return companion_turn_langsmith_parent_enabled_from_app_config()
 
@@ -446,12 +456,7 @@ def create_companion_turn_root_run(
 
     TODO(#3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
     """
-    enabled = (
-        companion_turn_langsmith_parent_enabled()
-        if parent_run_enabled is None
-        else parent_run_enabled
-    )
-    if not enabled:
+    if not _resolve_companion_turn_langsmith_parent_enabled(parent_run_enabled):
         return None
     if _langsmith_parent_models_are_kernel_test_placeholders(
         chat_model, tool_model
