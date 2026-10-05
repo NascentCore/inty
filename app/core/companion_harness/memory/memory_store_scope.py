@@ -291,6 +291,16 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
+_CORE_COMPANION_TEMPLATE_ACCESSOR_ATTRS: Final[tuple[str, ...]] = (
+    "identity",
+    "soul",
+    "style_md",
+    "user_md",
+    "memory_md",
+    "channels_md",
+    "companionship_md",
+)
+
 _REQUIRED_FILES_ATTR = (
     "identity",
     "soul",
@@ -318,14 +328,9 @@ def is_scope_initialized_in_store(store: MemoryStore) -> bool:
 _MINIMAL_TRANSCRIPT_SEED = ""
 
 # Canonical rel paths for core companion templates seeded into MemoryStore on init.
-_CORE_COMPANION_TEMPLATE_REL_PATHS: Final[tuple[str, ...]] = (
-    IDENTITY_MD_REL,
-    SOUL_MD_REL,
-    STYLE_MD_REL,
-    USER_MD_REL,
-    MEMORY_MD_REL,
-    CHANNELS_MD_REL,
-    COMPANIONSHIP_MD_REL,
+_CORE_COMPANION_TEMPLATE_REL_PATHS: Final[tuple[str, ...]] = tuple(
+    getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, attr)
+    for attr in _CORE_COMPANION_TEMPLATE_ACCESSOR_ATTRS
 )
 
 
