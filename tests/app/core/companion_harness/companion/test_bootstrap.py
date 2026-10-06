@@ -12,13 +12,14 @@ from app.core.companion_harness.companion.bootstrap import (
     tool_companion_bootstrap_user_interactive_complete,
     tool_companion_set_experience_profile,
 )
-from app.core.companion_harness.experience_profile.experience_directives import (
-    ExperienceDirectiveTone,
-    ExperienceSessionIntent,
-)
 from app.core.companion_harness.companion.models import (
     ContextMeta,
     load_prompt_bundle,
+)
+from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.experience_profile.experience_directives import (
+    ExperienceDirectiveTone,
+    ExperienceSessionIntent,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
@@ -45,7 +46,6 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
     tool_memory_store_write_document,
 )
-from app.core.companion_harness.companion.scope import CompanionScope
 
 
 def _store(root: Path):
@@ -75,6 +75,17 @@ def test_bootstrap_writable_rel_paths_match_scope_path_accessors() -> None:
         }
     )
     assert accessor_rels == frozenset(BOOTSTRAP_WRITABLE_REL_PATHS)
+
+
+def test_bootstrap_template_seed_only_rels_match_scope_path_accessors() -> None:
+    from app.core.companion_harness.companion.bootstrap import (
+        _BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS,
+    )
+
+    p = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert frozenset(_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS) == frozenset(
+        {p.memory_md, p.soul}
+    )
 
 
 def test_interactive_bootstrap_active_requires_incomplete_meta() -> None:

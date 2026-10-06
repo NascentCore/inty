@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-06 scan (cron)
+
+Source: open PR overlap check (#4001 HYGIENE-480..482 bootstrap output contract + core template paths, #3998 HYGIENE-477..479 slot_rank — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `_PACKAGE_PROMPT_SEED_FILES` still duplicates prompt-seed accessor rels; `bootstrap.py` seed-only template rels still import raw `*_MD_REL`; stale issue audit snapshot still in maintenance dir.
+
+Open PRs checked: #4001 (`cursor/agent-maintenance-tasks-oct5-480`), #3998 (`cursor/agent-maintenance-tasks-0139`), #3995 (`cursor/agent-maintenance-tasks-0090`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct6-483`)
+
+- [x] **HYGIENE-2026-483** #3413: `memory_store_scope.py` — derive `_PACKAGE_PROMPT_SEED_FILES` from `MemoryStoreScopePaths` prompt-seed accessors (single source with HYGIENE-2026-175 parity test). Fixed in `cursor/agent-maintenance-tasks-oct6-483`.
+- [x] **HYGIENE-2026-484** #3413: `bootstrap.py` — `_BOOTSTRAP_TEMPLATE_SEED_ONLY_RELS` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `MEMORY_MD_REL` / `SOUL_MD_REL`). Fixed in `cursor/agent-maintenance-tasks-oct6-483`.
+- [x] **HYGIENE-2026-485** `companion/test_bootstrap.py` — assert bootstrap template seed-only rels match scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct6-483`.
+- [x] **HYGIENE-2026-486** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (superseded by GitHub issues). Fixed in `cursor/agent-maintenance-tasks-oct6-483`.
