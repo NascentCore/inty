@@ -66,6 +66,102 @@ def _client_message_for_provider_status(status_code: int) -> str:
     return _MSG_PROVIDER_GENERIC
 
 
+def _provider_http_status_from_chat_completion_error_body(
+    err_raw: Any,
+) -> tuple[int | None, str]:
+    """Parse OpenRouter-style ``error`` payload on a chat completion response."""
+    code: int | None = None
+    msg_tail = ""
+    if isinstance(err_raw, dict):
+        c = err_raw.get("code")
+        if isinstance(c, int):
+            code = c
+        elif isinstance(c, str) and c.strip().isdigit():
+            code = int(c.strip())
+        msg_tail = str(err_raw.get("message") or "").strip()
+    elif err_raw is not None:
+        c = getattr(err_raw, "code", None)
+        if isinstance(c, int):
+            code = c
+        msg_tail = str(getattr(err_raw, "message", "") or "").strip()
+    http_status = code if isinstance(code, int) and 100 <= code <= 599 else None
+    return http_status, msg_tail
+
+
+def _companion_inference_error_from_api_status_error(
+    exc: Any,
+) -> CompanionLLMInferenceBackendError:
+    code = int(exc.status_code)
+    logger.warning(
+        "companion llm inference provider error status={} type={} message={!r} body={!r}",
+        code,
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+        getattr(exc, "body", None),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_client_message_for_provider_status(code),
+        provider_http_status=code,
+    )
+
+
+def _companion_inference_error_from_openai_timeout(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference timeout type={} message={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_TIMEOUT,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_openai_connection(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference connection error type={} message={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_UNREACHABLE,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_openai_api_error(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference api error type={} message={!r} body={!r}",
+        type(exc).__name__,
+        getattr(exc, "message", ""),
+        getattr(exc, "body", None),
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_GENERIC,
+        provider_http_status=None,
+    )
+
+
+def _companion_inference_error_from_unexpected_openai_exc(
+    exc: Exception,
+) -> CompanionLLMInferenceBackendError:
+    logger.warning(
+        "companion llm inference unexpected exc_type={} exc={!r}",
+        type(exc).__name__,
+        exc,
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=_MSG_PROVIDER_GENERIC,
+        provider_http_status=None,
+    )
+
+
 def companion_llm_inference_backend_error_from_openai(
     exc: Exception,
 ) -> CompanionLLMInferenceBackendError:
@@ -77,59 +173,17 @@ def companion_llm_inference_backend_error_from_openai(
         APITimeoutError,
     )
 
-    if isinstance(exc, APIStatusError):
-        code = int(exc.status_code)
-        logger.warning(
-            "companion llm inference provider error status={} type={} message={!r} body={!r}",
-            code,
-            type(exc).__name__,
-            getattr(exc, "message", ""),
-            getattr(exc, "body", None),
-        )
-        return CompanionLLMInferenceBackendError(
-            client_message_en=_client_message_for_provider_status(code),
-            provider_http_status=code,
-        )
-    if isinstance(exc, APITimeoutError):
-        logger.warning(
-            "companion llm inference timeout type={} message={!r}",
-            type(exc).__name__,
-            getattr(exc, "message", ""),
-        )
-        return CompanionLLMInferenceBackendError(
-            client_message_en=_MSG_PROVIDER_TIMEOUT,
-            provider_http_status=None,
-        )
-    if isinstance(exc, APIConnectionError):
-        logger.warning(
-            "companion llm inference connection error type={} message={!r}",
-            type(exc).__name__,
-            getattr(exc, "message", ""),
-        )
-        return CompanionLLMInferenceBackendError(
-            client_message_en=_MSG_PROVIDER_UNREACHABLE,
-            provider_http_status=None,
-        )
-    if isinstance(exc, APIError):
-        logger.warning(
-            "companion llm inference api error type={} message={!r} body={!r}",
-            type(exc).__name__,
-            getattr(exc, "message", ""),
-            getattr(exc, "body", None),
-        )
-        return CompanionLLMInferenceBackendError(
-            client_message_en=_MSG_PROVIDER_GENERIC,
-            provider_http_status=None,
-        )
-    logger.warning(
-        "companion llm inference unexpected exc_type={} exc={!r}",
-        type(exc).__name__,
-        exc,
-    )
-    return CompanionLLMInferenceBackendError(
-        client_message_en=_MSG_PROVIDER_GENERIC,
-        provider_http_status=None,
-    )
+    match exc:
+        case APIStatusError():
+            return _companion_inference_error_from_api_status_error(exc)
+        case APITimeoutError():
+            return _companion_inference_error_from_openai_timeout(exc)
+        case APIConnectionError():
+            return _companion_inference_error_from_openai_connection(exc)
+        case APIError():
+            return _companion_inference_error_from_openai_api_error(exc)
+        case _:
+            return _companion_inference_error_from_unexpected_openai_exc(exc)
 
 
 def log_and_build_inference_error(
@@ -160,29 +214,17 @@ def raise_if_chat_completion_missing_choices(resp: Any, *, model: str) -> None:
         return
 
     err_raw = getattr(resp, "error", None)
-    code: int | None = None
-    msg_tail = ""
-    if isinstance(err_raw, dict):
-        c = err_raw.get("code")
-        if isinstance(c, int):
-            code = c
-        elif isinstance(c, str) and c.strip().isdigit():
-            code = int(c.strip())
-        msg_tail = str(err_raw.get("message") or "").strip()
-    elif err_raw is not None:
-        c = getattr(err_raw, "code", None)
-        if isinstance(c, int):
-            code = c
-        msg_tail = str(getattr(err_raw, "message", "") or "").strip()
+    http_status, msg_tail = _provider_http_status_from_chat_completion_error_body(
+        err_raw
+    )
 
     logger.warning(
         "companion chat.completions missing choices model={} raw_error_code={} error_message={!r}",
         model,
-        code,
+        http_status,
         msg_tail,
     )
 
-    http_status = code if isinstance(code, int) and 100 <= code <= 599 else None
     msg_en = (
         _client_message_for_provider_status(http_status)
         if http_status is not None

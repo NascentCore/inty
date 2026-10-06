@@ -382,29 +382,22 @@ def build_user_feedback_disclosure_display_text(
     return url
 
 
-async def append_user_feedback_issue_disclosure_to_output_queue(
+def _user_feedback_issue_disclosure_visible_mode() -> bool:
+    return (
+        resolve_user_feedback_disclosure_mode()
+        == UserFeedbackDisclosureMode.VISIBLE
+    )
+
+
+async def _append_visible_user_feedback_issue_disclosure(
     *,
     user_id: str,
     agent_id: str,
     batch_id: str,
     user_msg_uuid: str,
     issue_url: str,
-    llm_reply: str,
-) -> bool:
-    """Persist correlated OutputQueue disclosure when feedback runs outside AgenticLoop.
-
-    Returns True when a visible disclosure row was appended (``app.debug`` only).
-    """
-    assert user_id != ""
-    assert agent_id != ""
-    assert batch_id != ""
-    assert user_msg_uuid != ""
-    assert issue_url.strip() != ""
-    if (
-        resolve_user_feedback_disclosure_mode()
-        != UserFeedbackDisclosureMode.VISIBLE
-    ):
-        return False
+    display_text: str,
+) -> None:
     from app.core.companion_harness.agent_channel.scope import AgentScope
     from app.core.agentic_companion.output_queue import (
         OutputQueueAppendInput,
@@ -414,10 +407,6 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
         OutputMessageKind,
     )
 
-    display_text = build_user_feedback_disclosure_display_text(
-        issue_url=issue_url,
-        llm_reply=llm_reply,
-    )
     scope = AgentScope(user_id=user_id, agent_id=agent_id)
     await get_output_queue_for_scope(scope).append_visible_message(
         OutputQueueAppendInput(
@@ -437,6 +426,40 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
         batch_id,
         user_msg_uuid,
         issue_url.strip(),
+    )
+
+
+async def append_user_feedback_issue_disclosure_to_output_queue(
+    *,
+    user_id: str,
+    agent_id: str,
+    batch_id: str,
+    user_msg_uuid: str,
+    issue_url: str,
+    llm_reply: str,
+) -> bool:
+    """Persist correlated OutputQueue disclosure when feedback runs outside AgenticLoop.
+
+    Returns True when a visible disclosure row was appended (``app.debug`` only).
+    """
+    assert user_id != ""
+    assert agent_id != ""
+    assert batch_id != ""
+    assert user_msg_uuid != ""
+    assert issue_url.strip() != ""
+    if not _user_feedback_issue_disclosure_visible_mode():
+        return False
+    display_text = build_user_feedback_disclosure_display_text(
+        issue_url=issue_url,
+        llm_reply=llm_reply,
+    )
+    await _append_visible_user_feedback_issue_disclosure(
+        user_id=user_id,
+        agent_id=agent_id,
+        batch_id=batch_id,
+        user_msg_uuid=user_msg_uuid,
+        issue_url=issue_url,
+        display_text=display_text,
     )
     return True
 
@@ -558,10 +581,10 @@ def load_user_feedback_github_config() -> tuple[str, str]:
     return repo, token
 
 
-def tool_companion_record_user_feedback(
-    store: MemoryStore,
+def _parse_user_feedback_tool_arguments(
     arguments: dict[str, Any],
-) -> str:
+) -> UserFeedbackInput | str:
+    """Validate LLM tool args; return ``UserFeedbackInput`` or an ERROR string."""
     raw_summary = arguments.get("complaint_summary")
     raw_category = arguments.get("complaint_category")
     if not isinstance(raw_summary, str):
@@ -576,72 +599,156 @@ def tool_companion_record_user_feedback(
     except ValueError:
         allowed = ", ".join(m.value for m in ComplaintCategory)
         return f"ERROR: complaint_category must be one of: {allowed}"
-
-    feedback_input = UserFeedbackInput(
+    return UserFeedbackInput(
         complaint_summary=summary,
         complaint_category=category,
     )
-    snapshot = build_harness_snapshot(store, feedback_input)
-    append_user_feedback_record(store, _snapshot_to_record(snapshot))
 
-    disclosure = resolve_user_feedback_disclosure_mode()
-    github_repo, github_token = load_user_feedback_github_config()
-    if not github_token.strip():
-        append_github_issue_skipped(
-            store,
+
+def _user_feedback_tool_result_from_outcome(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_issue_url: str,
+    github_issue_number: int,
+    github_skipped_reason: str | None,
+) -> str:
+    return format_user_feedback_tool_result(
+        UserFeedbackToolOutcome(
             feedback_id=snapshot.feedback_id,
-            reason="skipped_no_token",
+            disclosure=disclosure,
+            github_issue_url=github_issue_url,
+            github_issue_number=github_issue_number,
+            github_skipped_reason=github_skipped_reason,
         )
-        return format_user_feedback_tool_result(
-            UserFeedbackToolOutcome(
-                feedback_id=snapshot.feedback_id,
-                disclosure=disclosure,
-                github_issue_url="",
-                github_issue_number=0,
-                github_skipped_reason="skipped_no_token",
-            )
-        )
+    )
 
-    if disclosure == UserFeedbackDisclosureMode.VISIBLE:
-        try:
-            result = file_github_issue_for_snapshot(
-                snapshot,
-                store,
-                github_repo=github_repo,
-                github_token=github_token,
-            )
-        except RuntimeError as exc:
-            return format_user_feedback_tool_result(
-                UserFeedbackToolOutcome(
-                    feedback_id=snapshot.feedback_id,
-                    disclosure=disclosure,
-                    github_issue_url="",
-                    github_issue_number=0,
-                    github_skipped_reason=str(exc),
-                )
-            )
-        return format_user_feedback_tool_result(
-            UserFeedbackToolOutcome(
-                feedback_id=snapshot.feedback_id,
-                disclosure=disclosure,
-                github_issue_url=result.url,
-                github_issue_number=result.number,
-                github_skipped_reason=None,
-            )
-        )
 
+def _finalize_user_feedback_without_github_token(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    store: MemoryStore,
+) -> str:
+    append_github_issue_skipped(
+        store,
+        feedback_id=snapshot.feedback_id,
+        reason="skipped_no_token",
+    )
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url="",
+        github_issue_number=0,
+        github_skipped_reason="skipped_no_token",
+    )
+
+
+def _finalize_user_feedback_visible_github(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_repo: str,
+    github_token: str,
+    store: MemoryStore,
+) -> str:
+    try:
+        result = file_github_issue_for_snapshot(
+            snapshot,
+            store,
+            github_repo=github_repo,
+            github_token=github_token,
+        )
+    except RuntimeError as exc:
+        return _user_feedback_tool_result_from_outcome(
+            snapshot,
+            disclosure=disclosure,
+            github_issue_url="",
+            github_issue_number=0,
+            github_skipped_reason=str(exc),
+        )
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url=result.url,
+        github_issue_number=result.number,
+        github_skipped_reason=None,
+    )
+
+
+def _finalize_user_feedback_hidden_github(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_repo: str,
+    github_token: str,
+    store: MemoryStore,
+) -> str:
     start_github_issue_job(
         snapshot,
         store,
         github_repo=github_repo,
         github_token=github_token,
     )
-    return format_user_feedback_tool_result(
-        UserFeedbackToolOutcome(
-            feedback_id=snapshot.feedback_id,
+    return _user_feedback_tool_result_from_outcome(
+        snapshot,
+        disclosure=disclosure,
+        github_issue_url="",
+        github_issue_number=0,
+        github_skipped_reason=None,
+    )
+
+
+def _finalize_user_feedback_tool_result(
+    snapshot: HarnessSnapshot,
+    *,
+    disclosure: UserFeedbackDisclosureMode,
+    github_repo: str,
+    github_token: str,
+    store: MemoryStore,
+) -> str:
+    """File or schedule GitHub issue creation and format the tool return string."""
+    if not github_token.strip():
+        return _finalize_user_feedback_without_github_token(
+            snapshot,
             disclosure=disclosure,
-            github_issue_url="",
-            github_issue_number=0,
-            github_skipped_reason=None,
+            store=store,
         )
+
+    match disclosure:
+        case UserFeedbackDisclosureMode.VISIBLE:
+            return _finalize_user_feedback_visible_github(
+                snapshot,
+                disclosure=disclosure,
+                github_repo=github_repo,
+                github_token=github_token,
+                store=store,
+            )
+        case UserFeedbackDisclosureMode.HIDDEN:
+            return _finalize_user_feedback_hidden_github(
+                snapshot,
+                disclosure=disclosure,
+                github_repo=github_repo,
+                github_token=github_token,
+                store=store,
+            )
+
+
+def tool_companion_record_user_feedback(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    parsed = _parse_user_feedback_tool_arguments(arguments)
+    if isinstance(parsed, str):
+        return parsed
+    snapshot = build_harness_snapshot(store, parsed)
+    append_user_feedback_record(store, _snapshot_to_record(snapshot))
+    disclosure = resolve_user_feedback_disclosure_mode()
+    github_repo, github_token = load_user_feedback_github_config()
+    return _finalize_user_feedback_tool_result(
+        snapshot,
+        disclosure=disclosure,
+        github_repo=github_repo,
+        github_token=github_token,
+        store=store,
     )
