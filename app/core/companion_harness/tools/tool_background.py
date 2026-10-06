@@ -1123,6 +1123,46 @@ def _tool_bg_memory_store_write_allowlist(
     return MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 
 
+async def _tool_bg_openai_loop_continue_chat_round(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    tool_schemas: list[Any],
+    progress: ToolBgLoopProgress,
+    messages_with_tool_results: list[dict[str, Any]],
+) -> tuple[Any, str | None]:
+    return await _tool_bg_continue_chat_round(
+        messages_with_tool_results=messages_with_tool_results,
+        resolved_client=run_ctx.resolved_client,
+        chat_completion_sync=run_ctx.chat_completion_sync,
+        tool_api_id=run_ctx.tool_api_id,
+        tools=tool_schemas,
+        langsmith_slice=run_ctx.langsmith_slice,
+        llm_round_timeout_sec=run_ctx.llm_round_timeout_sec,
+        scope_registry_key=run_ctx.scope_registry_key,
+        trace_id=run_ctx.trace_id,
+        user_msg_uuid=run_ctx.user_msg_uuid,
+        trace_hooks=run_ctx.trace_hooks,
+        progress=progress,
+    )
+
+
+def _tool_bg_openai_loop_refresh_tool_schemas(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    turn_capture: ToolBgTurnCapture,
+    tool_schemas: list[Any],
+    messages_with_tool_results: list[dict[str, Any]],
+) -> list[Any]:
+    return _tool_bg_after_tool_messages_appended(
+        messages_with_tool_results=messages_with_tool_results,
+        memory_store=run_ctx.memory_store,
+        companion_turn_track=run_ctx.companion_turn_track,
+        runtime_context=run_ctx.runtime_context,
+        tools=tool_schemas,
+        turn_capture=turn_capture,
+    )
+
+
 def _tool_bg_build_openai_loop_handlers(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1146,32 +1186,22 @@ def _tool_bg_build_openai_loop_handlers(
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
-        return await _tool_bg_continue_chat_round(
-            messages_with_tool_results=messages_with_tool_results,
-            resolved_client=run_ctx.resolved_client,
-            chat_completion_sync=run_ctx.chat_completion_sync,
-            tool_api_id=run_ctx.tool_api_id,
-            tools=tools_for_rounds,
-            langsmith_slice=run_ctx.langsmith_slice,
-            llm_round_timeout_sec=run_ctx.llm_round_timeout_sec,
-            scope_registry_key=run_ctx.scope_registry_key,
-            trace_id=run_ctx.trace_id,
-            user_msg_uuid=run_ctx.user_msg_uuid,
-            trace_hooks=run_ctx.trace_hooks,
+        return await _tool_bg_openai_loop_continue_chat_round(
+            run_ctx=run_ctx,
+            tool_schemas=tools_for_rounds,
             progress=progress,
+            messages_with_tool_results=messages_with_tool_results,
         )
 
     async def after_tool_messages_appended(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> None:
         nonlocal tools_for_rounds
-        tools_for_rounds = _tool_bg_after_tool_messages_appended(
-            messages_with_tool_results=messages_with_tool_results,
-            memory_store=run_ctx.memory_store,
-            companion_turn_track=run_ctx.companion_turn_track,
-            runtime_context=run_ctx.runtime_context,
-            tools=tools_for_rounds,
+        tools_for_rounds = _tool_bg_openai_loop_refresh_tool_schemas(
+            run_ctx=run_ctx,
             turn_capture=turn_capture,
+            tool_schemas=tools_for_rounds,
+            messages_with_tool_results=messages_with_tool_results,
         )
 
     return _ToolBgOpenAiLoopHandlers(
@@ -1790,6 +1820,48 @@ async def _tool_bg_kickoff_and_run_through_delivery(
     )
 
 
+def _tool_bg_kickoff_config_for_background_loop(
+    *,
+    tool_model: GenAIModel,
+    trace_id: str,
+    user_msg_uuid: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    tools: list[Any],
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    write_allowlist: frozenset[str] | None,
+    repository_only_store_text: bool,
+    skip_finish_envelope_routing: bool,
+    suppress_user_delivery: bool,
+    on_event: Callable[[ToolOutputEvent], None],
+    activity_label: str | None,
+    execute_tool_call_fn: Callable[..., Any],
+) -> _ToolBgKickoffLoopConfig:
+    assert llm_round_timeout_sec > 0.0
+    return _tool_bg_kickoff_loop_config_from_run_args(
+        tool_api_id=tool_model.id_on_provider,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1819,11 +1891,9 @@ async def run_tool_background_loop(
     langsmith_slice: CompanionTurnLangsmithSlice,
     force_tools_first_round: bool = True,
 ) -> None:
-    assert llm_round_timeout_sec > 0.0
-    tool_api_id = tool_model.id_on_provider
     try:
-        kickoff_config = _tool_bg_kickoff_loop_config_from_run_args(
-            tool_api_id=tool_api_id,
+        kickoff_config = _tool_bg_kickoff_config_for_background_loop(
+            tool_model=tool_model,
             trace_id=trace_id,
             user_msg_uuid=user_msg_uuid,
             chat_completion_sync=chat_completion_sync,

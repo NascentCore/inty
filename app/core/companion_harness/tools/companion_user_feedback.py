@@ -382,29 +382,22 @@ def build_user_feedback_disclosure_display_text(
     return url
 
 
-async def append_user_feedback_issue_disclosure_to_output_queue(
+def _user_feedback_issue_disclosure_visible_mode() -> bool:
+    return (
+        resolve_user_feedback_disclosure_mode()
+        == UserFeedbackDisclosureMode.VISIBLE
+    )
+
+
+async def _append_visible_user_feedback_issue_disclosure(
     *,
     user_id: str,
     agent_id: str,
     batch_id: str,
     user_msg_uuid: str,
     issue_url: str,
-    llm_reply: str,
-) -> bool:
-    """Persist correlated OutputQueue disclosure when feedback runs outside AgenticLoop.
-
-    Returns True when a visible disclosure row was appended (``app.debug`` only).
-    """
-    assert user_id != ""
-    assert agent_id != ""
-    assert batch_id != ""
-    assert user_msg_uuid != ""
-    assert issue_url.strip() != ""
-    if (
-        resolve_user_feedback_disclosure_mode()
-        != UserFeedbackDisclosureMode.VISIBLE
-    ):
-        return False
+    display_text: str,
+) -> None:
     from app.core.companion_harness.agent_channel.scope import AgentScope
     from app.core.agentic_companion.output_queue import (
         OutputQueueAppendInput,
@@ -414,10 +407,6 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
         OutputMessageKind,
     )
 
-    display_text = build_user_feedback_disclosure_display_text(
-        issue_url=issue_url,
-        llm_reply=llm_reply,
-    )
     scope = AgentScope(user_id=user_id, agent_id=agent_id)
     await get_output_queue_for_scope(scope).append_visible_message(
         OutputQueueAppendInput(
@@ -437,6 +426,40 @@ async def append_user_feedback_issue_disclosure_to_output_queue(
         batch_id,
         user_msg_uuid,
         issue_url.strip(),
+    )
+
+
+async def append_user_feedback_issue_disclosure_to_output_queue(
+    *,
+    user_id: str,
+    agent_id: str,
+    batch_id: str,
+    user_msg_uuid: str,
+    issue_url: str,
+    llm_reply: str,
+) -> bool:
+    """Persist correlated OutputQueue disclosure when feedback runs outside AgenticLoop.
+
+    Returns True when a visible disclosure row was appended (``app.debug`` only).
+    """
+    assert user_id != ""
+    assert agent_id != ""
+    assert batch_id != ""
+    assert user_msg_uuid != ""
+    assert issue_url.strip() != ""
+    if not _user_feedback_issue_disclosure_visible_mode():
+        return False
+    display_text = build_user_feedback_disclosure_display_text(
+        issue_url=issue_url,
+        llm_reply=llm_reply,
+    )
+    await _append_visible_user_feedback_issue_disclosure(
+        user_id=user_id,
+        agent_id=agent_id,
+        batch_id=batch_id,
+        user_msg_uuid=user_msg_uuid,
+        issue_url=issue_url,
+        display_text=display_text,
     )
     return True
 
