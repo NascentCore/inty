@@ -40,18 +40,16 @@ class OpenRouterInvalidJsonError(RuntimeError):
     """OpenRouter returned a response body that was not valid JSON."""
 
 
-def create_chat_completion_sync(
-    client: Any,
+def _sync_chat_completion_create_kwargs(
     *,
     model: str,
     messages_payload: list[dict[str, Any]],
     tools: list[Any],
-    tool_choice: str | None = None,
-    response_format: dict[str, Any] | None = None,
-    langsmith_extra: dict[str, Any] | None = None,
-    high_reasoning: bool = False,
-) -> Any:
-    _ensure_langsmith_handle_container_end_patch()
+    tool_choice: str | None,
+    response_format: dict[str, Any] | None,
+    langsmith_extra: dict[str, Any] | None,
+    high_reasoning: bool,
+) -> dict[str, Any]:
     create_kw: dict[str, Any] = {
         "model": model,
         "messages": deepcopy(messages_payload),
@@ -75,35 +73,81 @@ def create_chat_completion_sync(
         create_kw["parallel_tool_calls"] = True
         if tool_choice is not None:
             create_kw["tool_choice"] = tool_choice
+    return create_kw
+
+
+def _sync_chat_completion_attempt(
+    client: Any,
+    *,
+    create_kw: dict[str, Any],
+    model: str,
+) -> Any:
+    reset_wrapped_llm_run_id_for_completion_attempt()
+    raw = client.chat.completions.create(**create_kw)
+    enriched = completion_with_langsmith_trace_id(raw)
+    raise_if_chat_completion_missing_choices(enriched, model=model)
+    # TODO(#3472): record_completion_token_usage from companion_llm_runtime_event_bind_ctx (#3476 deferred).
+    # TODO(#3474): split input vs output token debit — follow-up.
+    return enriched
+
+
+def _raise_or_retry_openrouter_invalid_json(
+    *,
+    exc: json.JSONDecodeError,
+    model: str,
+    attempt: int,
+) -> None:
+    retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
+    logger.warning(
+        "llm.chat_completions invalid_json_response model={} attempt={}/{} retryable={} err={}",
+        model,
+        attempt,
+        _OPENROUTER_JSON_MAX_ATTEMPTS,
+        retryable,
+        exc,
+    )
+    if retryable:
+        delay = _OPENROUTER_JSON_BACKOFF_SECONDS[min(attempt - 1, 1)]
+        time.sleep(delay)
+        return
+    invalid_json_exc = OpenRouterInvalidJsonError(
+        "OpenRouter returned a non-JSON response body "
+        f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
+    )
+    record_llm_inference_failure(model=model, exc=invalid_json_exc)
+    raise invalid_json_exc from exc
+
+
+def create_chat_completion_sync(
+    client: Any,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+    tool_choice: str | None = None,
+    response_format: dict[str, Any] | None = None,
+    langsmith_extra: dict[str, Any] | None = None,
+    high_reasoning: bool = False,
+) -> Any:
+    _ensure_langsmith_handle_container_end_patch()
+    create_kw = _sync_chat_completion_create_kwargs(
+        model=model,
+        messages_payload=messages_payload,
+        tools=tools,
+        tool_choice=tool_choice,
+        response_format=response_format,
+        langsmith_extra=langsmith_extra,
+        high_reasoning=high_reasoning,
+    )
     for attempt in range(1, _OPENROUTER_JSON_MAX_ATTEMPTS + 1):
         try:
-            reset_wrapped_llm_run_id_for_completion_attempt()
-            raw = client.chat.completions.create(**create_kw)
-            enriched = completion_with_langsmith_trace_id(raw)
-            raise_if_chat_completion_missing_choices(enriched, model=model)
-            # TODO(#3472): record_completion_token_usage from companion_llm_runtime_event_bind_ctx (#3476 deferred).
-            # TODO(#3474): split input vs output token debit — follow-up.
-            return enriched
+            return _sync_chat_completion_attempt(
+                client, create_kw=create_kw, model=model
+            )
         except json.JSONDecodeError as exc:
-            retryable = attempt < _OPENROUTER_JSON_MAX_ATTEMPTS
-            logger.warning(
-                "llm.chat_completions invalid_json_response model={} attempt={}/{} retryable={} err={}",
-                model,
-                attempt,
-                _OPENROUTER_JSON_MAX_ATTEMPTS,
-                retryable,
-                exc,
+            _raise_or_retry_openrouter_invalid_json(
+                exc=exc, model=model, attempt=attempt
             )
-            if retryable:
-                delay = _OPENROUTER_JSON_BACKOFF_SECONDS[min(attempt - 1, 1)]
-                time.sleep(delay)
-                continue
-            invalid_json_exc = OpenRouterInvalidJsonError(
-                "OpenRouter returned a non-JSON response body "
-                f"for model={model} after {_OPENROUTER_JSON_MAX_ATTEMPTS} attempts."
-            )
-            record_llm_inference_failure(model=model, exc=invalid_json_exc)
-            raise invalid_json_exc from exc
         except Exception as exc:
             inf = log_and_build_inference_error(exc)
             record_llm_inference_failure(model=model, exc=inf)
