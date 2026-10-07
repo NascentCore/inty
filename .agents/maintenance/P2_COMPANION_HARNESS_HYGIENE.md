@@ -700,3 +700,18 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-07 scan (cron)
+
+Source: open PR overlap check (many stale-harness alias PRs — avoided `turn_compose_context_from_legacy_flags` / `inner_tick_activity_suppresses_user_delivery` trap); ruff F401 + vulture `--min-confidence 80` clean after alias removal.
+
+Open PRs checked: #3999..#4004 stale-alias / maintenance bundles — overlapping theme; this run targets zero-reference shims only.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** #3413: drop `OUTPUT_FORMAT_IM_DM_MD` models alias; Telegram test imports `OUTPUT_FORMAT_IM_DM_MD_REL`. Fixed in `cursor/stale-companion-harness-code-dc50`.
+- [x] **HYGIENE-2026-183** #3413: drop `TRANSCRIPT_REL` shim in `companion_user_feedback.py`. Fixed in `cursor/stale-companion-harness-code-dc50`.
+- [x] **HYGIENE-2026-184** #3413: drop `current_persona_revision_id` wrapper; `companion_tool_runtime` calls `compute_persona_revision_id`. Fixed in `cursor/stale-companion-harness-code-dc50`.
+- [x] **HYGIENE-2026-185** ruff F401: unused imports in `ws_outbound_materialize` / `ws_turn_support`. Fixed in `cursor/stale-companion-harness-code-dc50`.
+- [x] **HYGIENE-2026-186** #3375: `ai_private_prompt` module doc — remove stale `get_ai_private_text_for_prompt` reference. Fixed in `cursor/stale-companion-harness-code-dc50`.
+- [x] **HYGIENE-2026-187** drop unused `_companion_ai_meta_from_turn_result` re-export from `chat_ws_companion_support`. Fixed in `cursor/stale-companion-harness-code-dc50`.

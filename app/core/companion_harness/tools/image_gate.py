@@ -41,10 +41,6 @@ def compute_persona_revision_id(store: MemoryStore) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
-def current_persona_revision_id(store: MemoryStore) -> str:
-    return compute_persona_revision_id(store)
-
-
 def append_image_asset_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
