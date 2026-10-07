@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-07 scan (cron)
+
+Source: open PR overlap check (#4004 HYGIENE-483..486 package seeds + bootstrap seed rels, #4001 HYGIENE-480..482 core template accessor attrs, #3974 HYGIENE-444 lifecycle JSONL constants, #3989 HYGIENE-470 tool_background scope path — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `append_jsonl_literal_paths` does not resolve `DEFAULT_MEMORY_STORE_SCOPE_PATHS.*`; `_REQUIRED_FILES_ATTR` lacks named accessor-attr tuple like `_CORE_COMPANION_TEMPLATE_ACCESSOR_ATTRS` (pull/4001).
+
+Open PRs checked: #4004 (`cursor/agent-maintenance-tasks-oct6-483`), #4001 (`cursor/agent-maintenance-tasks-oct5-480`), #3974 (`cursor/agent-maintenance-tasks-c9e1`), #3989 (`cursor/agent-maintenance-tasks-ae66`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct7-487`)
+
+- [x] **HYGIENE-2026-487** `companion/lifecycle_invariants.py` — `append_jsonl_literal_paths` resolves `DEFAULT_MEMORY_STORE_SCOPE_PATHS.<attr>` for invariant AST checks. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.
+- [x] **HYGIENE-2026-488** `companion/test_append_jsonl_scope_path_resolution.py` — fixture module + test proving scope-path append resolution. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.
+- [x] **HYGIENE-2026-489** `memory_store_scope.py` — `_REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS` canonical tuple; `_REQUIRED_FILES_ATTR` aliases it. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.

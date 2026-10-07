@@ -12,11 +12,16 @@ import ast
 from pathlib import Path
 from typing import Final
 
-from app.core.companion_harness.memory import memory_store_path_constants as _memdoc_path_constants
+from app.core.companion_harness.memory import (
+    memory_store_path_constants as _memdoc_path_constants,
+)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -149,6 +154,20 @@ def module_calls_store_method(
     return lines
 
 
+def _resolve_append_jsonl_path_expr(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name) and node.id in _MEMDOC_PATH_CONSTANT_NAMES:
+        return getattr(_memdoc_path_constants, node.id)
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "DEFAULT_MEMORY_STORE_SCOPE_PATHS"
+    ):
+        return getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, node.attr)
+    return None
+
+
 def append_jsonl_literal_paths(relative_path: str) -> list[str]:
     """Resolved first arguments to append_jsonl_record in a module."""
     tree = parse_module_ast(relative_path)
@@ -164,12 +183,9 @@ def append_jsonl_literal_paths(relative_path: str) -> list[str]:
             continue
         if not node.args:
             continue
-        first = node.args[0]
-        if isinstance(first, ast.Constant) and isinstance(first.value, str):
-            paths.append(first.value)
-            continue
-        if isinstance(first, ast.Name) and first.id in _MEMDOC_PATH_CONSTANT_NAMES:
-            paths.append(getattr(_memdoc_path_constants, first.id))
+        resolved = _resolve_append_jsonl_path_expr(node.args[0])
+        if resolved is not None:
+            paths.append(resolved)
     return paths
 
 

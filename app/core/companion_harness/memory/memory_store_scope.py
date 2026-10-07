@@ -291,13 +291,15 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
-_REQUIRED_FILES_ATTR = (
+_REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS: Final[tuple[str, ...]] = (
     "identity",
     "soul",
     "user_md",
     "memory_md",
     "transcript",
 )
+
+_REQUIRED_FILES_ATTR = _REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS
 
 
 def is_scope_initialized_in_store(store: MemoryStore) -> bool:

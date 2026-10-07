@@ -52,6 +52,7 @@ from app.core.companion_harness.memory.memory_store_scope import (
     _CORE_COMPANION_TEMPLATE_REL_PATHS,
     _PACKAGE_PROMPT_SEED_FILES,
     _REQUIRED_FILES_ATTR,
+    _REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS,
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     get_imate_axiom_system_text,
@@ -129,8 +130,11 @@ def test_core_companion_template_rel_paths_match_scope_path_accessors() -> None:
 
 
 def test_required_files_attr_matches_scope_path_accessors() -> None:
+    assert _REQUIRED_FILES_ATTR == _REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS
     p = MemoryStoreScopePaths()
-    accessor_rels = frozenset(getattr(p, attr) for attr in _REQUIRED_FILES_ATTR)
+    accessor_rels = frozenset(
+        getattr(p, attr) for attr in _REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS
+    )
     assert accessor_rels == frozenset(
         {
             p.identity,
