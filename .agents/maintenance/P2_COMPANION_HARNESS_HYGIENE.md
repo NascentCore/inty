@@ -709,6 +709,6 @@ Open PRs checked: #4004 (`cursor/agent-maintenance-tasks-oct6-483`), #4001 (`cur
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct7-487`)
 
-- [ ] **HYGIENE-2026-487** `companion/lifecycle_invariants.py` — `append_jsonl_literal_paths` resolves `DEFAULT_MEMORY_STORE_SCOPE_PATHS.<attr>` for invariant AST checks.
-- [ ] **HYGIENE-2026-488** `memory/test_lifecycle_invariants_scope_append.py` — fixture module + test proving scope-path append resolution.
-- [ ] **HYGIENE-2026-489** `memory_store_scope.py` — `_REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS` canonical tuple; `_REQUIRED_FILES_ATTR` aliases it.
+- [x] **HYGIENE-2026-487** `companion/lifecycle_invariants.py` — `append_jsonl_literal_paths` resolves `DEFAULT_MEMORY_STORE_SCOPE_PATHS.<attr>` for invariant AST checks. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.
+- [x] **HYGIENE-2026-488** `companion/test_append_jsonl_scope_path_resolution.py` — fixture module + test proving scope-path append resolution. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.
+- [x] **HYGIENE-2026-489** `memory_store_scope.py` — `_REQUIRED_SCOPE_FILE_ACCESSOR_ATTRS` canonical tuple; `_REQUIRED_FILES_ATTR` aliases it. Fixed in `cursor/agent-maintenance-tasks-oct7-487`.
