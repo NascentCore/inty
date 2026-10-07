@@ -150,6 +150,19 @@ class AgenticLoopOutput:
     output_message_ids: tuple[str, ...] = ()
 
 
+def _agentic_loop_langsmith_context(
+    *,
+    turn_slice: CompanionTurnLangsmithSlice,
+    trace_id: str,
+    run_id: str,
+) -> AgenticLoopLangsmithContext:
+    return AgenticLoopLangsmithContext(
+        turn_slice=turn_slice,
+        trace_id=trace_id,
+        run_id=run_id,
+    )
+
+
 def build_implicit_sign_on_greeting_loop_context(
     *,
     messages: list[dict[str, Any]],
@@ -184,7 +197,7 @@ def build_implicit_sign_on_greeting_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -238,7 +251,7 @@ def build_inner_tick_chat_only_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -293,7 +306,7 @@ def build_inner_tick_tool_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -349,7 +362,7 @@ def _settled_user_chat_agentic_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -512,7 +525,7 @@ def build_bootstrap_user_chat_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
