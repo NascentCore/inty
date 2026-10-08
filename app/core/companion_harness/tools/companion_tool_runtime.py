@@ -927,6 +927,41 @@ async def _dispatch_companion_record_user_profile(
     return f"OK recorded user profile fields: {', '.join(recorded)}"
 
 
+async def _dispatch_companion_named_tool(
+    store: MemoryStore,
+    name: str,
+    arguments: dict[str, Any],
+) -> str:
+    """Dispatch non-MemoryStore companion tools after registry allowlist check."""
+    match name:
+        case _ if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
+            return tool_techno_core_record_event(store, arguments)
+        case _ if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
+            return tool_living_sphere_record_update(store, arguments)
+        case _ if name == AI_PRIVATE_APPEND_TOOL_NAME:
+            return tool_ai_private_append(store, arguments)
+        case "schedule_task":
+            return _dispatch_schedule_task(store, arguments)
+        case _ if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
+            return tool_companion_record_user_feedback(store, arguments)
+        case "companion_set_experience_profile":
+            return _dispatch_companion_set_experience_profile(store, arguments)
+        case "google_web_search":
+            return await _dispatch_google_web_search(arguments)
+        case "read_web_page":
+            return await _dispatch_read_web_page(store, arguments)
+        case "generate_image":
+            return await _dispatch_generate_image(store, arguments)
+        case "modify_image":
+            return await _dispatch_modify_image(store, arguments)
+        case "companion_bootstrap_user_interactive_complete":
+            return _dispatch_bootstrap_user_interactive_complete(store, arguments)
+        case _ if name == CompanionToolName.COMPANION_RECORD_USER_PROFILE.value:
+            return await _dispatch_companion_record_user_profile(store, arguments)
+        case _:
+            return f"ERROR: unknown tool {name!r}"
+
+
 async def _dispatch(
     store: MemoryStore,
     name: str,
@@ -955,33 +990,7 @@ async def _dispatch(
     if memory_store_dispatch_result is not None:
         return memory_store_dispatch_result
 
-    match name:
-        case _ if name == TECHNO_CORE_RECORD_EVENT_TOOL_NAME:
-            return tool_techno_core_record_event(store, arguments)
-        case _ if name == LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME:
-            return tool_living_sphere_record_update(store, arguments)
-        case _ if name == AI_PRIVATE_APPEND_TOOL_NAME:
-            return tool_ai_private_append(store, arguments)
-        case "schedule_task":
-            return _dispatch_schedule_task(store, arguments)
-        case _ if name == COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
-            return tool_companion_record_user_feedback(store, arguments)
-        case "companion_set_experience_profile":
-            return _dispatch_companion_set_experience_profile(store, arguments)
-        case "google_web_search":
-            return await _dispatch_google_web_search(arguments)
-        case "read_web_page":
-            return await _dispatch_read_web_page(store, arguments)
-        case "generate_image":
-            return await _dispatch_generate_image(store, arguments)
-        case "modify_image":
-            return await _dispatch_modify_image(store, arguments)
-        case "companion_bootstrap_user_interactive_complete":
-            return _dispatch_bootstrap_user_interactive_complete(store, arguments)
-        case _ if name == CompanionToolName.COMPANION_RECORD_USER_PROFILE.value:
-            return await _dispatch_companion_record_user_profile(store, arguments)
-        case _:
-            return f"ERROR: unknown tool {name!r}"
+    return await _dispatch_companion_named_tool(store, name, arguments)
 
 
 async def execute_tool_call(

@@ -635,8 +635,31 @@ async def _fetch_tool_bg_initial_completion(
     )
     if initial_round is None:
         return None
-    initial_response, initial_meta = initial_round
+    return _tool_bg_initial_completion_after_round(
+        initial_round=initial_round,
+        tool_api_id=tool_api_id,
+        request_snapshot=request_snapshot,
+        scope_registry_key=scope_registry_key,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        trace_hooks=trace_hooks,
+        force_tools=force_tools,
+    )
 
+
+def _tool_bg_initial_completion_after_round(
+    *,
+    initial_round: tuple[Any, _InitialToolBgCompletionMeta],
+    tool_api_id: str,
+    request_snapshot: list[dict[str, Any]],
+    scope_registry_key: str,
+    trace_id: str,
+    user_msg_uuid: str,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+    force_tools: bool,
+) -> tuple[Any, _InitialToolBgCompletionMeta, list[dict[str, Any]]] | None:
+    """Log and return the first tool-bg completion, or None when aborted."""
+    initial_response, initial_meta = initial_round
     if is_tool_background_aborted(user_msg_uuid):
         logger.debug(
             "repl.turn.bg aborted after initial api trace_id={} user_msg_uuid={}",
@@ -1862,6 +1885,31 @@ def _tool_bg_kickoff_config_for_background_loop(
     )
 
 
+# TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
+# omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
+_TOOL_BG_DEFAULT_RUNTIME_CONTEXT = TurnRuntimeContext(
+    channel=ChannelKind.APP_WS,
+    implicit_signal_bundle=None,
+)
+
+
+async def _tool_bg_run_kickoff_and_delivery(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    kickoff_config: _ToolBgKickoffLoopConfig,
+) -> None:
+    await _tool_bg_kickoff_and_run_through_delivery(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        config=kickoff_config,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1882,12 +1930,7 @@ async def run_tool_background_loop(
     suppress_user_delivery: bool = False,
     skip_finish_envelope_routing: bool = False,
     activity_label: str | None = None,
-    # TODO(#3411): tool_background passes implicit_signal_bundle=None — LangSmith tool_* spans
-    # omit ``## User's Local Time Context``; verify injection on foreground agentic_companion_chat only.
-    runtime_context: TurnRuntimeContext = TurnRuntimeContext(
-        channel=ChannelKind.APP_WS,
-        implicit_signal_bundle=None,
-    ),
+    runtime_context: TurnRuntimeContext = _TOOL_BG_DEFAULT_RUNTIME_CONTEXT,
     langsmith_slice: CompanionTurnLangsmithSlice,
     force_tools_first_round: bool = True,
 ) -> None:
@@ -1911,12 +1954,12 @@ async def run_tool_background_loop(
             activity_label=activity_label,
             execute_tool_call_fn=execute_tool_call_fn,
         )
-        await _tool_bg_kickoff_and_run_through_delivery(
+        await _tool_bg_run_kickoff_and_delivery(
             memory_store=memory_store,
             request_messages=request_messages,
             client=client,
             force_tools_first_round=force_tools_first_round,
-            config=kickoff_config,
+            kickoff_config=kickoff_config,
         )
     finally:
         clear_tool_background_abort_flag(user_msg_uuid)

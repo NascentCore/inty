@@ -335,24 +335,24 @@ def _transcript_dialogue_for_turn(
     return transcript_rows_to_openai_dialogue(loaded_state.transcript_window)
 
 
-def _build_turn_messages_with_compaction(
+def _turn_messages_without_transcript_compaction(
+    system_messages: list[dict[str, Any]],
+    transcript_dialogue: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    messages = list(system_messages)
+    messages.extend(transcript_dialogue)
+    return messages
+
+
+def _apply_transcript_compaction_to_turn_messages(
     *,
     store: MemoryStore,
     loaded_state: CompanionTurnLoadedState,
-    track: CompanionTurnTrack,
     system_messages: list[dict[str, Any]],
     transcript_dialogue: list[dict[str, Any]],
-    transcript_compaction: TranscriptCompactionConfig | None,
+    transcript_compaction: TranscriptCompactionConfig,
     compaction_state_rel: str,
 ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
-    if (
-        transcript_compaction is None
-        or inner_tick_kind_for_track(track) is not None
-    ):
-        messages = list(system_messages)
-        messages.extend(transcript_dialogue)
-        return messages, None
-
     prior_state = load_compaction_state_from_store(store, compaction_state_rel)
     compactor = ConversationCompactor(
         transcript_compaction,
@@ -392,6 +392,38 @@ def _build_turn_messages_with_compaction(
             outcome.state.compaction_count,
         )
     return messages, transcript_compaction_meta
+
+
+def _build_turn_messages_with_compaction(
+    *,
+    store: MemoryStore,
+    loaded_state: CompanionTurnLoadedState,
+    track: CompanionTurnTrack,
+    system_messages: list[dict[str, Any]],
+    transcript_dialogue: list[dict[str, Any]],
+    transcript_compaction: TranscriptCompactionConfig | None,
+    compaction_state_rel: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    if (
+        transcript_compaction is None
+        or inner_tick_kind_for_track(track) is not None
+    ):
+        return (
+            _turn_messages_without_transcript_compaction(
+                system_messages,
+                transcript_dialogue,
+            ),
+            None,
+        )
+
+    return _apply_transcript_compaction_to_turn_messages(
+        store=store,
+        loaded_state=loaded_state,
+        system_messages=system_messages,
+        transcript_dialogue=transcript_dialogue,
+        transcript_compaction=transcript_compaction,
+        compaction_state_rel=compaction_state_rel,
+    )
 
 
 def _append_prompt_plan_tail_system_slices(
