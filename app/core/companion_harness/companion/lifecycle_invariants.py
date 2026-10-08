@@ -13,10 +13,9 @@ from pathlib import Path
 from typing import Final
 
 from app.core.companion_harness.memory import memory_store_path_constants as _memdoc_path_constants
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TOOL_BACKGROUND_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    _AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -43,13 +42,13 @@ AWAKE_TURN_TOOL_BACKGROUND_MODULE_PATH: Final[str] = (
 )
 
 AWAKE_TURN_ALLOWED_APPEND_JSONL: Final[frozenset[str]] = frozenset(
-    {
-        TRANSCRIPT_JSONL_REL,
-        TRANSCRIPT_INNER_TICK_JSONL_REL,
-    }
+    getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, attr)
+    for attr in _AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS
 )
 
-AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL: Final[str] = TOOL_BACKGROUND_JSONL_REL
+AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL: Final[str] = (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS.tool_background_jsonl
+)
 
 AWAKE_TURN_FORBIDDEN_IMPORT_SUBSTRINGS: Final[frozenset[str]] = frozenset(
     {

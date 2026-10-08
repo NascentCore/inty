@@ -709,6 +709,6 @@ Open PRs checked: #4007 (`cursor/agent-maintenance-tasks-oct7-487`), #4004 (`cur
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct8-490`)
 
-- [ ] **HYGIENE-2026-490** `companion/lifecycle_invariants.py` — derive `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `TRANSCRIPT_*` / `TOOL_BACKGROUND_*` imports).
-- [ ] **HYGIENE-2026-491** `memory_store_scope.py` — `_AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS` canonical tuple for awake-turn kernel append allowlist accessors.
-- [ ] **HYGIENE-2026-492** `memory/test_memory_store_scope.py` — assert awake-turn append JSONL allowlist matches `_AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS` + `tool_background_jsonl` accessor.
+- [x] **HYGIENE-2026-490** `companion/lifecycle_invariants.py` — derive `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` (drop direct `TRANSCRIPT_*` / `TOOL_BACKGROUND_*` imports). Fixed in `cursor/agent-maintenance-tasks-oct8-490` / pull/4010.
+- [x] **HYGIENE-2026-491** `memory_store_scope.py` — `_AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS` canonical tuple for awake-turn kernel append allowlist accessors. Fixed in `cursor/agent-maintenance-tasks-oct8-490` / pull/4010.
+- [x] **HYGIENE-2026-492** `memory/test_memory_store_scope.py` — assert awake-turn append JSONL allowlist matches `_AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS` + `tool_background_jsonl` accessor. Fixed in `cursor/agent-maintenance-tasks-oct8-490` / pull/4010.
