@@ -700,3 +700,11 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-08 scan (cron)
+
+Source: stale/legacy review vs `docs/imate/companion_harness/DESIGN.md`; ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; one superseded bridge kept alive only by its own test (same pattern as HYGIENE-2026-94).
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** #3453: remove stale `turn_compose_context_from_legacy_flags` (pre-`TurnComposeContext` bool-flag bridge); production uses `build_turn_compose_context` + `resolve_phase_for_compose`; only `test_compose_context.py::test_legacy_flags_use_track_pinned_bootstrap_phase` referenced it (covered by `test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap`).
