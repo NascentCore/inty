@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.companion_harness.companion import lifecycle_invariants as lifecycle_inv
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
@@ -49,6 +50,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     memory_daily_gist_rel,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    _AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS,
     _CORE_COMPANION_TEMPLATE_REL_PATHS,
     _PACKAGE_PROMPT_SEED_FILES,
     _REQUIRED_FILES_ATTR,
@@ -140,6 +142,17 @@ def test_required_files_attr_matches_scope_path_accessors() -> None:
             p.transcript,
         }
     )
+
+
+def test_awake_turn_append_jsonl_scope_accessor_attrs_match_lifecycle_invariants() -> (
+    None
+):
+    p = MemoryStoreScopePaths()
+    accessor_rels = frozenset(
+        getattr(p, attr) for attr in _AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS
+    )
+    assert accessor_rels == lifecycle_inv.AWAKE_TURN_ALLOWED_APPEND_JSONL
+    assert p.tool_background_jsonl == lifecycle_inv.AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL
 
 
 def test_package_prompt_seed_files_match_scope_path_accessors() -> None:

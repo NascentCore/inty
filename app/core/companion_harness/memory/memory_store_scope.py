@@ -291,6 +291,11 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
+_AWAKE_TURN_APPEND_JSONL_SCOPE_ACCESSOR_ATTRS: Final[tuple[str, ...]] = (
+    "transcript",
+    "transcript_inner_tick",
+)
+
 _REQUIRED_FILES_ATTR = (
     "identity",
     "soul",
