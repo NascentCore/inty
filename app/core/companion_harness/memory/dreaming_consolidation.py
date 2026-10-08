@@ -617,6 +617,98 @@ def _parse_dreaming_tool_calls(response: Any) -> list[DreamingDocumentUpdate]:
     return updates
 
 
+def _dreaming_transcript_block_from_rows(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+) -> tuple[dict[str, list[ChatMessage]], str]:
+    """Group transcript rows by day and render the combined curator slice block."""
+    rows_by_day = _rows_by_day(rows)
+    day_blocks = [
+        _dreaming_transcript_block(store, day_rows, day_iso=day)
+        for day, day_rows in sorted(rows_by_day.items())
+    ]
+    return rows_by_day, "\n\n".join(day_blocks)
+
+
+def _consolidate_sequential_daily_gists(
+    store: MemoryStore,
+    rows_by_day: dict[str, list[ChatMessage]],
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    *,
+    ws: str,
+) -> bool:
+    """Rewrite ``memory/daily/<date>.md`` for each day present in the slice."""
+    any_curation = False
+    for day, day_rows in sorted(rows_by_day.items()):
+        t = time.perf_counter()
+        _rewrite_dreaming_daily_gist_md(
+            store,
+            day=day,
+            rows=day_rows,
+            complete_fn=complete_fn,
+        )
+        any_curation = True
+        _log_dreaming_consolidation_curated(
+            step=f"daily_gist_md:{day}",
+            ws=ws,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+    return any_curation
+
+
+def _consolidate_sequential_long_term_docs(
+    store: MemoryStore,
+    *,
+    transcript_block: str,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    ws: str,
+) -> bool:
+    """Chain MEMORY → USER → STYLE → SOUL → COMPANIONSHIP rewrites on one slice."""
+    user_text = "Dreaming transcript slice:\n" + transcript_block
+    assistant_text = ""
+    for step, rewrite_fn in (
+        ("dreaming_memory_md", _rewrite_memory_md),
+        ("dreaming_user_md", _rewrite_user_md),
+        ("dreaming_style_md", _rewrite_style_md),
+        ("dreaming_soul_md", _rewrite_soul_md),
+        ("dreaming_companionship_md", _rewrite_companionship_md),
+    ):
+        t = time.perf_counter()
+        rewrite_fn(
+            store,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            complete_fn=complete_fn,
+        )
+        _log_dreaming_consolidation_curated(
+            step=step,
+            ws=ws,
+            ms=(time.perf_counter() - t) * 1000.0,
+        )
+    return True
+
+
+def _maybe_compact_living_sphere_during_dreaming(
+    store: MemoryStore,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    *,
+    tool_bg_idle_event: Event,
+    ws: str,
+) -> bool:
+    """Run pending LivingSphere compaction when the tool-background lane is idle."""
+    t = time.perf_counter()
+    if not compact_living_sphere_if_pending(
+        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    ):
+        return False
+    _log_dreaming_consolidation_curated(
+        step="dreaming_living_sphere_md",
+        ws=ws,
+        ms=(time.perf_counter() - t) * 1000.0,
+    )
+    return True
+
+
 def _apply_dreaming_document_updates(
     store: MemoryStore,
     curator_input: DreamingCuratorInput,
@@ -685,12 +777,9 @@ def _consolidate_memory_sequential(
     assert rows
     t_all = time.perf_counter()
     ws = store.scope.registry_key()
-    rows_by_day = _rows_by_day(rows)
-    day_blocks = [
-        _dreaming_transcript_block(store, day_rows, day_iso=day)
-        for day, day_rows in sorted(rows_by_day.items())
-    ]
-    transcript_block = "\n\n".join(day_blocks)
+    rows_by_day, transcript_block = _dreaming_transcript_block_from_rows(
+        store, rows
+    )
     # TODO(dreaming-day-rollup): append LIFE_CURRENTS.md body per day in — #3376
     # rows_by_day before memory/user/style/soul curator steps (#3376).
     logger.info(
@@ -700,61 +789,64 @@ def _consolidate_memory_sequential(
         len(transcript_block),
     )
 
-    any_curation = False
-    for day, day_rows in sorted(rows_by_day.items()):
-        t = time.perf_counter()
-        _rewrite_dreaming_daily_gist_md(
-            store,
-            day=day,
-            rows=day_rows,
-            complete_fn=complete_fn,
-        )
-        any_curation = True
-        _log_dreaming_consolidation_curated(
-            step=f"daily_gist_md:{day}",
-            ws=ws,
-            ms=(time.perf_counter() - t) * 1000.0,
-        )
-
-    user_text = "Dreaming transcript slice:\n" + transcript_block
-    assistant_text = ""
-    for step, rewrite_fn in (
-        ("dreaming_memory_md", _rewrite_memory_md),
-        ("dreaming_user_md", _rewrite_user_md),
-        ("dreaming_style_md", _rewrite_style_md),
-        ("dreaming_soul_md", _rewrite_soul_md),
-        ("dreaming_companionship_md", _rewrite_companionship_md),
-    ):
-        t = time.perf_counter()
-        rewrite_fn(
-            store,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            complete_fn=complete_fn,
-        )
-        any_curation = True
-        _log_dreaming_consolidation_curated(
-            step=step,
-            ws=ws,
-            ms=(time.perf_counter() - t) * 1000.0,
-        )
-
-    t = time.perf_counter()
-    if compact_living_sphere_if_pending(
-        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    any_curation = _consolidate_sequential_daily_gists(
+        store,
+        rows_by_day,
+        complete_fn,
+        ws=ws,
+    )
+    if _consolidate_sequential_long_term_docs(
+        store,
+        transcript_block=transcript_block,
+        complete_fn=complete_fn,
+        ws=ws,
     ):
         any_curation = True
-        _log_dreaming_consolidation_curated(
-            step="dreaming_living_sphere_md",
-            ws=ws,
-            ms=(time.perf_counter() - t) * 1000.0,
-        )
+    if _maybe_compact_living_sphere_during_dreaming(
+        store,
+        complete_fn,
+        tool_bg_idle_event=tool_bg_idle_event,
+        ws=ws,
+    ):
+        any_curation = True
 
     logger.info(
         "dreaming_consolidation done total_ms={:.0f} ws={} curated={}",
         (time.perf_counter() - t_all) * 1000.0,
         ws,
         any_curation,
+    )
+    return any_curation
+
+
+def _one_shot_dreaming_curator_llm_round(
+    store: MemoryStore,
+    curator_input: DreamingCuratorInput,
+    llm_client: LlmClient,
+    langsmith_extra: dict[str, Any],
+    ws: str,
+) -> bool:
+    """Single required-tool-call LLM round that applies parallel MemoryDoc updates."""
+    messages = _build_one_shot_dreaming_messages(curator_input)
+    tools = [
+        _dreaming_document_update_tool_schema(curator_input.required_paths)
+    ]
+    t = time.perf_counter()
+    response = llm_client.chat_completion_unified(
+        messages=messages,
+        model=llm_client.resolve_model("memory"),
+        tools=tools,
+        tool_choice="required",
+        langsmith_extra=langsmith_extra,
+    )
+    updates = _parse_dreaming_tool_calls(response)
+    any_curation = _apply_dreaming_document_updates(
+        store, curator_input, updates
+    )
+    _log_dreaming_consolidation_curated(
+        step=DREAMING_ONE_SHOT_LLM_ROLE,
+        ws=ws,
+        ms=(time.perf_counter() - t) * 1000.0,
     )
     return any_curation
 
@@ -781,38 +873,21 @@ def _consolidate_memory_one_shot(
         len(curator_input.transcript_block),
     )
 
-    messages = _build_one_shot_dreaming_messages(curator_input)
-    tools = [
-        _dreaming_document_update_tool_schema(curator_input.required_paths)
-    ]
-    t = time.perf_counter()
-    response = llm_client.chat_completion_unified(
-        messages=messages,
-        model=llm_client.resolve_model("memory"),
-        tools=tools,
-        tool_choice="required",
-        langsmith_extra=langsmith_extra,
-    )
-    updates = _parse_dreaming_tool_calls(response)
-    any_curation = _apply_dreaming_document_updates(
-        store, curator_input, updates
-    )
-    _log_dreaming_consolidation_curated(
-        step=DREAMING_ONE_SHOT_LLM_ROLE,
-        ws=ws,
-        ms=(time.perf_counter() - t) * 1000.0,
+    any_curation = _one_shot_dreaming_curator_llm_round(
+        store,
+        curator_input,
+        llm_client,
+        langsmith_extra,
+        ws,
     )
 
-    t = time.perf_counter()
-    if compact_living_sphere_if_pending(
-        store, complete_fn, tool_bg_idle_event=tool_bg_idle_event
+    if _maybe_compact_living_sphere_during_dreaming(
+        store,
+        complete_fn,
+        tool_bg_idle_event=tool_bg_idle_event,
+        ws=ws,
     ):
         any_curation = True
-        _log_dreaming_consolidation_curated(
-            step="dreaming_living_sphere_md",
-            ws=ws,
-            ms=(time.perf_counter() - t) * 1000.0,
-        )
 
     logger.info(
         "dreaming_consolidation done total_ms={:.0f} ws={} curated={}",
