@@ -559,6 +559,66 @@ def _prompt_plan_openai_loop_bind_context(
     )
 
 
+async def _prompt_plan_bound_execute_tool_call(
+    bind: _PromptPlanOpenAiLoopBindContext,
+    name: str,
+    raw_arguments: str,
+) -> tuple[str, str | None]:
+    return await _prompt_plan_openai_loop_execute_tool_call(
+        store=bind.store,
+        name=name,
+        raw_arguments=raw_arguments,
+        write_allowlist=bind.write_allowlist,
+        repository_only_store_text=bind.repository_only_store_text,
+    )
+
+
+async def _prompt_plan_bound_continue_chat(
+    bind: _PromptPlanOpenAiLoopBindContext,
+    acc: _PromptPlanToolLoopAcc,
+    messages_with_tool_results: list[dict[str, Any]],
+) -> tuple[Any, str | None]:
+    return await _prompt_plan_openai_loop_continue_chat(
+        llm_client=bind.llm_client,
+        messages_with_tool_results=messages_with_tool_results,
+        acc=acc,
+        tool_choice=bind.tool_choice,
+        chat_model=bind.chat_model,
+        langsmith_extra=bind.langsmith_extra,
+        high_reasoning=bind.high_reasoning,
+    )
+
+
+async def _prompt_plan_bound_after_tool_messages_appended(
+    bind: _PromptPlanOpenAiLoopBindContext,
+    acc: _PromptPlanToolLoopAcc,
+    messages_with_tool_results: list[dict[str, Any]],
+) -> None:
+    await _prompt_plan_openai_loop_after_tool_append(
+        messages_with_tool_results=messages_with_tool_results,
+        acc=acc,
+        after_tool_messages_appended=bind.after_append_hook,
+    )
+
+
+async def _prompt_plan_bound_on_assistant_message(
+    bind: _PromptPlanOpenAiLoopBindContext,
+    acc: _PromptPlanToolLoopAcc,
+    interim_state: _PromptPlanInterimPersistState,
+    message: Any,
+) -> None:
+    await _prompt_plan_openai_loop_on_assistant_message(
+        message,
+        store=bind.store,
+        transcript_rel=bind.transcript_rel,
+        trace_id=bind.trace_id,
+        user_msg_uuid=bind.user_msg_uuid,
+        acc=acc,
+        interim_output_sink=bind.interim_output_sink,
+        interim_state=interim_state,
+    )
+
+
 def _prompt_plan_build_openai_tool_loop_handlers(
     *,
     bind: _PromptPlanOpenAiLoopBindContext,
@@ -568,46 +628,25 @@ def _prompt_plan_build_openai_tool_loop_handlers(
     async def execute_tool_call(
         name: str, raw_arguments: str
     ) -> tuple[str, str | None]:
-        return await _prompt_plan_openai_loop_execute_tool_call(
-            store=bind.store,
-            name=name,
-            raw_arguments=raw_arguments,
-            write_allowlist=bind.write_allowlist,
-            repository_only_store_text=bind.repository_only_store_text,
-        )
+        return await _prompt_plan_bound_execute_tool_call(bind, name, raw_arguments)
 
     async def continue_chat(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> tuple[Any, str | None]:
-        return await _prompt_plan_openai_loop_continue_chat(
-            llm_client=bind.llm_client,
-            messages_with_tool_results=messages_with_tool_results,
-            acc=acc,
-            tool_choice=bind.tool_choice,
-            chat_model=bind.chat_model,
-            langsmith_extra=bind.langsmith_extra,
-            high_reasoning=bind.high_reasoning,
+        return await _prompt_plan_bound_continue_chat(
+            bind, acc, messages_with_tool_results
         )
 
     async def after_tool_messages_appended(
         messages_with_tool_results: list[dict[str, Any]],
     ) -> None:
-        await _prompt_plan_openai_loop_after_tool_append(
-            messages_with_tool_results=messages_with_tool_results,
-            acc=acc,
-            after_tool_messages_appended=bind.after_append_hook,
+        await _prompt_plan_bound_after_tool_messages_appended(
+            bind, acc, messages_with_tool_results
         )
 
     async def on_assistant_message(message: Any) -> None:
-        await _prompt_plan_openai_loop_on_assistant_message(
-            message,
-            store=bind.store,
-            transcript_rel=bind.transcript_rel,
-            trace_id=bind.trace_id,
-            user_msg_uuid=bind.user_msg_uuid,
-            acc=acc,
-            interim_output_sink=bind.interim_output_sink,
-            interim_state=interim_state,
+        await _prompt_plan_bound_on_assistant_message(
+            bind, acc, interim_state, message
         )
 
     return _PromptPlanOpenAiLoopHandlers(

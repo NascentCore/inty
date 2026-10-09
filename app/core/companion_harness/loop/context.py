@@ -151,15 +151,16 @@ class AgenticLoopOutput:
 
 
 def _agentic_loop_langsmith_context(
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    langsmith_trace_id: str,
-    langsmith_run_id: str,
+    *,
+    turn_slice: CompanionTurnLangsmithSlice,
+    trace_id: str,
+    run_id: str,
 ) -> AgenticLoopLangsmithContext:
     """Shared LangSmith bundle for ``build_*_loop_context`` assembly."""
     return AgenticLoopLangsmithContext(
-        turn_slice=langsmith_slice,
-        trace_id=langsmith_trace_id,
-        run_id=langsmith_run_id,
+        turn_slice=turn_slice,
+        trace_id=trace_id,
+        run_id=run_id,
     )
 
 
@@ -198,9 +199,9 @@ def build_implicit_sign_on_greeting_loop_context(
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=_agentic_loop_langsmith_context(
-            langsmith_slice,
-            langsmith_trace_id,
-            langsmith_run_id,
+            turn_slice=langsmith_slice,
+            trace_id=langsmith_trace_id,
+            run_id=langsmith_run_id,
         ),
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
@@ -252,9 +253,9 @@ def build_inner_tick_chat_only_loop_context(
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=_agentic_loop_langsmith_context(
-            langsmith_slice,
-            langsmith_trace_id,
-            langsmith_run_id,
+            turn_slice=langsmith_slice,
+            trace_id=langsmith_trace_id,
+            run_id=langsmith_run_id,
         ),
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
@@ -307,9 +308,9 @@ def build_inner_tick_tool_loop_context(
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=_agentic_loop_langsmith_context(
-            langsmith_slice,
-            langsmith_trace_id,
-            langsmith_run_id,
+            turn_slice=langsmith_slice,
+            trace_id=langsmith_trace_id,
+            run_id=langsmith_run_id,
         ),
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
@@ -417,9 +418,9 @@ def _agentic_loop_context_for_settled_user_chat(
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=_agentic_loop_langsmith_context(
-            langsmith_slice,
-            langsmith_trace_id,
-            langsmith_run_id,
+            turn_slice=langsmith_slice,
+            trace_id=langsmith_trace_id,
+            run_id=langsmith_run_id,
         ),
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
@@ -580,9 +581,9 @@ def build_bootstrap_user_chat_loop_context(
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
         langsmith=_agentic_loop_langsmith_context(
-            langsmith_slice,
-            langsmith_trace_id,
-            langsmith_run_id,
+            turn_slice=langsmith_slice,
+            trace_id=langsmith_trace_id,
+            run_id=langsmith_run_id,
         ),
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,

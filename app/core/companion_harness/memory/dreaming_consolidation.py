@@ -760,6 +760,38 @@ def _apply_dreaming_document_updates(
     return any_written
 
 
+def _run_dreaming_sequential_curation_phases(
+    store: MemoryStore,
+    *,
+    rows_by_day: dict[str, list[ChatMessage]],
+    transcript_block: str,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    tool_bg_idle_event: Event,
+    ws: str,
+) -> bool:
+    any_curation = _consolidate_sequential_daily_gists(
+        store,
+        rows_by_day,
+        complete_fn,
+        ws=ws,
+    )
+    if _consolidate_sequential_long_term_docs(
+        store,
+        transcript_block=transcript_block,
+        complete_fn=complete_fn,
+        ws=ws,
+    ):
+        any_curation = True
+    if _maybe_compact_living_sphere_during_dreaming(
+        store,
+        complete_fn,
+        tool_bg_idle_event=tool_bg_idle_event,
+        ws=ws,
+    ):
+        any_curation = True
+    return any_curation
+
+
 def _consolidate_memory_sequential(
     store: MemoryStore,
     rows: list[ChatMessage],
@@ -789,26 +821,14 @@ def _consolidate_memory_sequential(
         len(transcript_block),
     )
 
-    any_curation = _consolidate_sequential_daily_gists(
+    any_curation = _run_dreaming_sequential_curation_phases(
         store,
-        rows_by_day,
-        complete_fn,
-        ws=ws,
-    )
-    if _consolidate_sequential_long_term_docs(
-        store,
+        rows_by_day=rows_by_day,
         transcript_block=transcript_block,
         complete_fn=complete_fn,
-        ws=ws,
-    ):
-        any_curation = True
-    if _maybe_compact_living_sphere_during_dreaming(
-        store,
-        complete_fn,
         tool_bg_idle_event=tool_bg_idle_event,
         ws=ws,
-    ):
-        any_curation = True
+    )
 
     logger.info(
         "dreaming_consolidation done total_ms={:.0f} ws={} curated={}",

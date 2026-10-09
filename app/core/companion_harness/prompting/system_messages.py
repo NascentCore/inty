@@ -525,23 +525,14 @@ def _inner_tick_autonomy_prompt_refs() -> _InnerTickAutonomyPromptRefs:
     )
 
 
-def _inner_tick_autonomy_workflow_and_tools_body(
+def _inner_tick_autonomy_workflow_steps_body(
     refs: _InnerTickAutonomyPromptRefs,
 ) -> str:
     life_currents_md = refs.life_currents_md
     user_md = refs.user_md
     memory_md = refs.memory_md
-    identity_md = refs.identity_md
     tool_read = refs.tool_read
     tool_write = refs.tool_write
-    tool_google = refs.tool_google
-    tool_read_web = refs.tool_read_web
-    tool_gen_img = refs.tool_gen_img
-    tool_mod_img = refs.tool_mod_img
-    tool_tc_event = refs.tool_tc_event
-    tool_ls_update = refs.tool_ls_update
-    tool_schedule = refs.tool_schedule
-    tool_set_profile = refs.tool_set_profile
     return (
         f"**目的**：沉默期在虚拟环境里**真的去做**一件事；工具调用、生成物、LS/TC 事件"
         f"就是「她在过自己的生活」的证据——不是整理对他的感受。\n\n"
@@ -567,6 +558,24 @@ def _inner_tick_autonomy_workflow_and_tools_body(
         "   - 进展：<本轮工具结果：读了哪几页、生成了什么、LS/TC 记了什么、挪动了什么>\n"
         "   ```\n"
         "   历史故意丢弃：旧主题/旧兴致不保留。\n"
+    )
+
+
+def _inner_tick_autonomy_open_tools_and_constraints_body(
+    refs: _InnerTickAutonomyPromptRefs,
+) -> str:
+    life_currents_md = refs.life_currents_md
+    identity_md = refs.identity_md
+    tool_write = refs.tool_write
+    tool_google = refs.tool_google
+    tool_read_web = refs.tool_read_web
+    tool_gen_img = refs.tool_gen_img
+    tool_mod_img = refs.tool_mod_img
+    tool_tc_event = refs.tool_tc_event
+    tool_ls_update = refs.tool_ls_update
+    tool_schedule = refs.tool_schedule
+    tool_set_profile = refs.tool_set_profile
+    return (
         "5. 开放工具示例：\n"
         f"   - ``{tool_google}`` / ``{tool_read_web}``：为他提过的话题查**外部资料**（书写进展，不写「我更懂他了」）；\n"
         f"   - ``{tool_gen_img}`` / ``{tool_mod_img}``：画**场景/物件/你在做的事**（按 {identity_md} 外貌）；\n"
@@ -581,6 +590,15 @@ def _inner_tick_autonomy_workflow_and_tools_body(
         f"- 调 ``{tool_set_profile}``（切换体验模式）；\n"
         f"- ``{tool_write}`` 写 USER / MEMORY / SOUL / STYLE / IDENTITY；\n"
         "- 编造未调用的工具结果。"
+    )
+
+
+def _inner_tick_autonomy_workflow_and_tools_body(
+    refs: _InnerTickAutonomyPromptRefs,
+) -> str:
+    return (
+        _inner_tick_autonomy_workflow_steps_body(refs)
+        + _inner_tick_autonomy_open_tools_and_constraints_body(refs)
     )
 
 
