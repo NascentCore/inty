@@ -153,17 +153,14 @@ def companion_tools_for_turn(
     return tools_for_turn
 
 
-# TODO(structural-simplicity): Dissolve this function, and let caller directly call the — #3516
-# track-denominated system messsages building API.
-def companion_system_messages_for_track(
+def _companion_system_messages_core_for_track(
     *,
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
     track: CompanionTurnTrack,
-    runtime_context: TurnRuntimeContext,
 ) -> list[dict[str, Any]]:
-    """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
+    """Track-specific system stack before runtime channel clauses."""
     match track:
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
             raise RuntimeError(
@@ -184,7 +181,7 @@ def companion_system_messages_for_track(
             CompanionTurnTrack.INNER_TICK_MONOLOG
             | CompanionTurnTrack.INNER_TICK_AUTONOMY
         ):
-            out = _async_tool_system_messages_for_track(
+            return _async_tool_system_messages_for_track(
                 track=track,
                 bundle=bundle,
                 context=context,
@@ -196,13 +193,22 @@ def companion_system_messages_for_track(
                 "PromptBuilder.bootstrap_turn_system_dicts (turn_pipeline)"
             )
         case CompanionTurnTrack.USER_CHAT:
-            out = build_settled_user_turn_dual_chat_leg_system_messages(
+            return build_settled_user_turn_dual_chat_leg_system_messages(
                 bundle,
                 context,
             )
+
+
+def _append_companion_system_messages_runtime_clauses(
+    *,
+    system_messages: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Output-format, Weixin alias, and reply-language clauses after track core."""
     # TODO(#3453): Migrate monolog/autonomy to TrackPromptComposer once slice builders land.
     out = append_runtime_output_format_system_message(
-        system_messages=out,
+        system_messages=system_messages,
         bundle=bundle,
         runtime_context=runtime_context,
     )
@@ -211,6 +217,30 @@ def companion_system_messages_for_track(
     # Chat-only tracks (greeting, proactive, scheduled, …) and dual-LLM chat-leg
     # prefixes; bootstrap/settled single-LLM use PromptBuilder instead.
     return append_configured_fixed_reply_language_system_messages(out)
+
+
+# TODO(structural-simplicity): Dissolve this function, and let caller directly call the — #3516
+# track-denominated system messsages building API.
+def companion_system_messages_for_track(
+    *,
+    store: MemoryStore,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    """Pick the scenario wrapper from ``CompanionTurnTrack`` (see ``system_messages`` docstring)."""
+    core = _companion_system_messages_core_for_track(
+        store=store,
+        bundle=bundle,
+        context=context,
+        track=track,
+    )
+    return _append_companion_system_messages_runtime_clauses(
+        system_messages=core,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
 
 
 def companion_turn_tools_and_system_messages(
@@ -250,6 +280,46 @@ def companion_turn_tools_and_system_messages(
     return tools_for_turn, system_messages
 
 
+def _companion_system_messages_for_mid_turn_refresh(
+    *,
+    track: CompanionTurnTrack,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """Leading system stack for mid-turn refresh on tool-capable tracks only."""
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            raise RuntimeError(
+                "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
+                "refresh_single_llm_bootstrap_chat_prompt_prefix"
+            )
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
+            return _async_tool_system_messages_for_track(
+                track=track,
+                bundle=bundle,
+                context=context,
+                store=store,
+            )
+        case CompanionTurnTrack.USER_CHAT:
+            return build_system_messages_for_tool_track(
+                bundle,
+                context,
+            )
+        case (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            raise RuntimeError(
+                "refresh_companion_turn_prompt_stack unsupported track="
+                f"{track.value}"
+            )
+
+
 def refresh_companion_turn_prompt_stack(
     *,
     store: MemoryStore,
@@ -277,36 +347,12 @@ def refresh_companion_turn_prompt_stack(
         track=track,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
-    match track:
-        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            raise RuntimeError(
-                "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
-                "refresh_single_llm_bootstrap_chat_prompt_prefix"
-            )
-        case (
-            CompanionTurnTrack.INNER_TICK_MONOLOG
-            | CompanionTurnTrack.INNER_TICK_AUTONOMY
-        ):
-            refreshed = _async_tool_system_messages_for_track(
-                track=track,
-                bundle=bundle,
-                context=context,
-                store=store,
-            )
-        case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(
-                bundle,
-                context,
-            )
-        case (
-            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-            | CompanionTurnTrack.INNER_TICK_SCHEDULED
-        ):
-            raise RuntimeError(
-                "refresh_companion_turn_prompt_stack unsupported track="
-                f"{track.value}"
-            )
+    refreshed = _companion_system_messages_for_mid_turn_refresh(
+        track=track,
+        bundle=bundle,
+        context=context,
+        store=store,
+    )
     refreshed = append_runtime_output_format_system_message(
         system_messages=refreshed,
         bundle=bundle,
