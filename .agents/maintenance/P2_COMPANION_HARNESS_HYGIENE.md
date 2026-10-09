@@ -709,6 +709,6 @@ Open PRs checked: #4010 (`cursor/agent-maintenance-tasks-oct8-490`), #4007 (`cur
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct9-493`)
 
-- [ ] **HYGIENE-2026-493** `memory_store_scope.py` — `_MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS` canonical tuple for tool transcript write guard.
-- [ ] **HYGIENE-2026-494** `tools/companion_tool_runtime.py` — transcript JSONL write guard via scope accessor rel frozenset (drop direct `TRANSCRIPT_*_REL` imports).
-- [ ] **HYGIENE-2026-495** `memory/test_memory_store_scope.py` — assert tool transcript write guard rels match scope accessor attrs.
+- [x] **HYGIENE-2026-493** `memory_store_scope.py` — `_MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS` canonical tuple for tool transcript write guard. Fixed in `cursor/agent-maintenance-tasks-oct9-493` / pull/4013.
+- [x] **HYGIENE-2026-494** `tools/companion_tool_runtime.py` — transcript JSONL write guard via scope accessor rel frozenset (drop direct `TRANSCRIPT_*_REL` imports). Fixed in `cursor/agent-maintenance-tasks-oct9-493` / pull/4013.
+- [x] **HYGIENE-2026-495** `memory/test_memory_store_scope.py` — assert tool transcript write guard rels match scope accessor attrs. Fixed in `cursor/agent-maintenance-tasks-oct9-493` / pull/4013.
