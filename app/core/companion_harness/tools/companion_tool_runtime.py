@@ -16,7 +16,7 @@ import time
 from datetime import date
 from pathlib import Path
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Final
 
 from pydantic import ValidationError
 
@@ -104,9 +104,16 @@ from .companion_tool_definitions import (
 from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_UPDATES_JSONL_REL,
     TECHNO_CORE_EVENTS_JSONL_REL,
-    TRANSCRIPT_INNER_TICK_JSONL_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    _MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS,
+)
+
+_TRANSCRIPT_JSONL_TOOL_WRITE_RELS: Final[frozenset[str]] = frozenset(
+    getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, attr)
+    for attr in _MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS
 )
 from app.core.companion_harness.memory.user_md_identity import (
     USER_PROFILE_SECTION,
@@ -377,7 +384,7 @@ def tool_memory_store_write_document(
     st = store
     if not _is_orm_mapped_store_relative_path(rel):
         return f"ERROR: cannot write {relative_path!r} (not a persisted companion document)"
-    if rel in (TRANSCRIPT_JSONL_REL, TRANSCRIPT_INNER_TICK_JSONL_REL):
+    if rel in _TRANSCRIPT_JSONL_TOOL_WRITE_RELS:
         v_err = _transcript_jsonl_validate_for_tool_write(content)
         if v_err is not None:
             return v_err

@@ -50,8 +50,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 )
 from app.core.companion_harness.memory.memory_store_scope import (
     _CORE_COMPANION_TEMPLATE_REL_PATHS,
+    _MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS,
     _PACKAGE_PROMPT_SEED_FILES,
     _REQUIRED_FILES_ATTR,
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     MemoryStoreScopePaths,
     ensure_minimal_documents_in_store,
     get_imate_axiom_system_text,
@@ -59,6 +61,9 @@ from app.core.companion_harness.memory.memory_store_scope import (
     get_safety_system_text,
     is_scope_initialized_in_store,
     load_template_seed_text,
+)
+from app.core.companion_harness.tools.companion_tool_runtime import (
+    _TRANSCRIPT_JSONL_TOOL_WRITE_RELS,
 )
 
 
@@ -140,6 +145,18 @@ def test_required_files_attr_matches_scope_path_accessors() -> None:
             p.transcript,
         }
     )
+
+
+def test_tool_write_transcript_jsonl_rels_match_scope_path_accessors() -> None:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    accessor_rels = frozenset(
+        getattr(paths, attr)
+        for attr in _MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS
+    )
+    assert accessor_rels == frozenset(
+        {paths.transcript, paths.transcript_inner_tick}
+    )
+    assert _TRANSCRIPT_JSONL_TOOL_WRITE_RELS == accessor_rels
 
 
 def test_package_prompt_seed_files_match_scope_path_accessors() -> None:

@@ -291,6 +291,13 @@ class MemoryStoreScopePaths:
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
 
+_MEMORY_STORE_TOOL_WRITE_TRANSCRIPT_JSONL_SCOPE_ACCESSOR_ATTRS: Final[
+    tuple[str, ...]
+] = (
+    "transcript",
+    "transcript_inner_tick",
+)
+
 _REQUIRED_FILES_ATTR = (
     "identity",
     "soul",
