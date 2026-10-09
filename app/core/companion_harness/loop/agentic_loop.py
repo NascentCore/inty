@@ -369,6 +369,61 @@ async def _prompt_plan_refresh_tools_after_append(
         acc.loop_tools = refreshed
 
 
+def _append_prompt_plan_interim_assistant_transcript(
+    *,
+    store: MemoryStore,
+    transcript_rel: str,
+    body: str,
+    trace_id: str,
+    user_msg_uuid: str,
+) -> str:
+    assistant_msg_uuid = str(uuid.uuid4())
+    store.append_jsonl_record(
+        transcript_rel,
+        {
+            "role": "assistant",
+            "content": body,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "reply_to": user_msg_uuid,
+            "source": "chat",
+            "trace_id": trace_id,
+        },
+    )
+    return assistant_msg_uuid
+
+
+async def _emit_prompt_plan_interim_output_if_needed(
+    *,
+    interim_output_sink: Any,
+    emit_every_round: bool,
+    had_tool_calls: bool,
+    body: str,
+    user_msg_uuid: str,
+    trace_id: str,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+    round_index: int,
+    assistant_msg_uuid: str,
+) -> None:
+    if interim_output_sink is None:
+        return
+    if not (emit_every_round or had_tool_calls):
+        return
+    await interim_output_sink(
+        InTurnInterimOutput(
+            text=body,
+            user_msg_uuid=user_msg_uuid,
+            trace_id=trace_id,
+            langsmith_trace_id=langsmith_trace_id,
+            langsmith_run_id=langsmith_run_id,
+            round_index=round_index,
+            had_tool_calls=had_tool_calls,
+            assistant_msg_uuid=assistant_msg_uuid,
+        )
+    )
+
+
 async def _persist_prompt_plan_interim_assistant(
     message: Any,
     *,
@@ -393,37 +448,28 @@ async def _persist_prompt_plan_interim_assistant(
             )
         return
     had_tool_calls = _prompt_plan_message_had_tool_calls(message)
-    assistant_msg_uuid = str(uuid.uuid4())
-    store.append_jsonl_record(
-        transcript_rel,
-        {
-            "role": "assistant",
-            "content": body,
-            "ts": utc_iso_ts(),
-            "uuid": assistant_msg_uuid,
-            "reply_to": user_msg_uuid,
-            "source": "chat",
-            "trace_id": trace_id,
-        },
+    assistant_msg_uuid = _append_prompt_plan_interim_assistant_transcript(
+        store=store,
+        transcript_rel=transcript_rel,
+        body=body,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
     )
     state.last_interim_assistant_msg_uuid = assistant_msg_uuid
     if not had_tool_calls:
         state.skip_final_transcript_assistant_row = True
-    if interim_output_sink is not None and (
-        emit_every_round or had_tool_calls
-    ):
-        await interim_output_sink(
-            InTurnInterimOutput(
-                text=body,
-                user_msg_uuid=user_msg_uuid,
-                trace_id=trace_id,
-                langsmith_trace_id=langsmith_trace_id,
-                langsmith_run_id=langsmith_run_id,
-                round_index=state.round_index,
-                had_tool_calls=had_tool_calls,
-                assistant_msg_uuid=assistant_msg_uuid,
-            )
-        )
+    await _emit_prompt_plan_interim_output_if_needed(
+        interim_output_sink=interim_output_sink,
+        emit_every_round=emit_every_round,
+        had_tool_calls=had_tool_calls,
+        body=body,
+        user_msg_uuid=user_msg_uuid,
+        trace_id=trace_id,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        round_index=state.round_index,
+        assistant_msg_uuid=assistant_msg_uuid,
+    )
 
 
 @dataclass

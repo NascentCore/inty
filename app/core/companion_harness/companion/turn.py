@@ -1046,6 +1046,32 @@ def _companion_turn_result_from_outcome(
 # through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
 # or ``"[image]"``); memory pipeline stays text-only. LLM tail content assembled in
 # turn_pipeline when chat model accepts IMAGE input.
+def _persist_companion_turn_after_agentic_loop(
+    *,
+    prepared: _CompanionTurnPrepared,
+    loop_outcome: _CompanionTurnAgenticLoopOutcome,
+) -> str:
+    """Append final assistant / ai_private transcript rows after ``AgenticLoop`` completes."""
+    return _persist_companion_turn_transcript(
+        store=prepared.store,
+        track=prepared.track,
+        implicit_sign_on_turn=prepared.runtime_flags.implicit_sign_on_turn,
+        in_turn_sync_persisted_transcript=prepared.in_turn_sync_persisted_transcript,
+        tail_user_messages=prepared.tail_user_messages,
+        trace_id=prepared.trace_id,
+        user_msg_uuid=prepared.user_msg_uuid,
+        ts_user=prepared.ts_user,
+        ai_private_splice_plan=prepared.ai_private_splice_plan,
+        last_text=loop_outcome.assistant_text,
+        skip_final_transcript_assistant_row=loop_outcome.skip_final_transcript_assistant_row,
+        skip_proactive_assistant_transcript_row=loop_outcome.skip_proactive_assistant_transcript_row,
+        last_interim_assistant_msg_uuid=loop_outcome.last_interim_assistant_msg_uuid,
+        significance_meta=loop_outcome.significance_meta,
+        turn_recall=loop_outcome.turn_recall,
+        inner_tick_turn=prepared.runtime_flags.inner_tick_turn,
+    )
+
+
 # TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
 async def _run_companion_turn_core(
     user_text: str,
@@ -1076,25 +1102,9 @@ async def _run_companion_turn_core(
         prepared=prepared,
         t_loop_start=t_loop,
     )
-    implicit_sign_on_turn = prepared.runtime_flags.implicit_sign_on_turn
-    inner_tick_turn = prepared.runtime_flags.inner_tick_turn
-    assistant_msg_uuid = _persist_companion_turn_transcript(
-        store=prepared.store,
-        track=prepared.track,
-        implicit_sign_on_turn=implicit_sign_on_turn,
-        in_turn_sync_persisted_transcript=prepared.in_turn_sync_persisted_transcript,
-        tail_user_messages=prepared.tail_user_messages,
-        trace_id=prepared.trace_id,
-        user_msg_uuid=prepared.user_msg_uuid,
-        ts_user=prepared.ts_user,
-        ai_private_splice_plan=prepared.ai_private_splice_plan,
-        last_text=loop_outcome.assistant_text,
-        skip_final_transcript_assistant_row=loop_outcome.skip_final_transcript_assistant_row,
-        skip_proactive_assistant_transcript_row=loop_outcome.skip_proactive_assistant_transcript_row,
-        last_interim_assistant_msg_uuid=loop_outcome.last_interim_assistant_msg_uuid,
-        significance_meta=loop_outcome.significance_meta,
-        turn_recall=loop_outcome.turn_recall,
-        inner_tick_turn=inner_tick_turn,
+    assistant_msg_uuid = _persist_companion_turn_after_agentic_loop(
+        prepared=prepared,
+        loop_outcome=loop_outcome,
     )
     return _companion_turn_result_from_outcome(
         prepared=prepared,
