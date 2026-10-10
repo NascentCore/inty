@@ -93,53 +93,71 @@ class _AiPrivateJsonlObjectParse:
     legacy_line: str | None
 
 
+def _parse_ai_private_surfaced_marker_row(
+    obj: dict[str, Any],
+) -> _AiPrivateJsonlObjectParse:
+    """Parse one ``{kind: surfaced, ref_uuid}`` marker row."""
+    ref = obj.get("ref_uuid")
+    surfaced_uuid = ref.strip() if isinstance(ref, str) and ref.strip() else None
+    return _AiPrivateJsonlObjectParse(
+        thought=None,
+        surfaced_uuid=surfaced_uuid,
+        legacy_line=None,
+    )
+
+
+def _resolve_ai_private_jsonl_object_text(obj: dict[str, Any]) -> str:
+    """Resolve display text from structured ``text`` or legacy object shape."""
+    text = obj.get("text")
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+    legacy_text = _format_ai_private_jsonl_object(obj)
+    return legacy_text if legacy_text else ""
+
+
+def _parse_ai_private_structured_thought_row(
+    obj: dict[str, Any],
+    *,
+    text: str,
+) -> _AiPrivateJsonlObjectParse:
+    """Parse one structured ``AiPrivateThought`` row when uuid/ts/text are present."""
+    raw_uuid = obj.get("uuid")
+    raw_ts = obj.get("ts")
+    assert isinstance(raw_uuid, str)
+    assert isinstance(raw_ts, str)
+    after = obj.get("after_user_msg_uuid")
+    after_uuid = after.strip() if isinstance(after, str) and after.strip() else None
+    return _AiPrivateJsonlObjectParse(
+        thought=AiPrivateThought(
+            uuid=raw_uuid.strip(),
+            ts=raw_ts.strip(),
+            text=text,
+            after_user_msg_uuid=after_uuid,
+        ),
+        surfaced_uuid=None,
+        legacy_line=None,
+    )
+
+
 def _parse_ai_private_jsonl_object(
     obj: dict[str, Any],
 ) -> _AiPrivateJsonlObjectParse:
     """Classify one JSON object as surfaced marker, structured thought, or legacy line."""
     if obj.get("kind") == AI_PRIVATE_SURFACED_KIND:
-        ref = obj.get("ref_uuid")
-        surfaced_uuid = (
-            ref.strip() if isinstance(ref, str) and ref.strip() else None
-        )
-        return _AiPrivateJsonlObjectParse(
-            thought=None,
-            surfaced_uuid=surfaced_uuid,
-            legacy_line=None,
-        )
+        return _parse_ai_private_surfaced_marker_row(obj)
 
     raw_uuid = obj.get("uuid")
     raw_ts = obj.get("ts")
-    text = obj.get("text")
-    if isinstance(text, str) and text.strip():
-        text = text.strip()
-    else:
-        legacy_text = _format_ai_private_jsonl_object(obj)
-        if legacy_text and not (
-            isinstance(raw_uuid, str) and isinstance(raw_ts, str)
-        ):
-            return _AiPrivateJsonlObjectParse(
-                thought=None,
-                surfaced_uuid=None,
-                legacy_line=legacy_text,
-            )
-        text = legacy_text if legacy_text else ""
+    text = _resolve_ai_private_jsonl_object_text(obj)
+    if text and not (isinstance(raw_uuid, str) and isinstance(raw_ts, str)):
+        return _AiPrivateJsonlObjectParse(
+            thought=None,
+            surfaced_uuid=None,
+            legacy_line=text,
+        )
 
     if isinstance(raw_uuid, str) and isinstance(raw_ts, str) and text:
-        after = obj.get("after_user_msg_uuid")
-        after_uuid = (
-            after.strip() if isinstance(after, str) and after.strip() else None
-        )
-        return _AiPrivateJsonlObjectParse(
-            thought=AiPrivateThought(
-                uuid=raw_uuid.strip(),
-                ts=raw_ts.strip(),
-                text=text,
-                after_user_msg_uuid=after_uuid,
-            ),
-            surfaced_uuid=None,
-            legacy_line=None,
-        )
+        return _parse_ai_private_structured_thought_row(obj, text=text)
 
     legacy_line = text if text else None
     return _AiPrivateJsonlObjectParse(

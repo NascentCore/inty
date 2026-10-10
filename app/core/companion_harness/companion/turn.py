@@ -215,7 +215,7 @@ class _CompanionTurnLangsmithParentBinding:
     tracing_context: Any
 
 
-def _bind_companion_turn_langsmith_parent(
+def _create_companion_turn_langsmith_parent_run_for_prepared(
     *,
     prepared: CompanionTurnLoopInput,
     langsmith_parent_run_enabled: bool,
@@ -226,8 +226,9 @@ def _bind_companion_turn_langsmith_parent(
     trace_id: str,
     user_msg_uuid: str,
     track: CompanionTurnTrack,
-) -> _CompanionTurnLangsmithParentBinding:
-    langsmith_parent_run = create_companion_turn_root_run(
+) -> Any:
+    """Instantiate the LangSmith parent run for one companion turn."""
+    return create_companion_turn_root_run(
         inty_trace_id=trace_id,
         user_msg_uuid=user_msg_uuid,
         chat_model=prepared.llm_client.resolve_model("chat"),
@@ -246,24 +247,67 @@ def _bind_companion_turn_langsmith_parent(
         ),
         langsmith_slice=prepared.langsmith_slice,
     )
+
+
+def _companion_turn_langsmith_trace_id_after_parent(
+    *,
+    prepared: CompanionTurnLoopInput,
+    langsmith_parent_run: Any,
+) -> str:
+    """Resolve accumulated LangSmith trace id after parent run creation."""
     langsmith_trace_acc = prepared.langsmith_trace_id
-    _ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
-    if _ls_tid:
-        langsmith_trace_acc = _ls_tid
+    ls_tid = companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run)
+    if ls_tid:
+        langsmith_trace_acc = ls_tid
+    return langsmith_trace_acc
+
+
+def _langsmith_tracing_context_for_parent_run(langsmith_parent_run: Any) -> Any:
+    """Return a context manager that nests LLM spans under the turn parent run."""
+    if langsmith_parent_run is None:
+        return nullcontext()
+    from langsmith.run_helpers import tracing_context as langsmith_tracing_context
+
+    return langsmith_tracing_context(parent=langsmith_parent_run)
+
+
+def _bind_companion_turn_langsmith_parent(
+    *,
+    prepared: CompanionTurnLoopInput,
+    langsmith_parent_run_enabled: bool,
+    inner_tick_turn: bool,
+    route_inner_activity: Any,
+    implicit_sign_on_turn: bool,
+    store: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    track: CompanionTurnTrack,
+) -> _CompanionTurnLangsmithParentBinding:
+    langsmith_parent_run = _create_companion_turn_langsmith_parent_run_for_prepared(
+        prepared=prepared,
+        langsmith_parent_run_enabled=langsmith_parent_run_enabled,
+        inner_tick_turn=inner_tick_turn,
+        route_inner_activity=route_inner_activity,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        store=store,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        track=track,
+    )
+    langsmith_trace_acc = _companion_turn_langsmith_trace_id_after_parent(
+        prepared=prepared,
+        langsmith_parent_run=langsmith_parent_run,
+    )
     if langsmith_parent_run is not None:
         logger.debug(
             "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
             "user_msg_uuid={} ls_trace_id={} defer_end_to_bg={}",
             trace_id,
             user_msg_uuid,
-            _ls_tid,
+            companion_turn_langsmith_parent_trace_id_str(langsmith_parent_run),
             bool(prepared.tools_for_turn),
         )
-    tracing_context = nullcontext()
-    if langsmith_parent_run is not None:
-        from langsmith.run_helpers import tracing_context as langsmith_tracing_context
-
-        tracing_context = langsmith_tracing_context(parent=langsmith_parent_run)
+    tracing_context = _langsmith_tracing_context_for_parent_run(langsmith_parent_run)
     return _CompanionTurnLangsmithParentBinding(
         parent_run=langsmith_parent_run,
         langsmith_trace_id=langsmith_trace_acc,
@@ -679,6 +723,29 @@ def _resolve_companion_turn_user_message_batch(
     return user_message_batch
 
 
+def _companion_turn_tail_user_messages_for_resolve(
+    *,
+    input_batch: Any,
+    user_text: str,
+    ts_user: datetime,
+    user_msg_uuid: str,
+    implicit_sign_on_turn: bool,
+) -> tuple[TurnTailUserMessage, ...]:
+    """Build tail user rows and align primary user message id with the last row."""
+    return resolve_turn_tail_user_messages(
+        mode=resolved_user_turn_batch_messages_llm_call_mode(),
+        input_batch=input_batch,
+        user_text=(
+            USER_SIGNED_ON_TRIGGER_USER_TEXT
+            if implicit_sign_on_turn
+            else user_text
+        ),
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
+
+
 def _resolve_companion_turn_user_tail_context(
     *,
     store: Any,
@@ -705,14 +772,9 @@ def _resolve_companion_turn_user_tail_context(
         preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
     )
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
-    tail_user_messages = resolve_turn_tail_user_messages(
-        mode=resolved_user_turn_batch_messages_llm_call_mode(),
+    tail_user_messages = _companion_turn_tail_user_messages_for_resolve(
         input_batch=input_batch,
-        user_text=(
-            USER_SIGNED_ON_TRIGGER_USER_TEXT
-            if implicit_sign_on_turn
-            else user_text
-        ),
+        user_text=user_text,
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         implicit_sign_on_turn=implicit_sign_on_turn,

@@ -171,16 +171,12 @@ class BootstrapUserChatPlugin:
         return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
-async def _run_settled_user_chat_single_llm(
+def _settled_user_chat_single_llm_after_tool_round_hook(
     prepared: CompanionTurnLoopInput,
-    *,
-    execution: Any,
-) -> AgenticLoopOutput:
-    assert prepared.user_message_batch is not None
+) -> Any:
+    """Refresh user-chat system prefix after each in-turn tool round."""
     store = prepared.store
     runtime_context = prepared.runtime_context
-    bundle = prepared.loaded_state.bundle
-    context = prepared.loaded_state.context
 
     async def _after_tool_round(
         messages_with_tool_results: list[dict[str, Any]],
@@ -191,8 +187,18 @@ async def _run_settled_user_chat_single_llm(
             runtime_context=runtime_context,
         )
 
+    return _after_tool_round
+
+
+def _settled_user_chat_single_llm_prompt_plan(
+    prepared: CompanionTurnLoopInput,
+) -> PromptPlan:
+    """Assemble the single-LLM prompt plan for settled ``USER_CHAT``."""
+    runtime_context = prepared.runtime_context
+    bundle = prepared.loaded_state.bundle
+    context = prepared.loaded_state.context
     transcript_window = _expanded_transcript_window(prepared)
-    single_llm_prompt_plan = PromptBuilder(
+    return PromptBuilder(
         bundle=bundle,
         context=context,
         runtime_context=runtime_context,
@@ -203,6 +209,16 @@ async def _run_settled_user_chat_single_llm(
         implicit_sign_on_turn=prepared.runtime_flags.implicit_sign_on_turn,
         tail_splice_thoughts=prepared.ai_private_splice_plan.thoughts,
     )
+
+
+async def _run_settled_user_chat_single_llm(
+    prepared: CompanionTurnLoopInput,
+    *,
+    execution: Any,
+) -> AgenticLoopOutput:
+    assert prepared.user_message_batch is not None
+    runtime_context = prepared.runtime_context
+    single_llm_prompt_plan = _settled_user_chat_single_llm_prompt_plan(prepared)
     loop_context = build_settled_user_chat_loop_context(
         messages=prepared.messages,
         tools_for_turn=prepared.tools_for_turn,
@@ -217,7 +233,9 @@ async def _run_settled_user_chat_single_llm(
         stack_depth=_system_stack_depth_from_prompt_plan(single_llm_prompt_plan),
         langsmith_trace_id=prepared.langsmith_trace_id,
         langsmith_run_id=prepared.langsmith_run_id,
-        after_tool_messages_appended=_after_tool_round,
+        after_tool_messages_appended=_settled_user_chat_single_llm_after_tool_round_hook(
+            prepared
+        ),
         output_queue=prepared.agentic_output_queue,
         user_message_batch=prepared.user_message_batch,
         tail_user_messages=prepared.tail_user_messages,
