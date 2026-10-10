@@ -150,6 +150,20 @@ class AgenticLoopOutput:
     output_message_ids: tuple[str, ...] = ()
 
 
+def _agentic_loop_langsmith_context(
+    *,
+    turn_slice: CompanionTurnLangsmithSlice,
+    trace_id: str,
+    run_id: str,
+) -> AgenticLoopLangsmithContext:
+    """Shared LangSmith bundle for ``build_*_loop_context`` assembly."""
+    return AgenticLoopLangsmithContext(
+        turn_slice=turn_slice,
+        trace_id=trace_id,
+        run_id=run_id,
+    )
+
+
 def build_implicit_sign_on_greeting_loop_context(
     *,
     messages: list[dict[str, Any]],
@@ -184,7 +198,7 @@ def build_implicit_sign_on_greeting_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -238,7 +252,7 @@ def build_inner_tick_chat_only_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -293,7 +307,7 @@ def build_inner_tick_tool_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
@@ -305,6 +319,69 @@ def build_inner_tick_tool_loop_context(
         user_message_batch=user_message_batch,
         prompt_plan=prompt_plan,
         stack_depth=stack_depth,
+    )
+
+
+@dataclass(frozen=True)
+class _SettledUserChatAgenticLoopBind:
+    """Resolved field bundle for one settled ``USER_CHAT`` ``AgenticLoopContext``."""
+
+    messages: tuple[dict[str, Any], ...]
+    tools_for_turn: tuple[dict[str, Any], ...]
+    repository_only_store_text: bool
+    trace_id: str
+    user_text: str
+    ts_user: datetime
+    user_msg_uuid: str
+    transcript_rel: str
+    langsmith_slice: CompanionTurnLangsmithSlice
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    runtime_context: TurnRuntimeContext
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    after_tool_messages_appended: AfterToolMessagesHook | None
+    output_queue: OutputQueue
+    user_message_batch: UserMessageBatch
+    context_meta: ContextMeta | None
+    prompt_plan: PromptPlan | None
+    stack_depth: int
+    execution: LoopExecutionPolicy
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None
+    prompt_bundle: PromptBundle | None
+
+
+def _agentic_loop_context_from_settled_user_chat_bind(
+    bind: _SettledUserChatAgenticLoopBind,
+) -> AgenticLoopContext:
+    """Materialize settled ``USER_CHAT`` ``AgenticLoopContext`` from a resolved bind."""
+    return AgenticLoopContext(
+        openai_messages=bind.messages,
+        openai_tools=bind.tools_for_turn,
+        companion_turn_track=CompanionTurnTrack.USER_CHAT,
+        execution=bind.execution,
+        repository_only_store_text=bind.repository_only_store_text,
+        trace_id=bind.trace_id,
+        user_text=bind.user_text,
+        ts_user=bind.ts_user,
+        user_msg_uuid=bind.user_msg_uuid,
+        transcript_rel=bind.transcript_rel,
+        langsmith=_agentic_loop_langsmith_context(
+            turn_slice=bind.langsmith_slice,
+            trace_id=bind.langsmith_trace_id,
+            run_id=bind.langsmith_run_id,
+        ),
+        runtime_context=bind.runtime_context,
+        tail_user_messages=bind.tail_user_messages,
+        after_tool_messages_appended=bind.after_tool_messages_appended,
+        output_queue=bind.output_queue,
+        user_message_batch=bind.user_message_batch,
+        context_meta=bind.context_meta,
+        prompt_plan=bind.prompt_plan,
+        stack_depth=bind.stack_depth,
+        dual_llm_chat_msgs=bind.dual_llm_chat_msgs,
+        dual_llm_tool_msgs=bind.dual_llm_tool_msgs,
+        prompt_bundle=bind.prompt_bundle,
     )
 
 
@@ -334,22 +411,18 @@ def build_settled_user_chat_loop_context(
     assert user_text.strip() != ""
     assert transcript_rel != ""
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
-        openai_tools=tuple(tools_for_turn),
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        execution=execution,
+    bind = _SettledUserChatAgenticLoopBind(
+        messages=tuple(messages),
+        tools_for_turn=tuple(tools_for_turn),
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
+        langsmith_slice=langsmith_slice,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
         after_tool_messages_appended=after_tool_messages_appended,
@@ -358,7 +431,12 @@ def build_settled_user_chat_loop_context(
         context_meta=None,
         prompt_plan=prompt_plan,
         stack_depth=stack_depth,
+        execution=execution,
+        dual_llm_chat_msgs=None,
+        dual_llm_tool_msgs=None,
+        prompt_bundle=None,
     )
+    return _agentic_loop_context_from_settled_user_chat_bind(bind)
 
 
 def build_settled_dual_llm_user_chat_loop_context(
@@ -391,33 +469,32 @@ def build_settled_dual_llm_user_chat_loop_context(
     assert dual_llm_chat_msgs
     assert dual_llm_tool_msgs
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
-        openai_tools=tuple(tools_for_turn),
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        execution=execution,
+    bind = _SettledUserChatAgenticLoopBind(
+        messages=tuple(messages),
+        tools_for_turn=tuple(tools_for_turn),
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
+        langsmith_slice=langsmith_slice,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
         runtime_context=runtime_context,
         tail_user_messages=tail_user_messages,
         after_tool_messages_appended=None,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
-        context_meta=context_meta,
         stack_depth=stack_depth,
+        execution=execution,
+        context_meta=context_meta,
+        prompt_plan=None,
         dual_llm_chat_msgs=dual_llm_chat_msgs,
         dual_llm_tool_msgs=dual_llm_tool_msgs,
         prompt_bundle=prompt_bundle,
     )
+    return _agentic_loop_context_from_settled_user_chat_bind(bind)
 
 
 def build_bootstrap_user_chat_loop_context(
@@ -457,7 +534,7 @@ def build_bootstrap_user_chat_loop_context(
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=AgenticLoopLangsmithContext(
+        langsmith=_agentic_loop_langsmith_context(
             turn_slice=langsmith_slice,
             trace_id=langsmith_trace_id,
             run_id=langsmith_run_id,
