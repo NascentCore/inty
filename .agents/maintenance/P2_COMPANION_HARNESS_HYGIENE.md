@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-10 scan (cron)
+
+Source: open PR overlap check (#3995 HYGIENE-474..476 proactive/inner-tick/user-feedback, #4001 HYGIENE-480..482 bootstrap persona paths, #4007 HYGIENE-487..489 append_jsonl AST, #4010 HYGIENE-490..492 awake-turn JSONL constants, #4013 HYGIENE-493..495 tool transcript write guard — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — session init / bootstrap / models still import `CONTEXT_JSON_REL` / `TRANSCRIPT_JSONL_REL` directly.
+
+Open PRs checked: #3995 (`cursor/agent-maintenance-tasks-0090`), #4001 (`cursor/agent-maintenance-tasks-oct5-480`), #4007 (`cursor/agent-maintenance-tasks-oct7-487`), #4010 (`cursor/agent-maintenance-tasks-oct8-490`), #4013 (`cursor/agent-maintenance-tasks-oct9-493`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct10-496`)
+
+- [x] **HYGIENE-2026-496** `companion/manager.py` — session-init `context.json` read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.
+- [x] **HYGIENE-2026-497** `companion/bootstrap.py` — bootstrap context paths via scope `context_json` accessor. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.
+- [x] **HYGIENE-2026-498** `companion/models.py` — `load_context_meta` + `transcript_relative_path_for_turn_persistence` via scope accessors; `companion/test_models.py` parity test. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.

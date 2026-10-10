@@ -23,6 +23,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -30,6 +31,7 @@ from app.core.companion_harness.companion.models import (
     TRANSCRIPT_WINDOW_MAX_MESSAGES,
     AI_PRIVATE_SPLICE_MANIFEST_SOURCE,
     ChatMessage,
+    CompanionTurnTrack,
     ContextMeta,
     InnerTickKind,
     TranscriptProjection,
@@ -39,6 +41,7 @@ from app.core.companion_harness.companion.models import (
     load_transcript_projection_from_store,
     load_transcript_text,
     transcript_for_llm_turn,
+    transcript_relative_path_for_turn_persistence,
     transcript_rows_user_visible,
     transcript_without_trailing_presence_signals,
 )
@@ -411,3 +414,21 @@ def test_load_transcript_projection_from_store(tmp_path: Path) -> None:
     )
     assert len(full) == 2
     assert len(visible) == 1
+
+
+def test_transcript_relative_path_for_turn_persistence_matches_scope_accessors() -> (
+    None
+):
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert (
+        transcript_relative_path_for_turn_persistence(
+            track=CompanionTurnTrack.USER_CHAT
+        )
+        == paths.transcript
+    )
+    assert (
+        transcript_relative_path_for_turn_persistence(
+            track=CompanionTurnTrack.INNER_TICK_MONOLOG
+        )
+        == paths.transcript_inner_tick
+    )
