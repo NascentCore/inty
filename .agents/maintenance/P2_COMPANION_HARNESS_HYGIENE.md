@@ -709,6 +709,6 @@ Open PRs checked: #3995 (`cursor/agent-maintenance-tasks-0090`), #4001 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct10-496`)
 
-- [ ] **HYGIENE-2026-496** `companion/manager.py` — session-init `context.json` read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`.
-- [ ] **HYGIENE-2026-497** `companion/bootstrap.py` — bootstrap context paths via scope `context_json` accessor.
-- [ ] **HYGIENE-2026-498** `companion/models.py` — `load_context_meta` + `transcript_jsonl_rel_for_turn` via scope accessors; `companion/test_models.py` parity test.
+- [x] **HYGIENE-2026-496** `companion/manager.py` — session-init `context.json` read/write via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.context_json`. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.
+- [x] **HYGIENE-2026-497** `companion/bootstrap.py` — bootstrap context paths via scope `context_json` accessor. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.
+- [x] **HYGIENE-2026-498** `companion/models.py` — `load_context_meta` + `transcript_relative_path_for_turn_persistence` via scope accessors; `companion/test_models.py` parity test. Fixed in `cursor/agent-maintenance-tasks-oct10-496` / pull/4016.
