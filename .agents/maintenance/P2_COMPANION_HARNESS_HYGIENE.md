@@ -700,3 +700,19 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-10 scan (cron stale code review)
+
+Source: stale/legacy review guided by `docs/imate/companion_harness/DESIGN.md`; vulture `--min-confidence 80` clean; ruff F401 in `ws_outbound_materialize` / `ws_turn_support` (post-refactor dead imports). Avoided `turn_compose_context_from_legacy_flags` / `inner_tick_activity_suppresses_user_delivery` (active bridge; open trap PRs).
+
+Open PRs checked: many open stale-harness PRs (#4011 etc.) — this run lands on `cursor/stale-companion-harness-code-d29e`.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-194** #3413: drop `OUTPUT_FORMAT_IM_DM_MD` models alias; Telegram `test_prompt_stack` uses `OUTPUT_FORMAT_IM_DM_MD_REL`.
+- [x] **HYGIENE-2026-195** #3413: drop `TRANSCRIPT_REL` shim in `companion_user_feedback`; use `TRANSCRIPT_JSONL_REL` directly.
+- [x] **HYGIENE-2026-196** #3413: drop `current_persona_revision_id` wrapper; `companion_tool_runtime` calls `compute_persona_revision_id`.
+- [x] **HYGIENE-2026-197** Remove unused `_companion_ai_meta_from_turn_result` re-export from `chat_ws_companion_support`.
+- [x] **HYGIENE-2026-198** Remove `apply_companion_ws_inner_tick_coords`; `chat_ws` calls `apply_inner_tick_coords` from `session`.
+- [x] **HYGIENE-2026-199** ruff F401: unused imports in `ws_outbound_materialize` / `ws_turn_support`.
+- [x] **HYGIENE-2026-200** #3375: `ai_private_prompt` module doc — remove stale `get_ai_private_text_for_prompt` reference.
