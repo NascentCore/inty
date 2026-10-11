@@ -404,6 +404,66 @@ class ContextMeta(BaseModel):
         return self
 
 
+def _read_prompt_bundle_memory_injection_slices(
+    store: MemoryStore,
+    *,
+    meta: ContextMeta,
+    day: str,
+) -> tuple[str, str]:
+    """Return ``(memory_md, memory_daily_today_md)`` honoring private-memory injection rules."""
+    inject_private = experience_profile_injects_private_memory(meta.context_mode)
+    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
+    daily_md = ""
+    if inject_private:
+        daily_md = _read_memory_document_optional(
+            store,
+            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
+            max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
+        )
+    else:
+        memory_long = ""
+    return memory_long, daily_md
+
+
+def _prompt_bundle_required_persona_from_store(
+    store: MemoryStore,
+) -> tuple[str, str, str, str, str, str]:
+    """Load fixed persona MemDocs required on every prompt bundle."""
+    return (
+        _read_memory_document_required(store, IDENTITY_MD_REL),
+        _read_memory_document_required(store, SOUL_MD_REL),
+        _read_memory_document_required(store, STYLE_MD_REL),
+        _read_memory_document_required(store, USER_MD_REL),
+        _read_memory_document_required(store, CHANNELS_MD_REL),
+        _read_memory_document_required(store, COMPANIONSHIP_MD_REL),
+    )
+
+
+def _prompt_bundle_optional_world_and_templates(
+    store: MemoryStore,
+) -> tuple[str, str, str, str, str, str, str]:
+    """Load optional world MemDocs and harness template slices."""
+    techno = _read_memory_document_optional(store, TECHNO_CORE_MD_REL)
+    living = _read_memory_document_optional(store, LIVING_SPHERE_MD_REL)
+    tools_md = _template_doc_truncated(
+        TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+    )
+    harness_md = _template_doc_truncated(
+        HARNESS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+    )
+    about_md = _template_doc_truncated(
+        ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+    )
+    significance = _template_doc_truncated(
+        SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
+    )
+    output_format = _template_doc_truncated(
+        OUTPUT_FORMAT_IM_DM_MD_REL,
+        max_chars=_OPTIONAL_DOC_MAX_CHARS,
+    )
+    return techno, living, tools_md, harness_md, about_md, significance, output_format
+
+
 def load_prompt_bundle(
     store: MemoryStore,
     *,
@@ -421,51 +481,39 @@ def load_prompt_bundle(
     ensure_template_seeded_core_documents_in_store(store)
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
-    inject_private = experience_profile_injects_private_memory(m.context_mode)
-
-    daily_md = ""
-    memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
-    if inject_private:
-        daily_md = _read_memory_document_optional(
-            store,
-            DEFAULT_MEMORY_STORE_SCOPE_PATHS.memory_daily_gist(day),
-            max_chars=_MEMORY_DAILY_GIST_INJECT_MAX_CHARS,
-        )
-    else:
-        memory_long = ""
+    memory_long, daily_md = _read_prompt_bundle_memory_injection_slices(
+        store,
+        meta=m,
+        day=day,
+    )
+    identity, soul, style_md, user_md, channels_md, companionship_md = (
+        _prompt_bundle_required_persona_from_store(store)
+    )
+    (
+        techno_core_md,
+        living_sphere_md,
+        tools_md,
+        harness_md,
+        about_md,
+        significance_perception_md,
+        output_format_im_dm_md,
+    ) = _prompt_bundle_optional_world_and_templates(store)
 
     return PromptBundle(
-        identity=_read_memory_document_required(store, IDENTITY_MD_REL),
-        soul=_read_memory_document_required(store, SOUL_MD_REL),
-        style_md=_read_memory_document_required(store, STYLE_MD_REL),
-        user_md=_read_memory_document_required(store, USER_MD_REL),
+        identity=identity,
+        soul=soul,
+        style_md=style_md,
+        user_md=user_md,
         memory_md=memory_long,
-        techno_core_md=_read_memory_document_optional(
-            store, TECHNO_CORE_MD_REL
-        ),
-        living_sphere_md=_read_memory_document_optional(
-            store, LIVING_SPHERE_MD_REL
-        ),
-        tools_md=_template_doc_truncated(
-            TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
-        harness_md=_template_doc_truncated(
-            HARNESS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
-        about_md=_template_doc_truncated(
-            ABOUT_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
-        channels_md=_read_memory_document_required(store, CHANNELS_MD_REL),
-        companionship_md=_read_memory_document_required(
-            store, COMPANIONSHIP_MD_REL
-        ),
-        significance_perception_md=_template_doc_truncated(
-            SIGNIFICANCE_PERCEPTION_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS
-        ),
-        output_format_im_dm_md=_template_doc_truncated(
-            OUTPUT_FORMAT_IM_DM_MD_REL,
-            max_chars=_OPTIONAL_DOC_MAX_CHARS,
-        ),
+        techno_core_md=techno_core_md,
+        living_sphere_md=living_sphere_md,
+        tools_md=tools_md,
+        harness_md=harness_md,
+        about_md=about_md,
+        channels_md=channels_md,
+        companionship_md=companionship_md,
+        significance_perception_md=significance_perception_md,
+        output_format_im_dm_md=output_format_im_dm_md,
         memory_daily_today_md=daily_md,
     )
 

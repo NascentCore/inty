@@ -16,6 +16,39 @@ class OfficialAssistantToolLoopResult:
     trace_id: str | None
 
 
+def _append_official_assistant_tool_round_sync(
+    *,
+    current_message: Any,
+    tool_calls: list[Any],
+    messages_with_tool_results: list[dict[str, Any]],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    execute_tool_call: Callable[[str, str], tuple[str, str | None]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+) -> None:
+    messages_with_tool_results.append(
+        build_assistant_tool_call_message(current_message)
+    )
+    for tool_call in tool_calls:
+        tool_name = tool_call.function.name
+        raw_arguments = tool_call.function.arguments or ""
+        tool_result, injected_system_message = execute_tool_call(
+            tool_name,
+            raw_arguments,
+        )
+        messages_with_tool_results.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": tool_result,
+            }
+        )
+        if injected_system_message:
+            insert_system_message(
+                messages_with_tool_results,
+                injected_system_message,
+            )
+
+
 def resolve_official_assistant_tool_loop(
     *,
     response: Any,
@@ -52,28 +85,14 @@ def resolve_official_assistant_tool_loop(
                 trace_id=last_trace_id,
             )
 
-        messages_with_tool_results.append(
-            build_assistant_tool_call_message(current_message)
+        _append_official_assistant_tool_round_sync(
+            current_message=current_message,
+            tool_calls=tool_calls,
+            messages_with_tool_results=messages_with_tool_results,
+            build_assistant_tool_call_message=build_assistant_tool_call_message,
+            execute_tool_call=execute_tool_call,
+            insert_system_message=insert_system_message,
         )
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            raw_arguments = tool_call.function.arguments or ""
-            tool_result, injected_system_message = execute_tool_call(
-                tool_name,
-                raw_arguments,
-            )
-            messages_with_tool_results.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": tool_result,
-                }
-            )
-            if injected_system_message:
-                insert_system_message(
-                    messages_with_tool_results,
-                    injected_system_message,
-                )
         current_response, last_trace_id = continue_chat(
             messages_with_tool_results
         )
@@ -82,6 +101,89 @@ def resolve_official_assistant_tool_loop(
         "Official assistant tool call rounds exceeded "
         f"limit={max_tool_call_rounds}"
     )
+
+
+async def _append_official_assistant_tool_round_async(
+    *,
+    current_message: Any,
+    tool_calls: list[Any],
+    messages_with_tool_results: list[dict[str, Any]],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+    after_tool_messages_appended: (
+        Callable[[list[dict[str, Any]]], Awaitable[None]] | None
+    ),
+) -> None:
+    messages_with_tool_results.append(
+        build_assistant_tool_call_message(current_message)
+    )
+    for tool_call in tool_calls:
+        tool_name = tool_call.function.name
+        raw_arguments = tool_call.function.arguments or ""
+        tool_result, injected_system_message = await execute_tool_call(
+            tool_name,
+            raw_arguments,
+        )
+        messages_with_tool_results.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": tool_result,
+            }
+        )
+        if injected_system_message:
+            insert_system_message(
+                messages_with_tool_results,
+                injected_system_message,
+            )
+    if after_tool_messages_appended is not None:
+        await after_tool_messages_appended(messages_with_tool_results)
+
+
+async def _official_assistant_tool_loop_async_round(
+    *,
+    current_response: Any,
+    messages_with_tool_results: list[dict[str, Any]],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+    continue_chat: Callable[
+        [list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]
+    ],
+    after_tool_messages_appended: (
+        Callable[[list[dict[str, Any]]], Awaitable[None]] | None
+    ),
+    on_assistant_message: Callable[[Any], Awaitable[None]] | None,
+    last_trace_id: str | None,
+) -> tuple[OfficialAssistantToolLoopResult | None, Any, str | None]:
+    """One async tool-loop round; early result when the assistant stops calling tools."""
+    current_message = current_response.choices[0].message
+    if on_assistant_message is not None:
+        await on_assistant_message(current_message)
+    tool_calls = getattr(current_message, "tool_calls", None) or []
+    if not tool_calls:
+        return (
+            OfficialAssistantToolLoopResult(
+                response=current_response,
+                messages=messages_with_tool_results,
+                trace_id=last_trace_id,
+            ),
+            current_response,
+            last_trace_id,
+        )
+
+    await _append_official_assistant_tool_round_async(
+        current_message=current_message,
+        tool_calls=tool_calls,
+        messages_with_tool_results=messages_with_tool_results,
+        build_assistant_tool_call_message=build_assistant_tool_call_message,
+        execute_tool_call=execute_tool_call,
+        insert_system_message=insert_system_message,
+        after_tool_messages_appended=after_tool_messages_appended,
+    )
+    next_response, next_trace_id = await continue_chat(messages_with_tool_results)
+    return None, next_response, next_trace_id
 
 
 async def resolve_openai_tool_call_loop_async(
@@ -116,44 +218,21 @@ async def resolve_openai_tool_call_loop_async(
     current_response = response
     last_trace_id = initial_trace_id
     for _ in range(max_tool_call_rounds):
-        current_message = current_response.choices[0].message
-        if on_assistant_message is not None:
-            await on_assistant_message(current_message)
-        tool_calls = getattr(current_message, "tool_calls", None) or []
-        if not tool_calls:
-            return OfficialAssistantToolLoopResult(
-                response=current_response,
-                messages=messages_with_tool_results,
-                trace_id=last_trace_id,
+        early_result, current_response, last_trace_id = (
+            await _official_assistant_tool_loop_async_round(
+                current_response=current_response,
+                messages_with_tool_results=messages_with_tool_results,
+                build_assistant_tool_call_message=build_assistant_tool_call_message,
+                execute_tool_call=execute_tool_call,
+                insert_system_message=insert_system_message,
+                continue_chat=continue_chat,
+                after_tool_messages_appended=after_tool_messages_appended,
+                on_assistant_message=on_assistant_message,
+                last_trace_id=last_trace_id,
             )
-
-        messages_with_tool_results.append(
-            build_assistant_tool_call_message(current_message)
         )
-        for tool_call in tool_calls:
-            tool_name = tool_call.function.name
-            raw_arguments = tool_call.function.arguments or ""
-            tool_result, injected_system_message = await execute_tool_call(
-                tool_name,
-                raw_arguments,
-            )
-            messages_with_tool_results.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": tool_result,
-                }
-            )
-            if injected_system_message:
-                insert_system_message(
-                    messages_with_tool_results,
-                    injected_system_message,
-                )
-        if after_tool_messages_appended is not None:
-            await after_tool_messages_appended(messages_with_tool_results)
-        current_response, last_trace_id = await continue_chat(
-            messages_with_tool_results
-        )
+        if early_result is not None:
+            return early_result
 
     raise ValueError(
         "Official assistant tool call rounds exceeded "
