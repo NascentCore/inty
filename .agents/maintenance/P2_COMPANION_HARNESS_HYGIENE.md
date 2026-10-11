@@ -709,6 +709,6 @@ Open PRs checked: #3989, #3992, #3995, #3998, #4001, #4004, #4007, #4010, #4013,
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct11-499`)
 
-- [ ] **HYGIENE-2026-499** `memory/retrieval.py` — `select_slices_for_turn` transcript window via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`
-- [ ] **HYGIENE-2026-500** `tools/image_gate.py` — generated-image index + core profile reads via scope accessors
-- [ ] **HYGIENE-2026-501** `memory/living_sphere_curator.py` — LIVING_SPHERE merge paths via scope `living_sphere_md` / `living_sphere_updates_jsonl`
+- [x] **HYGIENE-2026-499** `memory/retrieval.py` — `select_slices_for_turn` transcript window via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.chat_history_md`. Fixed in `cursor/agent-maintenance-tasks-oct11-499` / pull/4019.
+- [x] **HYGIENE-2026-500** `tools/image_gate.py` — generated-image index + core profile reads via scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct11-499` / pull/4019.
+- [x] **HYGIENE-2026-501** `memory/living_sphere_curator.py` — LIVING_SPHERE merge paths via scope `living_sphere_md` / `living_sphere_updates_jsonl`. Fixed in `cursor/agent-maintenance-tasks-oct11-499` / pull/4019.
