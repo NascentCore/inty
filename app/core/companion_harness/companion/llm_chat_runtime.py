@@ -436,28 +436,14 @@ def _instantiate_companion_turn_langsmith_root(
     )
 
 
-def create_companion_turn_root_run(
+def _companion_turn_langsmith_parent_creation_allowed(
     *,
-    inty_trace_id: str,
-    user_msg_uuid: str,
+    parent_run_enabled: bool | None,
     chat_model: GenAIModel,
     tool_model: GenAIModel,
-    user_id: str = "",
-    companion_id: str = "",
-    parent_run_enabled: bool | None = None,
-    companion_turn_track: CompanionTurnTrack | None = None,
-    inner_tick_turn: bool = False,
-    inner_tick_activity: InnerTickActivity | None = None,
-    implicit_user_signed_on: bool = False,
-    transcript_newest_message_uuid: str | None = None,
-    langsmith_slice: CompanionTurnLangsmithSlice,
-) -> Any | None:
-    """Create LangSmith parent RunTree for one companion turn (TurnOrchestrator layer).
-
-    TODO(#3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
-    """
+) -> bool:
     if not _resolve_companion_turn_langsmith_parent_enabled(parent_run_enabled):
-        return None
+        return False
     if _langsmith_parent_models_are_kernel_test_placeholders(
         chat_model, tool_model
     ):
@@ -467,7 +453,25 @@ def create_companion_turn_root_run(
             chat_model.id_on_provider,
             tool_model.id_on_provider,
         )
-        return None
+        return False
+    return True
+
+
+def _try_instantiate_companion_turn_langsmith_root(
+    *,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    user_id: str,
+    companion_id: str,
+    companion_turn_track: CompanionTurnTrack | None,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity | None,
+    implicit_user_signed_on: bool,
+    transcript_newest_message_uuid: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any | None:
     try:
         from langsmith.run_trees import RunTree
 
@@ -489,6 +493,48 @@ def create_companion_turn_root_run(
     except Exception as exc:
         logger.warning("companion_turn_langsmith_parent create failed: {}", exc)
         return None
+
+
+def create_companion_turn_root_run(
+    *,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    user_id: str = "",
+    companion_id: str = "",
+    parent_run_enabled: bool | None = None,
+    companion_turn_track: CompanionTurnTrack | None = None,
+    inner_tick_turn: bool = False,
+    inner_tick_activity: InnerTickActivity | None = None,
+    implicit_user_signed_on: bool = False,
+    transcript_newest_message_uuid: str | None = None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any | None:
+    """Create LangSmith parent RunTree for one companion turn (TurnOrchestrator layer).
+
+    TODO(#3633): Move parent open/close into AgenticLoop for queue paths; shrink turn.py to pre-loop only.
+    """
+    if not _companion_turn_langsmith_parent_creation_allowed(
+        parent_run_enabled=parent_run_enabled,
+        chat_model=chat_model,
+        tool_model=tool_model,
+    ):
+        return None
+    return _try_instantiate_companion_turn_langsmith_root(
+        inty_trace_id=inty_trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_model=chat_model,
+        tool_model=tool_model,
+        user_id=user_id,
+        companion_id=companion_id,
+        companion_turn_track=companion_turn_track,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_activity=inner_tick_activity,
+        implicit_user_signed_on=implicit_user_signed_on,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+        langsmith_slice=langsmith_slice,
+    )
 
 
 def companion_turn_langsmith_parent_trace_id_str(root_run: Any) -> str:

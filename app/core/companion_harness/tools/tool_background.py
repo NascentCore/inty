@@ -1910,6 +1910,27 @@ async def _tool_bg_run_kickoff_and_delivery(
     )
 
 
+async def _tool_bg_run_kickoff_with_abort_cleanup(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    kickoff_config: _ToolBgKickoffLoopConfig,
+    user_msg_uuid: str,
+) -> None:
+    try:
+        await _tool_bg_run_kickoff_and_delivery(
+            memory_store=memory_store,
+            request_messages=request_messages,
+            client=client,
+            force_tools_first_round=force_tools_first_round,
+            kickoff_config=kickoff_config,
+        )
+    finally:
+        clear_tool_background_abort_flag(user_msg_uuid)
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1934,32 +1955,30 @@ async def run_tool_background_loop(
     langsmith_slice: CompanionTurnLangsmithSlice,
     force_tools_first_round: bool = True,
 ) -> None:
-    try:
-        kickoff_config = _tool_bg_kickoff_config_for_background_loop(
-            tool_model=tool_model,
-            trace_id=trace_id,
-            user_msg_uuid=user_msg_uuid,
-            chat_completion_sync=chat_completion_sync,
-            tools=tools,
-            langsmith_slice=langsmith_slice,
-            llm_round_timeout_sec=llm_round_timeout_sec,
-            trace_hooks=trace_hooks,
-            companion_turn_track=companion_turn_track,
-            runtime_context=runtime_context,
-            write_allowlist=write_allowlist,
-            repository_only_store_text=repository_only_store_text,
-            skip_finish_envelope_routing=skip_finish_envelope_routing,
-            suppress_user_delivery=suppress_user_delivery,
-            on_event=on_event,
-            activity_label=activity_label,
-            execute_tool_call_fn=execute_tool_call_fn,
-        )
-        await _tool_bg_run_kickoff_and_delivery(
-            memory_store=memory_store,
-            request_messages=request_messages,
-            client=client,
-            force_tools_first_round=force_tools_first_round,
-            kickoff_config=kickoff_config,
-        )
-    finally:
-        clear_tool_background_abort_flag(user_msg_uuid)
+    kickoff_config = _tool_bg_kickoff_config_for_background_loop(
+        tool_model=tool_model,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        chat_completion_sync=chat_completion_sync,
+        tools=tools,
+        langsmith_slice=langsmith_slice,
+        llm_round_timeout_sec=llm_round_timeout_sec,
+        trace_hooks=trace_hooks,
+        companion_turn_track=companion_turn_track,
+        runtime_context=runtime_context,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        suppress_user_delivery=suppress_user_delivery,
+        on_event=on_event,
+        activity_label=activity_label,
+        execute_tool_call_fn=execute_tool_call_fn,
+    )
+    await _tool_bg_run_kickoff_with_abort_cleanup(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        kickoff_config=kickoff_config,
+        user_msg_uuid=user_msg_uuid,
+    )

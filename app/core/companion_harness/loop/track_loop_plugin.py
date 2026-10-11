@@ -112,63 +112,90 @@ def _agentic_loop(prepared: CompanionTurnLoopInput) -> AgenticLoop:
     )
 
 
+def _bootstrap_user_chat_after_tool_round_hook(
+    prepared: CompanionTurnLoopInput,
+) -> Any:
+    """Refresh bootstrap user-chat system prefix after each in-turn tool round."""
+    store = prepared.store
+    runtime_context = prepared.runtime_context
+
+    async def _after_tool_round(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        return refresh_single_llm_bootstrap_chat_prompt_prefix(
+            store=store,
+            messages=messages_with_tool_results,
+            runtime_context=runtime_context,
+        )
+
+    return _after_tool_round
+
+
+def _bootstrap_user_chat_prompt_plan(
+    prepared: CompanionTurnLoopInput,
+) -> PromptPlan:
+    """Assemble the prompt plan for ``USER_CHAT_BOOTSTRAP``."""
+    runtime_context = prepared.runtime_context
+    bundle = prepared.loaded_state.bundle
+    context = prepared.loaded_state.context
+    transcript_window = _expanded_transcript_window(prepared)
+    return PromptBuilder(
+        bundle=bundle,
+        context=context,
+        runtime_context=runtime_context,
+    ).build_bootstrap_user_chat_prompt(
+        transcript_window=transcript_window,
+        tail_user_messages=prepared.tail_user_messages,
+        tools=tuple(prepared.tools_for_turn),
+        implicit_sign_on_turn=prepared.runtime_flags.implicit_sign_on_turn,
+        tail_splice_thoughts=prepared.ai_private_splice_plan.thoughts,
+    )
+
+
+async def _run_bootstrap_user_chat_single_llm(
+    prepared: CompanionTurnLoopInput,
+    *,
+    execution: Any,
+) -> AgenticLoopOutput:
+    assert prepared.user_message_batch is not None
+    runtime_context = prepared.runtime_context
+    bootstrap_prompt_plan = _bootstrap_user_chat_prompt_plan(prepared)
+    loop_context = build_bootstrap_user_chat_loop_context(
+        messages=prepared.messages,
+        tools_for_turn=prepared.tools_for_turn,
+        repository_only_store_text=prepared.repository_only_store_text,
+        trace_id=prepared.trace_id,
+        user_text=prepared.user_text,
+        ts_user=prepared.ts_user,
+        user_msg_uuid=prepared.user_msg_uuid,
+        transcript_rel=prepared.transcript_rel,
+        langsmith_slice=prepared.langsmith_slice,
+        runtime_context=runtime_context,
+        stack_depth=_system_stack_depth_from_prompt_plan(bootstrap_prompt_plan),
+        langsmith_trace_id=prepared.langsmith_trace_id,
+        langsmith_run_id=prepared.langsmith_run_id,
+        after_tool_messages_appended=_bootstrap_user_chat_after_tool_round_hook(
+            prepared
+        ),
+        output_queue=prepared.agentic_output_queue,
+        user_message_batch=prepared.user_message_batch,
+        tail_user_messages=prepared.tail_user_messages,
+        prompt_plan=bootstrap_prompt_plan,
+        execution=execution,
+    )
+    return await _agentic_loop(prepared).run_single_llm_turn(context=loop_context)
+
+
 class BootstrapUserChatPlugin:
     """``USER_CHAT_BOOTSTRAP`` single-LLM AgenticLoop with bootstrap prompt refresh."""
 
     async def run(self, prepared: CompanionTurnLoopInput) -> AgenticLoopOutput:
         assert prepared.user_message_batch is not None
-        p = prepared
-        store = p.store
-        runtime_context = p.runtime_context
-        bundle = p.loaded_state.bundle
-        context = p.loaded_state.context
-
-        async def _after_tool_round(
-            messages_with_tool_results: list[dict[str, Any]],
-        ) -> list[dict[str, Any]]:
-            return refresh_single_llm_bootstrap_chat_prompt_prefix(
-                store=store,
-                messages=messages_with_tool_results,
-                runtime_context=runtime_context,
-            )
-
-        transcript_window = _expanded_transcript_window(p)
-        bootstrap_prompt_plan = PromptBuilder(
-            bundle=bundle,
-            context=context,
-            runtime_context=runtime_context,
-        ).build_bootstrap_user_chat_prompt(
-            transcript_window=transcript_window,
-            tail_user_messages=p.tail_user_messages,
-            tools=tuple(p.tools_for_turn),
-            implicit_sign_on_turn=p.runtime_flags.implicit_sign_on_turn,
-            tail_splice_thoughts=p.ai_private_splice_plan.thoughts,
-        )
-        execution = _loop_execution_policy(p)
-        loop_context = build_bootstrap_user_chat_loop_context(
-            messages=p.messages,
-            tools_for_turn=p.tools_for_turn,
-            repository_only_store_text=p.repository_only_store_text,
-            trace_id=p.trace_id,
-            user_text=p.user_text,
-            ts_user=p.ts_user,
-            user_msg_uuid=p.user_msg_uuid,
-            transcript_rel=p.transcript_rel,
-            langsmith_slice=p.langsmith_slice,
-            runtime_context=runtime_context,
-            stack_depth=_system_stack_depth_from_prompt_plan(
-                bootstrap_prompt_plan
-            ),
-            langsmith_trace_id=p.langsmith_trace_id,
-            langsmith_run_id=p.langsmith_run_id,
-            after_tool_messages_appended=_after_tool_round,
-            output_queue=p.agentic_output_queue,
-            user_message_batch=p.user_message_batch,
-            tail_user_messages=p.tail_user_messages,
-            prompt_plan=bootstrap_prompt_plan,
+        execution = _loop_execution_policy(prepared)
+        return await _run_bootstrap_user_chat_single_llm(
+            prepared,
             execution=execution,
         )
-        return await _agentic_loop(p).run_single_llm_turn(context=loop_context)
 
 
 def _settled_user_chat_single_llm_after_tool_round_hook(

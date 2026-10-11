@@ -127,6 +127,47 @@ def _dreaming_batch_consolidate_and_checkpoint(
         raise
 
 
+def _dreaming_batch_candidate_for_session(
+    session: CompanionSession,
+    *,
+    idle_seconds: int,
+) -> DreamingCandidate | None:
+    """Return consolidation candidate when session is initialized and dreaming is due."""
+    assert idle_seconds > 0
+    if not session.is_initialized:
+        return None
+    return dreaming_due(
+        session.store,
+        now=datetime.now(UTC),
+        dreaming_idle_seconds=idle_seconds,
+    )
+
+
+def _run_dreaming_batch_for_candidate(
+    *,
+    session: CompanionSession,
+    candidate: DreamingCandidate,
+    idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
+    inty_trace_id: str,
+) -> DreamingBatchOutcome:
+    if session.store.uses_repository_without_scope_disk:
+        return _run_dreaming_batch_with_repository_advisory_lock(
+            session=session,
+            candidate=candidate,
+            idle_seconds=idle_seconds,
+            curator_mode=curator_mode,
+            inty_trace_id=inty_trace_id,
+        )
+    return _run_dreaming_batch_locked(
+        session=session,
+        candidate=candidate,
+        idle_seconds=idle_seconds,
+        curator_mode=curator_mode,
+        inty_trace_id=inty_trace_id,
+    )
+
+
 def run_dreaming_batch_if_due(
     session: CompanionSession,
     *,
@@ -151,30 +192,15 @@ def run_dreaming_batch_if_due(
     Callable from scope inner-tick worker (#3255 / PR #3387); caller holds scope
     ``turn_lock`` on ``CompanionSession``.
     """
-    assert idle_seconds > 0
-    if not session.is_initialized:
-        return DreamingBatchOutcome.NOT_DUE
-
-    candidate = dreaming_due(
-        session.store,
-        now=datetime.now(UTC),
-        dreaming_idle_seconds=idle_seconds,
+    candidate = _dreaming_batch_candidate_for_session(
+        session,
+        idle_seconds=idle_seconds,
     )
     if candidate is None:
         return DreamingBatchOutcome.NOT_DUE
 
     inty_trace_id = new_dreaming_batch_trace_id()
-
-    if session.store.uses_repository_without_scope_disk:
-        return _run_dreaming_batch_with_repository_advisory_lock(
-            session=session,
-            candidate=candidate,
-            idle_seconds=idle_seconds,
-            curator_mode=curator_mode,
-            inty_trace_id=inty_trace_id,
-        )
-
-    return _run_dreaming_batch_locked(
+    return _run_dreaming_batch_for_candidate(
         session=session,
         candidate=candidate,
         idle_seconds=idle_seconds,
