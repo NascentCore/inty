@@ -522,6 +522,23 @@ def _persist_companion_turn_ai_private_and_assistant_transcript(
     )
 
 
+def _companion_turn_transcript_rel_and_assistant_msg_uuid(
+    *,
+    track: CompanionTurnTrack,
+    implicit_sign_on_turn: bool,
+    last_interim_assistant_msg_uuid: str | None,
+) -> tuple[str, str]:
+    """Resolve transcript path and final assistant row id for one turn persist."""
+    rel_tr = _companion_turn_transcript_relative_path(
+        track=track,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
+    assistant_msg_uuid = _resolve_companion_turn_assistant_msg_uuid(
+        last_interim_assistant_msg_uuid
+    )
+    return rel_tr, assistant_msg_uuid
+
+
 def _persist_companion_turn_transcript(
     *,
     store: Any,
@@ -541,12 +558,10 @@ def _persist_companion_turn_transcript(
     turn_recall: str | None,
     inner_tick_turn: bool,
 ) -> str:
-    rel_tr = _companion_turn_transcript_relative_path(
+    rel_tr, assistant_msg_uuid = _companion_turn_transcript_rel_and_assistant_msg_uuid(
         track=track,
         implicit_sign_on_turn=implicit_sign_on_turn,
-    )
-    assistant_msg_uuid = _resolve_companion_turn_assistant_msg_uuid(
-        last_interim_assistant_msg_uuid
+        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
     )
     _append_companion_turn_user_transcript_side(
         store=store,

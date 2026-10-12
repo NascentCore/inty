@@ -381,24 +381,28 @@ def _create_and_register_companion_turn_langsmith_root(
     return root
 
 
-def _instantiate_companion_turn_langsmith_root(
-    *,
-    RunTree: Any,
-    inty_trace_id: str,
-    user_msg_uuid: str,
-    chat_model: GenAIModel,
-    tool_model: GenAIModel,
+def _stripped_companion_scope_ids(
     user_id: str,
     companion_id: str,
+) -> tuple[str, str]:
+    """Normalize user and companion ids for LangSmith parent run metadata."""
+    return (user_id or "").strip(), (companion_id or "").strip()
+
+
+def _langsmith_parent_turn_ctx_and_meta(
+    *,
+    uid: str,
+    cid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
     companion_turn_track: CompanionTurnTrack | None,
     inner_tick_turn: bool,
     inner_tick_activity: InnerTickActivity | None,
     implicit_user_signed_on: bool,
     transcript_newest_message_uuid: str | None,
     langsmith_slice: CompanionTurnLangsmithSlice,
-) -> Any:
-    uid = (user_id or "").strip()
-    cid = (companion_id or "").strip()
+) -> tuple[_LangsmithParentTurnContext, dict[str, Any]]:
+    """Resolve LangSmith parent lane context and metadata for one companion turn."""
     turn_ctx = _resolve_langsmith_parent_turn_context(
         user_id=uid,
         companion_id=cid,
@@ -416,6 +420,38 @@ def _instantiate_companion_turn_langsmith_root(
         langsmith_slice=langsmith_slice,
         turn_ctx=turn_ctx,
         transcript_newest_message_uuid=transcript_newest_message_uuid,
+    )
+    return turn_ctx, meta
+
+
+def _instantiate_companion_turn_langsmith_root(
+    *,
+    RunTree: Any,
+    inty_trace_id: str,
+    user_msg_uuid: str,
+    chat_model: GenAIModel,
+    tool_model: GenAIModel,
+    user_id: str,
+    companion_id: str,
+    companion_turn_track: CompanionTurnTrack | None,
+    inner_tick_turn: bool,
+    inner_tick_activity: InnerTickActivity | None,
+    implicit_user_signed_on: bool,
+    transcript_newest_message_uuid: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any:
+    uid, cid = _stripped_companion_scope_ids(user_id, companion_id)
+    turn_ctx, meta = _langsmith_parent_turn_ctx_and_meta(
+        uid=uid,
+        cid=cid,
+        chat_model=chat_model,
+        tool_model=tool_model,
+        companion_turn_track=companion_turn_track,
+        inner_tick_turn=inner_tick_turn,
+        inner_tick_activity=inner_tick_activity,
+        implicit_user_signed_on=implicit_user_signed_on,
+        transcript_newest_message_uuid=transcript_newest_message_uuid,
+        langsmith_slice=langsmith_slice,
     )
     return _create_and_register_companion_turn_langsmith_root(
         RunTree=RunTree,
