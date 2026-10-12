@@ -709,6 +709,6 @@ Open PRs checked: #3989, #3995, #4013, #4016, #4019 — no overlap with tasks be
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct12-502`)
 
-- [ ] **HYGIENE-2026-502** `memory/dreaming_consolidation.py` — curator read/write + one-shot tool path list via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` persona MemDoc accessors.
-- [ ] **HYGIENE-2026-503** `memory/user_md_identity.py` — `load_user_md_template_text` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md` (drop `USER_MD_REL` import).
-- [ ] **HYGIENE-2026-504** `tools/companion_tool_runtime.py` — `USER_MD` profile tool + techno/living-sphere JSONL appends via scope accessors.
+- [x] **HYGIENE-2026-502** `memory/dreaming_consolidation.py` — curator read/write + one-shot tool path list via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` persona MemDoc accessors. Fixed in `cursor/agent-maintenance-tasks-oct12-502` / pull/4022.
+- [x] **HYGIENE-2026-503** `memory/user_md_identity.py` — `load_user_md_template_text` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md` (drop `USER_MD_REL` import). Fixed in `cursor/agent-maintenance-tasks-oct12-502` / pull/4022.
+- [x] **HYGIENE-2026-504** `tools/companion_tool_runtime.py` — `USER_MD` profile tool + techno/living-sphere JSONL appends via scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct12-502` / pull/4022.
