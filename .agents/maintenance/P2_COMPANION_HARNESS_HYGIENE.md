@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-12 scan (cron)
+
+Source: open PR overlap check (#3989 HYGIENE-466..470, #3995 HYGIENE-474..476, #4013 HYGIENE-493..495, #4016 HYGIENE-496..498, #4019 HYGIENE-499..501 — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — `dreaming_consolidation.py`, `user_md_identity.py`, and event-append paths in `companion_tool_runtime.py` still use direct `*_REL` imports.
+
+Open PRs checked: #3989, #3995, #4013, #4016, #4019 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct12-502`)
+
+- [ ] **HYGIENE-2026-502** `memory/dreaming_consolidation.py` — curator read/write + one-shot tool path list via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` persona MemDoc accessors.
+- [ ] **HYGIENE-2026-503** `memory/user_md_identity.py` — `load_user_md_template_text` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.user_md` (drop `USER_MD_REL` import).
+- [ ] **HYGIENE-2026-504** `tools/companion_tool_runtime.py` — `USER_MD` profile tool + techno/living-sphere JSONL appends via scope accessors.
