@@ -464,6 +464,44 @@ def _prompt_bundle_optional_world_and_templates(
     return techno, living, tools_md, harness_md, about_md, significance, output_format
 
 
+def _assemble_prompt_bundle(
+    *,
+    identity: str,
+    soul: str,
+    style_md: str,
+    user_md: str,
+    memory_long: str,
+    techno_core_md: str,
+    living_sphere_md: str,
+    tools_md: str,
+    harness_md: str,
+    about_md: str,
+    channels_md: str,
+    companionship_md: str,
+    significance_perception_md: str,
+    output_format_im_dm_md: str,
+    daily_md: str,
+) -> PromptBundle:
+    """Materialize ``PromptBundle`` from already-loaded MemDoc bodies."""
+    return PromptBundle(
+        identity=identity,
+        soul=soul,
+        style_md=style_md,
+        user_md=user_md,
+        memory_md=memory_long,
+        techno_core_md=techno_core_md,
+        living_sphere_md=living_sphere_md,
+        tools_md=tools_md,
+        harness_md=harness_md,
+        about_md=about_md,
+        channels_md=channels_md,
+        companionship_md=companionship_md,
+        significance_perception_md=significance_perception_md,
+        output_format_im_dm_md=output_format_im_dm_md,
+        memory_daily_today_md=daily_md,
+    )
+
+
 def load_prompt_bundle(
     store: MemoryStore,
     *,
@@ -499,12 +537,12 @@ def load_prompt_bundle(
         output_format_im_dm_md,
     ) = _prompt_bundle_optional_world_and_templates(store)
 
-    return PromptBundle(
+    return _assemble_prompt_bundle(
         identity=identity,
         soul=soul,
         style_md=style_md,
         user_md=user_md,
-        memory_md=memory_long,
+        memory_long=memory_long,
         techno_core_md=techno_core_md,
         living_sphere_md=living_sphere_md,
         tools_md=tools_md,
@@ -514,7 +552,7 @@ def load_prompt_bundle(
         companionship_md=companionship_md,
         significance_perception_md=significance_perception_md,
         output_format_im_dm_md=output_format_im_dm_md,
-        memory_daily_today_md=daily_md,
+        daily_md=daily_md,
     )
 
 
