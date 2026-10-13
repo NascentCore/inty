@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-13 scan (cron)
+
+Source: open PR overlap check (#4016 HYGIENE-496..498 manager/bootstrap/models, #4019 HYGIENE-499..501 retrieval/image_gate/living_sphere_curator, #4022 HYGIENE-502..504 dreaming_consolidation/user_md/tool_runtime — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — `companion_tool_definitions.py` write allowlists and append-only tool descriptions still import `*_REL` directly.
+
+Open PRs checked: #4016 (`cursor/agent-maintenance-tasks-oct10-496`), #4019 (`cursor/agent-maintenance-tasks-oct11-499`), #4022 (`cursor/agent-maintenance-tasks-oct12-502`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct13-505`)
+
+- [x] **HYGIENE-2026-505** #3413: `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
+- [x] **HYGIENE-2026-506** #3413: `companion_tool_definitions.py` — append-only tool descriptions (`ai_private`, living sphere, techno core) via scope JSONL accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
+- [x] **HYGIENE-2026-507** `tools/test_companion_tool_definitions.py` — assert write allowlists match scope-path accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
