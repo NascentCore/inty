@@ -709,6 +709,6 @@ Open PRs checked: #4016 (`cursor/agent-maintenance-tasks-oct10-496`), #4019 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct13-505`)
 
-- [ ] **HYGIENE-2026-505** #3413: `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
-- [ ] **HYGIENE-2026-506** #3413: `companion_tool_definitions.py` — append-only tool descriptions (`ai_private`, living sphere, techno core) via scope JSONL accessors.
-- [ ] **HYGIENE-2026-507** `tools/test_companion_tool_definitions.py` — assert write allowlists match scope-path accessors.
+- [x] **HYGIENE-2026-505** #3413: `companion_tool_definitions.py` — `MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST*` from `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
+- [x] **HYGIENE-2026-506** #3413: `companion_tool_definitions.py` — append-only tool descriptions (`ai_private`, living sphere, techno core) via scope JSONL accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
+- [x] **HYGIENE-2026-507** `tools/test_companion_tool_definitions.py` — assert write allowlists match scope-path accessors. Fixed in `cursor/agent-maintenance-tasks-oct13-505`.
