@@ -6,7 +6,7 @@
 
 ## mattpocock/skills 说明
 
-mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 自有 skill 在 `.cursor/skills/`。
+`.agents/skills/` 里的 skill 是仓库内本地副本。`skills-lock.json` 的 `sourceType` 为 `local`，`npx skills update` 不再从 GitHub 拉取。Inty 自有 skill 在 `.cursor/skills/`。
 
 ### Setup 状态
 
