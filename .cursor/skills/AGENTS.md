@@ -6,7 +6,7 @@
 
 ## mattpocock/skills 说明
 
-mattpocock/skills 已安装于 `.agents/skills/`（`skills-lock.json`）；Inty 自有 skill 在 `.cursor/skills/`。
+mattpocock/skills 已 **vendored** 于 `.agents/skills/`（见根目录 `agents-lock.json`，**不同步 GitHub**）；Inty 自有 skill 在 `.cursor/skills/`。索引见 [`.cursor/agents.md`](/.cursor/agents.md)。
 
 ### Setup 状态
 
