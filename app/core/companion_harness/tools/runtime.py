@@ -217,6 +217,50 @@ async def _official_assistant_tool_loop_async_round(
     return None, next_response, next_trace_id
 
 
+async def _run_official_assistant_tool_loop_async(
+    *,
+    response: Any,
+    openai_messages: list[dict[str, Any]],
+    max_tool_call_rounds: int,
+    execute_tool_call: Callable[[str, str], Awaitable[tuple[str, str | None]]],
+    continue_chat: Callable[
+        [list[dict[str, Any]]], Awaitable[tuple[Any, str | None]]
+    ],
+    build_assistant_tool_call_message: Callable[[Any], dict[str, Any]],
+    insert_system_message: Callable[[list[dict[str, Any]], str], None],
+    initial_trace_id: str | None,
+    after_tool_messages_appended: (
+        Callable[[list[dict[str, Any]]], Awaitable[None]] | None
+    ),
+    on_assistant_message: Callable[[Any], Awaitable[None]] | None,
+) -> OfficialAssistantToolLoopResult:
+    """Drive async official-assistant tool rounds until completion or limit."""
+    messages_with_tool_results = [*openai_messages]
+    current_response = response
+    last_trace_id = initial_trace_id
+    for _ in range(max_tool_call_rounds):
+        early_result, current_response, last_trace_id = (
+            await _official_assistant_tool_loop_async_round(
+                current_response=current_response,
+                messages_with_tool_results=messages_with_tool_results,
+                build_assistant_tool_call_message=build_assistant_tool_call_message,
+                execute_tool_call=execute_tool_call,
+                insert_system_message=insert_system_message,
+                continue_chat=continue_chat,
+                after_tool_messages_appended=after_tool_messages_appended,
+                on_assistant_message=on_assistant_message,
+                last_trace_id=last_trace_id,
+            )
+        )
+        if early_result is not None:
+            return early_result
+
+    raise ValueError(
+        "Official assistant tool call rounds exceeded "
+        f"limit={max_tool_call_rounds}"
+    )
+
+
 async def resolve_openai_tool_call_loop_async(
     *,
     response: Any,
@@ -245,29 +289,17 @@ async def resolve_openai_tool_call_loop_async(
     Callers use it to refresh leading system messages or tool
     definitions when workspace slices change mid-loop (e.g. bootstrap complete).
     """
-    messages_with_tool_results = [*openai_messages]
-    current_response = response
-    last_trace_id = initial_trace_id
-    for _ in range(max_tool_call_rounds):
-        early_result, current_response, last_trace_id = (
-            await _official_assistant_tool_loop_async_round(
-                current_response=current_response,
-                messages_with_tool_results=messages_with_tool_results,
-                build_assistant_tool_call_message=build_assistant_tool_call_message,
-                execute_tool_call=execute_tool_call,
-                insert_system_message=insert_system_message,
-                continue_chat=continue_chat,
-                after_tool_messages_appended=after_tool_messages_appended,
-                on_assistant_message=on_assistant_message,
-                last_trace_id=last_trace_id,
-            )
-        )
-        if early_result is not None:
-            return early_result
-
-    raise ValueError(
-        "Official assistant tool call rounds exceeded "
-        f"limit={max_tool_call_rounds}"
+    return await _run_official_assistant_tool_loop_async(
+        response=response,
+        openai_messages=openai_messages,
+        max_tool_call_rounds=max_tool_call_rounds,
+        execute_tool_call=execute_tool_call,
+        continue_chat=continue_chat,
+        build_assistant_tool_call_message=build_assistant_tool_call_message,
+        insert_system_message=insert_system_message,
+        initial_trace_id=initial_trace_id,
+        after_tool_messages_appended=after_tool_messages_appended,
+        on_assistant_message=on_assistant_message,
     )
 
 

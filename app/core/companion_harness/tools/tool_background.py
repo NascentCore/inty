@@ -1931,6 +1931,26 @@ async def _tool_bg_run_kickoff_with_abort_cleanup(
         clear_tool_background_abort_flag(user_msg_uuid)
 
 
+async def _run_tool_background_loop_kickoff(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    kickoff_config: Any,
+    user_msg_uuid: str,
+) -> None:
+    """Run tool-background kickoff with per-turn abort flag cleanup."""
+    await _tool_bg_run_kickoff_with_abort_cleanup(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        kickoff_config=kickoff_config,
+        user_msg_uuid=user_msg_uuid,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1974,7 +1994,7 @@ async def run_tool_background_loop(
         activity_label=activity_label,
         execute_tool_call_fn=execute_tool_call_fn,
     )
-    await _tool_bg_run_kickoff_with_abort_cleanup(
+    await _run_tool_background_loop_kickoff(
         memory_store=memory_store,
         request_messages=request_messages,
         client=client,

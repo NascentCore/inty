@@ -779,46 +779,63 @@ async def _dispatch_generate_image(
     return out
 
 
+def _parse_modify_image_source_arguments(
+    arguments: dict[str, Any],
+) -> tuple[str, str, str | None]:
+    """Normalize modify_image source args; return (path_s, url_s, error_message)."""
+    raw_path = arguments.get("source_image_relative_path")
+    raw_url = arguments.get("source_image_url")
+    if raw_path is not None and not isinstance(raw_path, str):
+        return "", "", (
+            "ERROR: source_image_relative_path must be a string or omitted"
+        )
+    if raw_url is not None and not isinstance(raw_url, str):
+        return "", "", "ERROR: source_image_url must be a string or omitted"
+    path_s = raw_path.strip() if isinstance(raw_path, str) else ""
+    url_s = raw_url.strip() if isinstance(raw_url, str) else ""
+    if path_s and url_s:
+        return (
+            "",
+            "",
+            "ERROR: use only one of source_image_relative_path or source_image_url, not both",
+        )
+    return path_s, url_s, None
+
+
+def _modify_image_http_url_for_store_path(
+    store: MemoryStore,
+    path_s: str,
+) -> tuple[str, str | None]:
+    """Resolve indexed asset HTTP URL for a memory-store relative image path."""
+    try:
+        normalized = normalize_memory_store_relative_path(path_s)
+    except ValueError as exc:
+        return "", f"ERROR: {exc}"
+    asset = find_latest_asset_by_local_relative_path(store, normalized)
+    if asset is None:
+        return "", f"ERROR: source image not in index: {normalized!r}"
+    u = str(asset.get("gcs_http_url") or "").strip()
+    if u.startswith("http://") or u.startswith("https://"):
+        return u, None
+    return (
+        "",
+        f"ERROR: source image in index has no http(s) URL for {normalized!r}",
+    )
+
+
 def _resolve_modify_image_source(
     store: MemoryStore,
     arguments: dict[str, Any],
 ) -> tuple[Path | None, str | None, str | None]:
     """Return (source_path, source_url, error_message)."""
-    raw_path = arguments.get("source_image_relative_path")
-    raw_url = arguments.get("source_image_url")
-    if raw_path is not None and not isinstance(raw_path, str):
-        return None, None, (
-            "ERROR: source_image_relative_path must be a string or omitted"
-        )
-    if raw_url is not None and not isinstance(raw_url, str):
-        return None, None, "ERROR: source_image_url must be a string or omitted"
-    path_s = raw_path.strip() if isinstance(raw_path, str) else ""
-    url_s = raw_url.strip() if isinstance(raw_url, str) else ""
-    if path_s and url_s:
-        return (
-            None,
-            None,
-            "ERROR: use only one of source_image_relative_path or source_image_url, not both",
-        )
+    path_s, url_s, arg_error = _parse_modify_image_source_arguments(arguments)
+    if arg_error is not None:
+        return None, None, arg_error
     src_path: Path | None = None
     if path_s:
-        try:
-            path_s = normalize_memory_store_relative_path(path_s)
-        except ValueError as exc:
-            return None, None, f"ERROR: {exc}"
-        asset = find_latest_asset_by_local_relative_path(store, path_s)
-        if asset is not None:
-            u = str(asset.get("gcs_http_url") or "").strip()
-            if u.startswith("http://") or u.startswith("https://"):
-                url_s = u
-            else:
-                return (
-                    None,
-                    None,
-                    f"ERROR: source image in index has no http(s) URL for {path_s!r}",
-                )
-        else:
-            return None, None, f"ERROR: source image not in index: {path_s!r}"
+        url_s, path_error = _modify_image_http_url_for_store_path(store, path_s)
+        if path_error is not None:
+            return None, None, path_error
     src_url_out: str | None = url_s if url_s else None
     if src_path is None and src_url_out is None:
         src_url_out = _latest_generated_image_http_url_from_index(store)

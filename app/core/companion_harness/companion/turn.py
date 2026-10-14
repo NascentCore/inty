@@ -539,6 +539,32 @@ def _companion_turn_transcript_rel_and_assistant_msg_uuid(
     return rel_tr, assistant_msg_uuid
 
 
+def _persist_companion_turn_transcript_user_side(
+    *,
+    store: Any,
+    rel_tr: str,
+    track: CompanionTurnTrack,
+    implicit_sign_on_turn: bool,
+    in_turn_sync_persisted_transcript: bool,
+    tail_user_messages: Any,
+    trace_id: str,
+    user_msg_uuid: str,
+    ts_user: Any,
+) -> None:
+    """Append user-side transcript rows for one companion turn."""
+    _append_companion_turn_user_transcript_side(
+        store=store,
+        rel_tr=rel_tr,
+        track=track,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+        in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
+        tail_user_messages=tail_user_messages,
+        trace_id=trace_id,
+        user_msg_uuid=user_msg_uuid,
+        ts_user=ts_user,
+    )
+
+
 def _persist_companion_turn_transcript(
     *,
     store: Any,
@@ -563,7 +589,7 @@ def _persist_companion_turn_transcript(
         implicit_sign_on_turn=implicit_sign_on_turn,
         last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
     )
-    _append_companion_turn_user_transcript_side(
+    _persist_companion_turn_transcript_user_side(
         store=store,
         rel_tr=rel_tr,
         track=track,

@@ -510,7 +510,30 @@ def _agentic_loop_context_from_settled_user_chat_bind(
     )
 
 
-def _make_settled_user_chat_loop_turn_inputs(
+@dataclass(frozen=True)
+class _SettledUserChatLoopTurnCommon:
+    """Shared caller fields for settled ``USER_CHAT`` loop context builders."""
+
+    messages: list[dict[str, Any]]
+    tools_for_turn: list[dict[str, Any]]
+    repository_only_store_text: bool
+    trace_id: str
+    user_text: str
+    ts_user: datetime
+    user_msg_uuid: str
+    transcript_rel: str
+    langsmith_slice: CompanionTurnLangsmithSlice
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    runtime_context: TurnRuntimeContext
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    output_queue: OutputQueue
+    user_message_batch: UserMessageBatch
+    stack_depth: int
+    execution: LoopExecutionPolicy
+
+
+def _settled_user_chat_loop_turn_common(
     *,
     messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
@@ -529,15 +552,9 @@ def _make_settled_user_chat_loop_turn_inputs(
     user_message_batch: UserMessageBatch,
     stack_depth: int,
     execution: LoopExecutionPolicy,
-    after_tool_messages_appended: AfterToolMessagesHook | None,
-    context_meta: ContextMeta | None,
-    prompt_plan: PromptPlan | None,
-    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None,
-    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None,
-    prompt_bundle: PromptBundle | None,
-) -> _SettledUserChatLoopTurnInputs:
-    """Map settled ``USER_CHAT`` caller fields to shared turn inputs."""
-    return _SettledUserChatLoopTurnInputs(
+) -> _SettledUserChatLoopTurnCommon:
+    """Bundle shared settled ``USER_CHAT`` builder kwargs."""
+    return _SettledUserChatLoopTurnCommon(
         messages=messages,
         tools_for_turn=tools_for_turn,
         repository_only_store_text=repository_only_store_text,
@@ -555,6 +572,62 @@ def _make_settled_user_chat_loop_turn_inputs(
         user_message_batch=user_message_batch,
         stack_depth=stack_depth,
         execution=execution,
+    )
+
+
+def _settled_user_chat_loop_context_from_common(
+    common: _SettledUserChatLoopTurnCommon,
+    *,
+    after_tool_messages_appended: AfterToolMessagesHook | None,
+    context_meta: ContextMeta | None,
+    prompt_plan: PromptPlan | None,
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None,
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None,
+    prompt_bundle: PromptBundle | None,
+) -> AgenticLoopContext:
+    """Materialize settled ``USER_CHAT`` loop context from common + variant fields."""
+    return _settled_user_chat_loop_context_from_shared_turn_inputs(
+        _settled_user_chat_loop_turn_inputs(
+            common,
+            after_tool_messages_appended=after_tool_messages_appended,
+            context_meta=context_meta,
+            prompt_plan=prompt_plan,
+            dual_llm_chat_msgs=dual_llm_chat_msgs,
+            dual_llm_tool_msgs=dual_llm_tool_msgs,
+            prompt_bundle=prompt_bundle,
+        )
+    )
+
+
+def _settled_user_chat_loop_turn_inputs(
+    common: _SettledUserChatLoopTurnCommon,
+    *,
+    after_tool_messages_appended: AfterToolMessagesHook | None,
+    context_meta: ContextMeta | None,
+    prompt_plan: PromptPlan | None,
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None,
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None,
+    prompt_bundle: PromptBundle | None,
+) -> _SettledUserChatLoopTurnInputs:
+    """Attach single-LLM vs dual-LLM variant fields to shared settled turn inputs."""
+    return _SettledUserChatLoopTurnInputs(
+        messages=common.messages,
+        tools_for_turn=common.tools_for_turn,
+        repository_only_store_text=common.repository_only_store_text,
+        trace_id=common.trace_id,
+        user_text=common.user_text,
+        ts_user=common.ts_user,
+        user_msg_uuid=common.user_msg_uuid,
+        transcript_rel=common.transcript_rel,
+        langsmith_slice=common.langsmith_slice,
+        langsmith_trace_id=common.langsmith_trace_id,
+        langsmith_run_id=common.langsmith_run_id,
+        runtime_context=common.runtime_context,
+        tail_user_messages=common.tail_user_messages,
+        output_queue=common.output_queue,
+        user_message_batch=common.user_message_batch,
+        stack_depth=common.stack_depth,
+        execution=common.execution,
         after_tool_messages_appended=after_tool_messages_appended,
         context_meta=context_meta,
         prompt_plan=prompt_plan,
@@ -587,32 +660,33 @@ def build_settled_user_chat_loop_context(
     prompt_plan: PromptPlan | None = None,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for single-LLM ``AgenticLoop``."""
-    return _settled_user_chat_loop_context_from_shared_turn_inputs(
-        _make_settled_user_chat_loop_turn_inputs(
-            messages=messages,
-            tools_for_turn=tools_for_turn,
-            repository_only_store_text=repository_only_store_text,
-            trace_id=trace_id,
-            user_text=user_text,
-            ts_user=ts_user,
-            user_msg_uuid=user_msg_uuid,
-            transcript_rel=transcript_rel,
-            langsmith_slice=langsmith_slice,
-            langsmith_trace_id=langsmith_trace_id,
-            langsmith_run_id=langsmith_run_id,
-            runtime_context=runtime_context,
-            tail_user_messages=tail_user_messages,
-            output_queue=output_queue,
-            user_message_batch=user_message_batch,
-            stack_depth=stack_depth,
-            execution=execution,
-            after_tool_messages_appended=after_tool_messages_appended,
-            context_meta=None,
-            prompt_plan=prompt_plan,
-            dual_llm_chat_msgs=None,
-            dual_llm_tool_msgs=None,
-            prompt_bundle=None,
-        )
+    common = _settled_user_chat_loop_turn_common(
+        messages=messages,
+        tools_for_turn=tools_for_turn,
+        repository_only_store_text=repository_only_store_text,
+        trace_id=trace_id,
+        user_text=user_text,
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        transcript_rel=transcript_rel,
+        langsmith_slice=langsmith_slice,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
+        output_queue=output_queue,
+        user_message_batch=user_message_batch,
+        stack_depth=stack_depth,
+        execution=execution,
+    )
+    return _settled_user_chat_loop_context_from_common(
+        common,
+        after_tool_messages_appended=after_tool_messages_appended,
+        context_meta=None,
+        prompt_plan=prompt_plan,
+        dual_llm_chat_msgs=None,
+        dual_llm_tool_msgs=None,
+        prompt_bundle=None,
     )
 
 
@@ -643,32 +717,33 @@ def build_settled_dual_llm_user_chat_loop_context(
     """Assemble settled ``USER_CHAT`` context for dual-LLM ``AgenticLoop``."""
     assert dual_llm_chat_msgs
     assert dual_llm_tool_msgs
-    return _settled_user_chat_loop_context_from_shared_turn_inputs(
-        _make_settled_user_chat_loop_turn_inputs(
-            messages=messages,
-            tools_for_turn=tools_for_turn,
-            repository_only_store_text=repository_only_store_text,
-            trace_id=trace_id,
-            user_text=user_text,
-            ts_user=ts_user,
-            user_msg_uuid=user_msg_uuid,
-            transcript_rel=transcript_rel,
-            langsmith_slice=langsmith_slice,
-            langsmith_trace_id=langsmith_trace_id,
-            langsmith_run_id=langsmith_run_id,
-            runtime_context=runtime_context,
-            tail_user_messages=tail_user_messages,
-            output_queue=output_queue,
-            user_message_batch=user_message_batch,
-            stack_depth=stack_depth,
-            execution=execution,
-            after_tool_messages_appended=None,
-            context_meta=context_meta,
-            prompt_plan=None,
-            dual_llm_chat_msgs=dual_llm_chat_msgs,
-            dual_llm_tool_msgs=dual_llm_tool_msgs,
-            prompt_bundle=prompt_bundle,
-        )
+    common = _settled_user_chat_loop_turn_common(
+        messages=messages,
+        tools_for_turn=tools_for_turn,
+        repository_only_store_text=repository_only_store_text,
+        trace_id=trace_id,
+        user_text=user_text,
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        transcript_rel=transcript_rel,
+        langsmith_slice=langsmith_slice,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        runtime_context=runtime_context,
+        tail_user_messages=tail_user_messages,
+        output_queue=output_queue,
+        user_message_batch=user_message_batch,
+        stack_depth=stack_depth,
+        execution=execution,
+    )
+    return _settled_user_chat_loop_context_from_common(
+        common,
+        after_tool_messages_appended=None,
+        context_meta=context_meta,
+        prompt_plan=None,
+        dual_llm_chat_msgs=dual_llm_chat_msgs,
+        dual_llm_tool_msgs=dual_llm_tool_msgs,
+        prompt_bundle=prompt_bundle,
     )
 
 
