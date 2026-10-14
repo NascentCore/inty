@@ -78,7 +78,7 @@ from .fal_z_image_tool import (
 )
 from .google_web_search import run_google_web_search
 from .image_gate import (
-    current_persona_revision_id,
+    compute_persona_revision_id,
     find_latest_asset_by_local_relative_path,
     list_image_asset_records,
 )
@@ -741,7 +741,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             num_images=n_img,
-            persona_revision_id=current_persona_revision_id(store),
+            persona_revision_id=compute_persona_revision_id(store),
         )
         logger.info(
             "tool generate_image wall_ms={:.0f} scope={} ok={}",
@@ -819,7 +819,7 @@ async def _dispatch(
             image_size=image_size_s,
             num_inference_steps=n_steps,
             strength=strength,
-            persona_revision_id=current_persona_revision_id(store),
+            persona_revision_id=compute_persona_revision_id(store),
         )
         logger.info(
             "tool modify_image wall_ms={:.0f} scope={} ok={}",
