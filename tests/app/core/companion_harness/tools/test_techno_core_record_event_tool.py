@@ -13,8 +13,8 @@ from app.core.companion_harness.companion.manager import (
 from app.core.companion_harness.memory.memory_registry import (
     shutdown_all_memory_stores,
 )
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TECHNO_CORE_EVENTS_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -49,7 +49,9 @@ async def test_techno_core_record_event_appends_valid_jsonl() -> None:
         json.dumps(payload, ensure_ascii=False),
     )
     assert out.startswith("OK recorded techno_core event_id=")
-    body = store.read_document(TECHNO_CORE_EVENTS_JSONL_REL)
+    body = store.read_document(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.techno_core_events_jsonl
+    )
     lines = [ln for ln in body.strip().split("\n") if ln.strip()]
     assert len(lines) == 1
     row = json.loads(lines[0])
