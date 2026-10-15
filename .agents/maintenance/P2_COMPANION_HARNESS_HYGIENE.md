@@ -709,6 +709,6 @@ Open PRs checked: #4028 (`cursor/agent-maintenance-tasks-oct14-508`), #4025 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct15-511`)
 
-- [ ] **HYGIENE-2026-511** #3413: `tools/test_ai_private_append_tool.py` — read assert via `ai_private_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-512** #3413: `companion/test_ai_private_prompt.py` — seed/read via `ai_private_jsonl` scope accessor.
-- [ ] **HYGIENE-2026-513** #3413: `tools/test_companion_record_user_profile_tool.py` — `user_md` scope accessor for seed/read/allowlist.
+- [x] **HYGIENE-2026-511** #3413: `tools/test_ai_private_append_tool.py` — read assert via `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct15-511`.
+- [x] **HYGIENE-2026-512** #3413: `companion/test_ai_private_prompt.py` — seed/read via `ai_private_jsonl` scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct15-511`.
+- [x] **HYGIENE-2026-513** #3413: `tools/test_companion_record_user_profile_tool.py` — `user_md` scope accessor for seed/read/allowlist. Fixed in `cursor/agent-maintenance-tasks-oct15-511`.

@@ -8,8 +8,8 @@ from app.core.companion_harness.companion.ai_private_prompt import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    AI_PRIVATE_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
@@ -30,7 +30,7 @@ async def test_ai_private_append_tool_records_thought(tmp_path: Path) -> None:
     thoughts = load_ai_private_thoughts(store)
     assert len(thoughts) == 1
     assert thoughts[0].text == "quiet worry about his silence"
-    raw = store.read_document(AI_PRIVATE_JSONL_REL)
+    raw = store.read_document(DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl)
     row = json.loads(raw.strip().splitlines()[0])
     assert row["uuid"] == thoughts[0].uuid
     assert row["text"] == thoughts[0].text
