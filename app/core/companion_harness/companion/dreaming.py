@@ -159,6 +159,57 @@ def apply_dreaming_checkpoint_to_prompt_rows(
     return rows
 
 
+def _dreaming_main_transcript_rows(store: MemoryStore) -> list[ChatMessage]:
+    """Load user-visible main transcript rows eligible for dreaming selection."""
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    # TODO(dreaming-day-rollup): merge paths.transcript_inner_tick + LIFE_CURRENTS.md — #3376
+    return transcript_without_trailing_presence_signals(
+        load_transcript_from_store(store, paths.transcript)
+    )
+
+
+def _dreaming_candidate_row_window(
+    raw_rows: list[ChatMessage],
+    *,
+    state: DreamingState | None,
+    now: datetime,
+) -> tuple[int, list[ChatMessage]]:
+    """Return (start_index, candidate_rows) after checkpoint and first-dream lookback."""
+    start_idx = _start_index_after_checkpoint(raw_rows, state)
+    cutoff = _aware_utc(now) - _FIRST_DREAMING_LOOKBACK
+    if state is None:
+        while start_idx < len(raw_rows):
+            if parse_transcript_datetime(raw_rows[start_idx].ts) >= cutoff:
+                break
+            start_idx += 1
+    candidate_rows = raw_rows[start_idx:]
+    return start_idx, candidate_rows
+
+
+def _dreaming_candidate_from_row_window(
+    candidate_rows: list[ChatMessage],
+    *,
+    start_idx: int,
+) -> DreamingCandidate | None:
+    """Materialize ``DreamingCandidate`` when the row window has a real user boundary."""
+    if not candidate_rows:
+        return None
+    real_users = [m for m in candidate_rows if is_real_user_message(m)]
+    if not real_users:
+        return None
+    latest_user_ts = max(parse_transcript_datetime(m.ts) for m in real_users)
+    boundary = candidate_rows[-1]
+    boundary_uuid = boundary.uuid or ""
+    if not boundary_uuid:
+        return None
+    return DreamingCandidate(
+        rows=candidate_rows,
+        latest_user_ts=latest_user_ts,
+        boundary_line_count=start_idx + len(candidate_rows),
+        boundary_uuid=boundary_uuid,
+    )
+
+
 def dreaming_candidate_slice(
     store: MemoryStore,
     *,
@@ -176,38 +227,18 @@ def dreaming_candidate_slice(
 
     Without checkpoint: at most the last 24h on the main transcript.
     """
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    # TODO(dreaming-day-rollup): merge paths.transcript_inner_tick + LIFE_CURRENTS.md — #3376
-    # into candidate rows; ai_private dreaming render partial in #3420 (#3376).
-    raw_rows = transcript_without_trailing_presence_signals(
-        load_transcript_from_store(store, paths.transcript)
-    )
+    raw_rows = _dreaming_main_transcript_rows(store)
     if not raw_rows:
         return None
     state = load_dreaming_state(store)
-    start_idx = _start_index_after_checkpoint(raw_rows, state)
-    cutoff = _aware_utc(now) - _FIRST_DREAMING_LOOKBACK
-    if state is None:
-        while start_idx < len(raw_rows):
-            if parse_transcript_datetime(raw_rows[start_idx].ts) >= cutoff:
-                break
-            start_idx += 1
-    candidate_rows = raw_rows[start_idx:]
-    if not candidate_rows:
-        return None
-    real_users = [m for m in candidate_rows if is_real_user_message(m)]
-    if not real_users:
-        return None
-    latest_user_ts = max(parse_transcript_datetime(m.ts) for m in real_users)
-    boundary = candidate_rows[-1]
-    boundary_uuid = boundary.uuid or ""
-    if not boundary_uuid:
-        return None
-    return DreamingCandidate(
-        rows=candidate_rows,
-        latest_user_ts=latest_user_ts,
-        boundary_line_count=start_idx + len(candidate_rows),
-        boundary_uuid=boundary_uuid,
+    start_idx, candidate_rows = _dreaming_candidate_row_window(
+        raw_rows,
+        state=state,
+        now=now,
+    )
+    return _dreaming_candidate_from_row_window(
+        candidate_rows,
+        start_idx=start_idx,
     )
 
 
