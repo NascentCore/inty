@@ -90,39 +90,23 @@ def resolve_tool_background_finish_envelope(
     )
 
 
-def _tool_bg_routing_fallback_completion_envelope(
-    *,
-    client: Any,
-    model: str,
-    create_completion_sync: Any,
+def _tool_bg_routing_fallback_messages_payload(
     conversation_messages: list[dict[str, Any]],
-    tid: str,
-    langsmith_slice: CompanionTurnLangsmithSlice,
-) -> DualLlmChatBranchEnvelope:
-    logger.debug(
-        "tool_bg_routing trace_id={} source=extra_completion_request "
-        "(final_assistant_not_valid_unified_envelope_json)",
-        tid,
-    )
-    routing_tail = [
-        {"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}
-    ]
+) -> list[dict[str, Any]]:
+    """Strip harness metadata keys and append the unified fallback system instruction."""
     payload = [
         {k: v for k, v in m.items() if not str(k).startswith("_")}
         for m in conversation_messages
     ]
-    payload.extend(routing_tail)
-    resp = create_completion_sync(
-        client,
-        model=model,
-        messages_payload=payload,
-        tools=[],
-        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-        langsmith_extra=langsmith_slice.tool_call_extra(
-            phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
-            extra_metadata=None,
-        ),
-    )
+    payload.append({"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT})
+    return payload
+
+
+def _tool_bg_routing_envelope_from_fallback_response(
+    *,
+    resp: Any,
+    tid: str,
+) -> DualLlmChatBranchEnvelope:
     fallback = parse_dual_llm_chat_envelope_from_message(
         resp.choices[0].message
     )
@@ -140,6 +124,36 @@ def _tool_bg_routing_fallback_completion_envelope(
         tid,
     )
     return _conservative_tool_finish_envelope()
+
+
+def _tool_bg_routing_fallback_completion_envelope(
+    *,
+    client: Any,
+    model: str,
+    create_completion_sync: Any,
+    conversation_messages: list[dict[str, Any]],
+    tid: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> DualLlmChatBranchEnvelope:
+    logger.debug(
+        "tool_bg_routing trace_id={} source=extra_completion_request "
+        "(final_assistant_not_valid_unified_envelope_json)",
+        tid,
+    )
+    resp = create_completion_sync(
+        client,
+        model=model,
+        messages_payload=_tool_bg_routing_fallback_messages_payload(
+            conversation_messages
+        ),
+        tools=[],
+        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
+        langsmith_extra=langsmith_slice.tool_call_extra(
+            phase_suffix=SOURCE_TOOL_BACKGROUND_ROUTING_FALLBACK,
+            extra_metadata=None,
+        ),
+    )
+    return _tool_bg_routing_envelope_from_fallback_response(resp=resp, tid=tid)
 
 
 def resolve_tool_bg_routing_sync(

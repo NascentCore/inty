@@ -164,6 +164,62 @@ def _agentic_loop_langsmith_context(
     )
 
 
+@dataclass(frozen=True)
+class _ForegroundTurnLoopWire:
+    """OpenAI wire and correlation fields for greeting, bootstrap, and inner-tick builders."""
+
+    messages: tuple[dict[str, Any], ...]
+    openai_tools: tuple[dict[str, Any], ...]
+    companion_turn_track: CompanionTurnTrack
+    execution: LoopExecutionPolicy
+    repository_only_store_text: bool
+    trace_id: str
+    user_text: str
+    ts_user: datetime
+    user_msg_uuid: str
+    transcript_rel: str
+    langsmith_slice: CompanionTurnLangsmithSlice
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    runtime_context: TurnRuntimeContext
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    after_tool_messages_appended: AfterToolMessagesHook | None
+    output_queue: OutputQueue
+    user_message_batch: UserMessageBatch
+    prompt_plan: PromptPlan | None
+    stack_depth: int
+
+
+def _agentic_loop_context_from_foreground_turn_wire(
+    wire: _ForegroundTurnLoopWire,
+) -> AgenticLoopContext:
+    """Materialize one-turn ``AgenticLoopContext`` from frozen foreground wire fields."""
+    return AgenticLoopContext(
+        openai_messages=wire.messages,
+        openai_tools=wire.openai_tools,
+        companion_turn_track=wire.companion_turn_track,
+        execution=wire.execution,
+        repository_only_store_text=wire.repository_only_store_text,
+        trace_id=wire.trace_id,
+        user_text=wire.user_text,
+        ts_user=wire.ts_user,
+        user_msg_uuid=wire.user_msg_uuid,
+        transcript_rel=wire.transcript_rel,
+        langsmith=_agentic_loop_langsmith_context(
+            turn_slice=wire.langsmith_slice,
+            trace_id=wire.langsmith_trace_id,
+            run_id=wire.langsmith_run_id,
+        ),
+        runtime_context=wire.runtime_context,
+        tail_user_messages=wire.tail_user_messages,
+        after_tool_messages_appended=wire.after_tool_messages_appended,
+        output_queue=wire.output_queue,
+        user_message_batch=wire.user_message_batch,
+        prompt_plan=wire.prompt_plan,
+        stack_depth=wire.stack_depth,
+    )
+
+
 def build_implicit_sign_on_greeting_loop_context(
     *,
     messages: list[dict[str, Any]],
@@ -187,29 +243,29 @@ def build_implicit_sign_on_greeting_loop_context(
     """Assemble implicit sign-on greeting context for single-LLM ``AgenticLoop``."""
     assert transcript_rel != ""
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
-        openai_tools=(),
-        companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
-        execution=execution,
-        repository_only_store_text=repository_only_store_text,
-        trace_id=trace_id,
-        user_text=user_text,
-        ts_user=ts_user,
-        user_msg_uuid=user_msg_uuid,
-        transcript_rel=transcript_rel,
-        langsmith=_agentic_loop_langsmith_context(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
-        runtime_context=runtime_context,
-        tail_user_messages=tail_user_messages,
-        after_tool_messages_appended=None,
-        output_queue=output_queue,
-        user_message_batch=user_message_batch,
-        prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
+    return _agentic_loop_context_from_foreground_turn_wire(
+        _ForegroundTurnLoopWire(
+            messages=tuple(messages),
+            openai_tools=(),
+            companion_turn_track=CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING,
+            execution=execution,
+            repository_only_store_text=repository_only_store_text,
+            trace_id=trace_id,
+            user_text=user_text,
+            ts_user=ts_user,
+            user_msg_uuid=user_msg_uuid,
+            transcript_rel=transcript_rel,
+            langsmith_slice=langsmith_slice,
+            langsmith_trace_id=langsmith_trace_id,
+            langsmith_run_id=langsmith_run_id,
+            runtime_context=runtime_context,
+            tail_user_messages=tail_user_messages,
+            after_tool_messages_appended=None,
+            output_queue=output_queue,
+            user_message_batch=user_message_batch,
+            prompt_plan=prompt_plan,
+            stack_depth=stack_depth,
+        )
     )
 
 
@@ -240,29 +296,29 @@ def _build_inner_tick_agentic_loop_context(
     assert transcript_rel != ""
     assert track in allowed_tracks
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
-        openai_tools=openai_tools,
-        companion_turn_track=track,
-        execution=execution,
-        repository_only_store_text=repository_only_store_text,
-        trace_id=trace_id,
-        user_text=user_text,
-        ts_user=ts_user,
-        user_msg_uuid=user_msg_uuid,
-        transcript_rel=transcript_rel,
-        langsmith=_agentic_loop_langsmith_context(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
-        runtime_context=runtime_context,
-        tail_user_messages=tail_user_messages,
-        after_tool_messages_appended=None,
-        output_queue=output_queue,
-        user_message_batch=user_message_batch,
-        prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
+    return _agentic_loop_context_from_foreground_turn_wire(
+        _ForegroundTurnLoopWire(
+            messages=tuple(messages),
+            openai_tools=openai_tools,
+            companion_turn_track=track,
+            execution=execution,
+            repository_only_store_text=repository_only_store_text,
+            trace_id=trace_id,
+            user_text=user_text,
+            ts_user=ts_user,
+            user_msg_uuid=user_msg_uuid,
+            transcript_rel=transcript_rel,
+            langsmith_slice=langsmith_slice,
+            langsmith_trace_id=langsmith_trace_id,
+            langsmith_run_id=langsmith_run_id,
+            runtime_context=runtime_context,
+            tail_user_messages=tail_user_messages,
+            after_tool_messages_appended=None,
+            output_queue=output_queue,
+            user_message_batch=user_message_batch,
+            prompt_plan=prompt_plan,
+            stack_depth=stack_depth,
+        )
     )
 
 
@@ -533,8 +589,37 @@ class _SettledUserChatLoopTurnCommon:
     execution: LoopExecutionPolicy
 
 
-def _settled_user_chat_loop_turn_common(
+@dataclass(frozen=True)
+class _SettledUserChatLoopVariantFields:
+    """Single-LLM vs dual-LLM fields for one settled ``USER_CHAT`` loop context build."""
+
+    after_tool_messages_appended: AfterToolMessagesHook | None
+    context_meta: ContextMeta | None
+    prompt_plan: PromptPlan | None
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None
+    prompt_bundle: PromptBundle | None
+
+
+def _settled_user_chat_loop_context_from_common_and_variant(
+    common: _SettledUserChatLoopTurnCommon,
+    variant: _SettledUserChatLoopVariantFields,
+) -> AgenticLoopContext:
+    """Materialize settled ``USER_CHAT`` loop context from shared + variant fields."""
+    return _settled_user_chat_loop_context_from_common(
+        common,
+        after_tool_messages_appended=variant.after_tool_messages_appended,
+        context_meta=variant.context_meta,
+        prompt_plan=variant.prompt_plan,
+        dual_llm_chat_msgs=variant.dual_llm_chat_msgs,
+        dual_llm_tool_msgs=variant.dual_llm_tool_msgs,
+        prompt_bundle=variant.prompt_bundle,
+    )
+
+
+def _build_settled_user_chat_loop_context_from_common_kwargs(
     *,
+    variant: _SettledUserChatLoopVariantFields,
     messages: list[dict[str, Any]],
     tools_for_turn: list[dict[str, Any]],
     repository_only_store_text: bool,
@@ -552,9 +637,9 @@ def _settled_user_chat_loop_turn_common(
     user_message_batch: UserMessageBatch,
     stack_depth: int,
     execution: LoopExecutionPolicy,
-) -> _SettledUserChatLoopTurnCommon:
-    """Bundle shared settled ``USER_CHAT`` builder kwargs."""
-    return _SettledUserChatLoopTurnCommon(
+) -> AgenticLoopContext:
+    """Shared settled ``USER_CHAT`` builder: materialize common turn fields + variant."""
+    common = _SettledUserChatLoopTurnCommon(
         messages=messages,
         tools_for_turn=tools_for_turn,
         repository_only_store_text=repository_only_store_text,
@@ -573,6 +658,7 @@ def _settled_user_chat_loop_turn_common(
         stack_depth=stack_depth,
         execution=execution,
     )
+    return _settled_user_chat_loop_context_from_common_and_variant(common, variant)
 
 
 def _settled_user_chat_loop_context_from_common(
@@ -660,7 +746,15 @@ def build_settled_user_chat_loop_context(
     prompt_plan: PromptPlan | None = None,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for single-LLM ``AgenticLoop``."""
-    common = _settled_user_chat_loop_turn_common(
+    return _build_settled_user_chat_loop_context_from_common_kwargs(
+        variant=_SettledUserChatLoopVariantFields(
+            after_tool_messages_appended=after_tool_messages_appended,
+            context_meta=None,
+            prompt_plan=prompt_plan,
+            dual_llm_chat_msgs=None,
+            dual_llm_tool_msgs=None,
+            prompt_bundle=None,
+        ),
         messages=messages,
         tools_for_turn=tools_for_turn,
         repository_only_store_text=repository_only_store_text,
@@ -678,15 +772,6 @@ def build_settled_user_chat_loop_context(
         user_message_batch=user_message_batch,
         stack_depth=stack_depth,
         execution=execution,
-    )
-    return _settled_user_chat_loop_context_from_common(
-        common,
-        after_tool_messages_appended=after_tool_messages_appended,
-        context_meta=None,
-        prompt_plan=prompt_plan,
-        dual_llm_chat_msgs=None,
-        dual_llm_tool_msgs=None,
-        prompt_bundle=None,
     )
 
 
@@ -717,7 +802,15 @@ def build_settled_dual_llm_user_chat_loop_context(
     """Assemble settled ``USER_CHAT`` context for dual-LLM ``AgenticLoop``."""
     assert dual_llm_chat_msgs
     assert dual_llm_tool_msgs
-    common = _settled_user_chat_loop_turn_common(
+    return _build_settled_user_chat_loop_context_from_common_kwargs(
+        variant=_SettledUserChatLoopVariantFields(
+            after_tool_messages_appended=None,
+            context_meta=context_meta,
+            prompt_plan=None,
+            dual_llm_chat_msgs=dual_llm_chat_msgs,
+            dual_llm_tool_msgs=dual_llm_tool_msgs,
+            prompt_bundle=prompt_bundle,
+        ),
         messages=messages,
         tools_for_turn=tools_for_turn,
         repository_only_store_text=repository_only_store_text,
@@ -735,15 +828,6 @@ def build_settled_dual_llm_user_chat_loop_context(
         user_message_batch=user_message_batch,
         stack_depth=stack_depth,
         execution=execution,
-    )
-    return _settled_user_chat_loop_context_from_common(
-        common,
-        after_tool_messages_appended=None,
-        context_meta=context_meta,
-        prompt_plan=None,
-        dual_llm_chat_msgs=dual_llm_chat_msgs,
-        dual_llm_tool_msgs=dual_llm_tool_msgs,
-        prompt_bundle=prompt_bundle,
     )
 
 
@@ -773,27 +857,27 @@ def build_bootstrap_user_chat_loop_context(
     assert user_text.strip() != ""
     assert transcript_rel != ""
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
-        openai_tools=tuple(tools_for_turn),
-        companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
-        execution=execution,
-        repository_only_store_text=repository_only_store_text,
-        trace_id=trace_id,
-        user_text=user_text,
-        ts_user=ts_user,
-        user_msg_uuid=user_msg_uuid,
-        transcript_rel=transcript_rel,
-        langsmith=_agentic_loop_langsmith_context(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
-        runtime_context=runtime_context,
-        tail_user_messages=tail_user_messages,
-        after_tool_messages_appended=after_tool_messages_appended,
-        output_queue=output_queue,
-        user_message_batch=user_message_batch,
-        prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
+    return _agentic_loop_context_from_foreground_turn_wire(
+        _ForegroundTurnLoopWire(
+            messages=tuple(messages),
+            openai_tools=tuple(tools_for_turn),
+            companion_turn_track=CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
+            execution=execution,
+            repository_only_store_text=repository_only_store_text,
+            trace_id=trace_id,
+            user_text=user_text,
+            ts_user=ts_user,
+            user_msg_uuid=user_msg_uuid,
+            transcript_rel=transcript_rel,
+            langsmith_slice=langsmith_slice,
+            langsmith_trace_id=langsmith_trace_id,
+            langsmith_run_id=langsmith_run_id,
+            runtime_context=runtime_context,
+            tail_user_messages=tail_user_messages,
+            after_tool_messages_appended=after_tool_messages_appended,
+            output_queue=output_queue,
+            user_message_batch=user_message_batch,
+            prompt_plan=prompt_plan,
+            stack_depth=stack_depth,
+        )
     )

@@ -1,12 +1,31 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.tools.companion_tool_definitions import (
     CompanionToolName,
 )
+
+
+@dataclass(frozen=True)
+class _MemoryStoreToolDispatchDeps:
+    """Injected MemoryStore tool implementations for ``dispatch_memory_store_tool``."""
+
+    write_allowlist: frozenset[str] | None
+    tool_memory_store_list_paths: Callable[[MemoryStore, str], str]
+    tool_memory_store_read_document: Callable[
+        [MemoryStore, str, int | None], str
+    ]
+    tool_memory_store_write_document: Callable[[MemoryStore, str, str], str]
+    tool_memory_store_mkdir: Callable[[MemoryStore, str], str]
+    tool_update_user_md: Callable[[MemoryStore, list[dict[str, Any]]], str]
+    parse_optional_max_chars: Callable[[Any], int | None]
+    write_document_allowlist_reject: Callable[
+        [MemoryStore, str, frozenset[str]], str | None
+    ]
 
 
 def _dispatch_memory_store_list_paths(
@@ -54,6 +73,72 @@ def _dispatch_memory_store_write_document(
     return tool_memory_store_write_document(store, rel, content)
 
 
+def _dispatch_memory_store_mkdir(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+    tool_memory_store_mkdir: Callable[[MemoryStore, str], str],
+) -> str:
+    rel = str(arguments.get("relative_path", ""))
+    return tool_memory_store_mkdir(store, rel)
+
+
+def _dispatch_memory_store_update_user_md(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+    tool_update_user_md: Callable[[MemoryStore, list[dict[str, Any]]], str],
+) -> str:
+    raw_items = arguments.get("items")
+    if not isinstance(raw_items, list):
+        return "ERROR: items must be a JSON array"
+    return tool_update_user_md(store, raw_items)
+
+
+def _dispatch_memory_store_tool_by_name(
+    *,
+    store: MemoryStore,
+    name: str,
+    arguments: dict[str, Any],
+    deps: _MemoryStoreToolDispatchDeps,
+) -> str | None:
+    """Route one MemoryStore tool name to its handler; ``None`` when unhandled."""
+    match name:
+        case "memory_store_list_paths":
+            return _dispatch_memory_store_list_paths(
+                store,
+                arguments,
+                deps.tool_memory_store_list_paths,
+            )
+        case "memory_store_read_document":
+            return _dispatch_memory_store_read_document(
+                store,
+                arguments,
+                deps.tool_memory_store_read_document,
+                deps.parse_optional_max_chars,
+            )
+        case "memory_store_write_document":
+            return _dispatch_memory_store_write_document(
+                store,
+                arguments,
+                deps.write_allowlist,
+                deps.tool_memory_store_write_document,
+                deps.write_document_allowlist_reject,
+            )
+        case "memory_store_mkdir":
+            return _dispatch_memory_store_mkdir(
+                store,
+                arguments,
+                deps.tool_memory_store_mkdir,
+            )
+        case CompanionToolName.UPDATE_USER_MD.value:
+            return _dispatch_memory_store_update_user_md(
+                store,
+                arguments,
+                deps.tool_update_user_md,
+            )
+        case _:
+            return None
+
+
 def dispatch_memory_store_tool(
     *,
     store: MemoryStore,
@@ -76,35 +161,19 @@ def dispatch_memory_store_tool(
 
     Returns `None` when the tool name is not handled by this dispatcher.
     """
-    match name:
-        case "memory_store_list_paths":
-            return _dispatch_memory_store_list_paths(
-                store,
-                arguments,
-                tool_memory_store_list_paths,
-            )
-        case "memory_store_read_document":
-            return _dispatch_memory_store_read_document(
-                store,
-                arguments,
-                tool_memory_store_read_document,
-                parse_optional_max_chars,
-            )
-        case "memory_store_write_document":
-            return _dispatch_memory_store_write_document(
-                store,
-                arguments,
-                write_allowlist,
-                tool_memory_store_write_document,
-                write_document_allowlist_reject,
-            )
-        case "memory_store_mkdir":
-            rel = str(arguments.get("relative_path", ""))
-            return tool_memory_store_mkdir(store, rel)
-        case CompanionToolName.UPDATE_USER_MD.value:
-            raw_items = arguments.get("items")
-            if not isinstance(raw_items, list):
-                return "ERROR: items must be a JSON array"
-            return tool_update_user_md(store, raw_items)
-        case _:
-            return None
+    deps = _MemoryStoreToolDispatchDeps(
+        write_allowlist=write_allowlist,
+        tool_memory_store_list_paths=tool_memory_store_list_paths,
+        tool_memory_store_read_document=tool_memory_store_read_document,
+        tool_memory_store_write_document=tool_memory_store_write_document,
+        tool_memory_store_mkdir=tool_memory_store_mkdir,
+        tool_update_user_md=tool_update_user_md,
+        parse_optional_max_chars=parse_optional_max_chars,
+        write_document_allowlist_reject=write_document_allowlist_reject,
+    )
+    return _dispatch_memory_store_tool_by_name(
+        store=store,
+        name=name,
+        arguments=arguments,
+        deps=deps,
+    )

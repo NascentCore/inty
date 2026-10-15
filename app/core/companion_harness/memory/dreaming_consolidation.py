@@ -547,54 +547,61 @@ def _build_one_shot_dreaming_messages(
     ]
 
 
+def _dreaming_document_update_tool_json_schema(
+    required_paths: tuple[str, ...],
+) -> dict[str, Any]:
+    """JSON Schema object for ``update_dreaming_document`` tool arguments."""
+    kind_values = [member.value for member in DreamingDocumentKind]
+    return {
+        "type": "object",
+        "properties": {
+            "document_kind": {
+                "type": "string",
+                "enum": kind_values,
+                "description": "Semantic document role being updated.",
+            },
+            "relative_path": {
+                "type": "string",
+                "enum": list(required_paths),
+                "description": "Exact MemoryStore relative path to write.",
+            },
+            "content_changed": {
+                "type": "boolean",
+                "description": (
+                    "True to write body; false for explicit no-op (keep current doc)."
+                ),
+            },
+            "body": {
+                "type": "string",
+                "description": (
+                    "Full updated markdown body when content_changed is true; "
+                    "empty for no-op."
+                ),
+            },
+            "changed_reason": {
+                "type": "string",
+                "description": "Brief reason for the change or no-op.",
+            },
+        },
+        "required": [
+            "document_kind",
+            "relative_path",
+            "content_changed",
+            "body",
+            "changed_reason",
+        ],
+        "additionalProperties": False,
+    }
+
+
 def _dreaming_document_update_tool_schema(
     required_paths: tuple[str, ...],
 ) -> dict[str, Any]:
     """OpenAI tool schema for parallel ``update_dreaming_document`` calls."""
-    kind_values = [member.value for member in DreamingDocumentKind]
     tool = openai_function_tool(
         _DREAMING_DOCUMENT_UPDATE_TOOL_NAME,
         "Update one dreaming MemoryDoc, or declare an explicit no-op for that path.",
-        {
-            "type": "object",
-            "properties": {
-                "document_kind": {
-                    "type": "string",
-                    "enum": kind_values,
-                    "description": "Semantic document role being updated.",
-                },
-                "relative_path": {
-                    "type": "string",
-                    "enum": list(required_paths),
-                    "description": "Exact MemoryStore relative path to write.",
-                },
-                "content_changed": {
-                    "type": "boolean",
-                    "description": (
-                        "True to write body; false for explicit no-op (keep current doc)."
-                    ),
-                },
-                "body": {
-                    "type": "string",
-                    "description": (
-                        "Full updated markdown body when content_changed is true; "
-                        "empty for no-op."
-                    ),
-                },
-                "changed_reason": {
-                    "type": "string",
-                    "description": "Brief reason for the change or no-op.",
-                },
-            },
-            "required": [
-                "document_kind",
-                "relative_path",
-                "content_changed",
-                "body",
-                "changed_reason",
-            ],
-            "additionalProperties": False,
-        },
+        _dreaming_document_update_tool_json_schema(required_paths),
     )
     return prepare_openai_tools_for_chat_completions([tool])[0]
 
