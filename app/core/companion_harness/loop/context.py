@@ -213,6 +213,111 @@ def build_implicit_sign_on_greeting_loop_context(
     )
 
 
+@dataclass(frozen=True)
+class _ForegroundTurnLoopWire:
+    """Resolved OpenAI wire + per-turn handles for one foreground ``AgenticLoopContext``."""
+
+    messages: tuple[dict[str, Any], ...]
+    openai_tools: tuple[dict[str, Any], ...]
+    companion_turn_track: CompanionTurnTrack
+    repository_only_store_text: bool
+    trace_id: str
+    user_text: str
+    ts_user: datetime
+    user_msg_uuid: str
+    transcript_rel: str
+    langsmith_slice: CompanionTurnLangsmithSlice
+    langsmith_trace_id: str
+    langsmith_run_id: str
+    runtime_context: TurnRuntimeContext
+    stack_depth: int
+    output_queue: OutputQueue
+    user_message_batch: UserMessageBatch
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    prompt_plan: PromptPlan
+    execution: LoopExecutionPolicy
+    after_tool_messages_appended: AfterToolMessagesHook | None
+
+
+def _agentic_loop_context_from_foreground_turn_wire(
+    wire: _ForegroundTurnLoopWire,
+) -> AgenticLoopContext:
+    """Materialize one foreground ``AgenticLoopContext`` from a resolved wire bundle."""
+    assert wire.transcript_rel != ""
+
+    return AgenticLoopContext(
+        openai_messages=wire.messages,
+        openai_tools=wire.openai_tools,
+        companion_turn_track=wire.companion_turn_track,
+        execution=wire.execution,
+        repository_only_store_text=wire.repository_only_store_text,
+        trace_id=wire.trace_id,
+        user_text=wire.user_text,
+        ts_user=wire.ts_user,
+        user_msg_uuid=wire.user_msg_uuid,
+        transcript_rel=wire.transcript_rel,
+        langsmith=_agentic_loop_langsmith_context(
+            turn_slice=wire.langsmith_slice,
+            trace_id=wire.langsmith_trace_id,
+            run_id=wire.langsmith_run_id,
+        ),
+        runtime_context=wire.runtime_context,
+        tail_user_messages=wire.tail_user_messages,
+        after_tool_messages_appended=wire.after_tool_messages_appended,
+        output_queue=wire.output_queue,
+        user_message_batch=wire.user_message_batch,
+        prompt_plan=wire.prompt_plan,
+        stack_depth=wire.stack_depth,
+    )
+
+
+def _foreground_turn_loop_wire_for_inner_tick(
+    *,
+    track: CompanionTurnTrack,
+    messages: list[dict[str, Any]],
+    openai_tools: tuple[dict[str, Any], ...],
+    repository_only_store_text: bool,
+    trace_id: str,
+    user_text: str,
+    ts_user: datetime,
+    user_msg_uuid: str,
+    transcript_rel: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    runtime_context: TurnRuntimeContext,
+    stack_depth: int,
+    langsmith_trace_id: str,
+    langsmith_run_id: str,
+    output_queue: OutputQueue,
+    user_message_batch: UserMessageBatch,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    prompt_plan: PromptPlan,
+    execution: LoopExecutionPolicy,
+) -> _ForegroundTurnLoopWire:
+    """Bundle inner-tick caller fields into one foreground loop wire."""
+    return _ForegroundTurnLoopWire(
+        messages=tuple(messages),
+        openai_tools=openai_tools,
+        companion_turn_track=track,
+        repository_only_store_text=repository_only_store_text,
+        trace_id=trace_id,
+        user_text=user_text,
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        transcript_rel=transcript_rel,
+        langsmith_slice=langsmith_slice,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
+        runtime_context=runtime_context,
+        stack_depth=stack_depth,
+        output_queue=output_queue,
+        user_message_batch=user_message_batch,
+        tail_user_messages=tail_user_messages,
+        prompt_plan=prompt_plan,
+        execution=execution,
+        after_tool_messages_appended=None,
+    )
+
+
 def _build_inner_tick_agentic_loop_context(
     *,
     track: CompanionTurnTrack,
@@ -237,33 +342,30 @@ def _build_inner_tick_agentic_loop_context(
     execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Shared ``AgenticLoopContext`` assembly for proactive inner-tick tracks."""
-    assert transcript_rel != ""
     assert track in allowed_tracks
 
-    return AgenticLoopContext(
-        openai_messages=tuple(messages),
+    wire = _foreground_turn_loop_wire_for_inner_tick(
+        track=track,
+        messages=messages,
         openai_tools=openai_tools,
-        companion_turn_track=track,
-        execution=execution,
         repository_only_store_text=repository_only_store_text,
         trace_id=trace_id,
         user_text=user_text,
         ts_user=ts_user,
         user_msg_uuid=user_msg_uuid,
         transcript_rel=transcript_rel,
-        langsmith=_agentic_loop_langsmith_context(
-            turn_slice=langsmith_slice,
-            trace_id=langsmith_trace_id,
-            run_id=langsmith_run_id,
-        ),
+        langsmith_slice=langsmith_slice,
         runtime_context=runtime_context,
-        tail_user_messages=tail_user_messages,
-        after_tool_messages_appended=None,
+        stack_depth=stack_depth,
+        langsmith_trace_id=langsmith_trace_id,
+        langsmith_run_id=langsmith_run_id,
         output_queue=output_queue,
         user_message_batch=user_message_batch,
+        tail_user_messages=tail_user_messages,
         prompt_plan=prompt_plan,
-        stack_depth=stack_depth,
+        execution=execution,
     )
+    return _agentic_loop_context_from_foreground_turn_wire(wire)
 
 
 def build_inner_tick_chat_only_loop_context(
@@ -575,6 +677,36 @@ def _settled_user_chat_loop_turn_common(
     )
 
 
+@dataclass(frozen=True)
+class _SettledUserChatLoopVariantFields:
+    """Single-LLM vs dual-LLM fields layered on settled ``USER_CHAT`` loop common."""
+
+    after_tool_messages_appended: AfterToolMessagesHook | None
+    context_meta: ContextMeta | None
+    prompt_plan: PromptPlan | None
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...] | None
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...] | None
+    prompt_bundle: PromptBundle | None
+
+
+def _build_settled_user_chat_loop_context_from_common_kwargs(
+    common: _SettledUserChatLoopTurnCommon,
+    variant: _SettledUserChatLoopVariantFields,
+) -> AgenticLoopContext:
+    """Materialize settled ``USER_CHAT`` loop context from common + variant bundle."""
+    return _settled_user_chat_loop_context_from_shared_turn_inputs(
+        _settled_user_chat_loop_turn_inputs(
+            common,
+            after_tool_messages_appended=variant.after_tool_messages_appended,
+            context_meta=variant.context_meta,
+            prompt_plan=variant.prompt_plan,
+            dual_llm_chat_msgs=variant.dual_llm_chat_msgs,
+            dual_llm_tool_msgs=variant.dual_llm_tool_msgs,
+            prompt_bundle=variant.prompt_bundle,
+        )
+    )
+
+
 def _settled_user_chat_loop_context_from_common(
     common: _SettledUserChatLoopTurnCommon,
     *,
@@ -586,17 +718,15 @@ def _settled_user_chat_loop_context_from_common(
     prompt_bundle: PromptBundle | None,
 ) -> AgenticLoopContext:
     """Materialize settled ``USER_CHAT`` loop context from common + variant fields."""
-    return _settled_user_chat_loop_context_from_shared_turn_inputs(
-        _settled_user_chat_loop_turn_inputs(
-            common,
-            after_tool_messages_appended=after_tool_messages_appended,
-            context_meta=context_meta,
-            prompt_plan=prompt_plan,
-            dual_llm_chat_msgs=dual_llm_chat_msgs,
-            dual_llm_tool_msgs=dual_llm_tool_msgs,
-            prompt_bundle=prompt_bundle,
-        )
+    variant = _SettledUserChatLoopVariantFields(
+        after_tool_messages_appended=after_tool_messages_appended,
+        context_meta=context_meta,
+        prompt_plan=prompt_plan,
+        dual_llm_chat_msgs=dual_llm_chat_msgs,
+        dual_llm_tool_msgs=dual_llm_tool_msgs,
+        prompt_bundle=prompt_bundle,
     )
+    return _build_settled_user_chat_loop_context_from_common_kwargs(common, variant)
 
 
 def _settled_user_chat_loop_turn_inputs(
@@ -679,8 +809,7 @@ def build_settled_user_chat_loop_context(
         stack_depth=stack_depth,
         execution=execution,
     )
-    return _settled_user_chat_loop_context_from_common(
-        common,
+    variant = _SettledUserChatLoopVariantFields(
         after_tool_messages_appended=after_tool_messages_appended,
         context_meta=None,
         prompt_plan=prompt_plan,
@@ -688,6 +817,7 @@ def build_settled_user_chat_loop_context(
         dual_llm_tool_msgs=None,
         prompt_bundle=None,
     )
+    return _build_settled_user_chat_loop_context_from_common_kwargs(common, variant)
 
 
 def build_settled_dual_llm_user_chat_loop_context(
@@ -736,8 +866,7 @@ def build_settled_dual_llm_user_chat_loop_context(
         stack_depth=stack_depth,
         execution=execution,
     )
-    return _settled_user_chat_loop_context_from_common(
-        common,
+    variant = _SettledUserChatLoopVariantFields(
         after_tool_messages_appended=None,
         context_meta=context_meta,
         prompt_plan=None,
@@ -745,6 +874,7 @@ def build_settled_dual_llm_user_chat_loop_context(
         dual_llm_tool_msgs=dual_llm_tool_msgs,
         prompt_bundle=prompt_bundle,
     )
+    return _build_settled_user_chat_loop_context_from_common_kwargs(common, variant)
 
 
 def build_bootstrap_user_chat_loop_context(

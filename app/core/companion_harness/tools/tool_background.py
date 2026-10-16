@@ -1951,6 +1951,26 @@ async def _run_tool_background_loop_kickoff(
     )
 
 
+async def _run_tool_background_loop_with_kickoff_config(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    user_msg_uuid: str,
+    kickoff_config: Any,
+) -> None:
+    """Run one tool-background loop after kickoff config is resolved."""
+    await _run_tool_background_loop_kickoff(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        kickoff_config=kickoff_config,
+        user_msg_uuid=user_msg_uuid,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -1994,11 +2014,11 @@ async def run_tool_background_loop(
         activity_label=activity_label,
         execute_tool_call_fn=execute_tool_call_fn,
     )
-    await _run_tool_background_loop_kickoff(
+    await _run_tool_background_loop_with_kickoff_config(
         memory_store=memory_store,
         request_messages=request_messages,
         client=client,
         force_tools_first_round=force_tools_first_round,
-        kickoff_config=kickoff_config,
         user_msg_uuid=user_msg_uuid,
+        kickoff_config=kickoff_config,
     )

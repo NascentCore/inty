@@ -600,7 +600,7 @@ def _persist_companion_turn_transcript(
         user_msg_uuid=user_msg_uuid,
         ts_user=ts_user,
     )
-    _persist_companion_turn_ai_private_and_assistant_transcript(
+    _persist_companion_turn_transcript_assistant_side(
         store=store,
         rel_tr=rel_tr,
         track=track,
@@ -616,6 +616,40 @@ def _persist_companion_turn_transcript(
         inner_tick_turn=inner_tick_turn,
     )
     return assistant_msg_uuid
+
+
+def _persist_companion_turn_transcript_assistant_side(
+    *,
+    store: Any,
+    rel_tr: str,
+    track: CompanionTurnTrack,
+    user_msg_uuid: str,
+    trace_id: str,
+    ai_private_splice_plan: AiPrivateSplicePlan,
+    last_text: str,
+    assistant_msg_uuid: str,
+    skip_final_transcript_assistant_row: bool,
+    skip_proactive_assistant_transcript_row: bool,
+    significance_meta: dict[str, Any] | None,
+    turn_recall: str | None,
+    inner_tick_turn: bool,
+) -> None:
+    """Append ai_private splice and assistant transcript rows for one companion turn."""
+    _persist_companion_turn_ai_private_and_assistant_transcript(
+        store=store,
+        rel_tr=rel_tr,
+        track=track,
+        user_msg_uuid=user_msg_uuid,
+        trace_id=trace_id,
+        ai_private_splice_plan=ai_private_splice_plan,
+        last_text=last_text,
+        assistant_msg_uuid=assistant_msg_uuid,
+        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
+        significance_meta=significance_meta,
+        turn_recall=turn_recall,
+        inner_tick_turn=inner_tick_turn,
+    )
 
 
 async def _await_tool_background_idle_if_configured(
