@@ -709,6 +709,6 @@ Open PRs checked: #4016 (`HYGIENE-2026-496..498`), #4019 (`499..501`), #4022 (`5
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-5398`)
 
-- [ ] **HYGIENE-2026-514** #3413: `tools/test_tool_background_langsmith_channel.py` — seed `context_json` + core MemDoc + `transcript` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`.
-- [ ] **HYGIENE-2026-515** #3413: `companion/test_turn_tail_user_track_metadata.py` — transcript + inner-tick transcript via scope accessors.
-- [ ] **HYGIENE-2026-516** #3413: `loop/context_builder_test_support.py` — `transcript_rel` via scope `transcript` accessor.
+- [x] **HYGIENE-2026-514** #3413: `tools/test_tool_background_langsmith_channel.py` — seed `context_json` + core MemDoc + `transcript` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`. Fixed in `cursor/agent-maintenance-tasks-5398` / pull/4033.
+- [x] **HYGIENE-2026-515** #3413: `companion/test_turn_tail_user_track_metadata.py` — transcript + inner-tick transcript via scope accessors. Fixed in `cursor/agent-maintenance-tasks-5398` / pull/4033.
+- [x] **HYGIENE-2026-516** #3413: `loop/context_builder_test_support.py` — `transcript_rel` via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-5398` / pull/4033.
