@@ -7,19 +7,18 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
     ReadyOutputMessage,
     clear_output_queues_for_tests,
 )
-from app.core.agentic_companion.types import UserMessageBatch
+from app.core.agentic_companion.types import OutputMessageKind, UserMessageBatch
+from app.core.companion_harness.agent_channel.scope import AgentScope
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
@@ -31,11 +30,14 @@ from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
+from app.core.companion_harness.companion.turn_routes import (
+    InTurnInterimOutput,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     LangsmithLlmSource,
-)
-from tests.app.core.companion_harness.loop.context_builder_test_support import (
-    loop_execution_for_track,
 )
 from app.core.companion_harness.loop.agentic_loop import (
     AgenticLoop,
@@ -45,25 +47,21 @@ from app.core.companion_harness.loop.context import (
     AgenticLoopContext,
     AgenticLoopLangsmithContext,
 )
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    REPLY_IN_USER_LANGUAGE_CLAUSE,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
-)
-from app.core.companion_harness.companion.turn_routes import (
-    InTurnInterimOutput,
-)
-from app.core.companion_harness.companion.turn_tail_user import (
-    TurnTailUserMessage,
-)
-from app.core.companion_harness.loop.runtime_system_clauses import (
-    REPLY_IN_USER_LANGUAGE_CLAUSE,
 )
 from app.core.companion_harness.prompt_builder import (
     PromptMessage,
     PromptMessageRole,
     PromptPlan,
 )
-from app.core.agentic_companion.types import OutputMessageKind
+from tests.app.core.companion_harness.loop.context_builder_test_support import (
+    loop_execution_for_track,
+)
 
 _SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 

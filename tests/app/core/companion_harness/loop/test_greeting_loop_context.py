@@ -10,15 +10,19 @@ from app.core.companion_harness.memory.memory_store_scope import (
 )
 
 _SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.agentic_companion.types import (
+    UserMessageBatch,
+    synthetic_user_message_batch,
+)
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
 )
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
-)
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
@@ -28,10 +32,6 @@ from app.core.companion_harness.prompting.track_composer import (
 )
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     loop_execution_for_track,
-)
-from app.core.agentic_companion.types import (
-    UserMessageBatch,
-    synthetic_user_message_batch,
 )
 
 

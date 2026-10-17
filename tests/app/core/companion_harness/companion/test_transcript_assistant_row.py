@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.core.companion_harness.companion.models import (
+    load_transcript_from_store,
+)
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.transcript_assistant_row import (
     TranscriptAssistantRowBuildInput,
     append_transcript_assistant_row,
     build_transcript_assistant_row,
-)
-from app.core.companion_harness.companion.models import (
-    load_transcript_from_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
