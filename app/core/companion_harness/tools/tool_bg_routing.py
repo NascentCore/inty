@@ -55,6 +55,45 @@ def _conservative_tool_finish_envelope() -> DualLlmChatBranchEnvelope:
     )
 
 
+def _tool_bg_routing_fallback_completion_messages(
+    conversation_messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Strip harness metadata keys and append unified-envelope fallback system tail."""
+    payload = [
+        {k: v for k, v in message.items() if not str(k).startswith("_")}
+        for message in conversation_messages
+    ]
+    payload.append(
+        {"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}
+    )
+    return payload
+
+
+def _tool_bg_routing_fallback_envelope_from_completion(
+    *,
+    resp: Any,
+    tid: str,
+) -> DualLlmChatBranchEnvelope:
+    """Parse fallback routing completion or return conservative envelope."""
+    fallback = parse_dual_llm_chat_envelope_from_message(
+        resp.choices[0].message
+    )
+    if fallback is not None:
+        logger.debug(
+            "tool_bg_routing trace_id={} source=extra_completion_response "
+            "output_to_user={} user_facing_reply_chars={}",
+            tid,
+            fallback.output_to_user,
+            len(fallback.user_facing_reply or ""),
+        )
+        return fallback
+    logger.debug(
+        "tool_bg_routing trace_id={} source=fallback_conservative_invalid_json",
+        tid,
+    )
+    return _conservative_tool_finish_envelope()
+
+
 def resolve_tool_background_finish_envelope(
     *,
     skip_finish_envelope_routing: bool,
@@ -104,14 +143,7 @@ def _tool_bg_routing_fallback_completion_envelope(
         "(final_assistant_not_valid_unified_envelope_json)",
         tid,
     )
-    routing_tail = [
-        {"role": "system", "content": _UNIFIED_FALLBACK_SYSTEM_PROMPT}
-    ]
-    payload = [
-        {k: v for k, v in m.items() if not str(k).startswith("_")}
-        for m in conversation_messages
-    ]
-    payload.extend(routing_tail)
+    payload = _tool_bg_routing_fallback_completion_messages(conversation_messages)
     resp = create_completion_sync(
         client,
         model=model,
@@ -123,23 +155,7 @@ def _tool_bg_routing_fallback_completion_envelope(
             extra_metadata=None,
         ),
     )
-    fallback = parse_dual_llm_chat_envelope_from_message(
-        resp.choices[0].message
-    )
-    if fallback is not None:
-        logger.debug(
-            "tool_bg_routing trace_id={} source=extra_completion_response "
-            "output_to_user={} user_facing_reply_chars={}",
-            tid,
-            fallback.output_to_user,
-            len(fallback.user_facing_reply or ""),
-        )
-        return fallback
-    logger.debug(
-        "tool_bg_routing trace_id={} source=fallback_conservative_invalid_json",
-        tid,
-    )
-    return _conservative_tool_finish_envelope()
+    return _tool_bg_routing_fallback_envelope_from_completion(resp=resp, tid=tid)
 
 
 def resolve_tool_bg_routing_sync(

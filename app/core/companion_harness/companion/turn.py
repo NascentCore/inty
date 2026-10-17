@@ -567,53 +567,41 @@ def _persist_companion_turn_transcript_user_side(
 
 def _persist_companion_turn_transcript(
     *,
-    store: Any,
-    track: CompanionTurnTrack,
-    implicit_sign_on_turn: bool,
-    in_turn_sync_persisted_transcript: bool,
-    tail_user_messages: Any,
-    trace_id: str,
-    user_msg_uuid: str,
-    ts_user: Any,
-    ai_private_splice_plan: AiPrivateSplicePlan,
-    last_text: str,
-    skip_final_transcript_assistant_row: bool,
-    skip_proactive_assistant_transcript_row: bool,
-    last_interim_assistant_msg_uuid: str | None,
-    significance_meta: dict[str, Any] | None,
-    turn_recall: str | None,
-    inner_tick_turn: bool,
+    prepared: _CompanionTurnPrepared,
+    loop_outcome: _CompanionTurnAgenticLoopOutcome,
 ) -> str:
+    """Append user and assistant transcript rows after one agentic loop completes."""
+    implicit_sign_on_turn = prepared.runtime_flags.implicit_sign_on_turn
     rel_tr, assistant_msg_uuid = _companion_turn_transcript_rel_and_assistant_msg_uuid(
-        track=track,
+        track=prepared.track,
         implicit_sign_on_turn=implicit_sign_on_turn,
-        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+        last_interim_assistant_msg_uuid=loop_outcome.last_interim_assistant_msg_uuid,
     )
     _persist_companion_turn_transcript_user_side(
-        store=store,
+        store=prepared.store,
         rel_tr=rel_tr,
-        track=track,
+        track=prepared.track,
         implicit_sign_on_turn=implicit_sign_on_turn,
-        in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
-        tail_user_messages=tail_user_messages,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
-        ts_user=ts_user,
+        in_turn_sync_persisted_transcript=prepared.in_turn_sync_persisted_transcript,
+        tail_user_messages=prepared.tail_user_messages,
+        trace_id=prepared.trace_id,
+        user_msg_uuid=prepared.user_msg_uuid,
+        ts_user=prepared.ts_user,
     )
     _persist_companion_turn_transcript_assistant_side(
-        store=store,
+        store=prepared.store,
         rel_tr=rel_tr,
-        track=track,
-        user_msg_uuid=user_msg_uuid,
-        trace_id=trace_id,
-        ai_private_splice_plan=ai_private_splice_plan,
-        last_text=last_text,
+        track=prepared.track,
+        user_msg_uuid=prepared.user_msg_uuid,
+        trace_id=prepared.trace_id,
+        ai_private_splice_plan=prepared.ai_private_splice_plan,
+        last_text=loop_outcome.assistant_text,
         assistant_msg_uuid=assistant_msg_uuid,
-        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
-        skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
-        significance_meta=significance_meta,
-        turn_recall=turn_recall,
-        inner_tick_turn=inner_tick_turn,
+        skip_final_transcript_assistant_row=loop_outcome.skip_final_transcript_assistant_row,
+        skip_proactive_assistant_transcript_row=loop_outcome.skip_proactive_assistant_transcript_row,
+        significance_meta=loop_outcome.significance_meta,
+        turn_recall=loop_outcome.turn_recall,
+        inner_tick_turn=prepared.runtime_flags.inner_tick_turn,
     )
     return assistant_msg_uuid
 
@@ -1190,22 +1178,8 @@ def _persist_companion_turn_after_agentic_loop(
 ) -> str:
     """Append final assistant / ai_private transcript rows after ``AgenticLoop`` completes."""
     return _persist_companion_turn_transcript(
-        store=prepared.store,
-        track=prepared.track,
-        implicit_sign_on_turn=prepared.runtime_flags.implicit_sign_on_turn,
-        in_turn_sync_persisted_transcript=prepared.in_turn_sync_persisted_transcript,
-        tail_user_messages=prepared.tail_user_messages,
-        trace_id=prepared.trace_id,
-        user_msg_uuid=prepared.user_msg_uuid,
-        ts_user=prepared.ts_user,
-        ai_private_splice_plan=prepared.ai_private_splice_plan,
-        last_text=loop_outcome.assistant_text,
-        skip_final_transcript_assistant_row=loop_outcome.skip_final_transcript_assistant_row,
-        skip_proactive_assistant_transcript_row=loop_outcome.skip_proactive_assistant_transcript_row,
-        last_interim_assistant_msg_uuid=loop_outcome.last_interim_assistant_msg_uuid,
-        significance_meta=loop_outcome.significance_meta,
-        turn_recall=loop_outcome.turn_recall,
-        inner_tick_turn=prepared.runtime_flags.inner_tick_turn,
+        prepared=prepared,
+        loop_outcome=loop_outcome,
     )
 
 
