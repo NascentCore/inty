@@ -5,8 +5,17 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from app.core.companion_harness.companion.models import CompanionTurnTrack
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+from app.core.agentic_companion.types import (
+    UserMessageBatch,
+    synthetic_user_message_batch,
+)
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
@@ -14,9 +23,6 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.turn_tail_user import (
     TurnTailUserMessage,
-)
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
@@ -26,10 +32,6 @@ from app.core.companion_harness.prompting.track_composer import (
 )
 from tests.app.core.companion_harness.loop.context_builder_test_support import (
     loop_execution_for_track,
-)
-from app.core.agentic_companion.types import (
-    UserMessageBatch,
-    synthetic_user_message_batch,
 )
 
 
@@ -79,7 +81,7 @@ def test_build_implicit_sign_on_greeting_loop_context_sets_track() -> None:
         user_text="",
         ts_user=ts,
         user_msg_uuid="u1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
+        transcript_rel=_SCOPE.transcript,
         langsmith_slice=CompanionTurnLangsmithSlice.app_default(),
         runtime_context=TurnRuntimeContext(
             channel=ChannelKind.APP_WS,
