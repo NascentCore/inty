@@ -709,6 +709,6 @@ Open PRs checked: #4033 (`HYGIENE-2026-514..516`), #4031 (`511..513`), #4028 (`5
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-f3a6`)
 
-- [ ] **HYGIENE-2026-517** #3413: `loop/test_greeting_loop_context.py` — `transcript_rel` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-518** #3413: `loop/test_agentic_loop_output_queue.py` — transcript seed/read via scope `transcript` accessor.
-- [ ] **HYGIENE-2026-519** #3413: `companion/test_transcript_assistant_row.py` — transcript append/read via scope `transcript` accessor.
+- [x] **HYGIENE-2026-517** #3413: `loop/test_greeting_loop_context.py` — `transcript_rel` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-f3a6` / pull/4036.
+- [x] **HYGIENE-2026-518** #3413: `loop/test_agentic_loop_output_queue.py` — transcript seed/read via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-f3a6` / pull/4036.
+- [x] **HYGIENE-2026-519** #3413: `companion/test_transcript_assistant_row.py` — transcript append/read via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-f3a6` / pull/4036.
