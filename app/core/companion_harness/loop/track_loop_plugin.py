@@ -32,6 +32,7 @@ from app.core.companion_harness.loop.context import (
     build_implicit_sign_on_greeting_loop_context,
     build_inner_tick_chat_only_loop_context,
     build_inner_tick_tool_loop_context,
+    _SettledDualLlmUserChatLoopVariantWire,
     build_settled_dual_llm_user_chat_loop_context,
     build_settled_user_chat_loop_context,
 )
@@ -349,10 +350,12 @@ async def _run_settled_user_chat_dual_llm(
         output_queue=prepared.agentic_output_queue,
         user_message_batch=prepared.user_message_batch,
         tail_user_messages=prepared.tail_user_messages,
-        dual_llm_chat_msgs=wire.chat_msgs,
-        dual_llm_tool_msgs=wire.tool_msgs,
-        prompt_bundle=bundle,
-        context_meta=context,
+        dual_llm_variant=_SettledDualLlmUserChatLoopVariantWire(
+            context_meta=context,
+            dual_llm_chat_msgs=wire.chat_msgs,
+            dual_llm_tool_msgs=wire.tool_msgs,
+            prompt_bundle=bundle,
+        ),
         execution=execution,
     )
     return await _agentic_loop(prepared).run_dual_llm_turn(context=loop_context)

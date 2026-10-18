@@ -689,6 +689,16 @@ class _SettledUserChatLoopVariantFields:
     prompt_bundle: PromptBundle | None
 
 
+@dataclass(frozen=True)
+class _SettledDualLlmUserChatLoopVariantWire:
+    """Pre-built dual-LLM stacks and context for settled ``USER_CHAT`` loop builders."""
+
+    context_meta: ContextMeta
+    dual_llm_chat_msgs: tuple[dict[str, Any], ...]
+    dual_llm_tool_msgs: tuple[dict[str, Any], ...]
+    prompt_bundle: PromptBundle
+
+
 def _settled_dual_llm_user_chat_loop_variant_fields(
     *,
     context_meta: ContextMeta,
@@ -870,10 +880,7 @@ def build_settled_dual_llm_user_chat_loop_context(
     output_queue: OutputQueue,
     user_message_batch: UserMessageBatch,
     tail_user_messages: tuple[TurnTailUserMessage, ...],
-    dual_llm_chat_msgs: tuple[dict[str, Any], ...],
-    dual_llm_tool_msgs: tuple[dict[str, Any], ...],
-    prompt_bundle: PromptBundle,
-    context_meta: ContextMeta,
+    dual_llm_variant: _SettledDualLlmUserChatLoopVariantWire,
     execution: LoopExecutionPolicy,
 ) -> AgenticLoopContext:
     """Assemble settled ``USER_CHAT`` context for dual-LLM ``AgenticLoop``."""
@@ -897,10 +904,10 @@ def build_settled_dual_llm_user_chat_loop_context(
         execution=execution,
     )
     variant = _settled_dual_llm_user_chat_loop_variant_fields(
-        context_meta=context_meta,
-        dual_llm_chat_msgs=dual_llm_chat_msgs,
-        dual_llm_tool_msgs=dual_llm_tool_msgs,
-        prompt_bundle=prompt_bundle,
+        context_meta=dual_llm_variant.context_meta,
+        dual_llm_chat_msgs=dual_llm_variant.dual_llm_chat_msgs,
+        dual_llm_tool_msgs=dual_llm_variant.dual_llm_tool_msgs,
+        prompt_bundle=dual_llm_variant.prompt_bundle,
     )
     return _build_settled_user_chat_loop_context_from_common_kwargs(common, variant)
 

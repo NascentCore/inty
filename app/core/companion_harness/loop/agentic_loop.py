@@ -87,6 +87,7 @@ from app.core.companion_harness.tools.runtime import (
 )
 from app.core.companion_harness.tools.tool_background import (
     ToolOutputEvent,
+    _ToolBackgroundLoopKickoffInputs,
     run_tool_background_loop,
 )
 from app.core.companion_harness.tools.image_gate import (
@@ -1285,24 +1286,26 @@ async def _run_dual_llm_tool_background_phase(
     await run_tool_background_loop(
         memory_store=store,
         request_messages=list(fg_result.tool_msgs_for_bg),
-        tool_model=tool_model,
-        user_msg_uuid=context.user_msg_uuid,
-        trace_id=context.trace_id,
-        tools=list(context.openai_tools),
-        on_event=event_sink,
-        execute_tool_call_fn=execute_tool_call,
         client=llm_client.sync_client_for_route("tool"),
-        chat_completion_sync=llm_client.chat_completions_sync,
-        write_allowlist=execution.write_allowlist,
-        repository_only_store_text=context.repository_only_store_text,
-        suppress_user_delivery=execution.suppresses_user_delivery,
-        skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
-        activity_label=execution.tool_bg_activity_label,
-        llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-        runtime_context=context.runtime_context,
-        langsmith_slice=context.langsmith.turn_slice,
-        companion_turn_track=context.companion_turn_track,
-        force_tools_first_round=fg_result.force_tools_first_round,
+        kickoff_inputs=_ToolBackgroundLoopKickoffInputs(
+            tool_model=tool_model,
+            user_msg_uuid=context.user_msg_uuid,
+            trace_id=context.trace_id,
+            tools=list(context.openai_tools),
+            on_event=event_sink,
+            execute_tool_call_fn=execute_tool_call,
+            chat_completion_sync=llm_client.chat_completions_sync,
+            write_allowlist=execution.write_allowlist,
+            repository_only_store_text=context.repository_only_store_text,
+            suppress_user_delivery=execution.suppresses_user_delivery,
+            skip_finish_envelope_routing=execution.skip_tool_bg_finish_routing,
+            activity_label=execution.tool_bg_activity_label,
+            llm_round_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
+            runtime_context=context.runtime_context,
+            langsmith_slice=context.langsmith.turn_slice,
+            companion_turn_track=context.companion_turn_track,
+            force_tools_first_round=fg_result.force_tools_first_round,
+        ),
     )
     await event_sink.flush()
     return tool_background_started

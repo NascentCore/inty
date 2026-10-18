@@ -1609,6 +1609,30 @@ class _ToolBgKickoffSession:
 
 
 @dataclass(frozen=True)
+class _ToolBackgroundLoopKickoffInputs:
+    """Bundled kickoff inputs for ``run_tool_background_loop`` (long public signature)."""
+
+    tool_model: GenAIModel
+    user_msg_uuid: str
+    trace_id: str
+    tools: list[Any]
+    on_event: Callable[[ToolOutputEvent], None]
+    execute_tool_call_fn: Callable[..., Any]
+    chat_completion_sync: ChatCompletionsSyncPort
+    companion_turn_track: CompanionTurnTrack
+    llm_round_timeout_sec: float
+    langsmith_slice: CompanionTurnLangsmithSlice
+    runtime_context: TurnRuntimeContext
+    force_tools_first_round: bool
+    trace_hooks: ToolBackgroundTraceHooks | None = None
+    write_allowlist: frozenset[str] | None = None
+    repository_only_store_text: bool = False
+    suppress_user_delivery: bool = False
+    skip_finish_envelope_routing: bool = False
+    activity_label: str | None = None
+
+
+@dataclass(frozen=True)
 class _ToolBgKickoffLoopConfig:
     """Shared tool-background loop inputs after kickoff session prep."""
 
@@ -1843,45 +1867,28 @@ async def _tool_bg_kickoff_and_run_through_delivery(
     )
 
 
-def _tool_bg_kickoff_config_for_background_loop(
-    *,
-    tool_model: GenAIModel,
-    trace_id: str,
-    user_msg_uuid: str,
-    chat_completion_sync: ChatCompletionsSyncPort,
-    tools: list[Any],
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    llm_round_timeout_sec: float,
-    trace_hooks: ToolBackgroundTraceHooks | None,
-    companion_turn_track: CompanionTurnTrack,
-    runtime_context: TurnRuntimeContext,
-    write_allowlist: frozenset[str] | None,
-    repository_only_store_text: bool,
-    skip_finish_envelope_routing: bool,
-    suppress_user_delivery: bool,
-    on_event: Callable[[ToolOutputEvent], None],
-    activity_label: str | None,
-    execute_tool_call_fn: Callable[..., Any],
+def _tool_bg_kickoff_config_from_loop_kickoff_inputs(
+    inputs: _ToolBackgroundLoopKickoffInputs,
 ) -> _ToolBgKickoffLoopConfig:
-    assert llm_round_timeout_sec > 0.0
+    assert inputs.llm_round_timeout_sec > 0.0
     return _tool_bg_kickoff_loop_config_from_run_args(
-        tool_api_id=tool_model.id_on_provider,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
-        chat_completion_sync=chat_completion_sync,
-        tools=tools,
-        langsmith_slice=langsmith_slice,
-        llm_round_timeout_sec=llm_round_timeout_sec,
-        trace_hooks=trace_hooks,
-        companion_turn_track=companion_turn_track,
-        runtime_context=runtime_context,
-        write_allowlist=write_allowlist,
-        repository_only_store_text=repository_only_store_text,
-        skip_finish_envelope_routing=skip_finish_envelope_routing,
-        suppress_user_delivery=suppress_user_delivery,
-        on_event=on_event,
-        activity_label=activity_label,
-        execute_tool_call_fn=execute_tool_call_fn,
+        tool_api_id=inputs.tool_model.id_on_provider,
+        trace_id=inputs.trace_id,
+        user_msg_uuid=inputs.user_msg_uuid,
+        chat_completion_sync=inputs.chat_completion_sync,
+        tools=inputs.tools,
+        langsmith_slice=inputs.langsmith_slice,
+        llm_round_timeout_sec=inputs.llm_round_timeout_sec,
+        trace_hooks=inputs.trace_hooks,
+        companion_turn_track=inputs.companion_turn_track,
+        runtime_context=inputs.runtime_context,
+        write_allowlist=inputs.write_allowlist,
+        repository_only_store_text=inputs.repository_only_store_text,
+        skip_finish_envelope_routing=inputs.skip_finish_envelope_routing,
+        suppress_user_delivery=inputs.suppress_user_delivery,
+        on_event=inputs.on_event,
+        activity_label=inputs.activity_label,
+        execute_tool_call_fn=inputs.execute_tool_call_fn,
     )
 
 
@@ -1975,50 +1982,15 @@ async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
-    tool_model: GenAIModel,
-    user_msg_uuid: str,
-    trace_id: str,
-    tools: list[Any],
-    on_event: Callable[[ToolOutputEvent], None],
-    execute_tool_call_fn: Callable[..., Any],
     client: Any,
-    chat_completion_sync: ChatCompletionsSyncPort,
-    companion_turn_track: CompanionTurnTrack,
-    llm_round_timeout_sec: float,
-    trace_hooks: ToolBackgroundTraceHooks | None = None,
-    write_allowlist: frozenset[str] | None = None,
-    repository_only_store_text: bool = False,
-    suppress_user_delivery: bool = False,
-    skip_finish_envelope_routing: bool = False,
-    activity_label: str | None = None,
-    runtime_context: TurnRuntimeContext = _TOOL_BG_DEFAULT_RUNTIME_CONTEXT,
-    langsmith_slice: CompanionTurnLangsmithSlice,
-    force_tools_first_round: bool = True,
+    kickoff_inputs: _ToolBackgroundLoopKickoffInputs,
 ) -> None:
-    kickoff_config = _tool_bg_kickoff_config_for_background_loop(
-        tool_model=tool_model,
-        trace_id=trace_id,
-        user_msg_uuid=user_msg_uuid,
-        chat_completion_sync=chat_completion_sync,
-        tools=tools,
-        langsmith_slice=langsmith_slice,
-        llm_round_timeout_sec=llm_round_timeout_sec,
-        trace_hooks=trace_hooks,
-        companion_turn_track=companion_turn_track,
-        runtime_context=runtime_context,
-        write_allowlist=write_allowlist,
-        repository_only_store_text=repository_only_store_text,
-        skip_finish_envelope_routing=skip_finish_envelope_routing,
-        suppress_user_delivery=suppress_user_delivery,
-        on_event=on_event,
-        activity_label=activity_label,
-        execute_tool_call_fn=execute_tool_call_fn,
-    )
+    kickoff_config = _tool_bg_kickoff_config_from_loop_kickoff_inputs(kickoff_inputs)
     await _run_tool_background_loop_with_kickoff_config(
         memory_store=memory_store,
         request_messages=request_messages,
         client=client,
-        force_tools_first_round=force_tools_first_round,
-        user_msg_uuid=user_msg_uuid,
+        force_tools_first_round=kickoff_inputs.force_tools_first_round,
+        user_msg_uuid=kickoff_inputs.user_msg_uuid,
         kickoff_config=kickoff_config,
     )
