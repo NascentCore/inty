@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-18 scan (cron)
+
+Source: open PR overlap check (#4036 HYGIENE-517..519, #4033 514..516, #4031 511..513, #4028 508..510); #3413 follow-up — harness tests still seed/read transcript via `TRANSCRIPT_JSONL_REL` instead of `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
+
+Open PRs checked: #4036, #4033, #4031, #4028 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct18-520`)
+
+- [x] **HYGIENE-2026-520** `loop/test_chat_only_prompt_plan.py` — transcript seed + `transcript_rel` via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.
+- [x] **HYGIENE-2026-521** `companion/test_proactive_chat.py` — transcript seed/append via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.
+- [x] **HYGIENE-2026-522** `companion/test_transcript_ai_private_hydrate.py` — transcript load/persist via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.
