@@ -709,6 +709,6 @@ Open PRs checked: #4036, #4033, #4031, #4028 — no overlap with tasks below.
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct18-520`)
 
-- [ ] **HYGIENE-2026-520** `loop/test_chat_only_prompt_plan.py` — transcript seed + `transcript_rel` via scope `transcript` accessor
-- [ ] **HYGIENE-2026-521** `companion/test_proactive_chat.py` — transcript seed/append via scope `transcript` accessor
-- [ ] **HYGIENE-2026-522** `companion/test_transcript_ai_private_hydrate.py` — transcript load/persist via scope `transcript` accessor
+- [x] **HYGIENE-2026-520** `loop/test_chat_only_prompt_plan.py` — transcript seed + `transcript_rel` via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.
+- [x] **HYGIENE-2026-521** `companion/test_proactive_chat.py` — transcript seed/append via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.
+- [x] **HYGIENE-2026-522** `companion/test_transcript_ai_private_hydrate.py` — transcript load/persist via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct18-520` / pull/4039.

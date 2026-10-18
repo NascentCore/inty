@@ -56,9 +56,11 @@ from app.core.companion_harness.prompting.track_composer import (
     TrackPromptComposer,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.llms.client import LLM_SCENE_CHAT, LLM_SCENE_INNER_TICK
 from app.core.agentic_companion.types import (
     OutputMessageKind,
@@ -81,7 +83,7 @@ def _store() -> MemoryStore:
         scope=CompanionScope("user-1", "agent-1", "chat-1"),
         repository=None,
     )
-    store.write_document(TRANSCRIPT_JSONL_REL, "")
+    store.write_document(_SCOPE.transcript, "")
     return store
 
 
@@ -128,7 +130,7 @@ def _common_context_kwargs(store: MemoryStore) -> dict:
         user_text="hi",
         ts_user=datetime(2026, 1, 1, tzinfo=UTC),
         user_msg_uuid="uid-1",
-        transcript_rel=TRANSCRIPT_JSONL_REL,
+        transcript_rel=_SCOPE.transcript,
         langsmith_slice=_langsmith_slice(),
         runtime_context=_runtime_context(),
         stack_depth=1,
