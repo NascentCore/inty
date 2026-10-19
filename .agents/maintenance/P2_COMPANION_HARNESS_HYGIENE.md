@@ -709,6 +709,6 @@ Open PRs checked: #4039 (`HYGIENE-2026-520..522`), #4036 (`517..519`), #4033 (`5
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-49a4`)
 
-- [ ] **HYGIENE-2026-523** #3413: `companion/test_turn_pipeline_bootstrap.py` — context + transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors.
-- [ ] **HYGIENE-2026-524** #3413: `companion/test_transcript_inner_tick_streams.py` — main/inner transcript paths via scope accessors.
-- [ ] **HYGIENE-2026-525** #3413: `companion/test_turn.py` — bootstrap context + transcript read via scope accessors.
+- [x] **HYGIENE-2026-523** #3413: `companion/test_turn_pipeline_bootstrap.py` — context + transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS` accessors. Fixed in `cursor/agent-maintenance-tasks-49a4` / pull/4041.
+- [x] **HYGIENE-2026-524** #3413: `companion/test_transcript_inner_tick_streams.py` — main/inner transcript paths via scope accessors. Fixed in `cursor/agent-maintenance-tasks-49a4` / pull/4041.
+- [x] **HYGIENE-2026-525** #3413: `companion/test_turn.py` — bootstrap context + transcript read via scope accessors. Fixed in `cursor/agent-maintenance-tasks-49a4` / pull/4041.

@@ -21,13 +21,16 @@ from app.core.agentic_companion.types import (
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.schedule_queue import (
@@ -133,7 +136,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
     rows = [
         json.loads(line)
-        for line in store.read_document(TRANSCRIPT_JSONL_REL).strip().splitlines()
+        for line in store.read_document(_SCOPE.transcript).strip().splitlines()
     ]
     assert rows[0]["role"] == "user"
     assert rows[0]["content"] == scheduled_text
@@ -143,7 +146,7 @@ def test_run_turn_inner_tick_scheduled_semantics(
 
 def _seed_bootstrap_workspace(store: MemoryStore) -> None:
     store.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
@@ -296,7 +299,7 @@ async def test_bootstrap_queue_turn_persists_single_user_row(
     )
     rows = [
         json.loads(line)
-        for line in store.read_document(TRANSCRIPT_JSONL_REL).splitlines()
+        for line in store.read_document(_SCOPE.transcript).splitlines()
         if line
     ]
     user_rows = [row for row in rows if row["role"] == "user"]
