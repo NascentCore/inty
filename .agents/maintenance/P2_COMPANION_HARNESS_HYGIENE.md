@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-19 scan (cron stale-code automation)
+
+Source: stale/legacy review per `docs/imate/companion_harness/DESIGN.md`; avoided trap symbols (`turn_compose_context_from_legacy_flags`, `inner_tick_activity_suppresses_user_delivery`) and open PR overlap (#4034 alias bundle).
+
+Open PRs checked: #4034, #4029, #3987 — no edits to compose_context / models alias / WS shims in this branch.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-237** #3413: `image_gate.py` — MemDoc path imports from `memory_store_path_constants` (not `memory_store_scope` re-exports).
+- [x] **HYGIENE-2026-238** #3413: drop `current_persona_revision_id` shim; `companion_tool_runtime` calls `compute_persona_revision_id` directly.
+- [x] **HYGIENE-2026-239** Remove never-wired `PromptLegKind.CHAT_LEG` / `TOOL_LEG` (dual-LLM stacks do not use `TurnComposeContext.leg_kind`).
+- [x] **HYGIENE-2026-240** `user_md_identity.py` — drop redundant `USER_MD_REL as USER_MD_REL` import alias.
