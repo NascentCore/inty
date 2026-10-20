@@ -33,9 +33,13 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 
@@ -90,7 +94,7 @@ def _default_deps(
 
 
 def _transcript_rows(store: MemoryStore) -> list[dict[str, Any]]:
-    raw = store.read_document(TRANSCRIPT_JSONL_REL).strip()
+    raw = store.read_document(_SCOPE.transcript).strip()
     if not raw:
         return []
     return [json.loads(line) for line in raw.splitlines()]
