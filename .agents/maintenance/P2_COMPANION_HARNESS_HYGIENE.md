@@ -709,6 +709,6 @@ Open PRs checked: #4041 (`HYGIENE-2026-523..525`), #4039 (`520..522`), #4036 (`5
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-81fb`)
 
-- [ ] **HYGIENE-2026-526** #3413: `companion/test_turn_pipeline_dreaming.py` — transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`.
-- [ ] **HYGIENE-2026-527** #3413: `companion/test_turn_proactive_structured.py` — transcript read via scope `transcript` accessor.
-- [ ] **HYGIENE-2026-528** #3413: `companion/test_turn_tracks.py` — `context_json` seed via scope accessor.
+- [x] **HYGIENE-2026-526** #3413: `companion/test_turn_pipeline_dreaming.py` — transcript seed via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-81fb` / pull/4043.
+- [x] **HYGIENE-2026-527** #3413: `companion/test_turn_proactive_structured.py` — transcript read via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-81fb` / pull/4043.
+- [x] **HYGIENE-2026-528** #3413: `companion/test_turn_tracks.py` — `context_json` seed via scope accessor. Fixed in `cursor/agent-maintenance-tasks-81fb` / pull/4043.
