@@ -10,8 +10,6 @@ from typing import Any
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     GENERATED_IMAGES_INDEX_JSONL_REL,
-)
-from app.core.companion_harness.memory.memory_store_scope import (
     IDENTITY_MD_REL,
     SOUL_MD_REL,
     USER_MD_REL,
@@ -39,10 +37,6 @@ def compute_persona_revision_id(store: MemoryStore) -> str:
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
-
-
-def current_persona_revision_id(store: MemoryStore) -> str:
-    return compute_persona_revision_id(store)
 
 
 def append_image_asset_record(
