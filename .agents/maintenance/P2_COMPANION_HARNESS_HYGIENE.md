@@ -709,6 +709,6 @@ Open PRs checked: #4043 (`HYGIENE-2026-526..528`), #4041 (`523..525`), #4039 (`5
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-1152`)
 
-- [ ] **HYGIENE-2026-529** #3413: `tools/test_companion_user_feedback_tool.py` — `context_json` + `transcript` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`.
-- [ ] **HYGIENE-2026-530** #3413: `experience_profile/test_experience_directives.py` — `context_json` via scope accessor.
-- [ ] **HYGIENE-2026-531** #3413: `companion/test_ai_private_manifest_persist.py` — `context_json` + `transcript` via scope accessors.
+- [x] **HYGIENE-2026-529** #3413: `tools/test_companion_user_feedback_tool.py` — `context_json` + `transcript` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`. Fixed in `cursor/agent-maintenance-tasks-1152` / pull/4045.
+- [x] **HYGIENE-2026-530** #3413: `experience_profile/test_experience_directives.py` — `context_json` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-1152` / pull/4045.
+- [x] **HYGIENE-2026-531** #3413: `companion/test_ai_private_manifest_persist.py` — `context_json` + `transcript` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-1152` / pull/4045.
