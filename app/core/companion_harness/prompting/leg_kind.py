@@ -1,7 +1,7 @@
-"""LLM request leg identity within a companion turn (dual-LLM vs single-LLM).
+"""LLM request leg identity within a companion turn.
 
-Phase 1 only uses ``SINGLE_LLM``. ``CHAT_LEG`` and ``TOOL_LEG`` activate in Phase 2
-when ``USER_CHAT`` dual-LLM paths move to ``TrackSystemRecipe`` (#3453).
+Settled user turns use ``SINGLE_LLM`` in ``TurnComposeContext``. Dual-LLM ``USER_CHAT``
+assembles chat vs tool stacks outside this enum (see ``dual_llm_message_stacks``).
 """
 
 from __future__ import annotations
@@ -13,5 +13,3 @@ class PromptLegKind(StrEnum):
     """Which LLM request leg within a turn is being composed."""
 
     SINGLE_LLM = "single_llm"
-    CHAT_LEG = "chat_leg"
-    TOOL_LEG = "tool_leg"
