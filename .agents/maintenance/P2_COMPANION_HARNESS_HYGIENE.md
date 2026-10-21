@@ -700,3 +700,22 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-21 scan (cron stale-code automation)
+
+Source: stale/legacy review per `docs/imate/companion_harness/DESIGN.md`; avoided trap symbols (`turn_compose_context_from_legacy_flags`, `inner_tick_activity_suppresses_user_delivery`); consolidated unmerged slices from open PR overlap (#4034 WS shims, #4042 leg_kind/persona).
+
+Open PRs checked: #4034, #4037, #4040, #4042 — landed on `cursor/stale-companion-harness-cleanup-oct21`.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-246** #3413: `image_gate.py` — MemDoc path imports from `memory_store_path_constants` (not `memory_store_scope` re-exports).
+- [x] **HYGIENE-2026-247** #3413: drop `current_persona_revision_id` shim; `companion_tool_runtime` calls `compute_persona_revision_id` directly.
+- [x] **HYGIENE-2026-248** Remove never-wired `PromptLegKind.CHAT_LEG` / `TOOL_LEG`.
+- [x] **HYGIENE-2026-249** `user_md_identity.py` — drop redundant `USER_MD_REL as USER_MD_REL` import alias.
+- [x] **HYGIENE-2026-250** Remove `apply_companion_ws_inner_tick_coords`; `chat_ws` calls `apply_inner_tick_coords` from `session`.
+- [x] **HYGIENE-2026-251** Drop `OUTPUT_FORMAT_IM_DM_MD` models alias; Telegram test uses `OUTPUT_FORMAT_IM_DM_MD_REL`.
+- [x] **HYGIENE-2026-252** Drop `TRANSCRIPT_REL` shim in `companion_user_feedback`.
+- [x] **HYGIENE-2026-253** Remove unused `_companion_ai_meta_from_turn_result` re-export from `chat_ws_companion_support`.
+- [x] **HYGIENE-2026-254** ruff F401: unused imports in `ws_outbound_materialize` / `ws_turn_support`.
+- [x] **HYGIENE-2026-255** #3375: `ai_private_prompt` module doc — remove stale `get_ai_private_text_for_prompt` reference.
