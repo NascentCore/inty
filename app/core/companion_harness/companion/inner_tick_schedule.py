@@ -111,6 +111,75 @@ def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
     return str(tail_uuid).strip()
 
 
+def _inner_tick_schedule_globally_enabled(
+    overrides: InnerTickScheduleOverrides | None,
+) -> bool:
+    enabled = inner_tick_enabled_from_env()
+    if overrides is not None and overrides.enabled is not None:
+        enabled = overrides.enabled
+    return enabled
+
+
+def _inner_tick_wait_after_min_gap(
+    *,
+    last_inner_fire_monotonic: float | None,
+    now: float,
+    min_gap: float,
+    poll: float,
+) -> float:
+    if last_inner_fire_monotonic is None:
+        return 0.0
+    elapsed = now - last_inner_fire_monotonic
+    remain = min_gap - elapsed
+    if remain <= 0.0:
+        return 0.0
+    return min(remain, poll)
+
+
+def _inner_tick_blocked_poll_wait(poll: float) -> float:
+    """Sleep cap when transcript is too short or the last row is not assistant."""
+    return min(_INNER_TICK_BLOCKED_MAX_SLEEP_SEC, poll)
+
+
+def _inner_tick_effective_min_transcript_lines(
+    overrides: InnerTickScheduleOverrides | None,
+) -> int:
+    if overrides is not None and overrides.min_transcript_msgs is not None:
+        return overrides.min_transcript_msgs
+    return _env_int(
+        "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
+        _DEFAULT_MIN_TRANSCRIPT_MSGS,
+    )
+
+
+def _inner_tick_effective_poll_seconds(
+    overrides: InnerTickScheduleOverrides | None,
+) -> float:
+    poll = inner_tick_poll_seconds()
+    if overrides is not None and overrides.poll_seconds is not None:
+        poll = overrides.poll_seconds
+    return poll
+
+
+def _inner_tick_effective_min_gap_seconds(
+    overrides: InnerTickScheduleOverrides | None,
+) -> float:
+    min_gap = inner_tick_min_gap_seconds()
+    if overrides is not None and overrides.min_gap_seconds is not None:
+        min_gap = overrides.min_gap_seconds
+    return min_gap
+
+
+def _inner_tick_transcript_growth_stalled(
+    *,
+    line_count: int,
+    last_monolog_transcript_line_count: int | None,
+) -> bool:
+    if last_monolog_transcript_line_count is None:
+        return False
+    return line_count <= last_monolog_transcript_line_count
+
+
 def next_inner_tick_wait_seconds(
     store: MemoryStore,
     *,
@@ -119,10 +188,7 @@ def next_inner_tick_wait_seconds(
     now_monotonic: float | None = None,
     overrides: InnerTickScheduleOverrides | None = None,
 ) -> float:
-    enabled = inner_tick_enabled_from_env()
-    if overrides is not None and overrides.enabled is not None:
-        enabled = overrides.enabled
-    if not enabled:
+    if not _inner_tick_schedule_globally_enabled(overrides):
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     if not load_context_meta(
@@ -133,37 +199,26 @@ def next_inner_tick_wait_seconds(
     now = now_monotonic if now_monotonic is not None else time.monotonic()
     msgs = _monolog_transcript_messages(store)
     line_count = len(msgs)
-    if last_monolog_transcript_line_count is not None:
-        if line_count <= last_monolog_transcript_line_count:
-            return _DISABLED_INNER_TICK_WAIT_SEC
+    if _inner_tick_transcript_growth_stalled(
+        line_count=line_count,
+        last_monolog_transcript_line_count=last_monolog_transcript_line_count,
+    ):
+        return _DISABLED_INNER_TICK_WAIT_SEC
 
-    if overrides is not None and overrides.min_transcript_msgs is not None:
-        min_lines = overrides.min_transcript_msgs
-    else:
-        min_lines = _env_int(
-            "INTY_V2_PROTO_INNER_TICK_MIN_TRANSCRIPT_MSGS",
-            _DEFAULT_MIN_TRANSCRIPT_MSGS,
-        )
-
-    poll = inner_tick_poll_seconds()
-    if overrides is not None and overrides.poll_seconds is not None:
-        poll = overrides.poll_seconds
-
-    blocked_sleep = min(_INNER_TICK_BLOCKED_MAX_SLEEP_SEC, poll)
+    min_lines = _inner_tick_effective_min_transcript_lines(overrides)
+    poll = _inner_tick_effective_poll_seconds(overrides)
+    blocked_sleep = _inner_tick_blocked_poll_wait(poll)
     if line_count < min_lines:
         return blocked_sleep
 
     if not msgs or msgs[-1].role != "assistant":
         return blocked_sleep
 
-    min_gap = inner_tick_min_gap_seconds()
-    if overrides is not None and overrides.min_gap_seconds is not None:
-        min_gap = overrides.min_gap_seconds
+    min_gap = _inner_tick_effective_min_gap_seconds(overrides)
 
-    if last_inner_fire_monotonic is None:
-        return 0.0
-    elapsed = now - last_inner_fire_monotonic
-    remain = min_gap - elapsed
-    if remain <= 0.0:
-        return 0.0
-    return min(remain, poll)
+    return _inner_tick_wait_after_min_gap(
+        last_inner_fire_monotonic=last_inner_fire_monotonic,
+        now=now,
+        min_gap=min_gap,
+        poll=poll,
+    )

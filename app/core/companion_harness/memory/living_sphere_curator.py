@@ -190,6 +190,39 @@ def compact_living_sphere_batch(
     return batch[-1].update_id
 
 
+def _compact_living_sphere_single_pending_batch(
+    store: MemoryStore,
+    complete_fn: Callable[[list[dict[str, Any]], str], str],
+    *,
+    scope: str,
+) -> tuple[bool, bool]:
+    """
+    Compact at most one pending batch.
+
+    Returns (did_compact, should_continue_loop).
+    """
+    rows = _read_all_updates(store)
+    state = _load_curator_state(store)
+    cursor = _curator_curated_through_update_id(state)
+    pending, cursor_missing = _pending_updates_after_cursor(
+        rows, curated_through_update_id=cursor
+    )
+    if cursor_missing and cursor:
+        logger.warning(
+            "living_sphere_curator cursor not found in jsonl; re-merging all rows scope={} cursor={}",
+            scope,
+            cursor,
+        )
+    if not pending:
+        return False, False
+    batch = pending[:_PENDING_UPDATES_BATCH_CAP]
+    last_id = compact_living_sphere_batch(store, batch, complete_fn)
+    state[_PIPELINE_CURSOR_KEY] = last_id
+    _write_curator_state(store, state)
+    should_continue = len(pending) > _PENDING_UPDATES_BATCH_CAP
+    return True, should_continue
+
+
 def compact_living_sphere_if_pending(
     store: MemoryStore,
     complete_fn: Callable[[list[dict[str, Any]], str], str],
@@ -204,26 +237,15 @@ def compact_living_sphere_if_pending(
     any_ran = False
     scope = store.scope.registry_key()
     for _ in range(_MAX_COMPACT_BATCHES_PER_TURN):
-        rows = _read_all_updates(store)
-        state = _load_curator_state(store)
-        cursor = _curator_curated_through_update_id(state)
-        pending, cursor_missing = _pending_updates_after_cursor(
-            rows, curated_through_update_id=cursor
+        did_compact, should_continue = _compact_living_sphere_single_pending_batch(
+            store,
+            complete_fn,
+            scope=scope,
         )
-        if cursor_missing and cursor:
-            logger.warning(
-                "living_sphere_curator cursor not found in jsonl; re-merging all rows scope={} cursor={}",
-                scope,
-                cursor,
-            )
-        if not pending:
+        if not did_compact:
             break
-        batch = pending[:_PENDING_UPDATES_BATCH_CAP]
-        last_id = compact_living_sphere_batch(store, batch, complete_fn)
-        state[_PIPELINE_CURSOR_KEY] = last_id
-        _write_curator_state(store, state)
         any_ran = True
-        if len(pending) <= _PENDING_UPDATES_BATCH_CAP:
+        if not should_continue:
             break
     else:
         rows_after = _read_all_updates(store)
