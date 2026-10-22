@@ -728,18 +728,18 @@ async def _dispatch_read_web_page(
     return await run_read_web_page(store, url=raw_u, max_bullets=mb_opt)
 
 
-async def _dispatch_generate_image(
-    store: MemoryStore,
+def _parse_generate_image_tool_arguments(
     arguments: dict[str, Any],
-) -> str:
+) -> tuple[str, str | None, int | None, int | None, str | None]:
+    """Normalize generate_image args; return (prompt, image_size, n_steps, n_img, error)."""
     prompt = arguments.get("prompt")
     if not isinstance(prompt, str):
-        return "ERROR: prompt must be a string"
+        return "", None, None, None, "ERROR: prompt must be a string"
     if not prompt.strip():
-        return "ERROR: prompt must be non-empty"
+        return "", None, None, None, "ERROR: prompt must be non-empty"
     image_size = arguments.get("image_size")
     if image_size is not None and not isinstance(image_size, str):
-        return "ERROR: image_size must be a string or omitted"
+        return "", None, None, None, "ERROR: image_size must be a string or omitted"
     image_size_s = image_size.strip() if isinstance(image_size, str) else None
     if image_size_s == "":
         image_size_s = None
@@ -748,17 +748,35 @@ async def _dispatch_generate_image(
         field_name="num_inference_steps",
     )
     if err:
-        return f"ERROR: {err}"
+        return "", None, None, None, f"ERROR: {err}"
     n_img, err2 = parse_optional_positive_int(
         arguments.get("num_images"), field_name="num_images"
     )
     if err2:
-        return f"ERROR: {err2}"
+        return "", None, None, None, f"ERROR: {err2}"
     if n_img is not None and n_img > MAX_NUM_IMAGES_PER_CALL:
         return (
-            "ERROR: num_images must be at most "
-            f"{MAX_NUM_IMAGES_PER_CALL} per generate_image call"
+            "",
+            None,
+            None,
+            None,
+            (
+                "ERROR: num_images must be at most "
+                f"{MAX_NUM_IMAGES_PER_CALL} per generate_image call"
+            ),
         )
+    return prompt, image_size_s, n_steps, n_img, None
+
+
+async def _dispatch_generate_image(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    prompt, image_size_s, n_steps, n_img, arg_error = (
+        _parse_generate_image_tool_arguments(arguments)
+    )
+    if arg_error is not None:
+        return arg_error
     from loguru import logger
 
     t_img = time.perf_counter()

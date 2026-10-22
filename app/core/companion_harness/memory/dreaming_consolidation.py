@@ -721,12 +721,11 @@ def _maybe_compact_living_sphere_during_dreaming(
     return True
 
 
-def _apply_dreaming_document_updates(
-    store: MemoryStore,
+def _indexed_dreaming_document_updates(
     curator_input: DreamingCuratorInput,
     updates: list[DreamingDocumentUpdate],
-) -> bool:
-    """Apply one-shot updates; skip explicit no-ops; fail before partial writes."""
+) -> dict[str, DreamingDocumentUpdate]:
+    """Index dreaming updates by path; validate required set before any store write."""
     by_path: dict[str, DreamingDocumentUpdate] = {}
     for update in updates:
         if update.relative_path in by_path:
@@ -753,6 +752,16 @@ def _apply_dreaming_document_updates(
         by_path[rel].content_changed for rel in curator_input.required_paths
     ):
         raise ValueError("no content_changed=true dreaming document updates")
+    return by_path
+
+
+def _apply_dreaming_document_updates(
+    store: MemoryStore,
+    curator_input: DreamingCuratorInput,
+    updates: list[DreamingDocumentUpdate],
+) -> bool:
+    """Apply one-shot updates; skip explicit no-ops; fail before partial writes."""
+    by_path = _indexed_dreaming_document_updates(curator_input, updates)
 
     any_written = False
     for rel in curator_input.required_paths:
