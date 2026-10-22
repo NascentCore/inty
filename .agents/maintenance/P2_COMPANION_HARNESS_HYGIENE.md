@@ -709,6 +709,6 @@ Open PRs checked: #4045 (`HYGIENE-2026-529..531`), #4043 (`526..528`) — no ove
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct22-532`)
 
-- [ ] **HYGIENE-2026-532** #3413: `companion/bootstrap_test_helpers.py` — `context_json` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`.
-- [ ] **HYGIENE-2026-533** #3413: `companion/companion_scripted_llm.py` — seed + transcript read helpers via scope `context_json` / `transcript` accessors.
-- [ ] **HYGIENE-2026-534** #3413: `companion/companion_scripted_llm.py` — inner-tick + tool-background read helpers via scope accessors.
+- [x] **HYGIENE-2026-532** #3413: `companion/bootstrap_test_helpers.py` — `context_json` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`. Fixed in `cursor/agent-maintenance-tasks-oct22-532` / pull/4048.
+- [x] **HYGIENE-2026-533** #3413: `companion/companion_scripted_llm.py` — seed + transcript read helpers via scope `context_json` / `transcript` accessors. Fixed in `cursor/agent-maintenance-tasks-oct22-532` / pull/4048.
+- [x] **HYGIENE-2026-534** #3413: `companion/companion_scripted_llm.py` — inner-tick + tool-background read helpers via scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct22-532` / pull/4048.
