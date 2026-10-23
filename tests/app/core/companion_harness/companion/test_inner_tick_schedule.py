@@ -6,9 +6,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.companion.inner_tick_schedule import (
@@ -18,13 +17,15 @@ from app.core.companion_harness.companion.inner_tick_schedule import (
     transcript_tail_message_uuid,
 )
 
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+
 
 def _write_transcript_store(
     scope: CompanionScope, rows: list[dict[str, object]]
 ) -> MemoryStore:
     body = "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n"
     st = MemoryStore(scope=scope, repository=None)
-    st.write_document(TRANSCRIPT_JSONL_REL, body)
+    st.write_document(_SCOPE.transcript, body)
     return st
 
 
@@ -109,7 +110,7 @@ def test_next_inner_tick_incomplete_bootstrap_phase_disables(
         ],
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE.context_json,
         json.dumps(
             {
                 "context_mode": "unspecific",
