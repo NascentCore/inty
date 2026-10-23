@@ -709,6 +709,6 @@ Open PRs checked: #4048 (`cursor/agent-maintenance-tasks-oct22-532`), #4045, #40
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct23-535`)
 
-- [ ] **HYGIENE-2026-535** #3413: `companion/test_dreaming.py` — transcript seed via scope `transcript` accessor
-- [ ] **HYGIENE-2026-536** #3413: `companion/test_inner_tick_schedule.py` — `context_json` + transcript via scope accessors
-- [ ] **HYGIENE-2026-537** #3413: `companion/test_implicit_sign_on_greeting_llm.py` — `context_json` scope accessor
+- [x] **HYGIENE-2026-535** #3413: `companion/test_dreaming.py` — transcript seed via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct23-535` / pull/4050.
+- [x] **HYGIENE-2026-536** #3413: `companion/test_inner_tick_schedule.py` — `context_json` + transcript via scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct23-535` / pull/4050.
+- [x] **HYGIENE-2026-537** #3413: `companion/test_implicit_sign_on_greeting_llm.py` — `context_json` scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct23-535` / pull/4050.

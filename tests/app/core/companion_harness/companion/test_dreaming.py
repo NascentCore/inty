@@ -15,9 +15,11 @@ from app.core.companion_harness.companion.dreaming import (
 from app.core.companion_harness.companion.models import ChatMessage
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 
 def _store(tmp_path: Path) -> MemoryStore:
@@ -31,7 +33,7 @@ def _write_transcript(
     store: MemoryStore, rows: list[dict[str, object]]
 ) -> None:
     body = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n"
-    store.write_document(TRANSCRIPT_JSONL_REL, body)
+    store.write_document(_SCOPE.transcript, body)
 
 
 def test_dreaming_without_checkpoint_looks_back_24h(tmp_path: Path) -> None:
