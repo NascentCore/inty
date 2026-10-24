@@ -61,7 +61,6 @@ SNAPSHOT_DOC_PATHS: tuple[str, ...] = (
     USER_MD_REL,
     MEMORY_MD_REL,
 )
-TRANSCRIPT_REL = TRANSCRIPT_JSONL_REL
 TRANSCRIPT_TAIL_MAX_CHARS = 12_000
 MEMORY_DOC_MAX_CHARS = 4_000
 
@@ -193,7 +192,7 @@ def build_harness_snapshot(
     feedback_id = str(uuid.uuid4())
     scope = store.scope
     context_json = store.read_document_if_exists(CONTEXT_JSON_REL) or ""
-    transcript_raw = store.read_document_if_exists(TRANSCRIPT_REL) or ""
+    transcript_raw = store.read_document_if_exists(TRANSCRIPT_JSONL_REL) or ""
     memory_docs: dict[str, str] = {}
     for rel in SNAPSHOT_DOC_PATHS:
         if rel == CONTEXT_JSON_REL:
