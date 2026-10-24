@@ -73,9 +73,13 @@ from tests.app.core.companion_harness.companion.bootstrap_test_helpers import (
     mark_interactive_bootstrap_completed,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
     LIFE_CURRENTS_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
     build_scripted_autonomy_inner_tick_script,
@@ -432,7 +436,7 @@ async def test_bootstrap_turn_delivers_and_persists_context() -> None:
         )
         assert "user" in scripted_transcript_roles(session.store)
         assert "assistant" in scripted_transcript_roles(session.store)
-        ctx_raw = session.store.read_document(CONTEXT_JSON_REL)
+        ctx_raw = session.store.read_document(_SCOPE.context_json)
         ctx = json.loads(ctx_raw)
         assert (
             ctx.get("workspace_bootstrap_user_interactive_completed") is False
