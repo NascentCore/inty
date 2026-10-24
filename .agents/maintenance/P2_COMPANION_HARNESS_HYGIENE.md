@@ -709,6 +709,6 @@ Open PRs checked: #4050 (`cursor/agent-maintenance-tasks-oct23-535`), #4048 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct24-538`)
 
-- [ ] **HYGIENE-2026-538** #3413: `tools/test_tool_background_transcript_metadata.py` — transcript seed/read via scope `transcript` accessor
-- [ ] **HYGIENE-2026-539** #3413: `companion/test_harness_orchestration_scripted_llm.py` — `context_json` read via scope accessor
-- [ ] **HYGIENE-2026-540** #3413: `companion/test_bootstrap_transcript_order.py` — `context_json` + transcript via scope accessors
+- [x] **HYGIENE-2026-538** #3413: `tools/test_tool_background_transcript_metadata.py` — transcript seed/read via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct24-538` / pull/4052.
+- [x] **HYGIENE-2026-539** #3413: `companion/test_harness_orchestration_scripted_llm.py` — `context_json` read via scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct24-538` / pull/4052.
+- [x] **HYGIENE-2026-540** #3413: `companion/test_bootstrap_transcript_order.py` — `context_json` + transcript via scope accessors. Fixed in `cursor/agent-maintenance-tasks-oct24-538` / pull/4052.
