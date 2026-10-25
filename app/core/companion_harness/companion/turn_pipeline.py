@@ -61,6 +61,7 @@ from .prompt_stack import (
 )
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
+    CompactionOutcome,
     ConversationCompactor,
     load_compaction_state_from_store,
     save_compaction_state_to_store,
@@ -344,6 +345,40 @@ def _turn_messages_without_transcript_compaction(
     return messages
 
 
+def _transcript_compaction_meta_after_maybe_compact(
+    *,
+    store: MemoryStore,
+    compaction_state_rel: str,
+    outcome: CompactionOutcome,
+    max_context_chars: int,
+) -> dict[str, Any]:
+    """Log compaction evaluation, persist state when compacted, return turn meta."""
+    transcript_compaction_meta = transcript_compaction_meta_from_outcome(
+        outcome, max_context_chars=max_context_chars
+    )
+    logger.debug(
+        "run_turn transcript_compaction_eval did_compact={} reason={} before={} "
+        "after={} max_context_chars={} compaction_count={}",
+        outcome.did_compact,
+        outcome.reason,
+        outcome.approx_chars_before,
+        outcome.approx_chars_after,
+        max_context_chars,
+        outcome.state.compaction_count,
+    )
+    if outcome.did_compact:
+        save_compaction_state_to_store(store, compaction_state_rel, outcome.state)
+        logger.info(
+            "run_turn transcript_compaction did_compact=true reason={} before={} after={} "
+            "compaction_count={}",
+            outcome.reason,
+            outcome.approx_chars_before,
+            outcome.approx_chars_after,
+            outcome.state.compaction_count,
+        )
+    return transcript_compaction_meta
+
+
 def _apply_transcript_compaction_to_turn_messages(
     *,
     store: MemoryStore,
@@ -368,29 +403,12 @@ def _apply_transcript_compaction_to_turn_messages(
     )
     messages = list(outcome.messages)
     max_cc = transcript_compaction.max_context_chars
-    transcript_compaction_meta = transcript_compaction_meta_from_outcome(
-        outcome, max_context_chars=max_cc
+    transcript_compaction_meta = _transcript_compaction_meta_after_maybe_compact(
+        store=store,
+        compaction_state_rel=compaction_state_rel,
+        outcome=outcome,
+        max_context_chars=max_cc,
     )
-    logger.debug(
-        "run_turn transcript_compaction_eval did_compact={} reason={} before={} "
-        "after={} max_context_chars={} compaction_count={}",
-        outcome.did_compact,
-        outcome.reason,
-        outcome.approx_chars_before,
-        outcome.approx_chars_after,
-        max_cc,
-        outcome.state.compaction_count,
-    )
-    if outcome.did_compact:
-        save_compaction_state_to_store(store, compaction_state_rel, outcome.state)
-        logger.info(
-            "run_turn transcript_compaction did_compact=true reason={} before={} after={} "
-            "compaction_count={}",
-            outcome.reason,
-            outcome.approx_chars_before,
-            outcome.approx_chars_after,
-            outcome.state.compaction_count,
-        )
     return messages, transcript_compaction_meta
 
 

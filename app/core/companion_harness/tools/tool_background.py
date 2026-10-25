@@ -343,6 +343,32 @@ class _InitialToolBgCompletionMeta:
     tool_choice: str | None
 
 
+def _tool_bg_initial_completion_for_tool_choice(
+    client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    *,
+    model: str,
+    messages_payload: list[dict[str, Any]],
+    tools: list[Any],
+    tool_choice: str | None,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Any:
+    """One tool_background first-completion attempt with LangSmith phase metadata."""
+    return chat_completion_sync(
+        client,
+        model=model,
+        messages_payload=messages_payload,
+        tools=tools,
+        tool_choice=tool_choice,
+        response_format=None,
+        langsmith_extra=langsmith_slice.tool_call_extra(
+            phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
+            extra_metadata=tool_choice_attempt_metadata(tool_choice),
+        ),
+        high_reasoning=True,
+    )
+
+
 def _initial_tool_bg_completion_with_fallbacks(
     client: Any,
     chat_completion_sync: ChatCompletionsSyncPort,
@@ -366,18 +392,14 @@ def _initial_tool_bg_completion_with_fallbacks(
     last_br: BadRequestError | None = None
     for tc in attempts:
         try:
-            resp = chat_completion_sync(
+            resp = _tool_bg_initial_completion_for_tool_choice(
                 client,
+                chat_completion_sync,
                 model=model,
                 messages_payload=messages_payload,
                 tools=tools,
                 tool_choice=tc,
-                response_format=None,
-                langsmith_extra=langsmith_slice.tool_call_extra(
-                    phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
-                    extra_metadata=tool_choice_attempt_metadata(tc),
-                ),
-                high_reasoning=True,
+                langsmith_slice=langsmith_slice,
             )
             meta = _InitialToolBgCompletionMeta(tool_choice=tc)
             return resp, meta
