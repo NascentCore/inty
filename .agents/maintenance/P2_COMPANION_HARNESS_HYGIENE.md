@@ -709,6 +709,6 @@ Open PRs checked: #4052 (`538..540`), #4050 (`535..537`), #4048 (`532..534`), #4
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-7940`)
 
-- [ ] **HYGIENE-2026-541** #3413: `companion/test_bootstrap.py` — `context_json` seed/read via scope accessor.
-- [ ] **HYGIENE-2026-542** #3413: `companion/test_models.py` — transcript seed/load via scope `transcript` accessor.
-- [ ] **HYGIENE-2026-543** #3413: `companion/test_living_sphere_runtime.py` — `context_json` seed via scope accessor.
+- [x] **HYGIENE-2026-541** #3413: `companion/test_bootstrap.py` — `context_json` seed/read via scope accessor. Fixed in `cursor/agent-maintenance-tasks-7940` / pull/4055.
+- [x] **HYGIENE-2026-542** #3413: `companion/test_models.py` — transcript seed/load via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-7940` / pull/4055.
+- [x] **HYGIENE-2026-543** #3413: `companion/test_living_sphere_runtime.py` — `context_json` seed via scope accessor. Fixed in `cursor/agent-maintenance-tasks-7940` / pull/4055.

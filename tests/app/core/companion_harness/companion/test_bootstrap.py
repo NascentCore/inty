@@ -24,7 +24,6 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     BOOTSTRAP_MD_REL,
     BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
-    CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
@@ -35,6 +34,8 @@ from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
+
+_SCOPE_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.companion_harness.tools.companion_tool_definitions import (
     BOOTSTRAP_WRITABLE_REL_PATHS,
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
@@ -92,7 +93,7 @@ def test_tool_companion_set_experience_profile_updates_context(
     root = tmp_path
     st = _store(root)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps(
             {"context_mode": "intimate", "user_id": "u"}, ensure_ascii=False
         )
@@ -106,7 +107,7 @@ def test_tool_companion_set_experience_profile_updates_context(
         ),
     )
     assert ok.startswith("OK ")
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["context_mode"] == "roleplay"
     assert data["experience_directives"]["intent"] == "roleplay"
     assert data["experience_change_note"] == "user asked"
@@ -117,7 +118,7 @@ def test_tool_companion_set_experience_profile_repairs_drifted_context(
 ) -> None:
     st = _store(tmp_path)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "roleplay",
@@ -138,7 +139,7 @@ def test_tool_companion_set_experience_profile_repairs_drifted_context(
         ),
     )
     assert ok.startswith("OK ")
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["context_mode"] == "emotional_companion"
     assert data["experience_directives"]["intent"] == "emotional_support"
     assert data["experience_directives"]["tone"] == "warm"
@@ -150,7 +151,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
     root = tmp_path
     st = _store(root)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps({"context_mode": "public"}, ensure_ascii=False) + "\n",
     )
     r = asyncio.run(
@@ -163,7 +164,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_missing_note(
     assert r.startswith("ERROR:")
     assert "note" in r
     assert (
-        json.loads(st.read_document(CONTEXT_JSON_REL))["context_mode"]
+        json.loads(st.read_document(_SCOPE_PATHS.context_json))["context_mode"]
         == "public"
     )
 
@@ -174,7 +175,7 @@ def test_execute_tool_call_dispatch_set_experience_profile(
     root = tmp_path
     st = _store(root)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps({"context_mode": "public"}, ensure_ascii=False) + "\n",
     )
     r = asyncio.run(
@@ -191,10 +192,10 @@ def test_execute_tool_call_dispatch_set_experience_profile(
     )
     assert r.startswith("OK ")
     assert (
-        json.loads(st.read_document(CONTEXT_JSON_REL))["context_mode"]
+        json.loads(st.read_document(_SCOPE_PATHS.context_json))["context_mode"]
         == "emotional_companion"
     )
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["experience_directives"]["intent"] == "emotional_support"
 
 
@@ -203,7 +204,7 @@ def test_tool_companion_set_experience_profile_sets_tone(
 ) -> None:
     st = _store(tmp_path)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps({"context_mode": "intimate"}, ensure_ascii=False) + "\n",
     )
     ok = tool_companion_set_experience_profile(
@@ -215,7 +216,7 @@ def test_tool_companion_set_experience_profile_sets_tone(
         ),
     )
     assert "tone='playful'" in ok
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["experience_directives"]["tone"] == "playful"
     assert data["experience_directives"]["intent"] == "casual_chat"
     assert data["context_mode"] == "emotional_companion"
@@ -226,7 +227,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_tone(
 ) -> None:
     st = _store(tmp_path)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps({"context_mode": "intimate"}, ensure_ascii=False) + "\n",
     )
     r = asyncio.run(
@@ -243,7 +244,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_tone(
         )
     )
     assert r.startswith("OK ")
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["context_mode"] == "remote_lover"
     assert data["experience_directives"]["intent"] == "remote_romance"
     assert data["experience_directives"]["tone"] == "playful"
@@ -348,11 +349,11 @@ def test_tool_companion_bootstrap_user_interactive_complete_updates_context(
         "workspace_bootstrap_user_interactive_completed": False,
     }
     st.write_document(
-        CONTEXT_JSON_REL, json.dumps(ctx, ensure_ascii=False) + "\n"
+        _SCOPE_PATHS.context_json, json.dumps(ctx, ensure_ascii=False) + "\n"
     )
     out = tool_companion_bootstrap_user_interactive_complete(st, "done")
     assert out.startswith("OK ")
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["workspace_bootstrap_user_interactive_completed"] is True
     assert data["workspace_bootstrap_user_interactive_complete_note"] == "done"
     assert data["context_mode"] == "unspecific"
@@ -364,7 +365,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
     root = tmp_path
     st = _store(root)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "roleplay",
@@ -376,7 +377,7 @@ def test_tool_companion_bootstrap_user_interactive_complete_preserves_non_bootst
         + "\n",
     )
     tool_companion_bootstrap_user_interactive_complete(st, None)
-    data = json.loads(st.read_document(CONTEXT_JSON_REL))
+    data = json.loads(st.read_document(_SCOPE_PATHS.context_json))
     assert data["context_mode"] == "roleplay"
 
 
@@ -385,7 +386,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_rejects_invalid_inten
 ) -> None:
     st = _store(tmp_path)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps({"context_mode": "intimate"}, ensure_ascii=False) + "\n",
     )
     r = asyncio.run(
@@ -402,7 +403,7 @@ def test_execute_tool_call_dispatch_set_experience_profile_rejects_invalid_inten
     )
     assert r.startswith("ERROR:")
     assert (
-        json.loads(st.read_document(CONTEXT_JSON_REL))["context_mode"]
+        json.loads(st.read_document(_SCOPE_PATHS.context_json))["context_mode"]
         == "intimate"
     )
 
@@ -411,7 +412,7 @@ def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
     root = tmp_path
     st = _store(root)
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "context_mode": "intimate",
@@ -447,7 +448,7 @@ def test_execute_tool_call_dispatch_write_and_complete(tmp_path: Path) -> None:
     )
     assert r2.startswith("OK ")
     assert (
-        json.loads(st.read_document(CONTEXT_JSON_REL))[
+        json.loads(st.read_document(_SCOPE_PATHS.context_json))[
             "workspace_bootstrap_user_interactive_completed"
         ]
         is True
@@ -461,7 +462,7 @@ def test_memory_store_write_soul_allowed_after_interactive_bootstrap_complete(
     st = _store(root)
     st.write_document(SOUL_MD_REL, "seed")
     st.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE_PATHS.context_json,
         json.dumps(
             {
                 "workspace_bootstrap_user_interactive_completed": True,

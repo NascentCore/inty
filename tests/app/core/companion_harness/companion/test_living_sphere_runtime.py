@@ -17,7 +17,6 @@ from app.core.companion_harness.memory.dreaming_consolidation import (
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANIONSHIP_MD_REL,
-    CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
@@ -27,6 +26,11 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TECHNO_CORE_MD_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE_PATHS = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
@@ -60,7 +64,7 @@ def test_living_sphere_seeded_and_injects_prompt(tmp_path: Path) -> None:
         (USER_MD_REL, "user\n"),
         (MEMORY_MD_REL, "mem\n"),
         (COMPANIONSHIP_MD_REL, "companionship\n"),
-        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
+        (_SCOPE_PATHS.context_json, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
@@ -118,7 +122,7 @@ def test_prompt_reflects_compacted_living_sphere_md(tmp_path: Path) -> None:
         (USER_MD_REL, "user\n"),
         (MEMORY_MD_REL, "mem\n"),
         (TECHNO_CORE_MD_REL, "tc\n"),
-        (CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n'),
+        (_SCOPE_PATHS.context_json, '{"context_mode":"intimate"}\n'),
     ):
         store.write_document(name, body)
     ensure_living_sphere_seeded(store)
