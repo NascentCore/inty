@@ -198,6 +198,61 @@ def _system_dicts_to_prompt_messages(
     return openai_dialogue_dicts_to_prompt_messages(system_dicts)
 
 
+def _prompt_plan_messages_from_system_transcript_and_splice(
+    *,
+    system_dicts: list[dict[str, Any]],
+    transcript_window: list[ChatMessage],
+    tail_splice_thoughts: tuple[AiPrivateThought, ...],
+) -> list[PromptMessage]:
+    """System prefix + transcript window + optional ai_private thought splice rows."""
+    messages: list[PromptMessage] = list(
+        _system_dicts_to_prompt_messages(system_dicts)
+    )
+    messages.extend(
+        openai_dialogue_dicts_to_prompt_messages(
+            transcript_rows_to_openai_dialogue(transcript_window)
+        )
+    )
+    for thought in tail_splice_thoughts:
+        messages.append(
+            PromptMessage(
+                role=PromptMessageRole.ASSISTANT,
+                content=transcript_message_content_for_llm(
+                    content=thought.text,
+                    ts=thought.ts,
+                ),
+            )
+        )
+    return messages
+
+
+def _append_prompt_plan_time_context_and_tail_user(
+    messages: list[PromptMessage],
+    *,
+    runtime_context: TurnRuntimeContext,
+    tail_user_messages: tuple[TurnTailUserMessage, ...],
+    implicit_sign_on_turn: bool,
+) -> None:
+    """Append client time system slice and tail user utterance rows in place."""
+    time_ctx_system = _companion_user_time_context_system_for_llm(
+        implicit_signal_bundle=runtime_context.implicit_signal_bundle,
+    )
+    if time_ctx_system is not None:
+        messages.append(
+            PromptMessage(
+                role=PromptMessageRole.SYSTEM,
+                content=time_ctx_system,
+            )
+        )
+    for tail_user in tail_user_message_contents_for_llm(
+        tail_user_messages=tail_user_messages,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    ):
+        messages.append(
+            PromptMessage(role=PromptMessageRole.USER, content=tail_user)
+        )
+
+
 def _append_runtime_channel_system_extras(
     *,
     system_dicts: list[dict[str, Any]],
@@ -356,41 +411,17 @@ class PromptBuilder:
         implicit_sign_on_turn: bool,
         tail_splice_thoughts: tuple[AiPrivateThought, ...],
     ) -> PromptPlan:
-        messages: list[PromptMessage] = list(
-            _system_dicts_to_prompt_messages(system_dicts)
+        messages = _prompt_plan_messages_from_system_transcript_and_splice(
+            system_dicts=system_dicts,
+            transcript_window=transcript_window,
+            tail_splice_thoughts=tail_splice_thoughts,
         )
-        messages.extend(
-            openai_dialogue_dicts_to_prompt_messages(
-                transcript_rows_to_openai_dialogue(transcript_window)
-            )
-        )
-        for thought in tail_splice_thoughts:
-            messages.append(
-                PromptMessage(
-                    role=PromptMessageRole.ASSISTANT,
-                    content=transcript_message_content_for_llm(
-                        content=thought.text,
-                        ts=thought.ts,
-                    ),
-                )
-            )
-        time_ctx_system = _companion_user_time_context_system_for_llm(
-            implicit_signal_bundle=self.runtime_context.implicit_signal_bundle,
-        )
-        if time_ctx_system is not None:
-            messages.append(
-                PromptMessage(
-                    role=PromptMessageRole.SYSTEM,
-                    content=time_ctx_system,
-                )
-            )
-        for tail_user in tail_user_message_contents_for_llm(
+        _append_prompt_plan_time_context_and_tail_user(
+            messages,
+            runtime_context=self.runtime_context,
             tail_user_messages=tail_user_messages,
             implicit_sign_on_turn=implicit_sign_on_turn,
-        ):
-            messages.append(
-                PromptMessage(role=PromptMessageRole.USER, content=tail_user)
-            )
+        )
         return PromptPlan(
             messages=tuple(messages),
             tools=tools,
