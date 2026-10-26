@@ -233,18 +233,11 @@ async def kernel_fire_proactive(
 
 # TODO(#3468): AUTONOMY durable artifacts (LIFE_CURRENTS, TC/LS events, generated_images)
 # must shape the next user-visible turn — fixture trace 019ed438 (see issue attachment).
-async def kernel_fire_throttled(
+async def _kernel_fire_throttled_companion_turn(
     kind: InnerTickKind,
     kernel_input: InnerTickKernelInput,
-) -> InnerTickKernelResult:
-    """Run one throttled inner-tick turn for ``kind``; caller holds ``turn_lock``."""
-    spec = inner_tick_spec(kind)
-    throttle_line_count: int | None = None
-    if spec.throttle_kind is not None:
-        throttle_line_count = monolog_transcript_line_count(
-            kernel_input.mem_store
-        )
-
+) -> CompanionTurnResult:
+    """Dispatch one monolog or autonomy inner-tick manager turn."""
     match kind:
         case InnerTickKind.MONOLOG:
             companion_turn = (
@@ -258,14 +251,13 @@ async def kernel_fire_throttled(
             reply_stripped = str(companion_turn.assistant_text or "").strip()
             if not reply_stripped:
                 logger.info("inner_tick_monolog kernel monolog_empty")
+            return companion_turn
         case InnerTickKind.AUTONOMY:
-            companion_turn = (
-                await kernel_input.manager.run_inner_tick_autonomy_turn(
-                    kernel_input.session,
-                    preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
-                    runtime_context=kernel_input.runtime_context,
-                    agentic_output_queue=kernel_input.agentic_output_queue,
-                )
+            return await kernel_input.manager.run_inner_tick_autonomy_turn(
+                kernel_input.session,
+                preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
+                runtime_context=kernel_input.runtime_context,
+                agentic_output_queue=kernel_input.agentic_output_queue,
             )
         case InnerTickKind.PROACTIVE_CHAT | InnerTickKind.SCHEDULED:
             raise ValueError(
@@ -273,6 +265,22 @@ async def kernel_fire_throttled(
                 "use kernel_fire_proactive or kernel_fire_scheduled"
             )
 
+
+async def kernel_fire_throttled(
+    kind: InnerTickKind,
+    kernel_input: InnerTickKernelInput,
+) -> InnerTickKernelResult:
+    """Run one throttled inner-tick turn for ``kind``; caller holds ``turn_lock``."""
+    spec = inner_tick_spec(kind)
+    throttle_line_count: int | None = None
+    if spec.throttle_kind is not None:
+        throttle_line_count = monolog_transcript_line_count(
+            kernel_input.mem_store
+        )
+    companion_turn = await _kernel_fire_throttled_companion_turn(
+        kind,
+        kernel_input,
+    )
     return InnerTickKernelResult(
         turn=companion_turn,
         track_path=spec.turn_track.value,

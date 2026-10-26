@@ -456,12 +456,13 @@ class PromptBuilder:
             user_md=self.bundle.user_md,
         )
 
-    def _greeting_core_system_dicts(self) -> list[dict[str, Any]]:
-        out: list[dict[str, Any]] = []
-        out.extend(_doctrine_system_messages())
-        out.extend(_auxiliary_system_messages())
+    def _greeting_phase_capability_persona_system_dicts(
+        self,
+    ) -> list[dict[str, Any]]:
+        """Capability + persona slices for greeting, keyed by bootstrap vs settled phase."""
         match self._compose_phase():
             case Phase.BOOTSTRAP:
+                out: list[dict[str, Any]] = []
                 out.extend(_capability_bootstrap_single_llm_system_messages())
                 out.extend(
                     _persona_bootstrap_user_turn_system_messages(
@@ -476,18 +477,27 @@ class PromptBuilder:
                         )
                     )
                 out.append(_system_message(_output_contract_text()))
+                return out
             case Phase.SETTLED:
-                out.extend(
+                settled: list[dict[str, Any]] = []
+                settled.extend(
                     _capability_settled_single_llm_system_messages(self.bundle)
                 )
-                out.extend(
+                settled.extend(
                     _persona_settled_user_turn_system_messages(
                         bundle=self.bundle,
                         context=self.context,
                         include_significance_perception_slice=True,
                     )
                 )
-                out.append(_system_message(_output_contract_text()))
+                settled.append(_system_message(_output_contract_text()))
+                return settled
+
+    def _greeting_core_system_dicts(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        out.extend(_doctrine_system_messages())
+        out.extend(_auxiliary_system_messages())
+        out.extend(self._greeting_phase_capability_persona_system_dicts())
         out.extend(
             assemble_contextual_slices(
                 self._turn_compose_context(

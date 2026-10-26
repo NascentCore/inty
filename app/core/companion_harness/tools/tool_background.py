@@ -38,6 +38,9 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     tool_choice_attempt_metadata,
 )
 from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
+from app.core.companion_harness.tools.openai_tool_turn_scan import (
+    iter_tool_results_with_resolved_names,
+)
 from app.core.companion_harness.tools.runtime import (
     insert_openai_system_message,
     resolve_openai_tool_call_loop_async,
@@ -238,35 +241,15 @@ def _generation_tool_execution_deliver(
         return False
     if image_paths:
         return True
-    pending: dict[str, str] = {}
-    for m in appended_messages:
-        if m.get("role") == "assistant":
-            pending.clear()
-            for tc in m.get("tool_calls") or []:
-                if not isinstance(tc, dict):
-                    continue
-                tid = tc.get("id")
-                fn = tc.get("function")
-                if not isinstance(fn, dict):
-                    continue
-                raw_name = fn.get("name")
-                if isinstance(tid, str) and isinstance(raw_name, str):
-                    n = raw_name.strip()
-                    if n:
-                        pending[tid] = n
+    for name, _tool_call_id, content in iter_tool_results_with_resolved_names(
+        appended_messages
+    ):
+        if not tool_requires_client_delivery_on_success(name):
             continue
-        if m.get("role") != "tool":
+        piece = content.strip()
+        if piece.startswith("ERROR"):
             continue
-        tid = m.get("tool_call_id")
-        if not isinstance(tid, str):
-            continue
-        name = pending.get(tid)
-        if not name or not tool_requires_client_delivery_on_success(name):
-            continue
-        content = str(m.get("content") or "").strip()
-        if content.startswith("ERROR"):
-            continue
-        if content:
+        if piece:
             return True
     return False
 

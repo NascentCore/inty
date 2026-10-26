@@ -867,21 +867,18 @@ def _resolve_modify_image_source(
     return src_path, src_url_out, None
 
 
-async def _dispatch_modify_image(
-    store: MemoryStore,
+def _parse_modify_image_tool_arguments(
     arguments: dict[str, Any],
-) -> str:
+) -> tuple[str, str | None, int | None, float | None, str | None]:
+    """Normalize modify_image args; return (prompt, image_size, n_steps, strength, error)."""
     prompt = arguments.get("prompt")
     if not isinstance(prompt, str):
-        return "ERROR: prompt must be a string"
+        return "", None, None, None, "ERROR: prompt must be a string"
     if not prompt.strip():
-        return "ERROR: prompt must be non-empty"
-    src_path, src_url_out, src_err = _resolve_modify_image_source(store, arguments)
-    if src_err is not None:
-        return src_err
+        return "", None, None, None, "ERROR: prompt must be non-empty"
     image_size = arguments.get("image_size")
     if image_size is not None and not isinstance(image_size, str):
-        return "ERROR: image_size must be a string or omitted"
+        return "", None, None, None, "ERROR: image_size must be a string or omitted"
     image_size_s = image_size.strip() if isinstance(image_size, str) else None
     if image_size_s == "":
         image_size_s = None
@@ -890,10 +887,25 @@ async def _dispatch_modify_image(
         field_name="num_inference_steps",
     )
     if err:
-        return f"ERROR: {err}"
+        return "", None, None, None, f"ERROR: {err}"
     strength, err_s = parse_optional_strength(arguments.get("strength"))
     if err_s:
-        return f"ERROR: {err_s}"
+        return "", None, None, None, f"ERROR: {err_s}"
+    return prompt, image_size_s, n_steps, strength, None
+
+
+async def _dispatch_modify_image(
+    store: MemoryStore,
+    arguments: dict[str, Any],
+) -> str:
+    prompt, image_size_s, n_steps, strength, arg_error = (
+        _parse_modify_image_tool_arguments(arguments)
+    )
+    if arg_error is not None:
+        return arg_error
+    src_path, src_url_out, src_err = _resolve_modify_image_source(store, arguments)
+    if src_err is not None:
+        return src_err
     from loguru import logger
 
     t_img = time.perf_counter()

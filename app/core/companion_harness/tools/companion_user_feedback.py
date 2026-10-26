@@ -37,6 +37,9 @@ from app.core.companion_harness.companion.runtime_events import (
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.tools.openai_tool_turn_scan import (
+    iter_tool_results_with_resolved_names,
+)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANION_USER_FEEDBACK_JSONL_REL,
     CONTEXT_JSON_REL,
@@ -328,37 +331,13 @@ def extract_github_issue_url_from_tool_turn_messages(
     appended_messages: list[dict[str, Any]],
 ) -> str:
     """Return issue URL from the latest successful ``companion_record_user_feedback`` tool row."""
-    pending: dict[str, str] = {}
     found = ""
-    for message in appended_messages:
-        role = message.get("role")
-        if role == "assistant":
-            pending.clear()
-            for tool_call in message.get("tool_calls") or []:
-                if not isinstance(tool_call, dict):
-                    continue
-                tool_call_id = tool_call.get("id")
-                function = tool_call.get("function")
-                if not isinstance(function, dict):
-                    continue
-                raw_name = function.get("name")
-                if isinstance(tool_call_id, str) and isinstance(raw_name, str):
-                    name = raw_name.strip()
-                    if name:
-                        pending[tool_call_id] = name
+    for name, _tool_call_id, content in iter_tool_results_with_resolved_names(
+        appended_messages
+    ):
+        if name != COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME:
             continue
-        if role != "tool":
-            continue
-        tool_call_id = message.get("tool_call_id")
-        if not isinstance(tool_call_id, str):
-            continue
-        if (
-            pending.get(tool_call_id)
-            != COMPANION_RECORD_USER_FEEDBACK_TOOL_NAME
-        ):
-            continue
-        content = message.get("content")
-        if not isinstance(content, str) or content.strip().startswith("ERROR"):
+        if content.strip().startswith("ERROR"):
             continue
         url = parse_github_issue_url_from_feedback_tool_result(content)
         if url:
