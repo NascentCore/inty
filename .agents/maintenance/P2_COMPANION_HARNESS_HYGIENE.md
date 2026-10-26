@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-10-26 scan (cron)
+
+Source: open PR overlap check (#4055 HYGIENE-541..543, #4052 HYGIENE-538..540, #4050 HYGIENE-535..537 — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; follow-up — `transcript_relative_path_for_turn_persistence` lacks `MemoryStoreScopePaths` smoke coverage; bootstrap loop context lacks scope-path parity assertion; stale issue audit snapshot removable.
+
+Open PRs checked: #4055, #4052, #4050, #4048 — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-oct26-544`)
+
+- [ ] **HYGIENE-2026-544** `memory/test_retrieval.py` — `transcript_relative_path_for_turn_persistence` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript accessors per track.
+- [ ] **HYGIENE-2026-545** `loop/test_bootstrap_user_chat_loop_context.py` — bootstrap `write_allowlist` matches scope bootstrap write accessors.
+- [ ] **HYGIENE-2026-546** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
