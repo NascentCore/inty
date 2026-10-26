@@ -709,6 +709,6 @@ Open PRs checked: #4055, #4052, #4050, #4048 — no overlap with tasks below.
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct26-544`)
 
-- [ ] **HYGIENE-2026-544** `memory/test_retrieval.py` — `transcript_relative_path_for_turn_persistence` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript accessors per track.
-- [ ] **HYGIENE-2026-545** `loop/test_bootstrap_user_chat_loop_context.py` — bootstrap `write_allowlist` matches scope bootstrap write accessors.
-- [ ] **HYGIENE-2026-546** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-544** `memory/test_retrieval.py` — `transcript_relative_path_for_turn_persistence` matches `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript accessors per track. Fixed in `cursor/agent-maintenance-tasks-oct26-544` / pull/4058.
+- [x] **HYGIENE-2026-545** `loop/test_bootstrap_user_chat_loop_context.py` — bootstrap `write_allowlist` matches scope bootstrap write accessors. Fixed in `cursor/agent-maintenance-tasks-oct26-544` / pull/4058.
+- [x] **HYGIENE-2026-546** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-oct26-544` / pull/4058.
