@@ -709,6 +709,6 @@ Open PRs checked: open maintenance PRs through #4058 — no overlap with tasks b
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-125a`)
 
-- [ ] **HYGIENE-2026-547** `memory/test_memory_store.py` — transcript append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`
-- [ ] **HYGIENE-2026-548** `companion/test_bootstrap_complete_not_blocked_without_profile.py` — `context_json` via scope accessor
-- [ ] **HYGIENE-2026-549** `runtime/test_dreaming_batch_scripted_llm.py` — context/transcript seed via scope accessors
+- [x] **HYGIENE-2026-547** `memory/test_memory_store.py` — transcript append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-125a` / pull/4060.
+- [x] **HYGIENE-2026-548** `companion/test_bootstrap_complete_not_blocked_without_profile.py` — `context_json` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-125a` / pull/4060.
+- [x] **HYGIENE-2026-549** `runtime/test_dreaming_batch_scripted_llm.py` — context/transcript seed via scope accessors. Fixed in `cursor/agent-maintenance-tasks-125a` / pull/4060.
