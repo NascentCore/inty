@@ -709,6 +709,6 @@ Open PRs checked: open maintenance PRs through #4060 — no overlap with tasks b
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct28-550`)
 
-- [ ] **HYGIENE-2026-550** `companion/test_ai_private_prompt.py` — `ai_private_jsonl` via scope accessor.
-- [ ] **HYGIENE-2026-551** `memory/test_transcript_compaction.py` — `context_compaction_state_json` via scope accessor.
-- [ ] **HYGIENE-2026-552** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`.
+- [x] **HYGIENE-2026-550** `companion/test_ai_private_prompt.py` — `ai_private_jsonl` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct28-550` / pull/4063.
+- [x] **HYGIENE-2026-551** `memory/test_transcript_compaction.py` — `context_compaction_state_json` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-oct28-550` / pull/4063.
+- [x] **HYGIENE-2026-552** Remove stale `.agents/maintenance/COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md`. Fixed in `cursor/agent-maintenance-tasks-oct28-550` / pull/4063.
