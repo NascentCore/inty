@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -117,6 +118,89 @@ def transcript_compaction_meta_from_outcome(
         "max_context_chars": max_context_chars,
         "compaction_count": outcome.state.compaction_count,
     }
+
+
+@dataclass(frozen=True)
+class _CompactionPromptRetrieval:
+    ranked_episodes: tuple[MemoryEpisode, ...]
+    ranked_semantic: tuple[SemanticMemoryItem, ...]
+    open_loops: tuple[str, ...]
+
+
+def _compaction_prompt_retrieval_slice(
+    *,
+    state: CompactionState,
+    turn: int,
+    config: CompactionConfig,
+) -> _CompactionPromptRetrieval:
+    ranked_episodes = tuple(
+        _rank_episodes_for_retrieval(episodes=state.episodic_memory, turn=turn)[
+            : config.retrieval_episode_count
+        ]
+    )
+    ranked_semantic = tuple(
+        sorted(
+            state.semantic_memory,
+            key=lambda item: item.confidence,
+            reverse=True,
+        )[: config.retrieval_semantic_count]
+    )
+    open_loops = tuple(
+        _collect_open_loops(
+            episodes=list(ranked_episodes),
+            max_items=config.retrieval_open_loop_count,
+        )
+    )
+    return _CompactionPromptRetrieval(
+        ranked_episodes=ranked_episodes,
+        ranked_semantic=ranked_semantic,
+        open_loops=open_loops,
+    )
+
+
+def _compaction_prompt_memory_section_lines(
+    retrieval: _CompactionPromptRetrieval,
+) -> tuple[list[str], list[str], list[str]]:
+    episode_lines = [
+        (
+            f"- [turn {ep.turn_start}-{ep.turn_end}] {ep.summary} "
+            f"(importance={ep.importance:.2f}, tags={','.join(ep.emotional_tags) or 'none'})"
+        )
+        for ep in retrieval.ranked_episodes
+    ]
+    semantic_lines = [
+        f"- {item.fact} (confidence={item.confidence:.2f})"
+        for item in retrieval.ranked_semantic
+    ]
+    open_loop_lines = [f"- {item}" for item in retrieval.open_loops]
+    return episode_lines, semantic_lines, open_loop_lines
+
+
+def _format_compaction_system_prompt(
+    *,
+    state: CompactionState,
+    turn: int,
+    retrieval: _CompactionPromptRetrieval,
+) -> str:
+    episode_lines, semantic_lines, open_loop_lines = (
+        _compaction_prompt_memory_section_lines(retrieval)
+    )
+    return "\n".join(
+        [
+            COMPACTION_SYSTEM_TAG,
+            f"turn={turn}",
+            "Long-term memory snapshot from compressed older dialogue. Prefer the "
+            "user's latest message when facts conflict.",
+            "## Running Summary",
+            state.running_summary or "- (none)",
+            "## Semantic Memory",
+            "\n".join(semantic_lines) if semantic_lines else "- (none)",
+            "## Episodic Memory",
+            "\n".join(episode_lines) if episode_lines else "- (none)",
+            "## Open Loops",
+            "\n".join(open_loop_lines) if open_loop_lines else "- (none)",
+        ]
+    )
 
 
 class ConversationCompactor:
@@ -285,47 +369,11 @@ class ConversationCompactor:
     def _build_compaction_system_prompt(
         self, *, state: CompactionState, turn: int
     ) -> str:
-        ranked_episodes = _rank_episodes_for_retrieval(
-            episodes=state.episodic_memory, turn=turn
-        )[: self._config.retrieval_episode_count]
-        ranked_semantic = sorted(
-            state.semantic_memory,
-            key=lambda item: item.confidence,
-            reverse=True,
-        )[: self._config.retrieval_semantic_count]
-        open_loops = _collect_open_loops(
-            episodes=ranked_episodes,
-            max_items=self._config.retrieval_open_loop_count,
+        retrieval = _compaction_prompt_retrieval_slice(
+            state=state, turn=turn, config=self._config
         )
-
-        episode_lines = [
-            (
-                f"- [turn {ep.turn_start}-{ep.turn_end}] {ep.summary} "
-                f"(importance={ep.importance:.2f}, tags={','.join(ep.emotional_tags) or 'none'})"
-            )
-            for ep in ranked_episodes
-        ]
-        semantic_lines = [
-            f"- {item.fact} (confidence={item.confidence:.2f})"
-            for item in ranked_semantic
-        ]
-        open_loop_lines = [f"- {item}" for item in open_loops]
-
-        return "\n".join(
-            [
-                COMPACTION_SYSTEM_TAG,
-                f"turn={turn}",
-                "Long-term memory snapshot from compressed older dialogue. Prefer the "
-                "user's latest message when facts conflict.",
-                "## Running Summary",
-                state.running_summary or "- (none)",
-                "## Semantic Memory",
-                "\n".join(semantic_lines) if semantic_lines else "- (none)",
-                "## Episodic Memory",
-                "\n".join(episode_lines) if episode_lines else "- (none)",
-                "## Open Loops",
-                "\n".join(open_loop_lines) if open_loop_lines else "- (none)",
-            ]
+        return _format_compaction_system_prompt(
+            state=state, turn=turn, retrieval=retrieval
         )
 
     def _build_minimal_compaction_system_prompt(

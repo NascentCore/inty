@@ -99,6 +99,55 @@ def _dual_llm_foreground_skip_result(
     )
 
 
+def _dual_llm_foreground_envelope_chat_sync(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> Any:
+    return fg_input.llm_client.chat_completion(
+        messages=chat_msgs,
+        model=fg_input.chat_model,
+        tools=None,
+        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
+        scene=fg_input.foreground_scene,
+        langsmith_extra=fg_input.langsmith_slice.foreground_invocation_extra(
+            source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+            extra_metadata=None,
+        ),
+        high_reasoning=fg_input.high_reasoning,
+    )
+
+
+def _raise_dual_llm_foreground_envelope_timeout(
+    fg_input: DualLlmForegroundChatInput,
+    exc: TimeoutError,
+    timeout_sec: float,
+) -> None:
+    record_llm_inference_failure(
+        model=fg_input.chat_model.id_on_provider,
+        exc=exc,
+        foreground_timeout_sec=timeout_sec,
+    )
+    raise RuntimeError(
+        f"async chat front timed out after "
+        f"{timeout_sec:.0f}s "
+        f"(trace_id={fg_input.trace_id})"
+    ) from exc
+
+
+def _langsmith_ids_after_envelope_completion(
+    resp: Any,
+    langsmith_trace_acc: str,
+    langsmith_run_acc: str,
+) -> tuple[str, str]:
+    tid = langsmith_trace_id_from_completion(resp)
+    if tid:
+        langsmith_trace_acc = tid
+    ls_lr = langsmith_llm_run_id_from_completion(resp)
+    if ls_lr:
+        langsmith_run_acc = ls_lr
+    return langsmith_trace_acc, langsmith_run_acc
+
+
 async def _dual_llm_foreground_await_envelope_completion(
     fg_input: DualLlmForegroundChatInput,
     chat_msgs: list[dict[str, Any]],
@@ -106,46 +155,22 @@ async def _dual_llm_foreground_await_envelope_completion(
     """Run sync envelope chat on a worker thread with timeout; return LangSmith ids."""
     langsmith_trace_acc = fg_input.langsmith_trace_id
     langsmith_run_acc = fg_input.langsmith_run_id
-    chat_model = fg_input.chat_model
     llm_client = fg_input.llm_client
-
-    def _chat_sync() -> Any:
-        return llm_client.chat_completion(
-            messages=chat_msgs,
-            model=chat_model,
-            tools=None,
-            response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-            scene=fg_input.foreground_scene,
-            langsmith_extra=fg_input.langsmith_slice.foreground_invocation_extra(
-                source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-                extra_metadata=None,
-            ),
-            high_reasoning=fg_input.high_reasoning,
-        )
+    timeout_sec = llm_client.config.async_chat_front_timeout_sec
 
     try:
         resp = await asyncio.wait_for(
-            asyncio.to_thread(_chat_sync),
-            timeout=llm_client.config.async_chat_front_timeout_sec,
+            asyncio.to_thread(
+                _dual_llm_foreground_envelope_chat_sync, fg_input, chat_msgs
+            ),
+            timeout=timeout_sec,
         )
     except TimeoutError as exc:
-        record_llm_inference_failure(
-            model=chat_model.id_on_provider,
-            exc=exc,
-            foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-        )
-        raise RuntimeError(
-            f"async chat front timed out after "
-            f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
-            f"(trace_id={fg_input.trace_id})"
-        ) from exc
+        _raise_dual_llm_foreground_envelope_timeout(fg_input, exc, timeout_sec)
 
-    tid = langsmith_trace_id_from_completion(resp)
-    if tid:
-        langsmith_trace_acc = tid
-    ls_lr = langsmith_llm_run_id_from_completion(resp)
-    if ls_lr:
-        langsmith_run_acc = ls_lr
+    langsmith_trace_acc, langsmith_run_acc = _langsmith_ids_after_envelope_completion(
+        resp, langsmith_trace_acc, langsmith_run_acc
+    )
     return resp, langsmith_trace_acc, langsmith_run_acc
 
 
