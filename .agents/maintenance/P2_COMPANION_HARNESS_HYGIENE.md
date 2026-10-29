@@ -709,6 +709,6 @@ Open PRs checked: open maintenance PRs through #4063 — no overlap with tasks b
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-bb71`)
 
-- [ ] **HYGIENE-2026-553** #3413: `test_prompt_builder.py` — `context_json` via scope accessor.
-- [ ] **HYGIENE-2026-554** #3413: `memory/test_resolve_client_time.py` — `user_md` via scope accessor.
-- [ ] **HYGIENE-2026-555** #3413: `tools/test_read_web_page_tool.py` — `memory_md` via scope accessor.
+- [x] **HYGIENE-2026-553** #3413: `test_prompt_builder.py` — `context_json` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-bb71` / pull/4065.
+- [x] **HYGIENE-2026-554** #3413: `memory/test_resolve_client_time.py` — `user_md` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-bb71` / pull/4065.
+- [x] **HYGIENE-2026-555** #3413: `tools/test_read_web_page_tool.py` — `memory_md` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-bb71` / pull/4065.
