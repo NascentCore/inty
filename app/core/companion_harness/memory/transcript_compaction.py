@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -119,6 +120,89 @@ def transcript_compaction_meta_from_outcome(
     }
 
 
+@dataclass(frozen=True)
+class _CompactionPromptRetrieval:
+    ranked_episodes: tuple[MemoryEpisode, ...]
+    ranked_semantic: tuple[SemanticMemoryItem, ...]
+    open_loops: tuple[str, ...]
+
+
+def _compaction_prompt_retrieval_slice(
+    *,
+    state: CompactionState,
+    turn: int,
+    config: CompactionConfig,
+) -> _CompactionPromptRetrieval:
+    ranked_episodes = tuple(
+        _rank_episodes_for_retrieval(episodes=state.episodic_memory, turn=turn)[
+            : config.retrieval_episode_count
+        ]
+    )
+    ranked_semantic = tuple(
+        sorted(
+            state.semantic_memory,
+            key=lambda item: item.confidence,
+            reverse=True,
+        )[: config.retrieval_semantic_count]
+    )
+    open_loops = tuple(
+        _collect_open_loops(
+            episodes=list(ranked_episodes),
+            max_items=config.retrieval_open_loop_count,
+        )
+    )
+    return _CompactionPromptRetrieval(
+        ranked_episodes=ranked_episodes,
+        ranked_semantic=ranked_semantic,
+        open_loops=open_loops,
+    )
+
+
+def _compaction_prompt_memory_section_lines(
+    retrieval: _CompactionPromptRetrieval,
+) -> tuple[list[str], list[str], list[str]]:
+    episode_lines = [
+        (
+            f"- [turn {ep.turn_start}-{ep.turn_end}] {ep.summary} "
+            f"(importance={ep.importance:.2f}, tags={','.join(ep.emotional_tags) or 'none'})"
+        )
+        for ep in retrieval.ranked_episodes
+    ]
+    semantic_lines = [
+        f"- {item.fact} (confidence={item.confidence:.2f})"
+        for item in retrieval.ranked_semantic
+    ]
+    open_loop_lines = [f"- {item}" for item in retrieval.open_loops]
+    return episode_lines, semantic_lines, open_loop_lines
+
+
+def _format_compaction_system_prompt(
+    *,
+    state: CompactionState,
+    turn: int,
+    retrieval: _CompactionPromptRetrieval,
+) -> str:
+    episode_lines, semantic_lines, open_loop_lines = (
+        _compaction_prompt_memory_section_lines(retrieval)
+    )
+    return "\n".join(
+        [
+            COMPACTION_SYSTEM_TAG,
+            f"turn={turn}",
+            "Long-term memory snapshot from compressed older dialogue. Prefer the "
+            "user's latest message when facts conflict.",
+            "## Running Summary",
+            state.running_summary or "- (none)",
+            "## Semantic Memory",
+            "\n".join(semantic_lines) if semantic_lines else "- (none)",
+            "## Episodic Memory",
+            "\n".join(episode_lines) if episode_lines else "- (none)",
+            "## Open Loops",
+            "\n".join(open_loop_lines) if open_loop_lines else "- (none)",
+        ]
+    )
+
+
 class ConversationCompactor:
     def __init__(
         self,
@@ -137,44 +221,89 @@ class ConversationCompactor:
     def state(self) -> CompactionState:
         return self._state
 
-    def maybe_compact(
-        self, *, messages: list[dict[str, Any]], turn: int
+    def _maybe_compact_no_op_outcome(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        before_chars: int,
+        reason: str,
     ) -> CompactionOutcome:
-        before_chars = estimate_messages_chars(messages)
-        if before_chars <= self._config.max_context_chars:
-            return CompactionOutcome(
-                messages=messages,
-                state=self._state,
-                did_compact=False,
-                reason="under_budget",
-                approx_chars_before=before_chars,
-                approx_chars_after=before_chars,
-            )
+        return CompactionOutcome(
+            messages=messages,
+            state=self._state,
+            did_compact=False,
+            reason=reason,
+            approx_chars_before=before_chars,
+            approx_chars_after=before_chars,
+        )
 
+    def _partition_messages_for_compaction(
+        self, messages: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
         system_messages = [
             m
             for m in messages
             if m.get("role") == "system" and not _is_compaction_message(m)
         ]
         dialogue_messages = [m for m in messages if m.get("role") != "system"]
-        if len(dialogue_messages) <= self._config.keep_recent_messages:
-            return CompactionOutcome(
-                messages=messages,
-                state=self._state,
-                did_compact=False,
-                reason="not_enough_dialogue",
-                approx_chars_before=before_chars,
-                approx_chars_after=before_chars,
-            )
-
         old_dialogue = dialogue_messages[: -self._config.keep_recent_messages]
         recent_dialogue = dialogue_messages[
             -self._config.keep_recent_messages :
         ]
+        return system_messages, old_dialogue, recent_dialogue
+
+    def maybe_compact(
+        self, *, messages: list[dict[str, Any]], turn: int
+    ) -> CompactionOutcome:
+        before_chars = estimate_messages_chars(messages)
+        if before_chars <= self._config.max_context_chars:
+            return self._maybe_compact_no_op_outcome(
+                messages=messages,
+                before_chars=before_chars,
+                reason="under_budget",
+            )
+
+        system_messages, old_dialogue, recent_dialogue = (
+            self._partition_messages_for_compaction(messages)
+        )
+        dialogue_count = len(old_dialogue) + len(recent_dialogue)
+        if dialogue_count <= self._config.keep_recent_messages:
+            return self._maybe_compact_no_op_outcome(
+                messages=messages,
+                before_chars=before_chars,
+                reason="not_enough_dialogue",
+            )
 
         next_state = self._absorb_old_dialogue(
             old_dialogue=old_dialogue, turn=turn
         )
+        compacted_messages, after_chars = self._shrink_dialogue_with_compaction(
+            system_messages=system_messages,
+            recent_dialogue=recent_dialogue,
+            next_state=next_state,
+            turn=turn,
+            before_chars=before_chars,
+        )
+        self._state = next_state
+
+        return CompactionOutcome(
+            messages=compacted_messages,
+            state=next_state,
+            did_compact=True,
+            reason="over_budget_compacted",
+            approx_chars_before=before_chars,
+            approx_chars_after=after_chars,
+        )
+
+    def _shrink_dialogue_with_compaction(
+        self,
+        *,
+        system_messages: list[dict[str, Any]],
+        recent_dialogue: list[dict[str, Any]],
+        next_state: CompactionState,
+        turn: int,
+        before_chars: int,
+    ) -> tuple[list[dict[str, Any]], int]:
         memory_msg = {
             "role": "system",
             "content": self._build_compaction_system_prompt(
@@ -199,16 +328,7 @@ class ConversationCompactor:
         if after_chars >= before_chars:
             compacted_messages = [*system_messages, *recent_dialogue]
             after_chars = estimate_messages_chars(compacted_messages)
-        self._state = next_state
-
-        return CompactionOutcome(
-            messages=compacted_messages,
-            state=next_state,
-            did_compact=True,
-            reason="over_budget_compacted",
-            approx_chars_before=before_chars,
-            approx_chars_after=after_chars,
-        )
+        return compacted_messages, after_chars
 
     def _absorb_old_dialogue(
         self, *, old_dialogue: list[dict[str, Any]], turn: int
@@ -249,47 +369,11 @@ class ConversationCompactor:
     def _build_compaction_system_prompt(
         self, *, state: CompactionState, turn: int
     ) -> str:
-        ranked_episodes = _rank_episodes_for_retrieval(
-            episodes=state.episodic_memory, turn=turn
-        )[: self._config.retrieval_episode_count]
-        ranked_semantic = sorted(
-            state.semantic_memory,
-            key=lambda item: item.confidence,
-            reverse=True,
-        )[: self._config.retrieval_semantic_count]
-        open_loops = _collect_open_loops(
-            episodes=ranked_episodes,
-            max_items=self._config.retrieval_open_loop_count,
+        retrieval = _compaction_prompt_retrieval_slice(
+            state=state, turn=turn, config=self._config
         )
-
-        episode_lines = [
-            (
-                f"- [turn {ep.turn_start}-{ep.turn_end}] {ep.summary} "
-                f"(importance={ep.importance:.2f}, tags={','.join(ep.emotional_tags) or 'none'})"
-            )
-            for ep in ranked_episodes
-        ]
-        semantic_lines = [
-            f"- {item.fact} (confidence={item.confidence:.2f})"
-            for item in ranked_semantic
-        ]
-        open_loop_lines = [f"- {item}" for item in open_loops]
-
-        return "\n".join(
-            [
-                COMPACTION_SYSTEM_TAG,
-                f"turn={turn}",
-                "Long-term memory snapshot from compressed older dialogue. Prefer the "
-                "user's latest message when facts conflict.",
-                "## Running Summary",
-                state.running_summary or "- (none)",
-                "## Semantic Memory",
-                "\n".join(semantic_lines) if semantic_lines else "- (none)",
-                "## Episodic Memory",
-                "\n".join(episode_lines) if episode_lines else "- (none)",
-                "## Open Loops",
-                "\n".join(open_loop_lines) if open_loop_lines else "- (none)",
-            ]
+        return _format_compaction_system_prompt(
+            state=state, turn=turn, retrieval=retrieval
         )
 
     def _build_minimal_compaction_system_prompt(
