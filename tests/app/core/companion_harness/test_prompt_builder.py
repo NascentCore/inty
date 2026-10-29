@@ -33,11 +33,15 @@ from app.core.companion_harness.memory.user_md_identity import (
     load_user_md_template_text,
 )
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     LIFE_CURRENTS_MD_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from app.core.companion_harness.prompt_builder import (
     PromptBuilder,
     PromptMessage,
@@ -263,7 +267,7 @@ def test_refresh_bootstrap_prefix_injects_telegram_profile_slice() -> None:
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -310,7 +314,7 @@ def test_refresh_bootstrap_prefix_updates_probe_hint_after_partial_user_md() -> 
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -357,7 +361,7 @@ def test_refresh_bootstrap_prefix_omits_cohort_after_bootstrap_complete() -> (
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL,
+        _SCOPE.context_json,
         json.dumps(
             {
                 "context_mode": "bootstrap",
@@ -516,7 +520,7 @@ def test_refresh_single_llm_user_chat_prompt_prefix_avoids_tool_background_compa
         repository=None,
     )
     store.write_document(
-        CONTEXT_JSON_REL, '{"context_mode":"emotional_companion"}'
+        _SCOPE.context_json, '{"context_mode":"emotional_companion"}'
     )
     store.write_document(IDENTITY_MD_REL, "id")
     store.write_document(USER_MD_REL, "user")
@@ -565,7 +569,7 @@ def test_refresh_single_llm_bootstrap_prompt_prefix_returns_bootstrap_tools() ->
         scope=CompanionScope("user-boot", "agent-boot", "chat-boot"),
         repository=None,
     )
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"bootstrap"}')
+    store.write_document(_SCOPE.context_json, '{"context_mode":"bootstrap"}')
     store.write_document(IDENTITY_MD_REL, "id")
     store.write_document(USER_MD_REL, "user")
     runtime = TurnRuntimeContext(
