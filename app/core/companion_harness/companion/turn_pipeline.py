@@ -113,6 +113,41 @@ class CompanionTurnPromptPlan:
     transcript_compaction: dict[str, Any] | None = None
 
 
+def _companion_turn_effective_user_text(
+    *,
+    user_text: str,
+    inner_tick_turn: bool,
+    tick_proactive: bool,
+    tick_scheduled: bool,
+) -> str:
+    """Resolve transcript user text for one turn track before MemoryStore reads."""
+    if tick_scheduled:
+        assert (
+            user_text.strip()
+        ), "inner_tick_scheduled requires non-empty scheduled_user_text"
+        return user_text
+    if inner_tick_turn:
+        return (
+            PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
+            if tick_proactive
+            else INNER_TICK_SYNTHETIC_USER_TEXT
+        )
+    return user_text
+
+
+def _assistant_turn_source_for_runtime_flags(
+    *,
+    inner_tick_turn: bool,
+    implicit_sign_on_turn: bool,
+) -> AssistantTurnSource:
+    """Map inner-tick / greeting tracks to assistant transcript turn_type."""
+    if inner_tick_turn:
+        return "inner_tick"
+    if implicit_sign_on_turn:
+        return "greeting"
+    return "chat"
+
+
 def resolve_turn_runtime_flags(
     *,
     track: CompanionTurnTrack,
@@ -132,25 +167,16 @@ def resolve_turn_runtime_flags(
     implicit_sign_on_turn = (
         track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
     )
-    effective_user_text = user_text
-    if tick_scheduled:
-        assert (
-            user_text.strip()
-        ), "inner_tick_scheduled requires non-empty scheduled_user_text"
-        effective_user_text = user_text
-    elif inner_tick_turn:
-        effective_user_text = (
-            PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER
-            if tick_proactive
-            else INNER_TICK_SYNTHETIC_USER_TEXT
-        )
-    turn_type: AssistantTurnSource
-    if inner_tick_turn:
-        turn_type = "inner_tick"
-    elif implicit_sign_on_turn:
-        turn_type = "greeting"
-    else:
-        turn_type = "chat"
+    effective_user_text = _companion_turn_effective_user_text(
+        user_text=user_text,
+        inner_tick_turn=inner_tick_turn,
+        tick_proactive=tick_proactive,
+        tick_scheduled=tick_scheduled,
+    )
+    turn_type = _assistant_turn_source_for_runtime_flags(
+        inner_tick_turn=inner_tick_turn,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
     return CompanionTurnRuntimeFlags(
         effective_user_text=effective_user_text,
         tick_proactive=tick_proactive,

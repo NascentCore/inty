@@ -131,6 +131,22 @@ def _github_issue_correlation_section(snapshot: HarnessSnapshot) -> str:
     )
 
 
+def _github_issue_harness_memory_docs_block(snapshot: HarnessSnapshot) -> str:
+    """Markdown block listing truncated MemoryStore docs for the GitHub issue body."""
+    memory_lines: list[str] = []
+    for rel, body in sorted(snapshot.memory_docs.items()):
+        excerpt = truncate_text(body, GITHUB_BODY_MEMORY_DOC_MAX_CHARS)
+        memory_lines.append(f"#### {rel}\n```\n{excerpt}\n```")
+    return "\n\n".join(memory_lines) if memory_lines else "_none_"
+
+
+def _github_issue_harness_runtime_events_block(snapshot: HarnessSnapshot) -> str:
+    """JSON excerpt of recent runtime events, or a placeholder when empty."""
+    if snapshot.runtime_events:
+        return json.dumps(snapshot.runtime_events, ensure_ascii=False, indent=2)
+    return "_none_"
+
+
 def _github_issue_harness_excerpt_section(snapshot: HarnessSnapshot) -> str:
     context_excerpt = truncate_text(
         snapshot.context_json,
@@ -140,16 +156,8 @@ def _github_issue_harness_excerpt_section(snapshot: HarnessSnapshot) -> str:
         snapshot.transcript_tail,
         GITHUB_BODY_TRANSCRIPT_MAX_CHARS,
     )
-    memory_lines: list[str] = []
-    for rel, body in sorted(snapshot.memory_docs.items()):
-        excerpt = truncate_text(body, GITHUB_BODY_MEMORY_DOC_MAX_CHARS)
-        memory_lines.append(f"#### {rel}\n```\n{excerpt}\n```")
-    memory_block = "\n\n".join(memory_lines) if memory_lines else "_none_"
-    runtime_block = (
-        json.dumps(snapshot.runtime_events, ensure_ascii=False, indent=2)
-        if snapshot.runtime_events
-        else "_none_"
-    )
+    memory_block = _github_issue_harness_memory_docs_block(snapshot)
+    runtime_block = _github_issue_harness_runtime_events_block(snapshot)
     return "\n".join(
         [
             "## Harness snapshot excerpt (GitHub body caps: transcript 2k, memory 500/doc)",
