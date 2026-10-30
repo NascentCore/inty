@@ -1012,6 +1012,44 @@ async def _invoke_chat_only_prompt_plan_llm(
             )
 
 
+def _parse_chat_only_proactive_assistant_message(msg: Any) -> _ChatOnlyAssistantParse:
+    """Proactive inner-tick tracks: omit transcript row when output_to_user is false."""
+    proactive_split = split_proactive_chat_message(msg)
+    if proactive_split.output_to_user:
+        return _ChatOnlyAssistantParse(
+            assistant_text=proactive_split.visible_text,
+            skip_final_transcript_assistant_row=False,
+            significance_meta=None,
+            turn_recall=None,
+        )
+    return _ChatOnlyAssistantParse(
+        assistant_text="",
+        skip_final_transcript_assistant_row=True,
+        significance_meta=None,
+        turn_recall=None,
+    )
+
+
+def _parse_chat_only_greeting_assistant_message(
+    msg: Any,
+    trace_id: str,
+) -> _ChatOnlyAssistantParse:
+    """Implicit sign-on greeting under dual-LLM structured envelope."""
+    dual_split = split_dual_llm_chat_branch_message(msg)
+    if dual_split.output_to_user is False:
+        logger.warning(
+            "chat_only_prompt_plan dual_llm envelope output_to_user=false "
+            "trace_id={} (expected true for greeting)",
+            trace_id,
+        )
+    return _ChatOnlyAssistantParse(
+        assistant_text=dual_split.visible_text,
+        skip_final_transcript_assistant_row=False,
+        significance_meta=dual_split.significance_meta,
+        turn_recall=dual_split.turn_recall,
+    )
+
+
 def _parse_chat_only_assistant_message(
     track: CompanionTurnTrack,
     msg: Any,
@@ -1022,34 +1060,9 @@ def _parse_chat_only_assistant_message(
             CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
             | CompanionTurnTrack.INNER_TICK_SCHEDULED
         ):
-            proactive_split = split_proactive_chat_message(msg)
-            if proactive_split.output_to_user:
-                return _ChatOnlyAssistantParse(
-                    assistant_text=proactive_split.visible_text,
-                    skip_final_transcript_assistant_row=False,
-                    significance_meta=None,
-                    turn_recall=None,
-                )
-            return _ChatOnlyAssistantParse(
-                assistant_text="",
-                skip_final_transcript_assistant_row=True,
-                significance_meta=None,
-                turn_recall=None,
-            )
+            return _parse_chat_only_proactive_assistant_message(msg)
         case CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING:
-            dual_split = split_dual_llm_chat_branch_message(msg)
-            if dual_split.output_to_user is False:
-                logger.warning(
-                    "chat_only_prompt_plan dual_llm envelope output_to_user=false "
-                    "trace_id={} (expected true for greeting)",
-                    trace_id,
-                )
-            return _ChatOnlyAssistantParse(
-                assistant_text=dual_split.visible_text,
-                skip_final_transcript_assistant_row=False,
-                significance_meta=dual_split.significance_meta,
-                turn_recall=dual_split.turn_recall,
-            )
+            return _parse_chat_only_greeting_assistant_message(msg, trace_id)
         case _:
             return _ChatOnlyAssistantParse(
                 assistant_text=(msg.content or "").strip(),
@@ -1218,6 +1231,50 @@ async def _run_chat_only_prompt_plan(
     )
 
 
+def _dual_llm_foreground_chat_input_from_agentic_context(
+    *,
+    context: AgenticLoopContext,
+    llm_client: LlmClient,
+    chat_msgs: list[dict[str, Any]],
+    tool_msgs: list[dict[str, Any]],
+) -> DualLlmForegroundChatInput:
+    execution = context.execution
+    chat_model = llm_client.resolve_model("chat")
+    return DualLlmForegroundChatInput(
+        llm_client=llm_client,
+        chat_msgs=chat_msgs,
+        tool_msgs=tool_msgs,
+        chat_model=chat_model,
+        langsmith_slice=context.langsmith.turn_slice,
+        foreground_scene=execution.llm_scene.value,
+        high_reasoning=execution.high_reasoning,
+        trace_id=context.trace_id,
+        skip_foreground_envelope=execution.skip_foreground_envelope,
+        langsmith_trace_id=context.langsmith.trace_id,
+        langsmith_run_id=context.langsmith.run_id,
+    )
+
+
+async def _append_dual_llm_foreground_visible_reply(
+    *,
+    fg_result: DualLlmForegroundChatResult,
+    appender: _UserVisibleOutputAppender,
+    trace_id: str,
+) -> None:
+    fg_text = fg_result.assistant_text.strip()
+    if not fg_text:
+        return
+    await appender.append_visible_message(
+        kind=OutputMessageKind.USER_REPLY,
+        text=fg_text,
+        trace_id=trace_id,
+        langsmith_trace_id=fg_result.langsmith_trace_id,
+        langsmith_run_id=fg_result.langsmith_run_id,
+        turn_recall=fg_result.turn_recall,
+        tool_background_started=bool(fg_result.tool_msgs_for_bg),
+    )
+
+
 async def _run_dual_llm_foreground_phase(
     *,
     context: AgenticLoopContext,
@@ -1229,40 +1286,24 @@ async def _run_dual_llm_foreground_phase(
         context.dual_llm_chat_msgs is not None
         and context.dual_llm_tool_msgs is not None
     )
-    execution = context.execution
     chat_msgs = list(context.dual_llm_chat_msgs)
     tool_msgs = list(context.dual_llm_tool_msgs)
     apply_agentic_loop_runtime_system_clauses(
         openai_messages=chat_msgs,
         user_text=context.user_text,
     )
-    chat_model = llm_client.resolve_model("chat")
-    fg_result = await run_dual_llm_foreground_chat(
-        DualLlmForegroundChatInput(
-            llm_client=llm_client,
-            chat_msgs=chat_msgs,
-            tool_msgs=tool_msgs,
-            chat_model=chat_model,
-            langsmith_slice=context.langsmith.turn_slice,
-            foreground_scene=execution.llm_scene.value,
-            high_reasoning=execution.high_reasoning,
-            trace_id=context.trace_id,
-            skip_foreground_envelope=execution.skip_foreground_envelope,
-            langsmith_trace_id=context.langsmith.trace_id,
-            langsmith_run_id=context.langsmith.run_id,
-        )
+    fg_input = _dual_llm_foreground_chat_input_from_agentic_context(
+        context=context,
+        llm_client=llm_client,
+        chat_msgs=chat_msgs,
+        tool_msgs=tool_msgs,
     )
-    fg_text = fg_result.assistant_text.strip()
-    if fg_text:
-        await appender.append_visible_message(
-            kind=OutputMessageKind.USER_REPLY,
-            text=fg_text,
-            trace_id=context.trace_id,
-            langsmith_trace_id=fg_result.langsmith_trace_id,
-            langsmith_run_id=fg_result.langsmith_run_id,
-            turn_recall=fg_result.turn_recall,
-            tool_background_started=bool(fg_result.tool_msgs_for_bg),
-        )
+    fg_result = await run_dual_llm_foreground_chat(fg_input)
+    await _append_dual_llm_foreground_visible_reply(
+        fg_result=fg_result,
+        appender=appender,
+        trace_id=context.trace_id,
+    )
     return fg_result
 
 

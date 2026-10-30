@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from collections.abc import Iterable
@@ -239,17 +240,20 @@ def _append_identity_bullets_to_user_md(
     return "\n".join(lines) + "\n"
 
 
-def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
-    """
-    Write user-volunteered basic information in the "Identity Information" section of USER.md.
-    Known template fields (name/gender/age/etc.) are filled inline; other labels are appended as dated bullets.
-    items: each entry contains label and value (both non-empty short text).
-    """
-    rel = USER_MD_REL
-    prev = store.read_document_if_exists(rel)
-    if prev is None:
-        return f"ERROR: missing {USER_MD_REL!r}"
-    today = date.today().isoformat()
+@dataclass(frozen=True)
+class _UserMdToolItemPartition:
+    """Validated USER.md tool items split into template slots vs custom bullets."""
+
+    inline_values: dict[str, str]
+    append_bullets: list[str]
+
+
+def _partition_user_md_tool_items(
+    items: list[dict[str, Any]],
+    *,
+    record_date_iso: str,
+) -> _UserMdToolItemPartition:
+    """Classify tool items into known identity fields or dated custom bullets."""
     inline_values: dict[str, str] = {}
     append_bullets: list[str] = []
     known_labels = {member.value for member in UserIdentityFieldLabel}
@@ -263,21 +267,45 @@ def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
         if label in known_labels:
             inline_values[label] = value
         else:
-            append_bullets.append(f"- {label}：{value}（记录日期 {today}）")
-    if not inline_values and not append_bullets:
+            append_bullets.append(f"- {label}：{value}（记录日期 {record_date_iso}）")
+    return _UserMdToolItemPartition(
+        inline_values=inline_values,
+        append_bullets=append_bullets,
+    )
+
+
+def _user_md_tool_success_message(partition: _UserMdToolItemPartition) -> str:
+    parts: list[str] = []
+    if partition.inline_values:
+        parts.append(f"filled {len(partition.inline_values)} template slot(s)")
+    if partition.append_bullets:
+        parts.append(f"appended {len(partition.append_bullets)} line(s)")
+    return f"OK {'; '.join(parts)} in {USER_MD_REL}"
+
+
+def tool_update_user_md(store: MemoryStore, items: list[dict[str, Any]]) -> str:
+    """
+    Write user-volunteered basic information in the "Identity Information" section of USER.md.
+    Known template fields (name/gender/age/etc.) are filled inline; other labels are appended as dated bullets.
+    items: each entry contains label and value (both non-empty short text).
+    """
+    rel = USER_MD_REL
+    prev = store.read_document_if_exists(rel)
+    if prev is None:
+        return f"ERROR: missing {USER_MD_REL!r}"
+    partition = _partition_user_md_tool_items(
+        items,
+        record_date_iso=date.today().isoformat(),
+    )
+    if not partition.inline_values and not partition.append_bullets:
         return "ERROR: no valid items (need label and value for each entry)"
     merged = prev
-    if inline_values:
-        merged = fill_user_md_identity_fields(merged, inline_values)
-    if append_bullets:
-        merged = _append_identity_bullets_to_user_md(merged, append_bullets)
+    if partition.inline_values:
+        merged = fill_user_md_identity_fields(merged, partition.inline_values)
+    if partition.append_bullets:
+        merged = _append_identity_bullets_to_user_md(merged, partition.append_bullets)
     store.write_document(rel, merged)
-    parts: list[str] = []
-    if inline_values:
-        parts.append(f"filled {len(inline_values)} template slot(s)")
-    if append_bullets:
-        parts.append(f"appended {len(append_bullets)} line(s)")
-    return f"OK {'; '.join(parts)} in {USER_MD_REL}"
+    return _user_md_tool_success_message(partition)
 
 
 def tool_memory_store_list_paths(
