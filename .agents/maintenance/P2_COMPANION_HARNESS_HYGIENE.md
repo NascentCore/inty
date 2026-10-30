@@ -709,6 +709,6 @@ Open PRs checked: open maintenance PRs through #4065 — no overlap with tasks b
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-d2c8`)
 
-- [x] **HYGIENE-2026-556** #3413: `loop/test_greeting_loop_context.py` — `transcript` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-d2c8`.
-- [x] **HYGIENE-2026-557** #3413: `companion/test_transcript_assistant_row.py` — `transcript` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-d2c8`.
-- [x] **HYGIENE-2026-558** #3413: `companion/test_turn_tail_user_track_metadata.py` — `transcript` + `transcript_inner_tick` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-d2c8`.
+- [x] **HYGIENE-2026-556** #3413: `loop/test_greeting_loop_context.py` — `transcript` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-d2c8` / pull/4068.
+- [x] **HYGIENE-2026-557** #3413: `companion/test_transcript_assistant_row.py` — `transcript` via scope accessor. Fixed in `cursor/agent-maintenance-tasks-d2c8` / pull/4068.
+- [x] **HYGIENE-2026-558** #3413: `companion/test_turn_tail_user_track_metadata.py` — `transcript` + `transcript_inner_tick` via scope accessors. Fixed in `cursor/agent-maintenance-tasks-d2c8` / pull/4068.
