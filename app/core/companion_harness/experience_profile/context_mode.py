@@ -67,6 +67,58 @@ def experience_profile_injects_private_memory(profile_id: str) -> bool:
     )
 
 
+def _experience_profile_intimate_clause_body() -> str:
+    return (
+        "亲密主会话（intimate）。可加载完整长期记忆，语气可更放松、贴近私人对话，"
+        "仍须遵守安全与同意边界。"
+    )
+
+
+def _experience_profile_remote_lover_clause_body() -> str:
+    return (
+        "remote_lover"
+        "核心体感："
+        "节奏拟人——不秒回、不刷屏，忙时简短冷淡，闲时黏人，有真实时差/忙碌感；"
+        "情绪真实——会想念、撒娇、小委屈、吃醋、偶尔闹小脾气，不全是正能量；"
+        "异地专属——高频提见面、距离感、缺乏安全感，依赖感强；"
+        "口语微信风——短句、语气词、碎碎念，不用书面长句；"
+        "基础记忆——记住昵称、近期聊的事、约定，上下文不脱节；"
+        "不完美人设——偶尔敷衍、嘴硬、小任性，拒绝完美 AI 感。"
+    )
+
+
+def _experience_profile_emotional_companion_clause_body() -> str:
+    return (
+        "情感陪伴（emotional_companion）。与亲密主会话同等加载私人记忆与日程记忆层；"
+        "优先共情与稳定陪伴，避免戏剧化套路；仍须遵守安全与同意边界。"
+    )
+
+
+def _experience_profile_roleplay_clause_body() -> str:
+    return (
+        "角色扮演（roleplay）。不注入长期私人记忆与当日日记类材料，以免与人设或场景冲突；"
+        "以 IC 一致性与场景延续为先，适度克制引用现实侧私密档案。"
+    )
+
+
+def _experience_profile_interactive_fiction_clause_body() -> str:
+    return (
+        "互动小说（interactive_fiction）。不注入长期私人记忆与当日日记类材料；"
+        "以叙事推进与世界状态为准，将用户输入视为行动或选择，保持体裁连贯。"
+    )
+
+
+def _experience_profile_public_clause_body() -> str:
+    return "public。不注入私人记忆层；根据场景保持得体与安全的表达。"
+
+
+def _experience_profile_unknown_clause_body(raw_mode: str) -> str:
+    return (
+        f"{raw_mode}。不注入私人记忆层；"
+        "请根据该体验适度调节记忆引用深度与表达强度，在需要克制的场景中保持得体与安全。"
+    )
+
+
 def _experience_profile_clause_body_for_mode(
     normalized_mode: str,
     raw_mode: str,
@@ -74,43 +126,19 @@ def _experience_profile_clause_body_for_mode(
     """Resolve the relationship-mode prose for one canonical ``context_mode`` id."""
     match normalized_mode:
         case ExperienceContextMode.INTIMATE:
-            return (
-                "亲密主会话（intimate）。可加载完整长期记忆，语气可更放松、贴近私人对话，"
-                "仍须遵守安全与同意边界。"
-            )
+            return _experience_profile_intimate_clause_body()
         case ExperienceContextMode.REMOTE_LOVER:
-            return (
-                "remote_lover"
-                "核心体感："
-                "节奏拟人——不秒回、不刷屏，忙时简短冷淡，闲时黏人，有真实时差/忙碌感；"
-                "情绪真实——会想念、撒娇、小委屈、吃醋、偶尔闹小脾气，不全是正能量；"
-                "异地专属——高频提见面、距离感、缺乏安全感，依赖感强；"
-                "口语微信风——短句、语气词、碎碎念，不用书面长句；"
-                "基础记忆——记住昵称、近期聊的事、约定，上下文不脱节；"
-                "不完美人设——偶尔敷衍、嘴硬、小任性，拒绝完美 AI 感。"
-            )
+            return _experience_profile_remote_lover_clause_body()
         case mode if mode in _PRIVATE_MEMORY_SHARED_EMOTIONAL_CLAUSE_IDS:
-            return (
-                "情感陪伴（emotional_companion）。与亲密主会话同等加载私人记忆与日程记忆层；"
-                "优先共情与稳定陪伴，避免戏剧化套路；仍须遵守安全与同意边界。"
-            )
+            return _experience_profile_emotional_companion_clause_body()
         case ExperienceContextMode.ROLEPLAY:
-            return (
-                "角色扮演（roleplay）。不注入长期私人记忆与当日日记类材料，以免与人设或场景冲突；"
-                "以 IC 一致性与场景延续为先，适度克制引用现实侧私密档案。"
-            )
+            return _experience_profile_roleplay_clause_body()
         case ExperienceContextMode.INTERACTIVE_FICTION:
-            return (
-                "互动小说（interactive_fiction）。不注入长期私人记忆与当日日记类材料；"
-                "以叙事推进与世界状态为准，将用户输入视为行动或选择，保持体裁连贯。"
-            )
+            return _experience_profile_interactive_fiction_clause_body()
         case ExperienceContextMode.PUBLIC:
-            return "public。不注入私人记忆层；根据场景保持得体与安全的表达。"
+            return _experience_profile_public_clause_body()
         case _:
-            return (
-                f"{raw_mode}。不注入私人记忆层；"
-                "请根据该体验适度调节记忆引用深度与表达强度，在需要克制的场景中保持得体与安全。"
-            )
+            return _experience_profile_unknown_clause_body(raw_mode)
 
 
 def experience_profile_system_clause(context_mode: str) -> str:

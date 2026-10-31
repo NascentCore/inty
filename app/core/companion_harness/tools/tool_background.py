@@ -1191,6 +1191,62 @@ def _tool_bg_openai_loop_refresh_tool_schemas(
     )
 
 
+def _tool_bg_openai_loop_execute_tool_call_handler(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    write_allowlist: frozenset[str],
+) -> Callable[[str, str], Any]:
+    async def execute_tool_call(
+        name: str, raw_arguments: str
+    ) -> tuple[str, str | None]:
+        return await _tool_bg_loop_execute_tool_call(
+            run_ctx,
+            write_allowlist=write_allowlist,
+            name=name,
+            raw_arguments=raw_arguments,
+        )
+
+    return execute_tool_call
+
+
+def _tool_bg_openai_loop_continue_chat_handler(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    tool_schemas: list[Any],
+    progress: ToolBgLoopProgress,
+) -> Callable[[list[dict[str, Any]]], Any]:
+    async def continue_chat(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> tuple[Any, str | None]:
+        return await _tool_bg_openai_loop_continue_chat_round(
+            run_ctx=run_ctx,
+            tool_schemas=tool_schemas,
+            progress=progress,
+            messages_with_tool_results=messages_with_tool_results,
+        )
+
+    return continue_chat
+
+
+def _tool_bg_openai_loop_after_tool_messages_handler(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    turn_capture: ToolBgTurnCapture,
+    tools_state: list[Any],
+) -> Callable[[list[dict[str, Any]]], Any]:
+    async def after_tool_messages_appended(
+        messages_with_tool_results: list[dict[str, Any]],
+    ) -> None:
+        tools_state[:] = _tool_bg_openai_loop_refresh_tool_schemas(
+            run_ctx=run_ctx,
+            turn_capture=turn_capture,
+            tool_schemas=list(tools_state),
+            messages_with_tool_results=messages_with_tool_results,
+        )
+
+    return after_tool_messages_appended
+
+
 def _tool_bg_build_openai_loop_handlers(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1199,43 +1255,23 @@ def _tool_bg_build_openai_loop_handlers(
 ) -> _ToolBgOpenAiLoopHandlers:
     allow = _tool_bg_memory_store_write_allowlist(run_ctx.write_allowlist)
     turn_capture = _tool_bg_new_turn_capture(working_messages)
-    tools_for_rounds = list(run_ctx.tools)
+    tools_for_rounds: list[Any] = list(run_ctx.tools)
 
-    async def execute_tool_call(
-        name: str, raw_arguments: str
-    ) -> tuple[str, str | None]:
-        return await _tool_bg_loop_execute_tool_call(
-            run_ctx,
+    return _ToolBgOpenAiLoopHandlers(
+        execute_tool_call=_tool_bg_openai_loop_execute_tool_call_handler(
+            run_ctx=run_ctx,
             write_allowlist=allow,
-            name=name,
-            raw_arguments=raw_arguments,
-        )
-
-    async def continue_chat(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> tuple[Any, str | None]:
-        return await _tool_bg_openai_loop_continue_chat_round(
+        ),
+        continue_chat=_tool_bg_openai_loop_continue_chat_handler(
             run_ctx=run_ctx,
             tool_schemas=tools_for_rounds,
             progress=progress,
-            messages_with_tool_results=messages_with_tool_results,
-        )
-
-    async def after_tool_messages_appended(
-        messages_with_tool_results: list[dict[str, Any]],
-    ) -> None:
-        nonlocal tools_for_rounds
-        tools_for_rounds = _tool_bg_openai_loop_refresh_tool_schemas(
+        ),
+        after_tool_messages_appended=_tool_bg_openai_loop_after_tool_messages_handler(
             run_ctx=run_ctx,
             turn_capture=turn_capture,
-            tool_schemas=tools_for_rounds,
-            messages_with_tool_results=messages_with_tool_results,
-        )
-
-    return _ToolBgOpenAiLoopHandlers(
-        execute_tool_call=execute_tool_call,
-        continue_chat=continue_chat,
-        after_tool_messages_appended=after_tool_messages_appended,
+            tools_state=tools_for_rounds,
+        ),
         turn_capture=turn_capture,
         tools_for_rounds=tools_for_rounds,
     )

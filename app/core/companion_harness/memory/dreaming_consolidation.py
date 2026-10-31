@@ -547,6 +547,43 @@ def _build_one_shot_dreaming_messages(
     ]
 
 
+def _dreaming_document_update_tool_schema_properties(
+    *,
+    required_paths: tuple[str, ...],
+    kind_values: list[str],
+) -> dict[str, Any]:
+    """Property map for one ``update_dreaming_document`` tool call."""
+    return {
+        "document_kind": {
+            "type": "string",
+            "enum": kind_values,
+            "description": "Semantic document role being updated.",
+        },
+        "relative_path": {
+            "type": "string",
+            "enum": list(required_paths),
+            "description": "Exact MemoryStore relative path to write.",
+        },
+        "content_changed": {
+            "type": "boolean",
+            "description": (
+                "True to write body; false for explicit no-op (keep current doc)."
+            ),
+        },
+        "body": {
+            "type": "string",
+            "description": (
+                "Full updated markdown body when content_changed is true; "
+                "empty for no-op."
+            ),
+        },
+        "changed_reason": {
+            "type": "string",
+            "description": "Brief reason for the change or no-op.",
+        },
+    }
+
+
 def _dreaming_document_update_tool_json_schema(
     *,
     required_paths: tuple[str, ...],
@@ -555,35 +592,10 @@ def _dreaming_document_update_tool_json_schema(
     """JSON Schema object for one ``update_dreaming_document`` tool call."""
     return {
         "type": "object",
-        "properties": {
-            "document_kind": {
-                "type": "string",
-                "enum": kind_values,
-                "description": "Semantic document role being updated.",
-            },
-            "relative_path": {
-                "type": "string",
-                "enum": list(required_paths),
-                "description": "Exact MemoryStore relative path to write.",
-            },
-            "content_changed": {
-                "type": "boolean",
-                "description": (
-                    "True to write body; false for explicit no-op (keep current doc)."
-                ),
-            },
-            "body": {
-                "type": "string",
-                "description": (
-                    "Full updated markdown body when content_changed is true; "
-                    "empty for no-op."
-                ),
-            },
-            "changed_reason": {
-                "type": "string",
-                "description": "Brief reason for the change or no-op.",
-            },
-        },
+        "properties": _dreaming_document_update_tool_schema_properties(
+            required_paths=required_paths,
+            kind_values=kind_values,
+        ),
         "required": [
             "document_kind",
             "relative_path",
