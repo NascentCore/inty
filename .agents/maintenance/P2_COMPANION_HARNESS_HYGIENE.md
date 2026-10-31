@@ -709,7 +709,7 @@ Open PRs checked: #4065 (`cursor/agent-maintenance-tasks-bb71`), #4068 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-oct31-559`)
 
-- [ ] **HYGIENE-2026-559** #3413: `loop/test_chat_only_prompt_plan.py` — transcript seed + `transcript_rel` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`
-- [ ] **HYGIENE-2026-560** #3413: `companion/test_transcript_ai_private_hydrate.py` — persist/load transcript via scope `transcript` accessor
-- [ ] **HYGIENE-2026-561** #3413: `loop/context_builder_test_support.py` — `transcript_rel` via scope `transcript` accessor
-- [ ] **HYGIENE-2026-562** #3413: `loop/test_agentic_loop_output_queue.py` — transcript seed/read + `transcript_rel` via scope `transcript` accessor
+- [x] **HYGIENE-2026-559** #3413: `loop/test_chat_only_prompt_plan.py` — transcript seed + `transcript_rel` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript`. Fixed in `cursor/agent-maintenance-tasks-oct31-559` / pull/4071.
+- [x] **HYGIENE-2026-560** #3413: `companion/test_transcript_ai_private_hydrate.py` — persist/load transcript via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct31-559` / pull/4071.
+- [x] **HYGIENE-2026-561** #3413: `loop/context_builder_test_support.py` — `transcript_rel` via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct31-559` / pull/4071.
+- [x] **HYGIENE-2026-562** #3413: `loop/test_agentic_loop_output_queue.py` — transcript seed/read + `transcript_rel` via scope `transcript` accessor. Fixed in `cursor/agent-maintenance-tasks-oct31-559` / pull/4071.
