@@ -13,6 +13,7 @@ TODO(#3634): Future persona PromptPlan + AgenticLoop entry for dreaming consolid
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from collections.abc import Callable
 from typing import Any
 
 from app.core.companion_harness.companion.dreaming import (
@@ -28,6 +29,9 @@ from app.core.companion_harness.companion.dreaming_observability import (
     new_dreaming_batch_trace_id,
     record_dreaming_batch_observability,
 )
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
+)
 from app.core.companion_harness.companion.manager import CompanionSession
 from app.core.companion_harness.memory.dreaming_consolidation import (
     DREAMING_ONE_SHOT_LLM_ROLE,
@@ -37,6 +41,131 @@ from app.core.companion_harness.runtime.dreaming_scope_lock import (
     try_dreaming_scope_advisory_lock,
 )
 from app.utils.config import DreamingCuratorMode
+
+
+def _run_dreaming_batch_with_repository_advisory_lock(
+    *,
+    session: CompanionSession,
+    candidate: DreamingCandidate,
+    idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
+    inty_trace_id: str,
+) -> DreamingBatchOutcome:
+    with try_dreaming_scope_advisory_lock(
+        session.store.scope.registry_key()
+    ) as lock_acquired:
+        if not lock_acquired:
+            record_dreaming_batch_observability(
+                session=session,
+                inty_trace_id=inty_trace_id,
+                outcome=DreamingBatchOutcome.ADVISORY_LOCK_BUSY,
+                candidate=candidate,
+                langsmith_root_run=None,
+            )
+            return DreamingBatchOutcome.ADVISORY_LOCK_BUSY
+        return _run_dreaming_batch_locked(
+            session=session,
+            candidate=candidate,
+            idle_seconds=idle_seconds,
+            curator_mode=curator_mode,
+            inty_trace_id=inty_trace_id,
+        )
+
+
+def _dreaming_batch_llm_complete_fn(
+    session: CompanionSession,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+) -> Callable[[list[dict[str, Any]], str], str]:
+    def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
+        return session.llm_client.complete_text(
+            messages,
+            model_role=role,
+            langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
+                model_role=role
+            ),
+        )
+
+    return _complete_fn
+
+
+def _dreaming_batch_consolidate_and_checkpoint(
+    *,
+    session: CompanionSession,
+    candidate: DreamingCandidate,
+    curator_mode: DreamingCuratorMode,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    inty_trace_id: str,
+    langsmith_root_run: Any,
+) -> None:
+    complete_fn = _dreaming_batch_llm_complete_fn(session, langsmith_slice)
+    try:
+        consolidate_memory_during_dreaming(
+            session.store,
+            candidate.rows,
+            curator_mode,
+            complete_fn,
+            session.llm_client,
+            langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
+                model_role=DREAMING_ONE_SHOT_LLM_ROLE
+            ),
+            tool_bg_idle_event=session.tool_bg_idle,
+        )
+        assert_dreaming_transcript_boundary_unchanged(session.store, candidate)
+        state = dreaming_state_from_candidate(
+            candidate, processed_at=datetime.now(UTC)
+        )
+        save_dreaming_state(session.store, state)
+    except BaseException as exc:
+        record_dreaming_batch_observability(
+            session=session,
+            inty_trace_id=inty_trace_id,
+            outcome=DreamingBatchOutcome.BATCH_FAILED,
+            candidate=candidate,
+            langsmith_root_run=langsmith_root_run,
+            batch_error=repr(exc),
+        )
+        raise
+
+
+def _dreaming_batch_candidate_for_session(
+    session: CompanionSession,
+    *,
+    idle_seconds: int,
+) -> DreamingCandidate | None:
+    """Return consolidation candidate when session is initialized and dreaming is due."""
+    assert idle_seconds > 0
+    if not session.is_initialized:
+        return None
+    return dreaming_due(
+        session.store,
+        now=datetime.now(UTC),
+        dreaming_idle_seconds=idle_seconds,
+    )
+
+
+def _run_dreaming_batch_for_candidate(
+    *,
+    session: CompanionSession,
+    candidate: DreamingCandidate,
+    idle_seconds: int,
+    curator_mode: DreamingCuratorMode,
+    inty_trace_id: str,
+) -> DreamingBatchOutcome:
+    if session.store.uses_repository_without_scope_disk:
+        return _run_dreaming_batch_with_repository_advisory_lock(
+            session=session,
+            candidate=candidate,
+            idle_seconds=idle_seconds,
+            curator_mode=curator_mode,
+            inty_trace_id=inty_trace_id,
+        )
+    return _run_dreaming_batch_locked(
+        session=session,
+        candidate=candidate,
+        idle_seconds=idle_seconds,
+        curator_mode=curator_mode,
+        inty_trace_id=inty_trace_id,
+    )
 
 
 def run_dreaming_batch_if_due(
@@ -63,42 +192,15 @@ def run_dreaming_batch_if_due(
     Callable from scope inner-tick worker (#3255 / PR #3387); caller holds scope
     ``turn_lock`` on ``CompanionSession``.
     """
-    assert idle_seconds > 0
-    if not session.is_initialized:
-        return DreamingBatchOutcome.NOT_DUE
-
-    candidate = dreaming_due(
-        session.store,
-        now=datetime.now(UTC),
-        dreaming_idle_seconds=idle_seconds,
+    candidate = _dreaming_batch_candidate_for_session(
+        session,
+        idle_seconds=idle_seconds,
     )
     if candidate is None:
         return DreamingBatchOutcome.NOT_DUE
 
     inty_trace_id = new_dreaming_batch_trace_id()
-
-    if session.store.uses_repository_without_scope_disk:
-        with try_dreaming_scope_advisory_lock(
-            session.store.scope.registry_key()
-        ) as lock_acquired:
-            if not lock_acquired:
-                record_dreaming_batch_observability(
-                    session=session,
-                    inty_trace_id=inty_trace_id,
-                    outcome=DreamingBatchOutcome.ADVISORY_LOCK_BUSY,
-                    candidate=candidate,
-                    langsmith_root_run=None,
-                )
-                return DreamingBatchOutcome.ADVISORY_LOCK_BUSY
-            return _run_dreaming_batch_locked(
-                session=session,
-                candidate=candidate,
-                idle_seconds=idle_seconds,
-                curator_mode=curator_mode,
-                inty_trace_id=inty_trace_id,
-            )
-
-    return _run_dreaming_batch_locked(
+    return _run_dreaming_batch_for_candidate(
         session=session,
         candidate=candidate,
         idle_seconds=idle_seconds,
@@ -123,45 +225,14 @@ def _run_dreaming_batch_locked(
         candidate=candidate,
         parent_run_enabled=None,
     ) as (langsmith_root_run, langsmith_slice):
-        try:
-
-            def _complete_fn(messages: list[dict[str, Any]], role: str) -> str:
-                return session.llm_client.complete_text(
-                    messages,
-                    model_role=role,
-                    langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
-                        model_role=role
-                    ),
-                )
-
-            consolidate_memory_during_dreaming(
-                session.store,
-                candidate.rows,
-                curator_mode,
-                _complete_fn,
-                session.llm_client,
-                langsmith_extra=langsmith_slice.dreaming_consolidation_extra(
-                    model_role=DREAMING_ONE_SHOT_LLM_ROLE
-                ),
-                tool_bg_idle_event=session.tool_bg_idle,
-            )
-            assert_dreaming_transcript_boundary_unchanged(
-                session.store, candidate
-            )
-            state = dreaming_state_from_candidate(
-                candidate, processed_at=datetime.now(UTC)
-            )
-            save_dreaming_state(session.store, state)
-        except BaseException as exc:
-            record_dreaming_batch_observability(
-                session=session,
-                inty_trace_id=inty_trace_id,
-                outcome=DreamingBatchOutcome.BATCH_FAILED,
-                candidate=candidate,
-                langsmith_root_run=langsmith_root_run,
-                batch_error=repr(exc),
-            )
-            raise
+        _dreaming_batch_consolidate_and_checkpoint(
+            session=session,
+            candidate=candidate,
+            curator_mode=curator_mode,
+            langsmith_slice=langsmith_slice,
+            inty_trace_id=inty_trace_id,
+            langsmith_root_run=langsmith_root_run,
+        )
 
     record_dreaming_batch_observability(
         session=session,
