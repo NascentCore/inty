@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-01 scan (cron)
+
+Source: open PR overlap check (87 open `Maintenance: HYGIENE` batches through HYGIENE-2026-562 — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/` + tests; #3413 follow-up — kernel JSONL writers still import `*_JSONL_REL` instead of `DEFAULT_MEMORY_STORE_SCOPE_PATHS`; stale issue audit doc superseded by GitHub issue comments.
+
+Open PRs checked: #4071..#3992 maintenance scope-path batches — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-7333`)
+
+- [ ] **HYGIENE-2026-563** maintenance: remove stale `COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (cron consolidation lives on GitHub issues).
+- [ ] **HYGIENE-2026-564** #3413: `runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`.
+- [ ] **HYGIENE-2026-565** #3413: `ai_private_prompt.py` — load/append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`.
