@@ -809,6 +809,28 @@ def _companion_turn_tail_user_messages_for_resolve(
     )
 
 
+def _companion_turn_user_tail_uuid_and_messages(
+    *,
+    input_batch: Any,
+    user_text: str,
+    preset_user_msg_uuid: str | None,
+    implicit_sign_on_turn: bool,
+) -> tuple[str, tuple[TurnTailUserMessage, ...], datetime]:
+    ts_user = utc_now()
+    user_msg_uuid = (
+        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
+    )
+    tail_user_messages = _companion_turn_tail_user_messages_for_resolve(
+        input_batch=input_batch,
+        user_text=user_text,
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        implicit_sign_on_turn=implicit_sign_on_turn,
+    )
+    user_msg_uuid = tail_user_messages[-1].message_id
+    return user_msg_uuid, tail_user_messages, ts_user
+
+
 def _resolve_companion_turn_user_tail_context(
     *,
     store: Any,
@@ -830,19 +852,13 @@ def _resolve_companion_turn_user_tail_context(
     loaded_state = tail_bundle.loaded_state
     user_text = tail_bundle.user_text
     context = loaded_state.context
-    ts_user = utc_now()
-    user_msg_uuid = (
-        preset_user_msg_uuid if preset_user_msg_uuid else str(uuid.uuid4())
-    )
     implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
-    tail_user_messages = _companion_turn_tail_user_messages_for_resolve(
+    user_msg_uuid, tail_user_messages, ts_user = _companion_turn_user_tail_uuid_and_messages(
         input_batch=input_batch,
         user_text=user_text,
-        ts_user=ts_user,
-        user_msg_uuid=user_msg_uuid,
+        preset_user_msg_uuid=preset_user_msg_uuid,
         implicit_sign_on_turn=implicit_sign_on_turn,
     )
-    user_msg_uuid = tail_user_messages[-1].message_id
     user_message_batch = _resolve_companion_turn_user_message_batch(
         track=track,
         user_msg_uuid=user_msg_uuid,

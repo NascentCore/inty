@@ -252,20 +252,20 @@ class ConversationCompactor:
         ]
         return system_messages, old_dialogue, recent_dialogue
 
-    def maybe_compact(
-        self, *, messages: list[dict[str, Any]], turn: int
-    ) -> CompactionOutcome:
-        before_chars = estimate_messages_chars(messages)
+    def _maybe_compact_no_op_gate(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        before_chars: int,
+        old_dialogue: list[dict[str, Any]],
+        recent_dialogue: list[dict[str, Any]],
+    ) -> CompactionOutcome | None:
         if before_chars <= self._config.max_context_chars:
             return self._maybe_compact_no_op_outcome(
                 messages=messages,
                 before_chars=before_chars,
                 reason="under_budget",
             )
-
-        system_messages, old_dialogue, recent_dialogue = (
-            self._partition_messages_for_compaction(messages)
-        )
         dialogue_count = len(old_dialogue) + len(recent_dialogue)
         if dialogue_count <= self._config.keep_recent_messages:
             return self._maybe_compact_no_op_outcome(
@@ -273,6 +273,23 @@ class ConversationCompactor:
                 before_chars=before_chars,
                 reason="not_enough_dialogue",
             )
+        return None
+
+    def maybe_compact(
+        self, *, messages: list[dict[str, Any]], turn: int
+    ) -> CompactionOutcome:
+        before_chars = estimate_messages_chars(messages)
+        system_messages, old_dialogue, recent_dialogue = (
+            self._partition_messages_for_compaction(messages)
+        )
+        no_op = self._maybe_compact_no_op_gate(
+            messages=messages,
+            before_chars=before_chars,
+            old_dialogue=old_dialogue,
+            recent_dialogue=recent_dialogue,
+        )
+        if no_op is not None:
+            return no_op
 
         next_state = self._absorb_old_dialogue(
             old_dialogue=old_dialogue, turn=turn

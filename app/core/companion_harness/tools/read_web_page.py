@@ -148,12 +148,9 @@ def _append_memory_block(
     store.write_document(MEMORY_MD_REL, merged)
 
 
-def _fetch_public_html_for_read_web_page(url: str) -> tuple[str, str] | str:
-    """Download and decode a public HTML document, or return an ``ERROR: …`` string."""
-    err = _validate_public_http_url(url)
-    if err:
-        return f"ERROR: {err}"
-    normalized = url.strip()
+def _read_web_page_http_response_or_error(
+    normalized: str,
+) -> tuple[bytes, str, str | None] | str:
     try:
         r = requests.get(
             normalized,
@@ -164,29 +161,56 @@ def _fetch_public_html_for_read_web_page(url: str) -> tuple[str, str] | str:
         r.raise_for_status()
     except requests.RequestException as exc:
         return f"ERROR: failed to fetch URL: {exc}"
-
     raw = r.content
     if len(raw) > _MAX_HTML_BYTES:
         return (
             f"ERROR: response body too large ({len(raw)} bytes); "
             f"max {_MAX_HTML_BYTES} bytes"
         )
-
     ctype = (r.headers.get("Content-Type") or "").lower()
-    looks_html = "html" in ctype or normalized.lower().rstrip("/").endswith(
+    return raw, ctype, r.encoding
+
+
+def _read_web_page_decode_html_or_error(
+    *,
+    normalized: str,
+    raw: bytes,
+    content_type: str,
+    response_encoding: str | None,
+) -> str:
+    looks_html = "html" in content_type or normalized.lower().rstrip("/").endswith(
         (".html", ".htm")
     )
     if not looks_html:
         sample = raw[:500].decode("utf-8", errors="replace").lower()
         if "<html" not in sample and "<!doctype" not in sample:
             return "ERROR: response does not look like HTML"
-
-    enc = r.encoding or "utf-8"
+    enc = response_encoding or "utf-8"
     try:
-        html = raw.decode(enc, errors="replace")
+        return raw.decode(enc, errors="replace")
     except LookupError:
-        html = raw.decode("utf-8", errors="replace")
-    return normalized, html
+        return raw.decode("utf-8", errors="replace")
+
+
+def _fetch_public_html_for_read_web_page(url: str) -> tuple[str, str] | str:
+    """Download and decode a public HTML document, or return an ``ERROR: …`` string."""
+    err = _validate_public_http_url(url)
+    if err:
+        return f"ERROR: {err}"
+    normalized = url.strip()
+    fetched = _read_web_page_http_response_or_error(normalized)
+    if isinstance(fetched, str):
+        return fetched
+    raw, ctype, response_encoding = fetched
+    html_or_err = _read_web_page_decode_html_or_error(
+        normalized=normalized,
+        raw=raw,
+        content_type=ctype,
+        response_encoding=response_encoding,
+    )
+    if html_or_err.startswith("ERROR:"):
+        return html_or_err
+    return normalized, html_or_err
 
 
 def run_read_web_page_sync(
