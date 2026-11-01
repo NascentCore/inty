@@ -709,6 +709,6 @@ Open PRs checked: #4071..#3992 maintenance scope-path batches — no overlap wit
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-7333`)
 
-- [ ] **HYGIENE-2026-563** maintenance: remove stale `COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (cron consolidation lives on GitHub issues).
-- [ ] **HYGIENE-2026-564** #3413: `runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`.
-- [ ] **HYGIENE-2026-565** #3413: `ai_private_prompt.py` — load/append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`.
+- [x] **HYGIENE-2026-563** maintenance: remove stale `COMPANION_HARNESS_ISSUE_AUDIT_2026-07-09.md` (cron consolidation lives on GitHub issues). Fixed in `cursor/agent-maintenance-tasks-7333` / pull/4074.
+- [x] **HYGIENE-2026-564** #3413: `runtime_events.py` — append/read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_runtime_events_jsonl`. Fixed in `cursor/agent-maintenance-tasks-7333` / pull/4074.
+- [x] **HYGIENE-2026-565** #3413: `ai_private_prompt.py` — load/append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.ai_private_jsonl`. Fixed in `cursor/agent-maintenance-tasks-7333` / pull/4074.
