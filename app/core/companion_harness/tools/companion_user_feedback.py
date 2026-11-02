@@ -38,7 +38,6 @@ from app.core.companion_harness.companion.runtime_events import (
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
-    COMPANION_USER_FEEDBACK_JSONL_REL,
     CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
@@ -46,6 +45,9 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     STYLE_MD_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
+)
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from app.utils.github.issues import GithubIssueCreateResult
 from app.utils.langsmith import get_current_trace_info
@@ -251,7 +253,10 @@ def _snapshot_to_record(snapshot: HarnessSnapshot) -> dict[str, Any]:
 def append_user_feedback_record(
     store: MemoryStore, record: dict[str, Any]
 ) -> None:
-    store.append_jsonl_record(COMPANION_USER_FEEDBACK_JSONL_REL, record)
+    store.append_jsonl_record(
+        DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl,
+        record,
+    )
 
 
 def append_github_issue_completion(

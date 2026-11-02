@@ -709,6 +709,6 @@ Open PRs checked: #4074 (`cursor/agent-maintenance-tasks-7333`), #4071..#3992 ma
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-1bec`)
 
-- [ ] **HYGIENE-2026-566** #3413: `companion_user_feedback.py` — append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl`.
-- [ ] **HYGIENE-2026-567** #3413: `image_gate.py` — image index JSONL via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl`.
-- [ ] **HYGIENE-2026-568** #3413: `living_sphere_curator.py` — pending updates read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl`.
+- [x] **HYGIENE-2026-566** #3413: `companion_user_feedback.py` — append via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.companion_user_feedback_jsonl`. Fixed in `cursor/agent-maintenance-tasks-1bec` / pull/4077.
+- [x] **HYGIENE-2026-567** #3413: `image_gate.py` — image index JSONL via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.generated_images_index_jsonl`. Fixed in `cursor/agent-maintenance-tasks-1bec` / pull/4077.
+- [x] **HYGIENE-2026-568** #3413: `living_sphere_curator.py` — pending updates read via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_updates_jsonl`. Fixed in `cursor/agent-maintenance-tasks-1bec` / pull/4077.
