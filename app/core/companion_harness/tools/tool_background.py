@@ -1414,6 +1414,27 @@ def _tool_bg_persist_when_should_not_push(
         )
 
 
+def _tool_bg_log_deliver_user_output_debug(
+    *,
+    run_ctx: _ToolBgLoopRunContext,
+    plan: ToolBgDeliveryPlan,
+    assistant_msg_uuid: str,
+) -> None:
+    logger.debug(
+        "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
+        "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
+        run_ctx.trace_id,
+        run_ctx.user_msg_uuid,
+        assistant_msg_uuid,
+        plan.generation_deliver,
+        plan.output_to_user_flag,
+        plan.deliver_output_to_user,
+        len(plan.display_text.strip()),
+        len(plan.transcript_body),
+        len(plan.image_paths),
+    )
+
+
 def _tool_bg_persist_and_emit_user_delivery(
     *,
     run_ctx: _ToolBgLoopRunContext,
@@ -1434,18 +1455,10 @@ def _tool_bg_persist_and_emit_user_delivery(
         total_tool_calls=progress.total_tool_calls,
         image_paths=plan.image_paths,
     )
-    logger.debug(
-        "repl.turn.bg deliver trace_id={} user_msg_uuid={} assistant_msg_uuid={} "
-        "generation_deliver={} output_to_user={} nl_chars={} transcript_chars={} image_paths_n={}",
-        run_ctx.trace_id,
-        run_ctx.user_msg_uuid,
-        assistant_msg_uuid,
-        plan.generation_deliver,
-        plan.output_to_user_flag,
-        plan.deliver_output_to_user,
-        len(plan.display_text.strip()),
-        len(plan.transcript_body),
-        len(plan.image_paths),
+    _tool_bg_log_deliver_user_output_debug(
+        run_ctx=run_ctx,
+        plan=plan,
+        assistant_msg_uuid=assistant_msg_uuid,
     )
     _emit_tool_bg_delivery_event(
         on_event=run_ctx.on_event,
@@ -1765,29 +1778,20 @@ def _tool_bg_kickoff_from_initial_response(
     )
 
 
-async def _tool_bg_kickoff_loop_run(
+async def _tool_bg_kickoff_prepare_and_fetch_initial(
     *,
     memory_store: MemoryStore,
     request_messages: list[dict[str, Any]],
     client: Any,
     force_tools_first_round: bool,
     config: _ToolBgKickoffLoopConfig,
-) -> _ToolBgLoopKickoff | None:
-    if is_tool_background_aborted(config.user_msg_uuid):
-        logger.debug(
-            "repl.turn.bg skip aborted before start trace_id={} user_msg_uuid={}",
-            config.trace_id,
-            config.user_msg_uuid,
-        )
-        return None
-
+) -> tuple[_ToolBgKickoffSession, Any] | None:
     session = _tool_bg_prepare_kickoff_session(
         memory_store=memory_store,
         request_messages=request_messages,
         client=client,
         companion_turn_track=config.companion_turn_track,
     )
-
     initial_fetch = await _fetch_tool_bg_initial_completion(
         resolved_client=session.resolved_client,
         chat_completion_sync=config.chat_completion_sync,
@@ -1805,6 +1809,35 @@ async def _tool_bg_kickoff_loop_run(
     if initial_fetch is None:
         return None
     initial_response, _initial_meta, _request_snapshot = initial_fetch
+    return session, initial_response
+
+
+async def _tool_bg_kickoff_loop_run(
+    *,
+    memory_store: MemoryStore,
+    request_messages: list[dict[str, Any]],
+    client: Any,
+    force_tools_first_round: bool,
+    config: _ToolBgKickoffLoopConfig,
+) -> _ToolBgLoopKickoff | None:
+    if is_tool_background_aborted(config.user_msg_uuid):
+        logger.debug(
+            "repl.turn.bg skip aborted before start trace_id={} user_msg_uuid={}",
+            config.trace_id,
+            config.user_msg_uuid,
+        )
+        return None
+
+    prepared = await _tool_bg_kickoff_prepare_and_fetch_initial(
+        memory_store=memory_store,
+        request_messages=request_messages,
+        client=client,
+        force_tools_first_round=force_tools_first_round,
+        config=config,
+    )
+    if prepared is None:
+        return None
+    session, initial_response = prepared
 
     return _tool_bg_kickoff_from_initial_response(
         session=session,

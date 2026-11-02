@@ -116,8 +116,8 @@ def _append_inner_tick_proactive_settled_contextual(
         out.append(_system_message(ctx.proactive_life_currents_block))
 
 
-def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
-    """Sole contextual-category orchestrator for all production tracks."""
+def _contextual_slices_for_track(ctx: TurnComposeContext) -> list[dict[str, Any]]:
+    """Track/phase-specific contextual slices before operator guidance."""
     out: list[dict[str, Any]] = []
     match ctx.track:
         case (
@@ -148,6 +148,12 @@ def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
             raise AssertionError(
                 f"assemble_contextual_slices unsupported track={unexpected!r}"
             )
+    return out
+
+
+def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
+    """Sole contextual-category orchestrator for all production tracks."""
+    out = _contextual_slices_for_track(ctx)
     out.extend(
         _about_operator_guidance_system_messages(
             ctx.bundle,

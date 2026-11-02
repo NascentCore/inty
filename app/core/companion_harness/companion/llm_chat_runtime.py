@@ -629,6 +629,34 @@ def _sync_langsmith_parent_run_after_end(
     th_name: str,
     had_error: bool,
 ) -> None:
+    if not _patch_langsmith_parent_run_after_end_or_post(
+        root_run,
+        ls_end_source=ls_end_source,
+        ls_tid=ls_tid,
+        ls_rid=ls_rid,
+        th_name=th_name,
+    ):
+        return
+    logger.debug(
+        "langsmith_companion_parent_run end_synced ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        th_name,
+        ls_tid,
+        ls_rid,
+        had_error,
+    )
+
+
+def _patch_langsmith_parent_run_after_end_or_post(
+    root_run: Any,
+    *,
+    ls_end_source: str,
+    ls_tid: str,
+    ls_rid: str,
+    th_name: str,
+) -> bool:
+    """Patch LangSmith parent run after ``end``; fall back to ``post``. Returns False if sync aborts."""
     try:
         root_run.patch(exclude_inputs=True)
     except Exception as exc:
@@ -654,17 +682,9 @@ def _sync_langsmith_parent_run_after_end(
                 exc2,
             )
             _unregister_open_langsmith_parent_run(root_run)
-            return
+            return False
     _unregister_open_langsmith_parent_run(root_run)
-    logger.debug(
-        "langsmith_companion_parent_run end_synced ls_end_source={!r} thread={} "
-        "ls_trace_id={} ls_run_id={} has_error={}",
-        ls_end_source,
-        th_name,
-        ls_tid,
-        ls_rid,
-        had_error,
-    )
+    return True
 
 
 def end_companion_turn_root_run_safe(

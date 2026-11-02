@@ -195,6 +195,31 @@ def log_and_build_inference_error(
     return companion_llm_inference_backend_error_from_openai(exc)
 
 
+def _companion_llm_error_for_missing_choices(
+    *,
+    model: str,
+    err_raw: Any,
+) -> CompanionLLMInferenceBackendError:
+    http_status, msg_tail = _provider_http_status_from_chat_completion_error_body(
+        err_raw
+    )
+    logger.warning(
+        "companion chat.completions missing choices model={} raw_error_code={} error_message={!r}",
+        model,
+        http_status,
+        msg_tail,
+    )
+    msg_en = (
+        _client_message_for_provider_status(http_status)
+        if http_status is not None
+        else _MSG_PROVIDER_GENERIC
+    )
+    return CompanionLLMInferenceBackendError(
+        client_message_en=msg_en,
+        provider_http_status=http_status,
+    )
+
+
 def raise_if_chat_completion_missing_choices(resp: Any, *, model: str) -> None:
     """Raise when ``choices`` is missing, null, or an empty list.
 
@@ -214,23 +239,4 @@ def raise_if_chat_completion_missing_choices(resp: Any, *, model: str) -> None:
         return
 
     err_raw = getattr(resp, "error", None)
-    http_status, msg_tail = _provider_http_status_from_chat_completion_error_body(
-        err_raw
-    )
-
-    logger.warning(
-        "companion chat.completions missing choices model={} raw_error_code={} error_message={!r}",
-        model,
-        http_status,
-        msg_tail,
-    )
-
-    msg_en = (
-        _client_message_for_provider_status(http_status)
-        if http_status is not None
-        else _MSG_PROVIDER_GENERIC
-    )
-    raise CompanionLLMInferenceBackendError(
-        client_message_en=msg_en,
-        provider_http_status=http_status,
-    )
+    raise _companion_llm_error_for_missing_choices(model=model, err_raw=err_raw)
