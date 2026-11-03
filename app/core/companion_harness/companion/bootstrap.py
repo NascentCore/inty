@@ -167,6 +167,23 @@ def build_interactive_bootstrap_template_reference_parts(
     return blocks
 
 
+def _load_context_json_object_from_store(
+    store: MemoryStore,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Load ``context.json`` as a dict; return ``(data, None)`` or ``(None, error)``."""
+
+    raw_body = store.read_document_if_exists(CONTEXT_JSON_REL)
+    if raw_body is None or not raw_body.strip():
+        return None, "ERROR: missing context.json"
+    try:
+        data: dict[str, Any] = json.loads(raw_body)
+    except json.JSONDecodeError as exc:
+        return None, f"ERROR: invalid context.json: {exc}"
+    if not isinstance(data, dict):
+        return None, "ERROR: context.json must be a JSON object"
+    return data, None
+
+
 def tool_companion_bootstrap_user_interactive_complete(
     store: MemoryStore,
     note: str | None = None,
@@ -178,27 +195,20 @@ def tool_companion_bootstrap_user_interactive_complete(
     ``ERROR`` status string because the LLM tool loop consumes the result text.
     """
 
-    rel = CONTEXT_JSON_REL
-    st = store
-    raw_body = st.read_document_if_exists(rel)
-    if raw_body is None or not raw_body.strip():
-        return "ERROR: missing context.json"
-    try:
-        data: dict[str, Any] = json.loads(raw_body)
-    except json.JSONDecodeError as exc:
-        return f"ERROR: invalid context.json: {exc}"
-    if not isinstance(data, dict):
-        return "ERROR: context.json must be a JSON object"
+    data, err = _load_context_json_object_from_store(store)
+    if err is not None:
+        return err
+    assert data is not None
     data["workspace_bootstrap_user_interactive_completed"] = True
     if note is not None and str(note).strip():
         data["workspace_bootstrap_user_interactive_complete_note"] = str(
             note
         ).strip()[:2000]
     out = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    st.write_document(rel, out)
+    store.write_document(CONTEXT_JSON_REL, out)
     logger.info(
         "companion_bootstrap_user_interactive_complete scope={}",
-        st.scope.registry_key(),
+        store.scope.registry_key(),
     )
     return (
         "OK interactive bootstrap marked complete. IDENTITY / STYLE / USER / MEMORY / SOUL "
@@ -224,24 +234,13 @@ class CompanionSetExperienceProfileToolInput(BaseModel):
     )
 
 
-def tool_companion_set_experience_profile(
-    store: MemoryStore,
+def _experience_profile_persist_payload(
+    data: dict[str, Any],
     tool_input: CompanionSetExperienceProfileToolInput,
-) -> str:
-    """Persist ``experience_directives`` and mapped ``context_mode`` in ``context.json``."""
+) -> tuple[dict[str, Any], str, ExperienceDirectives]:
+    """Merge experience profile tool input into context JSON; return body, prior mode, directives."""
 
     normalized = context_mode_for_session_intent(tool_input.experience_intent)
-    rel_ctx = CONTEXT_JSON_REL
-    st = store
-    raw_body = st.read_document_if_exists(rel_ctx)
-    if raw_body is None or not str(raw_body).strip():
-        return "ERROR: missing context.json"
-    try:
-        data: dict[str, Any] = json.loads(raw_body)
-    except json.JSONDecodeError as exc:
-        return f"ERROR: invalid context.json: {exc}"
-    if not isinstance(data, dict):
-        return "ERROR: context.json must be a JSON object"
     previous = str(data.get("context_mode", "")).strip() or "(unset)"
     existing_directives = ExperienceDirectives.model_validate(
         data.get("experience_directives") or {}
@@ -264,16 +263,14 @@ def tool_companion_set_experience_profile(
     persisted = updated.model_dump(mode="json")
     # Audit note only; not part of ContextMeta (ephemeral tool rationale).
     persisted["experience_change_note"] = tool_input.note.strip()[:2000]
-    out = json.dumps(persisted, indent=2, ensure_ascii=False) + "\n"
-    st.write_document(rel_ctx, out)
-    logger.info(
-        "companion_set_experience_profile scope={} {} -> {} intent={} tone={}",
-        st.scope.registry_key(),
-        previous,
-        normalized,
-        tool_input.experience_intent.value,
-        directives.tone.value if directives.tone is not None else None,
-    )
+    return persisted, previous, directives
+
+
+def _experience_profile_tool_ok_message(
+    tool_input: CompanionSetExperienceProfileToolInput,
+    normalized: str,
+    previous: str,
+) -> str:
     tone_suffix = ""
     if tool_input.tone is not None:
         tone_suffix = f"; experience_directives.tone={tool_input.tone.value!r}"
@@ -282,6 +279,33 @@ def tool_companion_set_experience_profile(
         f"(context_mode {normalized!r}, previous {previous!r}){tone_suffix}; "
         "applies starting the next companion turn."
     )
+
+
+def tool_companion_set_experience_profile(
+    store: MemoryStore,
+    tool_input: CompanionSetExperienceProfileToolInput,
+) -> str:
+    """Persist ``experience_directives`` and mapped ``context_mode`` in ``context.json``."""
+
+    data, err = _load_context_json_object_from_store(store)
+    if err is not None:
+        return err
+    assert data is not None
+    persisted, previous, directives = _experience_profile_persist_payload(
+        data, tool_input
+    )
+    normalized = str(persisted.get("context_mode", "")).strip()
+    out = json.dumps(persisted, indent=2, ensure_ascii=False) + "\n"
+    store.write_document(CONTEXT_JSON_REL, out)
+    logger.info(
+        "companion_set_experience_profile scope={} {} -> {} intent={} tone={}",
+        store.scope.registry_key(),
+        previous,
+        normalized,
+        tool_input.experience_intent.value,
+        directives.tone.value if directives.tone is not None else None,
+    )
+    return _experience_profile_tool_ok_message(tool_input, normalized, previous)
 
 
 class CompanionRecordUserProfileToolInput(BaseModel):
