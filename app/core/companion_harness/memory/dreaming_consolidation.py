@@ -825,6 +825,28 @@ def _run_dreaming_sequential_curation_phases(
     return any_curation
 
 
+def _prepare_dreaming_sequential_consolidation(
+    store: MemoryStore,
+    rows: list[ChatMessage],
+) -> tuple[str, dict[str, list[ChatMessage]], str, float]:
+    """Build transcript block and log consolidation start; returns ``t_all`` for elapsed ms."""
+    assert rows
+    t_all = time.perf_counter()
+    ws = store.scope.registry_key()
+    rows_by_day, transcript_block = _dreaming_transcript_block_from_rows(
+        store, rows
+    )
+    # TODO(dreaming-day-rollup): append LIFE_CURRENTS.md body per day in — #3376
+    # rows_by_day before memory/user/style/soul curator steps (#3376).
+    logger.info(
+        "dreaming_consolidation start ws={} rows={} chars={}",
+        ws,
+        len(rows),
+        len(transcript_block),
+    )
+    return ws, rows_by_day, transcript_block, t_all
+
+
 def _consolidate_memory_sequential(
     store: MemoryStore,
     rows: list[ChatMessage],
@@ -839,19 +861,8 @@ def _consolidate_memory_sequential(
     ``LIFE_CURRENTS.md`` per candidate day into curator prompts (#3376).
     ai_private manifest hydrate + unconsumed section: partial #3420.
     """
-    assert rows
-    t_all = time.perf_counter()
-    ws = store.scope.registry_key()
-    rows_by_day, transcript_block = _dreaming_transcript_block_from_rows(
-        store, rows
-    )
-    # TODO(dreaming-day-rollup): append LIFE_CURRENTS.md body per day in — #3376
-    # rows_by_day before memory/user/style/soul curator steps (#3376).
-    logger.info(
-        "dreaming_consolidation start ws={} rows={} chars={}",
-        ws,
-        len(rows),
-        len(transcript_block),
+    ws, rows_by_day, transcript_block, t_all = (
+        _prepare_dreaming_sequential_consolidation(store, rows)
     )
 
     any_curation = _run_dreaming_sequential_curation_phases(

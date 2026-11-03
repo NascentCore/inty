@@ -193,6 +193,25 @@ def _record_image_asset(
     )
 
 
+async def _await_z_image_turbo_call_results(maybe_results: Any) -> list[Any]:
+    if asyncio.iscoroutine(maybe_results):
+        return await maybe_results
+    return maybe_results
+
+
+def _generate_image_tool_success_message(
+    *,
+    prompt: str,
+    image_count: int,
+) -> str:
+    blocks = [
+        f"Image prompt:\n{_prompt_for_tool_display(prompt)}",
+        _success_tool_banner_compact("generate_image"),
+        f"Generated {image_count} image(s).",
+    ]
+    return "\n\n".join(blocks)
+
+
 async def run_generate_image_z_image_turbo(
     store: MemoryStore,
     *,
@@ -215,15 +234,11 @@ async def run_generate_image_z_image_turbo(
     maybe_results = _z_image_turbo_call(
         z_in, gcs_base, skip_gcs_upload=skip_gcs
     )
-    if asyncio.iscoroutine(maybe_results):
-        results = await maybe_results
-    else:
-        results = maybe_results
+    results = await _await_z_image_turbo_call_results(maybe_results)
 
     if not results:
         return "ERROR: Fal z-image-turbo returned no images."
 
-    n = len(results)
     for item in results:
         _record_image_asset(
             store,
@@ -232,12 +247,10 @@ async def run_generate_image_z_image_turbo(
             persona_revision_id=persona_revision_id,
         )
 
-    blocks = [
-        f"Image prompt:\n{_prompt_for_tool_display(prompt)}",
-        _success_tool_banner_compact("generate_image"),
-        f"Generated {n} image(s).",
-    ]
-    return "\n\n".join(blocks)
+    return _generate_image_tool_success_message(
+        prompt=prompt,
+        image_count=len(results),
+    )
 
 
 @dataclass(frozen=True)

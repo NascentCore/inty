@@ -270,17 +270,9 @@ def _in_turn_tool_round_content_contract_zh() -> str:
     )
 
 
-def _output_contract_text_with_tools(
-    *,
-    tool_side_compact: bool = False,
-) -> str:
-    # TODO(#3470): Interim lines during bootstrap writes should sound like chatting
-    # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
-    base = (
-        "输出与工具："
-        + _in_turn_tool_round_content_contract_zh()
-        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
-        + "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
+def _output_contract_profile_and_schedule_clauses_zh() -> str:
+    return (
+        "（1）用户自愿透露、适合长期保存的基本事实（含闲聊中的小细节），"
         "应及时调用 update_user_md 写入 USER 档案，避免只记在当轮回复里；"
         "IDENTITY.md / STYLE.md 中值得长期保留的相处约定，在用户明确表达或反复出现时，"
         "用 memory_store_read_document 读全文后再 memory_store_write_document 更新；"
@@ -292,6 +284,11 @@ def _output_contract_text_with_tools(
         "使下一轮加载到新约定；涉及**能否做到某类事**（客观可行性）时须与 IDENTITY、SOUL 约定文档中已持久化的边界与约束一致，避免自相矛盾；"
         "若因部署或通道能力变化需补充客观边界，应通过上述约定文档更新，先用 memory_store_read_document 读全文再 memory_store_write_document 覆盖。"
         "REPL 仅允许覆盖会话档案根路径（路径工具所指根）下的约定文档（见工具说明），勿改 transcript 等运行时文件。"
+    )
+
+
+def _output_contract_memorystore_verification_clauses_zh() -> str:
+    return (
         "（3）核对持久化约定、记忆规则或控制面设置时，优先使用 memory_store_read_document；"
         "**不要**为日常闲聊或无核验目的调用 memory_store_list_paths 列举根目录；"
         "仅在即将 read/write 某路径且不确定同层有哪些名称、用户明确询问某路径或目录是否存在、或须核对本回合 system 未给出的全文（含 transcript.jsonl / transcript_inner_tick.jsonl）时"
@@ -301,12 +298,33 @@ def _output_contract_text_with_tools(
         "必须先调用 memory_store_read_document，或在确有列举必要时 memory_store_list_paths，取得依据后再作答；**禁止**仅凭对话记忆、"
         "想象或「内部读取」叙事来报具体数字或断言文档内容。"
         "在尚未完成上述工具调用前，不要声称已检查持久化内容或已与档案同步。"
+    )
+
+
+def _output_contract_search_and_implementation_clauses_zh() -> str:
+    return (
         "（5）当用户需要**实时或可核验的公开信息**（新闻、股价、赛事、政策法规、可引用的公开资料等），"
         "且持久化约定文档与当前对话无法提供依据时，须先调用 google_web_search 再作答；"
         "未读到工具返回前不得编造检索结果、链接或摘要。"
         "（6）当用户询问**当前所用模型、调用参数、上下文窗口、真实注入的 system/对话栈**或与实现细节相关、"
         "且需要可核验的事实时，**禁止**编造与实现不符的技术说法（例如错误描述模型族系、温度或未发生的调用方式）；"
         "仅可依据当前可见上下文或已执行工具返回作答，无法核验时如实说明不确定。"
+    )
+
+
+def _output_contract_text_with_tools(
+    *,
+    tool_side_compact: bool = False,
+) -> str:
+    # TODO(#3470): Interim lines during bootstrap writes should sound like chatting
+    # while working, not repeated「我在记档案 / 已上线」status; trace 019ed445-8195-7b93-bbf4-c23dd5b8ebf4.
+    base = (
+        "输出与工具："
+        + _in_turn_tool_round_content_contract_zh()
+        + _MEMORYSTORE_PATH_TOOLS_INTRO_ZH
+        + _output_contract_profile_and_schedule_clauses_zh()
+        + _output_contract_memorystore_verification_clauses_zh()
+        + _output_contract_search_and_implementation_clauses_zh()
     )
     base += _repl_tool_contract_image_generation_clause()
     base += _repl_tool_contract_suffix_after_image_clause(

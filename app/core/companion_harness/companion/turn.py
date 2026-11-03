@@ -1136,16 +1136,12 @@ async def _run_companion_turn_agentic_phase(
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
 
-def _companion_turn_result_from_outcome(
+def _log_companion_turn_done_from_outcome(
     *,
     prepared: _CompanionTurnPrepared,
     loop_outcome: _CompanionTurnAgenticLoopOutcome,
-    assistant_msg_uuid: str,
     t0: float,
-) -> CompanionTurnResult:
-    implicit_sign_on_turn = prepared.runtime_flags.implicit_sign_on_turn
-    inner_tick_turn = prepared.runtime_flags.inner_tick_turn
-    route_inner_activity = prepared.runtime_flags.route_inner_activity
+) -> None:
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "
         "langsmith_trace_id={} langsmith_run_id={}",
@@ -1156,11 +1152,31 @@ def _companion_turn_result_from_outcome(
         loop_outcome.langsmith_trace_id or "",
         loop_outcome.langsmith_run_id or "",
     )
-    transcript_user_content = (
-        USER_SIGNED_ON_TRIGGER_USER_TEXT
-        if implicit_sign_on_turn
-        else "\n".join(message.text for message in prepared.tail_user_messages)
+
+
+def _transcript_user_content_for_turn_result(
+    prepared: _CompanionTurnPrepared,
+) -> str:
+    if prepared.runtime_flags.implicit_sign_on_turn:
+        return USER_SIGNED_ON_TRIGGER_USER_TEXT
+    return "\n".join(message.text for message in prepared.tail_user_messages)
+
+
+def _companion_turn_result_from_outcome(
+    *,
+    prepared: _CompanionTurnPrepared,
+    loop_outcome: _CompanionTurnAgenticLoopOutcome,
+    assistant_msg_uuid: str,
+    t0: float,
+) -> CompanionTurnResult:
+    inner_tick_turn = prepared.runtime_flags.inner_tick_turn
+    route_inner_activity = prepared.runtime_flags.route_inner_activity
+    _log_companion_turn_done_from_outcome(
+        prepared=prepared,
+        loop_outcome=loop_outcome,
+        t0=t0,
     )
+    transcript_user_content = _transcript_user_content_for_turn_result(prepared)
     return CompanionTurnResult(
         assistant_text=loop_outcome.assistant_text,
         significance_perception=loop_outcome.significance_meta,

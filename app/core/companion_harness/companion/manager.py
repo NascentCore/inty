@@ -177,6 +177,28 @@ def _bootstrap_companion_memory_store(store: MemoryStore) -> None:
     # TODO(#3471): ensure_token_budget_seeded(store, initial_budget=...) on session init (#3476 deferred).
 
 
+def _materialize_companion_session_store(
+    scope: CompanionScope,
+    *,
+    memory_pg_dsn: str,
+    user_id: str,
+    companion_id: str,
+    chat_id: str,
+) -> MemoryStore:
+    """Open MemoryStore for one scope and ensure default context + bootstrap seeds."""
+    store = get_memory_store(scope, dsn=memory_pg_dsn)
+    existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
+    if _companion_session_context_write_full(existing_ctx):
+        _write_companion_default_context_json(
+            store,
+            user_id=user_id,
+            companion_id=companion_id,
+            chat_id=chat_id,
+        )
+    _bootstrap_companion_memory_store(store)
+    return store
+
+
 class CompanionManager:
     """管理所有活跃 companion session 的生命周期。
 
@@ -214,19 +236,16 @@ class CompanionManager:
                 return existing
 
             scope = CompanionScope(user_id, companion_id, chat_id)
-            if not (self._config.memory_pg_dsn or "").strip():
+            memory_pg_dsn = (self._config.memory_pg_dsn or "").strip()
+            if not memory_pg_dsn:
                 raise ValueError(MEMORY_STORE_REGISTRY_REQUIRES_DSN)
-            store = get_memory_store(scope, dsn=self._config.memory_pg_dsn)
-
-            existing_ctx = store.read_document_if_exists(CONTEXT_JSON_REL)
-            if _companion_session_context_write_full(existing_ctx):
-                _write_companion_default_context_json(
-                    store,
-                    user_id=user_id,
-                    companion_id=companion_id,
-                    chat_id=chat_id,
-                )
-            _bootstrap_companion_memory_store(store)
+            store = _materialize_companion_session_store(
+                scope,
+                memory_pg_dsn=memory_pg_dsn,
+                user_id=user_id,
+                companion_id=companion_id,
+                chat_id=chat_id,
+            )
 
             session = CompanionSession(
                 scope=scope,

@@ -163,6 +163,44 @@ def due_scheduled_task(mem_store: MemoryStore) -> ScheduleTask | None:
     return next_due_task_for_execution(mem_store)
 
 
+async def _kernel_run_scheduled_inner_tick_turn(
+    kernel_input: InnerTickKernelInput,
+    *,
+    synthetic_user_text: str,
+) -> CompanionTurnResult:
+    return await kernel_input.manager.run_inner_tick_scheduled_turn(
+        kernel_input.session,
+        synthetic_user_text,
+        preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
+        runtime_context=kernel_input.runtime_context,
+        agentic_output_queue=kernel_input.agentic_output_queue,
+    )
+
+
+def _kernel_scheduled_result_after_turn(
+    *,
+    companion_turn: CompanionTurnResult,
+    due_task: ScheduleTask,
+    mem_store: MemoryStore,
+    synthetic_user_text: str,
+) -> InnerTickKernelResult | None:
+    reply_stripped = str(companion_turn.assistant_text or "").strip()
+    if not reply_stripped:
+        mark_task_retry(
+            mem_store, due_task.id, "empty assistant reply"
+        )
+        return None
+    mark_task_fired(mem_store, due_task.id)
+    return InnerTickKernelResult(
+        turn=companion_turn,
+        track_path="inner_tick_scheduled",
+        transcript_user_text=synthetic_user_text,
+        scheduled_task_id=due_task.id,
+        throttle_line_count=None,
+        throttle_kind=None,
+    )
+
+
 async def kernel_fire_scheduled(
     kernel_input: InnerTickKernelInput,
     due_task: ScheduleTask,
@@ -173,35 +211,20 @@ async def kernel_fire_scheduled(
         exec_time_utc=due_task.exec_time_utc,
     )
     try:
-        companion_turn = (
-            await kernel_input.manager.run_inner_tick_scheduled_turn(
-                kernel_input.session,
-                synthetic_user_text,
-                preset_user_msg_uuid=kernel_input.preset_user_msg_uuid,
-                runtime_context=kernel_input.runtime_context,
-                agentic_output_queue=kernel_input.agentic_output_queue,
-            )
+        companion_turn = await _kernel_run_scheduled_inner_tick_turn(
+            kernel_input,
+            synthetic_user_text=synthetic_user_text,
         )
     except Exception as exc:
         if not getattr(exc, "companion_tool_background_started", False):
             mark_task_retry(kernel_input.mem_store, due_task.id, str(exc))
         raise
 
-    reply_stripped = str(companion_turn.assistant_text or "").strip()
-    if not reply_stripped:
-        mark_task_retry(
-            kernel_input.mem_store, due_task.id, "empty assistant reply"
-        )
-        return None
-
-    mark_task_fired(kernel_input.mem_store, due_task.id)
-    return InnerTickKernelResult(
-        turn=companion_turn,
-        track_path="inner_tick_scheduled",
-        transcript_user_text=synthetic_user_text,
-        scheduled_task_id=due_task.id,
-        throttle_line_count=None,
-        throttle_kind=None,
+    return _kernel_scheduled_result_after_turn(
+        companion_turn=companion_turn,
+        due_task=due_task,
+        mem_store=kernel_input.mem_store,
+        synthetic_user_text=synthetic_user_text,
     )
 
 
