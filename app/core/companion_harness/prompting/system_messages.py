@@ -921,21 +921,26 @@ def append_profile_collection_system_messages(
     return out
 
 
-def _tool_track_static_system_messages(
+def _extend_tool_side_static_system_slices(
+    out: list[dict[str, Any]],
+    *,
     bundle: PromptBundle,
     context: ContextMeta,
-) -> list[dict[str, Any]]:
-    """Doctrine through output slices for tool-background track (before contextual)."""
-    out: list[dict[str, Any]] = []
+    inner_tick_turn: bool,
+    skip_memory_blocks: bool,
+    include_auxiliary: bool,
+) -> None:
+    """Append doctrine→capability→persona→output slices for tool-side static stacks."""
     out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
+    if include_auxiliary:
+        out.extend(_auxiliary_system_messages())
     out.extend(
         _capability_system_messages(
             bundle=bundle,
             tools_on=True,
             chat_branch_no_tool_api=False,
             tool_side_compact=True,
-            inner_tick_turn=False,
+            inner_tick_turn=inner_tick_turn,
             interactive_bootstrap_active=False,
         )
     )
@@ -943,15 +948,15 @@ def _tool_track_static_system_messages(
         _persona_system_messages(
             bundle=bundle,
             context=context,
-            inner_tick_turn=False,
-            skip_memory_blocks=True,
+            inner_tick_turn=inner_tick_turn,
+            skip_memory_blocks=skip_memory_blocks,
             include_significance_perception_slice=False,
             interactive_bootstrap_active=False,
         )
     )
     out.extend(
         _output_system_messages(
-            inner_tick_turn=False,
+            inner_tick_turn=inner_tick_turn,
             tick_proactive=False,
             tools_on=True,
             tool_side_compact=True,
@@ -960,6 +965,22 @@ def _tool_track_static_system_messages(
             include_significance_perception_slice=False,
             chat_branch_no_tool_api=False,
         )
+    )
+
+
+def _tool_track_static_system_messages(
+    bundle: PromptBundle,
+    context: ContextMeta,
+) -> list[dict[str, Any]]:
+    """Doctrine through output slices for tool-background track (before contextual)."""
+    out: list[dict[str, Any]] = []
+    _extend_tool_side_static_system_slices(
+        out,
+        bundle=bundle,
+        context=context,
+        inner_tick_turn=False,
+        skip_memory_blocks=True,
+        include_auxiliary=True,
     )
     return out
 
@@ -996,39 +1017,13 @@ def _inner_tick_monolog_static_system_messages(
 ) -> list[dict[str, Any]]:
     """Doctrine through output slices for INNER_TICK_MONOLOG (before contextual)."""
     out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(_auxiliary_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=True,
-            inner_tick_turn=True,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=True,
-            skip_memory_blocks=False,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=True,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=True,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
+    _extend_tool_side_static_system_slices(
+        out,
+        bundle=bundle,
+        context=context,
+        inner_tick_turn=True,
+        skip_memory_blocks=False,
+        include_auxiliary=True,
     )
     return out
 
@@ -1067,38 +1062,13 @@ def _inner_tick_autonomy_static_system_messages(
 ) -> list[dict[str, Any]]:
     """Doctrine through output slices for INNER_TICK_AUTONOMY (before contextual)."""
     out: list[dict[str, Any]] = []
-    out.extend(_doctrine_system_messages())
-    out.extend(
-        _capability_system_messages(
-            bundle=bundle,
-            tools_on=True,
-            chat_branch_no_tool_api=False,
-            tool_side_compact=True,
-            inner_tick_turn=True,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _persona_system_messages(
-            bundle=bundle,
-            context=context,
-            inner_tick_turn=True,
-            skip_memory_blocks=False,
-            include_significance_perception_slice=False,
-            interactive_bootstrap_active=False,
-        )
-    )
-    out.extend(
-        _output_system_messages(
-            inner_tick_turn=True,
-            tick_proactive=False,
-            tools_on=True,
-            tool_side_compact=True,
-            async_foreground_chat_stack=False,
-            interactive_bootstrap_active=False,
-            include_significance_perception_slice=False,
-            chat_branch_no_tool_api=False,
-        )
+    _extend_tool_side_static_system_slices(
+        out,
+        bundle=bundle,
+        context=context,
+        inner_tick_turn=True,
+        skip_memory_blocks=False,
+        include_auxiliary=False,
     )
     return out
 

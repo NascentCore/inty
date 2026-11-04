@@ -469,6 +469,46 @@ def resolve_user_visible_feedback_display_text(
     )
 
 
+def _persist_github_issue_create_success(
+    store: MemoryStore,
+    *,
+    snapshot: HarnessSnapshot,
+    result: GithubIssueCreateResult,
+) -> GithubIssueCreateResult:
+    append_github_issue_completion(
+        store,
+        feedback_id=snapshot.feedback_id,
+        github_issue_url=result.url,
+        github_issue_number=result.number,
+    )
+    logger.info(
+        "companion_user_feedback github_issue_created feedback_id={} url={}",
+        snapshot.feedback_id,
+        result.url,
+    )
+    return result
+
+
+def _persist_github_issue_create_failure(
+    store: MemoryStore,
+    *,
+    snapshot: HarnessSnapshot,
+    exc: BaseException,
+) -> None:
+    reason = f"github_error:{type(exc).__name__}:{exc}"
+    append_github_issue_skipped(
+        store,
+        feedback_id=snapshot.feedback_id,
+        reason=reason,
+    )
+    logger.warning(
+        "companion_user_feedback github_issue_failed feedback_id={} err={}",
+        snapshot.feedback_id,
+        exc,
+    )
+    raise RuntimeError(reason) from exc
+
+
 def file_github_issue_for_snapshot(
     snapshot: HarnessSnapshot,
     store: MemoryStore,
@@ -487,31 +527,17 @@ def file_github_issue_for_snapshot(
             github_repo=github_repo,
             github_token=github_token,
         )
-        append_github_issue_completion(
-            store,
-            feedback_id=snapshot.feedback_id,
-            github_issue_url=result.url,
-            github_issue_number=result.number,
-        )
-        logger.info(
-            "companion_user_feedback github_issue_created feedback_id={} url={}",
-            snapshot.feedback_id,
-            result.url,
-        )
-        return result
     except Exception as exc:
-        reason = f"github_error:{type(exc).__name__}:{exc}"
-        append_github_issue_skipped(
+        _persist_github_issue_create_failure(
             store,
-            feedback_id=snapshot.feedback_id,
-            reason=reason,
+            snapshot=snapshot,
+            exc=exc,
         )
-        logger.warning(
-            "companion_user_feedback github_issue_failed feedback_id={} err={}",
-            snapshot.feedback_id,
-            exc,
-        )
-        raise RuntimeError(reason) from exc
+    return _persist_github_issue_create_success(
+        store,
+        snapshot=snapshot,
+        result=result,
+    )
 
 
 def _github_issue_worker(

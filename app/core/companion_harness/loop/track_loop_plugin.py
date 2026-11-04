@@ -282,15 +282,16 @@ class _SettledDualLlmOpenAiWire:
     stack_depth: int
 
 
-def _settled_dual_llm_openai_wire(
+def _settled_dual_llm_chat_openai_messages(
     prepared: CompanionTurnLoopInput,
-) -> _SettledDualLlmOpenAiWire:
-    """Build chat/tool wire message tuples and stack depth for dual-LLM user chat."""
+    *,
+    stack_depth: int,
+) -> tuple[dict[str, Any], ...]:
+    """Chat-leg OpenAI messages with dual-LLM system stack swapped in."""
     store = prepared.store
     runtime_context = prepared.runtime_context
     bundle = prepared.loaded_state.bundle
     context = prepared.loaded_state.context
-    # TODO(#3460): Move dual-LLM message-stack assembly into loop/context.py.
     _, chat_system_msgs = dual_llm_system_message_variants(
         store=store,
         bundle=bundle,
@@ -299,12 +300,23 @@ def _settled_dual_llm_openai_wire(
         route_inner_activity=prepared.runtime_flags.route_inner_activity,
         runtime_context=runtime_context,
     )
-    stack_depth = len(prepared.prompt_plan.system_messages)
     chat_msgs = replace_leading_system_messages_multi(
         prepared.messages,
         chat_system_msgs,
         stack_depth=stack_depth,
     )
+    return tuple(chat_msgs)
+
+
+def _settled_dual_llm_tool_openai_messages(
+    prepared: CompanionTurnLoopInput,
+    *,
+    stack_depth: int,
+) -> tuple[dict[str, Any], ...]:
+    """Tool-leg OpenAI messages for settled dual-LLM user chat."""
+    runtime_context = prepared.runtime_context
+    bundle = prepared.loaded_state.bundle
+    context = prepared.loaded_state.context
     dual_llm_prompt_builder = PromptBuilder(
         bundle=bundle,
         context=context,
@@ -315,10 +327,25 @@ def _settled_dual_llm_openai_wire(
         stack_depth=stack_depth,
         tools=tuple(prepared.tools_for_turn),
     )
-    tool_msgs = prompt_messages_to_openai_dicts(tool_plan.messages)
+    return tuple(prompt_messages_to_openai_dicts(tool_plan.messages))
+
+
+def _settled_dual_llm_openai_wire(
+    prepared: CompanionTurnLoopInput,
+) -> _SettledDualLlmOpenAiWire:
+    """Build chat/tool wire message tuples and stack depth for dual-LLM user chat."""
+    stack_depth = len(prepared.prompt_plan.system_messages)
+    chat_msgs = _settled_dual_llm_chat_openai_messages(
+        prepared,
+        stack_depth=stack_depth,
+    )
+    tool_msgs = _settled_dual_llm_tool_openai_messages(
+        prepared,
+        stack_depth=stack_depth,
+    )
     return _SettledDualLlmOpenAiWire(
-        chat_msgs=tuple(chat_msgs),
-        tool_msgs=tuple(tool_msgs),
+        chat_msgs=chat_msgs,
+        tool_msgs=tool_msgs,
         stack_depth=stack_depth,
     )
 
