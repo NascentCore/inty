@@ -25,14 +25,6 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     context_mode_for_session_intent,
     repair_context_json_dict,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
-
-from .utc import local_date_str
-from app.core.companion_harness.memory.memory_store_scope import (
-    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
-    ensure_template_seeded_core_documents_in_store,
-    load_template_seed_text,
-)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     CHANNELS_MD_REL,
@@ -40,18 +32,24 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
     HARNESS_MD_REL,
     IDENTITY_MD_REL,
-    LIVING_SPHERE_MD_REL,
     MEMORY_MD_REL,
     OUTPUT_FORMAT_IM_DM_MD_REL,
     SIGNIFICANCE_PERCEPTION_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TECHNO_CORE_MD_REL,
     TOOLS_MD_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    ensure_template_seeded_core_documents_in_store,
+    load_template_seed_text,
+)
+from app.core.companion_harness.prompting.bundle import PromptBundle
+
+from .utc import local_date_str
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -422,6 +420,7 @@ def load_prompt_bundle(
     day = local_date_str()
     m = meta if meta is not None else ContextMeta()
     inject_private = experience_profile_injects_private_memory(m.context_mode)
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
     daily_md = ""
     memory_long = _read_memory_document_required(store, MEMORY_MD_REL)
@@ -441,10 +440,10 @@ def load_prompt_bundle(
         user_md=_read_memory_document_required(store, USER_MD_REL),
         memory_md=memory_long,
         techno_core_md=_read_memory_document_optional(
-            store, TECHNO_CORE_MD_REL
+            store, paths.techno_core_md
         ),
         living_sphere_md=_read_memory_document_optional(
-            store, LIVING_SPHERE_MD_REL
+            store, paths.living_sphere_md
         ),
         tools_md=_template_doc_truncated(
             TOOLS_MD_REL, max_chars=_OPTIONAL_DOC_MAX_CHARS

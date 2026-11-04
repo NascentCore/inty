@@ -709,6 +709,6 @@ Open PRs checked: #4080 (`cursor/agent-maintenance-tasks-b106`), #4077 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov4-572`)
 
-- [ ] **HYGIENE-2026-572** #3413: `memory/living_sphere_curator.py` — compact read/write ``LIVING_SPHERE.md`` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_md`. Claimed in `cursor/agent-maintenance-tasks-nov4-572`.
-- [ ] **HYGIENE-2026-573** #3413: `companion/models.py` — `load_prompt_bundle_from_store` TechnoCore slice via scope `techno_core_md`. Claimed in `cursor/agent-maintenance-tasks-nov4-572`.
-- [ ] **HYGIENE-2026-574** #3413: `companion/models.py` — `load_prompt_bundle_from_store` LivingSphere slice via scope `living_sphere_md`. Claimed in `cursor/agent-maintenance-tasks-nov4-572`.
+- [x] **HYGIENE-2026-572** #3413: `memory/living_sphere_curator.py` — compact read/write ``LIVING_SPHERE.md`` via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.living_sphere_md`. Fixed in `cursor/agent-maintenance-tasks-nov4-572`.
+- [x] **HYGIENE-2026-573** #3413: `companion/models.py` — `load_prompt_bundle_from_store` TechnoCore slice via scope `techno_core_md`. Fixed in `cursor/agent-maintenance-tasks-nov4-572`.
+- [x] **HYGIENE-2026-574** #3413: `companion/models.py` — `load_prompt_bundle_from_store` LivingSphere slice via scope `living_sphere_md`. Fixed in `cursor/agent-maintenance-tasks-nov4-572`.
