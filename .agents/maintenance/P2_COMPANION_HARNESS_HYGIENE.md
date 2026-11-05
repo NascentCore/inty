@@ -700,3 +700,16 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-05 scan (cron)
+
+Source: open PR overlap check (#4083 HYGIENE-572..574 LivingSphere curator + optional prompt slices — no overlap); ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean on `app/core/companion_harness/`; #3413 follow-up — `load_prompt_bundle` core persona MemDoc reads and `read_web_page` MEMORY append still use direct ``*_MD_REL`` constants.
+
+Open PRs checked: #4083 (`cursor/agent-maintenance-tasks-nov4-572`), #4080 (`cursor/agent-maintenance-tasks-b106`), #4084 (`cursor/stale-companion-harness-legacy-bridge-20261105`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov5-575`)
+
+- [ ] **HYGIENE-2026-575** #3413: `companion/models.py` — `load_prompt_bundle` identity + soul via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity` / `.soul`.
+- [ ] **HYGIENE-2026-576** #3413: `companion/models.py` — `load_prompt_bundle` style + user + semantic memory via scope `.style_md` / `.user_md` / `.memory_md`.
+- [ ] **HYGIENE-2026-577** #3413: `companion/models.py` — `load_prompt_bundle` channels + companionship via scope `.channels_md` / `.companionship_md`.
+- [ ] **HYGIENE-2026-578** #3413: `tools/read_web_page.py` — MEMORY.md read/append via scope `.memory_md`.
