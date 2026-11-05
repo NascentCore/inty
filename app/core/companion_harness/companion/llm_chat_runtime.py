@@ -687,6 +687,25 @@ def _patch_langsmith_parent_run_after_end_or_post(
     return True
 
 
+def _log_langsmith_companion_parent_run_end_start(
+    *,
+    ls_end_source: str,
+    ls_tid: str,
+    ls_rid: str,
+    had_error: bool,
+) -> None:
+    """Debug breadcrumb before ending a companion-turn LangSmith parent run."""
+    logger.debug(
+        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
+        "ls_trace_id={} ls_run_id={} has_error={}",
+        ls_end_source,
+        threading.current_thread().name,
+        ls_tid,
+        ls_rid,
+        had_error,
+    )
+
+
 def end_companion_turn_root_run_safe(
     root_run: Any,
     *,
@@ -699,14 +718,11 @@ def end_companion_turn_root_run_safe(
     ls_tid = companion_turn_langsmith_parent_trace_id_str(root_run)
     ls_rid = companion_turn_langsmith_parent_run_id_str(root_run)
     th_name = threading.current_thread().name
-    logger.debug(
-        "langsmith_companion_parent_run end_start ls_end_source={!r} thread={} "
-        "ls_trace_id={} ls_run_id={} has_error={}",
-        ls_end_source,
-        th_name,
-        ls_tid,
-        ls_rid,
-        error is not None,
+    _log_langsmith_companion_parent_run_end_start(
+        ls_end_source=ls_end_source,
+        ls_tid=ls_tid,
+        ls_rid=ls_rid,
+        had_error=error is not None,
     )
     try:
         _end_langsmith_parent_run_tree(

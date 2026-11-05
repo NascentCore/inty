@@ -470,6 +470,33 @@ def _rows_by_day(rows: list[ChatMessage]) -> dict[str, list[ChatMessage]]:
     return grouped
 
 
+def _dreaming_one_shot_companionship_body(store: MemoryStore) -> str:
+    """Resolve COMPANIONSHIP.md for curator input, seeding from template when absent."""
+    body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
+    if body is None:
+        return load_template_seed_text(COMPANIONSHIP_MD_REL)
+    return body
+
+
+def _dreaming_one_shot_curator_document_bodies(
+    store: MemoryStore,
+    *,
+    daily_paths: tuple[str, ...],
+    soul_curator_doc: str,
+    companionship_body: str,
+) -> dict[str, str]:
+    """Read fixed-path MemoryDocs referenced by one-shot dreaming curation."""
+    current_bodies = {
+        rel: store.read_document_if_exists(rel) or "" for rel in daily_paths
+    }
+    current_bodies[MEMORY_MD_REL] = store.read_document(MEMORY_MD_REL)
+    current_bodies[USER_MD_REL] = store.read_document(USER_MD_REL)
+    current_bodies[STYLE_MD_REL] = store.read_document(STYLE_MD_REL)
+    current_bodies[SOUL_MD_REL] = soul_curator_doc
+    current_bodies[COMPANIONSHIP_MD_REL] = companionship_body
+    return current_bodies
+
+
 def _build_dreaming_curator_input(
     store: MemoryStore,
     rows: list[ChatMessage],
@@ -482,9 +509,7 @@ def _build_dreaming_curator_input(
     )
     soul_body = store.read_document(SOUL_MD_REL)
     soul_curator_doc, soul_frozen = _split_soul_appearance_section(soul_body)
-    companionship_body = store.read_document_if_exists(COMPANIONSHIP_MD_REL)
-    if companionship_body is None:
-        companionship_body = load_template_seed_text(COMPANIONSHIP_MD_REL)
+    companionship_body = _dreaming_one_shot_companionship_body(store)
     day_blocks = [
         _dreaming_transcript_block(store, day_rows, day_iso=day)
         for day, day_rows in sorted(by_day.items())
@@ -496,14 +521,12 @@ def _build_dreaming_curator_input(
         SOUL_MD_REL,
         COMPANIONSHIP_MD_REL,
     )
-    current_bodies = {
-        rel: store.read_document_if_exists(rel) or "" for rel in daily_paths
-    }
-    current_bodies[MEMORY_MD_REL] = store.read_document(MEMORY_MD_REL)
-    current_bodies[USER_MD_REL] = store.read_document(USER_MD_REL)
-    current_bodies[STYLE_MD_REL] = store.read_document(STYLE_MD_REL)
-    current_bodies[SOUL_MD_REL] = soul_curator_doc
-    current_bodies[COMPANIONSHIP_MD_REL] = companionship_body
+    current_bodies = _dreaming_one_shot_curator_document_bodies(
+        store,
+        daily_paths=daily_paths,
+        soul_curator_doc=soul_curator_doc,
+        companionship_body=companionship_body,
+    )
     return DreamingCuratorInput(
         required_paths=required_paths,
         current_bodies=current_bodies,

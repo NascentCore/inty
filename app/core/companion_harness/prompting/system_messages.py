@@ -788,17 +788,42 @@ def _capability_system_messages(
     return out
 
 
-def _persona_system_messages(
+def _persona_private_memory_system_messages(
     *,
     bundle: PromptBundle,
     context: ContextMeta,
-    inner_tick_turn: bool,
     skip_memory_blocks: bool,
+) -> list[dict[str, Any]]:
+    """Daily gist and semantic memory slices when the experience profile allows."""
+    if skip_memory_blocks:
+        return []
+    if not experience_profile_injects_private_memory(context.context_mode):
+        return []
+    out: list[dict[str, Any]] = []
+    if bundle.memory_daily_today_md.strip():
+        out.append(
+            _system_message(
+                MEMORY_SYSTEM_HEADING_DAILY_GIST
+                + bundle.memory_daily_today_md.strip()
+            )
+        )
+    if bundle.memory_md.strip():
+        out.append(
+            _system_message(
+                MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
+            )
+        )
+    return out
+
+
+def _persona_core_document_system_messages(
+    *,
+    bundle: PromptBundle,
+    inner_tick_turn: bool,
     include_significance_perception_slice: bool,
     interactive_bootstrap_active: bool,
 ) -> list[dict[str, Any]]:
-    # TODO(crs-persona-slice-registry): Registry for persistable persona slices — #3341
-    # (inject order, heading, gate) instead of per-doc conditionals — #3367 / #3343.
+    """Identity through user.md slices before optional private-memory blocks."""
     out: list[dict[str, Any]] = [
         _system_message(bundle.identity.strip()),
         _system_message(bundle.soul.strip()),
@@ -819,21 +844,65 @@ def _persona_system_messages(
     out.append(_system_message(bundle.user_md.strip()))
     if include_significance_perception_slice and not inner_tick_turn:
         out.append(_system_message(bundle.significance_perception_md.strip()))
-    if experience_profile_injects_private_memory(context.context_mode):
-        if not skip_memory_blocks and bundle.memory_daily_today_md.strip():
-            out.append(
-                _system_message(
-                    MEMORY_SYSTEM_HEADING_DAILY_GIST
-                    + bundle.memory_daily_today_md.strip()
-                )
-            )
-        if not skip_memory_blocks and bundle.memory_md.strip():
-            out.append(
-                _system_message(
-                    MEMORY_SYSTEM_HEADING_SEMANTIC + bundle.memory_md.strip()
-                )
-            )
     return out
+
+
+def _persona_system_messages(
+    *,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    inner_tick_turn: bool,
+    skip_memory_blocks: bool,
+    include_significance_perception_slice: bool,
+    interactive_bootstrap_active: bool,
+) -> list[dict[str, Any]]:
+    # TODO(crs-persona-slice-registry): Registry for persistable persona slices — #3341
+    # (inject order, heading, gate) instead of per-doc conditionals — #3367 / #3343.
+    core = _persona_core_document_system_messages(
+        bundle=bundle,
+        inner_tick_turn=inner_tick_turn,
+        include_significance_perception_slice=include_significance_perception_slice,
+        interactive_bootstrap_active=interactive_bootstrap_active,
+    )
+    memory = _persona_private_memory_system_messages(
+        bundle=bundle,
+        context=context,
+        skip_memory_blocks=skip_memory_blocks,
+    )
+    return [*core, *memory]
+
+
+def _output_contract_text_for_stack_flags(
+    *,
+    inner_tick_turn: bool,
+    tick_proactive: bool,
+    tools_on: bool,
+    tool_side_compact: bool,
+    async_foreground_chat_stack: bool,
+    interactive_bootstrap_active: bool,
+) -> str:
+    """Pick the primary output-contract body for one static system stack."""
+    match (
+        inner_tick_turn,
+        tick_proactive,
+        tools_on,
+        async_foreground_chat_stack,
+        interactive_bootstrap_active,
+    ):
+        case (True, True, _, _, _):
+            return _output_contract_text()
+        case (True, False, _, _, _):
+            return _output_contract_text_inner_tick()
+        case (False, _, True, True, _):
+            return _output_contract_text_chat_branch_mirrored_tools()
+        case (False, _, True, False, True):
+            return _output_contract_text_interactive_bootstrap_tools()
+        case (False, _, True, False, False):
+            return _output_contract_text_with_tools(
+                tool_side_compact=tool_side_compact,
+            )
+        case _:
+            return _output_contract_text()
 
 
 def _output_system_messages(
@@ -847,36 +916,15 @@ def _output_system_messages(
     include_significance_perception_slice: bool,
     chat_branch_no_tool_api: bool,
 ) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    if inner_tick_turn:
-        if tick_proactive:
-            out.append(_system_message(_output_contract_text()))
-        else:
-            out.append(_system_message(_output_contract_text_inner_tick()))
-    elif tools_on and not inner_tick_turn:
-        if not async_foreground_chat_stack:
-            if interactive_bootstrap_active:
-                out.append(
-                    _system_message(
-                        _output_contract_text_interactive_bootstrap_tools()
-                    )
-                )
-            else:
-                out.append(
-                    _system_message(
-                        _output_contract_text_with_tools(
-                            tool_side_compact=tool_side_compact,
-                        )
-                    )
-                )
-        else:
-            out.append(
-                _system_message(
-                    _output_contract_text_chat_branch_mirrored_tools()
-                )
-            )
-    else:
-        out.append(_system_message(_output_contract_text()))
+    contract_text = _output_contract_text_for_stack_flags(
+        inner_tick_turn=inner_tick_turn,
+        tick_proactive=tick_proactive,
+        tools_on=tools_on,
+        tool_side_compact=tool_side_compact,
+        async_foreground_chat_stack=async_foreground_chat_stack,
+        interactive_bootstrap_active=interactive_bootstrap_active,
+    )
+    out: list[dict[str, Any]] = [_system_message(contract_text)]
     if include_significance_perception_slice and chat_branch_no_tool_api:
         out.append(
             _system_message(_dual_llm_chat_structured_output_contract_text())
