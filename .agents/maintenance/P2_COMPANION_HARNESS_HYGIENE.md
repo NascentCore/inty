@@ -699,4 +699,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
-- [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-05 scan (cron)
+
+Source: stale/legacy code review guided by `docs/imate/companion_harness/DESIGN.md`; ruff UP017/UP035/UP041/F401/F841 + vulture `--min-confidence 80` clean; track-only compose (#3401) left dead `turn_compose_context_from_legacy_flags` (test-only); `#3413` models `OUTPUT_FORMAT_IM_DM_MD` re-export alias still referenced by one ops test.
+
+Open PRs checked: none open on touched paths.
+
+### Open tasks
+
+- [x] **HYGIENE-2026-182** #3401: remove stale `turn_compose_context_from_legacy_flags` (pre-track `build_system_messages` bool bridge); superseded by `build_turn_compose_context` + `resolve_phase_for_compose`; orphaned `test_legacy_flags_use_track_pinned_bootstrap_phase` (covered by `test_resolve_phase_for_compose_user_chat_bootstrap_pins_bootstrap`).
+- [x] **HYGIENE-2026-183** #3413: drop `OUTPUT_FORMAT_IM_DM_MD` alias from `models.py`; migrate `tests/backend/ops/telegram_channel/test_prompt_stack.py` to `OUTPUT_FORMAT_IM_DM_MD_REL`.
+- [x] **HYGIENE-2026-184** #3375: fix stale module doc in `ai_private_prompt.py` (removed reference to deleted `get_ai_private_text_for_prompt`).
