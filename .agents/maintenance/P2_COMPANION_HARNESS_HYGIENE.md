@@ -709,7 +709,7 @@ Open PRs checked: #4083 (`cursor/agent-maintenance-tasks-nov4-572`), #4080 (`cur
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov5-575`)
 
-- [ ] **HYGIENE-2026-575** #3413: `companion/models.py` — `load_prompt_bundle` identity + soul via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity` / `.soul`.
-- [ ] **HYGIENE-2026-576** #3413: `companion/models.py` — `load_prompt_bundle` style + user + semantic memory via scope `.style_md` / `.user_md` / `.memory_md`.
-- [ ] **HYGIENE-2026-577** #3413: `companion/models.py` — `load_prompt_bundle` channels + companionship via scope `.channels_md` / `.companionship_md`.
-- [ ] **HYGIENE-2026-578** #3413: `tools/read_web_page.py` — MEMORY.md read/append via scope `.memory_md`.
+- [x] **HYGIENE-2026-575** #3413: `companion/models.py` — `load_prompt_bundle` identity + soul via `DEFAULT_MEMORY_STORE_SCOPE_PATHS.identity` / `.soul`. Fixed in `cursor/agent-maintenance-tasks-nov5-575`.
+- [x] **HYGIENE-2026-576** #3413: `companion/models.py` — `load_prompt_bundle` style + user + semantic memory via scope `.style_md` / `.user_md` / `.memory_md`. Fixed in `cursor/agent-maintenance-tasks-nov5-575`.
+- [x] **HYGIENE-2026-577** #3413: `companion/models.py` — `load_prompt_bundle` channels + companionship via scope `.channels_md` / `.companionship_md`. Fixed in `cursor/agent-maintenance-tasks-nov5-575`.
+- [x] **HYGIENE-2026-578** #3413: `tools/read_web_page.py` — MEMORY.md read/append via scope `.memory_md`. Fixed in `cursor/agent-maintenance-tasks-nov5-575`.
