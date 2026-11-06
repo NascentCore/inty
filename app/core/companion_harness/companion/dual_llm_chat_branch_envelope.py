@@ -164,11 +164,11 @@ class DualLlmChatBranchEnvelope(BaseModel):
     @classmethod
     def _coerce_score(cls, v: object) -> int:
         if isinstance(v, bool):
-            raise ValueError("score must not be boolean")
+            raise TypeError("score must not be boolean")
         if isinstance(v, int):
             return v
         if isinstance(v, float):
-            return int(round(v))
+            return round(v)
         if isinstance(v, str) and v.strip().isdigit():
             return int(v.strip())
         raise ValueError("score must be integer 1-10")
