@@ -37,73 +37,41 @@ import threading
 import time
 import uuid
 from contextlib import nullcontext
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from datetime import datetime
 from typing import Any
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
-from app.core.companion_harness.memory.client_time_from_memory_store import (
-    resolve_client_time,
-)
-from app.schemas.implicit_signals import ImplicitSignalBundle
-from .llm_runtime_events import (
-    LlmRuntimeEventBind,
-    companion_llm_runtime_event_bind_ctx,
-)
-from .proactive_chat import build_proactive_chat_transcript_user_marker
-from .transcript_ai_private import (
-    AiPrivateSplicePersistInput,
-    AiPrivateSplicePlan,
-    build_ai_private_splice_plan,
-    persist_ai_private_splice_if_applicable,
-    track_uses_ai_private_splice,
+from app.core.agentic_companion.types import (
+    UserMessageBatch,
+    synthetic_user_message_batch,
+    user_message_batch_is_agent_initiated_synthetic,
 )
 from app.core.companion_harness.companion.bootstrap import (
     interactive_bootstrap_active,
 )
-from .models import (
-    CompanionTurnTrack,
-    CompanionTurnResult,
-    load_context_meta,
-    transcript_relative_path_for_turn_persistence,
+from app.core.companion_harness.loop.config import (
+    resolved_user_turn_batch_messages_llm_call_mode,
 )
+from app.core.companion_harness.loop.context import AgenticLoopOutput
 from app.core.companion_harness.loop.track_loop_input import (
     CompanionTurnLoopInput,
 )
 from app.core.companion_harness.loop.track_loop_plugin import (
     resolve_agentic_loop,
 )
-from app.core.agentic_companion.types import (
-    synthetic_user_message_batch,
-    user_message_batch_is_agent_initiated_synthetic,
+from app.core.companion_harness.memory.client_time_from_memory_store import (
+    resolve_client_time,
 )
-from app.core.companion_harness.loop.config import (
-    resolved_user_turn_batch_messages_llm_call_mode,
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
-from .turn_track import (
-    companion_turn_track_skips_empty_proactive_assistant_row,
-    companion_turn_track_syncs_transcript_in_agentic_loop,
-)
-from .turn_deps import CompanionTurnDeps
-from .turn_pipeline import (
-    build_companion_turn_prompt_plan,
-    load_companion_turn_state,
-    resolve_turn_runtime_flags,
-)
-from .turn_tail_user import (
-    append_turn_track_tail_user_transcript_rows,
-    resolve_turn_tail_user_messages,
-)
-from .transcript_assistant_row import (
-    TranscriptAssistantRowBuildInput,
-    append_transcript_assistant_row,
-)
-from .utc import (
-    strip_leading_transcript_timestamp_prefixes,
-    utc_iso_ts,
-    utc_now,
-)
+from app.core.config import global_config_loaded_from_config_yaml
+from app.core.llms.client import LlmClient
+from app.schemas.implicit_signals import ImplicitSignalBundle
+
 from .implicit_signal_messages import (
     USER_SIGNED_ON_TRIGGER_USER_TEXT,
     implicit_user_signed_on_chat_turn,
@@ -114,8 +82,51 @@ from .llm_chat_runtime import (
     create_companion_turn_root_run,
     end_companion_turn_root_run_safe,
 )
-from app.core.companion_harness.memory.memory_store_scope import (
-    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+from .llm_runtime_events import (
+    LlmRuntimeEventBind,
+    companion_llm_runtime_event_bind_ctx,
+)
+from .models import (
+    CompanionTurnResult,
+    CompanionTurnTrack,
+    ContextMeta,
+    load_context_meta,
+    transcript_relative_path_for_turn_persistence,
+)
+from .proactive_chat import build_proactive_chat_transcript_user_marker
+from .transcript_ai_private import (
+    AiPrivateSplicePersistInput,
+    AiPrivateSplicePlan,
+    build_ai_private_splice_plan,
+    persist_ai_private_splice_if_applicable,
+    track_uses_ai_private_splice,
+)
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
+)
+from .turn_deps import CompanionTurnDeps
+from .turn_pipeline import (
+    CompanionTurnLoadedState,
+    CompanionTurnPromptPlan,
+    CompanionTurnRuntimeFlags,
+    build_companion_turn_prompt_plan,
+    load_companion_turn_state,
+    resolve_turn_runtime_flags,
+)
+from .turn_tail_user import (
+    TurnTailUserMessage,
+    append_turn_track_tail_user_transcript_rows,
+    resolve_turn_tail_user_messages,
+)
+from .turn_track import (
+    companion_turn_track_skips_empty_proactive_assistant_row,
+    companion_turn_track_syncs_transcript_in_agentic_loop,
+)
+from .utc import (
+    strip_leading_transcript_timestamp_prefixes,
+    utc_iso_ts,
+    utc_now,
 )
 
 
@@ -143,34 +154,12 @@ async def _await_tool_background_idle_if_configured(
         )
 
 
-# TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput`` — #3293
-# https://github.com/NascentCore/inty/issues/3293
-# through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
-# or ``"[image]"``); memory pipeline stays text-only. LLM tail content assembled in
-# turn_pipeline when chat model accepts IMAGE input.
-# TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
-async def _run_companion_turn_core(
-    user_text: str,
-    *,
-    track: CompanionTurnTrack,
+def _enrich_runtime_context_client_time(
     deps: CompanionTurnDeps,
-) -> CompanionTurnResult:
-    # TODO(#3473): skip LLM when companion_token_budget_allows_llm is false.
-    """
-    执行一轮完整对话。
-
-    - 加载 context + prompt bundle + transcript
-    - 组装 system prompt + messages
-    - 调用 LLM（经 ``AgenticLoop`` + ``OutputQueue``）
-    - 持久化 transcript
-
-    返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
-    """
-    store = deps.store
-    llm_client = deps.llm_client
-    transcript_compaction = deps.transcript_compaction
-    transcript_llm_window_max_messages = deps.transcript_llm_window_max_messages
-    repository_only_store_text = deps.repository_only_store_text
+    *,
+    store: MemoryStore,
+) -> CompanionTurnDeps:
+    """Resolve ``client_time`` from MemoryStore and attach to ``TurnRuntimeContext`` when known."""
     runtime_context = deps.runtime_context
     incoming_bundle = runtime_context.implicit_signal_bundle
     resolved_time = resolve_client_time(
@@ -182,84 +171,68 @@ async def _run_companion_turn_core(
             global_config_loaded_from_config_yaml.agent.companion_harness.default_user_time_zone
         ),
     )
-    if resolved_time is not None:
-        if incoming_bundle is None:
-            enriched_bundle = ImplicitSignalBundle(client_time=resolved_time)
-        else:
-            enriched_bundle = incoming_bundle.model_copy(
-                update={"client_time": resolved_time}
-            )
-        runtime_context = replace(
-            runtime_context,
-            implicit_signal_bundle=enriched_bundle,
+    if resolved_time is None:
+        return deps
+    if incoming_bundle is None:
+        enriched_bundle = ImplicitSignalBundle(client_time=resolved_time)
+    else:
+        enriched_bundle = incoming_bundle.model_copy(
+            update={"client_time": resolved_time}
         )
-        deps = replace(deps, runtime_context=runtime_context)
-    preset_user_msg_uuid = deps.preset_user_msg_uuid
-    langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled
-    tool_bg_idle_event = deps.tool_bg_idle_event
-    agentic_output_queue = deps.agentic_output_queue
-    user_message_batch = deps.user_message_batch
-    input_batch = deps.input_batch
-    assert agentic_output_queue is not None
-    t0 = time.perf_counter()
-    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
-    implicit_signal_bundle = runtime_context.implicit_signal_bundle
-
-    runtime_flags = resolve_turn_runtime_flags(
-        track=track,
-        user_text=user_text,
-        implicit_signal_bundle=implicit_signal_bundle,
+    runtime_context = replace(
+        runtime_context,
+        implicit_signal_bundle=enriched_bundle,
     )
-    user_text = runtime_flags.effective_user_text
-    tick_proactive = runtime_flags.tick_proactive
-    inner_tick_turn = runtime_flags.inner_tick_turn
-    route_inner_activity = runtime_flags.route_inner_activity
-    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
+    return replace(deps, runtime_context=runtime_context)
 
-    logger.info(
-        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={}",
-        store.scope.registry_key(),
-        track.value,
-        len(user_text),
-        inner_tick_turn,
-        route_inner_activity.value if inner_tick_turn else "-",
-    )
-    logger.debug(
-        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
-        llm_client.config.api_base,
-        llm_client.resolve_model("chat"),
-        llm_client.resolve_model("tool"),
-    )
 
+def _tool_background_idle_wait_timeout_sec(
+    llm_client: LlmClient,
+) -> float:
+    """Seconds to wait for ``tool_bg_idle``; falls back to async chat front timeout from config."""
     raw_idle_timeout = (
         os.environ.get("INTY_TOOL_BG_IDLE_WAIT_TIMEOUT_SEC", "").strip() or ""
     )
     try:
-        idle_wait_timeout_sec = (
+        return (
             float(raw_idle_timeout)
             if raw_idle_timeout
             else float(llm_client.config.async_chat_front_timeout_sec)
         )
     except ValueError:
-        idle_wait_timeout_sec = float(
-            llm_client.config.async_chat_front_timeout_sec
-        )
-    # User/proactive turns skip idle wait so burst USER_CHAT is not starved (#3123 / #3113).
-    # Dreaming / LivingSphere curator still wait on ``tool_bg_idle`` before compact.
-    match track:
-        case (
-            CompanionTurnTrack.USER_CHAT
-            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
-            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-        ):
-            pass
-        case _:
-            await _await_tool_background_idle_if_configured(
-                tool_bg_idle_event,
-                idle_wait_timeout_sec=idle_wait_timeout_sec,
-                scope_registry_key=store.scope.registry_key(),
-            )
+        return float(llm_client.config.async_chat_front_timeout_sec)
+
+
+@dataclass(frozen=True)
+class TurnCorePromptAssembly:
+    """Prompt plan, identity, and tail-user batch for one companion turn (pre-LLM)."""
+
+    user_text: str
+    context: ContextMeta
+    loaded_state: CompanionTurnLoadedState
+    ts_user: datetime
+    user_msg_uuid: str
+    tail_user_messages: tuple[TurnTailUserMessage, ...]
+    user_message_batch: UserMessageBatch | None
+    ai_private_splice_plan: AiPrivateSplicePlan
+    prompt_plan: CompanionTurnPromptPlan
+
+
+def _prepare_companion_turn_prompt_assembly(
+    *,
+    store: MemoryStore,
+    track: CompanionTurnTrack,
+    deps: CompanionTurnDeps,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    transcript_compaction: Any,
+    preset_user_msg_uuid: str | None,
+) -> TurnCorePromptAssembly:
+    tick_proactive = runtime_flags.tick_proactive
+    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
+    transcript_llm_window_max_messages = deps.transcript_llm_window_max_messages
+    user_text = runtime_flags.effective_user_text
+    input_batch = deps.input_batch
+    user_message_batch = deps.user_message_batch
 
     loaded_state = load_companion_turn_state(
         store=store,
@@ -304,12 +277,6 @@ async def _run_companion_turn_core(
             "correlation; direct synthetic batch is not supported (#3466)."
         )
     if track == CompanionTurnTrack.USER_CHAT and user_message_batch is None:
-        # #3466 backup-only: direct (non-InputQueue) settled user chat so
-        # AgenticLoop always has batch correlation; caller delivers from
-        # ``CompanionTurnResult`` while the presence pump skips these rows.
-        # TODO(#3460): replace the ``agent-initiated:`` batch-id prefix with
-        # an explicit direct-turn marker once legacy non-InputQueue callers
-        # are retired.
         user_message_batch = synthetic_user_message_batch(
             user_msg_uuid=user_msg_uuid,
             track_label=track.value,
@@ -321,25 +288,58 @@ async def _run_companion_turn_core(
         track=track,
         tick_proactive=tick_proactive,
         implicit_sign_on_turn=implicit_sign_on_turn,
-        runtime_context=runtime_context,
+        runtime_context=deps.runtime_context,
         transcript_compaction=transcript_compaction,
         tail_splice_thoughts=list(ai_private_splice_plan.thoughts),
     )
+    return TurnCorePromptAssembly(
+        user_text=user_text,
+        context=context,
+        loaded_state=loaded_state,
+        ts_user=ts_user,
+        user_msg_uuid=user_msg_uuid,
+        tail_user_messages=tail_user_messages,
+        user_message_batch=user_message_batch,
+        ai_private_splice_plan=ai_private_splice_plan,
+        prompt_plan=prompt_plan,
+    )
+
+
+async def _run_companion_turn_agentic_loop_phase(
+    *,
+    store: MemoryStore,
+    track: CompanionTurnTrack,
+    llm_client: LlmClient,
+    runtime_flags: CompanionTurnRuntimeFlags,
+    assembly: TurnCorePromptAssembly,
+    deps: CompanionTurnDeps,
+    trace_id: str,
+    langsmith_trace_acc: str,
+    langsmith_llm_run_acc: str,
+    agentic_output_queue: Any,
+    repository_only_store_text: bool,
+) -> tuple[AgenticLoopOutput, bool]:
+    """Run LangSmith parent + ``AgenticLoop``; returns loop output and proactive-skip flag."""
+    inner_tick_turn = runtime_flags.inner_tick_turn
+    route_inner_activity = runtime_flags.route_inner_activity
+    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
+    langsmith_parent_run_enabled = deps.langsmith_parent_run_enabled
+    langsmith_slice = deps.langsmith_slice
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    runtime_context = deps.runtime_context
+
+    context = assembly.context
+    loaded_state = assembly.loaded_state
+    prompt_plan = assembly.prompt_plan
+    tail_user_messages = assembly.tail_user_messages
+    user_message_batch = assembly.user_message_batch
+    ai_private_splice_plan = assembly.ai_private_splice_plan
+    user_text = assembly.user_text
+    ts_user = assembly.ts_user
+    user_msg_uuid = assembly.user_msg_uuid
+
     tools_for_turn = prompt_plan.tools_for_turn
     messages = prompt_plan.messages
-    trace_id = str(uuid.uuid4())
-    langsmith_trace_acc = ""
-    langsmith_llm_run_acc = ""
-
-    last_text = ""
-    skip_proactive_assistant_transcript_row = False
-    significance_meta: dict[str, Any] | None = None
-    turn_recall: str | None = None
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
-    in_turn_sync_persisted_transcript = False
-    output_message_ids: tuple[str, ...] = ()
-    tool_background_started = False
     t_loop = time.perf_counter()
 
     llm_runtime_bind_token: (
@@ -356,8 +356,6 @@ async def _run_companion_turn_core(
                 scene=None,
             )
         )
-
-        langsmith_slice = deps.langsmith_slice
 
         langsmith_parent_run = create_companion_turn_root_run(
             inty_trace_id=trace_id,
@@ -381,8 +379,10 @@ async def _run_companion_turn_core(
         _ls_tid = companion_turn_langsmith_parent_trace_id_str(
             langsmith_parent_run
         )
+        prepared_langsmith_trace_id = langsmith_trace_acc
+        prepared_langsmith_run_id = langsmith_llm_run_acc
         if _ls_tid:
-            langsmith_trace_acc = _ls_tid
+            prepared_langsmith_trace_id = _ls_tid
         if langsmith_parent_run is not None:
             logger.debug(
                 "langsmith_companion_parent_run run_turn_bind inty_trace_id={} "
@@ -401,9 +401,6 @@ async def _run_companion_turn_core(
 
         with _langsmith_cm:
             try:
-                in_turn_sync_persisted_transcript = (
-                    companion_turn_track_syncs_transcript_in_agentic_loop(track)
-                )
                 transcript_rel = (
                     paths.transcript
                     if track == CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
@@ -431,32 +428,18 @@ async def _run_companion_turn_core(
                     user_msg_uuid=user_msg_uuid,
                     ai_private_splice_plan=ai_private_splice_plan,
                     repository_only_store_text=repository_only_store_text,
-                    langsmith_trace_id=langsmith_trace_acc,
-                    langsmith_run_id=langsmith_llm_run_acc,
+                    langsmith_trace_id=prepared_langsmith_trace_id,
+                    langsmith_run_id=prepared_langsmith_run_id,
                     transcript_rel=transcript_rel,
                 )
                 plugin = resolve_agentic_loop(track=track)
                 loop_out = await plugin.run(prepared)
-                last_text = loop_out.assistant_text
-                significance_meta = loop_out.significance_meta
-                turn_recall = loop_out.turn_recall
-                langsmith_trace_acc = loop_out.langsmith_trace_id
-                langsmith_llm_run_acc = loop_out.langsmith_run_id
-                skip_final_transcript_assistant_row = (
-                    loop_out.skip_final_transcript_assistant_row
-                )
-                last_interim_assistant_msg_uuid = (
-                    loop_out.last_interim_assistant_msg_uuid
-                )
-                output_message_ids = loop_out.output_message_ids
-                tool_background_started = loop_out.tool_background_started
-                if (
+                skip_proactive_assistant_transcript_row = bool(
                     companion_turn_track_skips_empty_proactive_assistant_row(
                         track
                     )
-                    and not last_text.strip()
-                ):
-                    skip_proactive_assistant_transcript_row = True
+                    and not loop_out.assistant_text.strip()
+                )
                 logger.info(
                     "run_turn loop_done agentic_loop track={} loop_total_ms={:.0f}",
                     track.value,
@@ -473,9 +456,142 @@ async def _run_companion_turn_core(
                 end_companion_turn_root_run_safe(
                     langsmith_parent_run, ls_end_source="run_turn_sync_ok"
                 )
+                return loop_out, skip_proactive_assistant_transcript_row
     finally:
         if llm_runtime_bind_token is not None:
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
+
+
+# TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput`` — #3293
+# https://github.com/NascentCore/inty/issues/3293
+# through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
+# or ``"[image]"``); memory pipeline stays text-only. LLM tail content assembled in
+# turn_pipeline when chat model accepts IMAGE input.
+# TODO(track-driven-system-messages-building): Inline calling of this function in the callers. — #3453
+async def _run_companion_turn_core(
+    user_text: str,
+    *,
+    track: CompanionTurnTrack,
+    deps: CompanionTurnDeps,
+) -> CompanionTurnResult:
+    # TODO(#3473): skip LLM when companion_token_budget_allows_llm is false.
+    """
+    执行一轮完整对话。
+
+    - 加载 context + prompt bundle + transcript
+    - 组装 system prompt + messages
+    - 调用 LLM（经 ``AgenticLoop`` + ``OutputQueue``）
+    - 持久化 transcript
+
+    返回 ``CompanionTurnResult``（``assistant_text`` 与可选 ``significance_perception``）。
+    """
+    deps = _enrich_runtime_context_client_time(deps, store=deps.store)
+    store = deps.store
+    llm_client = deps.llm_client
+    transcript_compaction = deps.transcript_compaction
+    repository_only_store_text = deps.repository_only_store_text
+    runtime_context = deps.runtime_context
+
+    preset_user_msg_uuid = deps.preset_user_msg_uuid
+    tool_bg_idle_event = deps.tool_bg_idle_event
+    agentic_output_queue = deps.agentic_output_queue
+    assert agentic_output_queue is not None
+    t0 = time.perf_counter()
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    implicit_signal_bundle = runtime_context.implicit_signal_bundle
+
+    runtime_flags = resolve_turn_runtime_flags(
+        track=track,
+        user_text=user_text,
+        implicit_signal_bundle=implicit_signal_bundle,
+    )
+    user_text_for_log = runtime_flags.effective_user_text
+    inner_tick_turn = runtime_flags.inner_tick_turn
+    route_inner_activity = runtime_flags.route_inner_activity
+    implicit_sign_on_turn = runtime_flags.implicit_sign_on_turn
+
+    logger.info(
+        "run_turn start scope={} track={} user_chars={} inner_tick_turn={} inner_tick_activity={}",
+        store.scope.registry_key(),
+        track.value,
+        len(user_text_for_log),
+        inner_tick_turn,
+        route_inner_activity.value if inner_tick_turn else "-",
+    )
+    logger.debug(
+        "run_turn llm_client api_base={} model_chat={} model_tool={} dual_llm=True",
+        llm_client.config.api_base,
+        llm_client.resolve_model("chat"),
+        llm_client.resolve_model("tool"),
+    )
+
+    idle_wait_timeout_sec = _tool_background_idle_wait_timeout_sec(llm_client)
+    # User/proactive turns skip idle wait so burst USER_CHAT is not starved (#3123 / #3113).
+    # Dreaming / LivingSphere curator still wait on ``tool_bg_idle`` before compact.
+    match track:
+        case (
+            CompanionTurnTrack.USER_CHAT
+            | CompanionTurnTrack.USER_CHAT_BOOTSTRAP
+            | CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+        ):
+            pass
+        case _:
+            await _await_tool_background_idle_if_configured(
+                tool_bg_idle_event,
+                idle_wait_timeout_sec=idle_wait_timeout_sec,
+                scope_registry_key=store.scope.registry_key(),
+            )
+
+    assembly = _prepare_companion_turn_prompt_assembly(
+        store=store,
+        track=track,
+        deps=deps,
+        runtime_flags=runtime_flags,
+        transcript_compaction=transcript_compaction,
+        preset_user_msg_uuid=preset_user_msg_uuid,
+    )
+    deps = replace(deps, user_message_batch=assembly.user_message_batch)
+
+    trace_id = str(uuid.uuid4())
+    langsmith_trace_acc = ""
+    langsmith_llm_run_acc = ""
+
+    loop_out, skip_proactive_assistant_transcript_row = (
+        await _run_companion_turn_agentic_loop_phase(
+            store=store,
+            track=track,
+            llm_client=llm_client,
+            runtime_flags=runtime_flags,
+            assembly=assembly,
+            deps=deps,
+            trace_id=trace_id,
+            langsmith_trace_acc=langsmith_trace_acc,
+            langsmith_llm_run_acc=langsmith_llm_run_acc,
+            agentic_output_queue=agentic_output_queue,
+            repository_only_store_text=repository_only_store_text,
+        )
+    )
+
+    last_text = loop_out.assistant_text
+    significance_meta = loop_out.significance_meta
+    turn_recall = loop_out.turn_recall
+    langsmith_trace_acc = loop_out.langsmith_trace_id
+    langsmith_llm_run_acc = loop_out.langsmith_run_id
+    skip_final_transcript_assistant_row = loop_out.skip_final_transcript_assistant_row
+    last_interim_assistant_msg_uuid = loop_out.last_interim_assistant_msg_uuid
+    output_message_ids = loop_out.output_message_ids
+    tool_background_started = loop_out.tool_background_started
+    in_turn_sync_persisted_transcript = (
+        companion_turn_track_syncs_transcript_in_agentic_loop(track)
+    )
+
+    prompt_plan = assembly.prompt_plan
+    context = assembly.context
+    tail_user_messages = assembly.tail_user_messages
+    ai_private_splice_plan = assembly.ai_private_splice_plan
+    user_msg_uuid = assembly.user_msg_uuid
+    ts_user = assembly.ts_user
 
     # 持久化 transcript
     # TODO(code-path-straightforwardness): refactor this function to accept — #3516

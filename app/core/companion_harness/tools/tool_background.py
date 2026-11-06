@@ -21,34 +21,30 @@ import re
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
-from collections.abc import Callable
 from typing import Any, Protocol
 
 from loguru import logger
 from openai import BadRequestError
 
-from app.utils.models_catalog import GenAIModel
-
-from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    INTY_TOOL_BG_ROUND_METADATA_KEY,
-    SOURCE_TOOL_BACKGROUND_CONTINUE,
-    SOURCE_TOOL_BACKGROUND_INITIAL,
-    tool_choice_attempt_metadata,
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    envelope_to_assistant_metadata_dict,
+    turn_recall_from_envelope,
 )
-from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
-from app.core.companion_harness.tools.runtime import (
-    insert_openai_system_message,
-    resolve_openai_tool_call_loop_async,
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
-
 from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
 from app.core.companion_harness.companion.llm_runtime_events import (
     record_llm_inference_failure,
+)
+from app.core.companion_harness.companion.message_format import (
+    openai_assistant_message_dict,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -57,29 +53,31 @@ from app.core.companion_harness.companion.models import (
 from app.core.companion_harness.companion.prompt_stack import (
     refresh_companion_turn_prompt_stack,
 )
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
-)
 from app.core.companion_harness.companion.runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
-)
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
-    envelope_to_assistant_metadata_dict,
-    turn_recall_from_envelope,
 )
 from app.core.companion_harness.companion.transcript_assistant_row import (
     TranscriptAssistantRowBuildInput,
     append_transcript_assistant_row,
 )
 from app.core.companion_harness.companion.utc import utc_iso_ts
-from app.core.companion_harness.companion.message_format import (
-    openai_assistant_message_dict,
+from app.core.companion_harness.llm.langsmith_invocation_extra import (
+    INTY_TOOL_BG_ROUND_METADATA_KEY,
+    SOURCE_TOOL_BACKGROUND_CONTINUE,
+    SOURCE_TOOL_BACKGROUND_INITIAL,
+    tool_choice_attempt_metadata,
 )
+from app.core.companion_harness.llm.ports import ChatCompletionsSyncPort
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOL_BACKGROUND_JSONL_REL,
 )
+from app.core.companion_harness.tools.runtime import (
+    insert_openai_system_message,
+    resolve_openai_tool_call_loop_async,
+)
+from app.utils.models_catalog import GenAIModel
 
 from .companion_tool_definitions import MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST
 from .companion_tool_runtime import (
@@ -489,6 +487,223 @@ def _append_background_log(
     )
 
 
+@dataclass
+class _ToolBgLoopRoundState:
+    """Mutable round counters shared by tool_background nested continuations."""
+
+    rounds_used: int
+    active_round: int
+    total_tool_calls: int
+
+
+async def _tool_bg_execute_tool_call_bridge(
+    *,
+    memory_store: MemoryStore,
+    execute_tool_call_fn: Callable[..., Any],
+    write_allowlist: frozenset[str],
+    repository_only_store_text: bool,
+    name: str,
+    raw_arguments: str,
+) -> tuple[str, str | None]:
+    result = await execute_tool_call_fn(
+        memory_store,
+        name,
+        raw_arguments,
+        write_allowlist=write_allowlist,
+        repository_only_store_text=repository_only_store_text,
+    )
+    return result, None
+
+
+async def _tool_bg_continue_after_tool_results(
+    *,
+    messages_with_tool_results: list[dict[str, Any]],
+    user_msg_uuid: str,
+    trace_id: str,
+    scope_registry_key: str,
+    tool_api_id: str,
+    tools: list[Any],
+    resolved_client: Any,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    llm_round_timeout_sec: float,
+    round_state: _ToolBgLoopRoundState,
+    trace_hooks: ToolBackgroundTraceHooks | None,
+) -> tuple[Any, str | None]:
+    if is_tool_background_aborted(user_msg_uuid):
+        raise BackgroundToolLoopAborted
+    if round_state.rounds_used >= _BG_TOOL_MAX_ROUNDS:
+        raise ValueError(
+            f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
+        )
+    round_state.rounds_used += 1
+    round_state.active_round = round_state.rounds_used
+    request_snapshot_inner = deepcopy(messages_with_tool_results)
+    inner_payload = _openai_messages_payload(messages_with_tool_results)
+    try:
+        next_resp = await asyncio.wait_for(
+            asyncio.to_thread(
+                chat_completion_sync,
+                resolved_client,
+                model=tool_api_id,
+                messages_payload=inner_payload,
+                tools=tools,
+                langsmith_extra=langsmith_slice.tool_call_extra(
+                    phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
+                    extra_metadata={
+                        INTY_TOOL_BG_ROUND_METADATA_KEY: round_state.active_round,
+                    },
+                ),
+                high_reasoning=True,
+            ),
+            timeout=llm_round_timeout_sec,
+        )
+    except TimeoutError as exc:
+        record_llm_inference_failure(
+            model=tool_api_id,
+            exc=exc,
+            foreground_timeout_sec=llm_round_timeout_sec,
+        )
+        logger.warning(
+            "repl.turn.bg continue round timed out trace_id={} "
+            "user_msg_uuid={} round={} timeout_sec={}",
+            trace_id,
+            user_msg_uuid,
+            round_state.active_round,
+            llm_round_timeout_sec,
+        )
+        raise BackgroundToolLoopAborted from exc
+    _log_bg_llm_round_result(
+        round_idx=round_state.active_round,
+        model=tool_api_id,
+        resp=next_resp,
+        request_messages=request_snapshot_inner,
+        scope_registry_key=scope_registry_key,
+        trace_id=trace_id,
+        trace_hooks=trace_hooks,
+    )
+    tool_calls = (
+        getattr(next_resp.choices[0].message, "tool_calls", None) or []
+    )
+    round_state.total_tool_calls += len(tool_calls)
+    return next_resp, None
+
+
+async def _tool_bg_after_tool_messages_appended(
+    *,
+    messages_with_tool_results: list[dict[str, Any]],
+    memory_store: MemoryStore,
+    companion_turn_track: CompanionTurnTrack,
+    runtime_context: TurnRuntimeContext,
+    appended_turn_msgs: list[dict[str, Any]],
+    appended_capture_from_len: list[int],
+    tools_holder: list[Any],
+) -> None:
+    start = appended_capture_from_len[0]
+    appended_turn_msgs.extend(messages_with_tool_results[start:])
+    appended_capture_from_len[0] = len(messages_with_tool_results)
+    tools_holder[0] = refresh_companion_turn_prompt_stack(
+        store=memory_store,
+        messages=messages_with_tool_results,
+        track=companion_turn_track,
+        runtime_context=runtime_context,
+    )
+    appended_capture_from_len[0] = len(messages_with_tool_results)
+
+
+def _tool_bg_compute_delivery_and_transcript(
+    *,
+    loop_result: Any,
+    appended_turn_msgs: list[dict[str, Any]],
+    total_tool_calls: int,
+    skip_finish_envelope_routing: bool,
+    resolved_client: Any,
+    tool_api_id: str,
+    chat_completion_sync: ChatCompletionsSyncPort,
+    trace_id: str,
+    langsmith_slice: CompanionTurnLangsmithSlice,
+    suppress_user_delivery: bool,
+) -> tuple[
+    str,
+    bool,
+    bool,
+    bool,
+    bool,
+    list[str],
+    list[str],
+    dict[str, Any] | None,
+    str | None,
+    str,
+    int,
+]:
+    raw_final = _assistant_text_from_completion_response(loop_result.response)
+    tool_call_names = _extract_tool_call_names(appended_turn_msgs)
+    image_paths = _local_paths_from_tool_messages(loop_result.messages)
+    generation_deliver = _generation_tool_execution_deliver(
+        appended_turn_msgs,
+        tool_call_names,
+        image_paths,
+    )
+    routing = resolve_tool_background_finish_envelope(
+        skip_finish_envelope_routing=skip_finish_envelope_routing,
+        client=resolved_client,
+        model=tool_api_id,
+        create_completion_sync=chat_completion_sync,
+        conversation_messages=list(loop_result.messages),
+        final_assistant_content=raw_final,
+        trace_id=trace_id,
+        langsmith_slice=langsmith_slice,
+    )
+    output_to_user_flag = routing.output_to_user
+    should_push = tool_background_should_deliver_to_user(
+        suppress_user_delivery=suppress_user_delivery,
+        generation_deliver=generation_deliver,
+        output_to_user=output_to_user_flag,
+    )
+    base_nl = (routing.user_facing_reply or "").strip()
+    significance_meta = envelope_to_assistant_metadata_dict(routing)
+    turn_recall = turn_recall_from_envelope(routing)
+    if output_to_user_flag and not base_nl:
+        filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
+        if filler:
+            base_nl = filler
+    from app.core.companion_harness.tools.companion_user_feedback import (
+        resolve_user_visible_feedback_display_text,
+    )
+
+    feedback_display = resolve_user_visible_feedback_display_text(
+        llm_reply=base_nl,
+        appended_turn_msgs=appended_turn_msgs,
+    )
+    deliver_output_to_user = output_to_user_flag
+    if feedback_display is not None:
+        display_text = feedback_display.display_text
+        if display_text.strip():
+            should_push = True
+            deliver_output_to_user = True
+    else:
+        display_text = base_nl
+    base_nl_chars = len(base_nl)
+    transcript_body = build_tool_background_transcript_body(
+        display_text=display_text,
+        appended_turn_msgs=appended_turn_msgs,
+        total_tool_calls=total_tool_calls,
+    )
+    return (
+        display_text,
+        deliver_output_to_user,
+        output_to_user_flag,
+        should_push,
+        generation_deliver,
+        tool_call_names,
+        image_paths,
+        significance_meta,
+        turn_recall,
+        transcript_body,
+        base_nl_chars,
+    )
+
+
 async def run_tool_background_loop(
     *,
     memory_store: MemoryStore,
@@ -540,6 +755,11 @@ async def run_tool_background_loop(
         total_tool_calls = 0
         rounds_used = 0
         active_round = 0
+        round_state = _ToolBgLoopRoundState(
+            rounds_used=rounds_used,
+            active_round=active_round,
+            total_tool_calls=total_tool_calls,
+        )
 
         request_snapshot = deepcopy(working_messages)
         payload = _openai_messages_payload(working_messages)
@@ -581,10 +801,12 @@ async def run_tool_background_loop(
             )
             return
 
-        rounds_used += 1
-        active_round = rounds_used
+        round_state.rounds_used += 1
+        round_state.active_round = round_state.rounds_used
+        rounds_used = round_state.rounds_used
+        active_round = round_state.active_round
         _log_bg_llm_round_result(
-            round_idx=active_round,
+            round_idx=round_state.active_round,
             model=tool_api_id,
             resp=initial_response,
             request_messages=request_snapshot,
@@ -633,7 +855,8 @@ async def run_tool_background_loop(
                     finish0,
                 )
             return
-        total_tool_calls += len(initial_tool_calls)
+        round_state.total_tool_calls += len(initial_tool_calls)
+        total_tool_calls = round_state.total_tool_calls
 
         allow = (
             write_allowlist
@@ -644,99 +867,60 @@ async def run_tool_background_loop(
         async def execute_tool_call(
             name: str, raw_arguments: str
         ) -> tuple[str, str | None]:
-            result = await execute_tool_call_fn(
-                memory_store,
-                name,
-                raw_arguments,
+            return await _tool_bg_execute_tool_call_bridge(
+                memory_store=memory_store,
+                execute_tool_call_fn=execute_tool_call_fn,
                 write_allowlist=allow,
                 repository_only_store_text=repository_only_store_text,
+                name=name,
+                raw_arguments=raw_arguments,
             )
-            return result, None
 
         async def continue_chat(
             messages_with_tool_results: list[dict[str, Any]],
         ) -> tuple[Any, str | None]:
-            nonlocal rounds_used, active_round, total_tool_calls
-            if is_tool_background_aborted(user_msg_uuid):
-                raise BackgroundToolLoopAborted
-            if rounds_used >= _BG_TOOL_MAX_ROUNDS:
-                raise ValueError(
-                    f"background tool loop exceeded max rounds: {_BG_TOOL_MAX_ROUNDS}"
-                )
-            rounds_used += 1
-            active_round = rounds_used
-            request_snapshot_inner = deepcopy(messages_with_tool_results)
-            inner_payload = _openai_messages_payload(messages_with_tool_results)
-            try:
-                next_resp = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        chat_completion_sync,
-                        resolved_client,
-                        model=tool_api_id,
-                        messages_payload=inner_payload,
-                        tools=tools,
-                        langsmith_extra=langsmith_slice.tool_call_extra(
-                            phase_suffix=SOURCE_TOOL_BACKGROUND_CONTINUE,
-                            extra_metadata={
-                                INTY_TOOL_BG_ROUND_METADATA_KEY: active_round,
-                            },
-                        ),
-                        high_reasoning=True,
-                    ),
-                    timeout=llm_round_timeout_sec,
-                )
-            except TimeoutError as exc:
-                record_llm_inference_failure(
-                    model=tool_api_id,
-                    exc=exc,
-                    foreground_timeout_sec=llm_round_timeout_sec,
-                )
-                logger.warning(
-                    "repl.turn.bg continue round timed out trace_id={} "
-                    "user_msg_uuid={} round={} timeout_sec={}",
-                    trace_id,
-                    user_msg_uuid,
-                    active_round,
-                    llm_round_timeout_sec,
-                )
-                raise BackgroundToolLoopAborted from exc
-            _log_bg_llm_round_result(
-                round_idx=active_round,
-                model=tool_api_id,
-                resp=next_resp,
-                request_messages=request_snapshot_inner,
-                scope_registry_key=scope_registry_key,
+            out = await _tool_bg_continue_after_tool_results(
+                messages_with_tool_results=messages_with_tool_results,
+                user_msg_uuid=user_msg_uuid,
                 trace_id=trace_id,
+                scope_registry_key=scope_registry_key,
+                tool_api_id=tool_api_id,
+                tools=tools,
+                resolved_client=resolved_client,
+                chat_completion_sync=chat_completion_sync,
+                langsmith_slice=langsmith_slice,
+                llm_round_timeout_sec=llm_round_timeout_sec,
+                round_state=round_state,
                 trace_hooks=trace_hooks,
             )
-            tool_calls = (
-                getattr(next_resp.choices[0].message, "tool_calls", None) or []
-            )
-            total_tool_calls += len(tool_calls)
-            return next_resp, None
+            nonlocal rounds_used, active_round, total_tool_calls
+            rounds_used = round_state.rounds_used
+            active_round = round_state.active_round
+            total_tool_calls = round_state.total_tool_calls
+            return out
 
         # Leading system refresh can shrink the message list; capture tool-round
         # append rows before refresh so transcript digest still sees tool results.
         appended_turn_msgs: list[dict[str, Any]] = []
-        appended_capture_from_len = len(working_messages)
+        appended_capture_holder: list[int] = [len(working_messages)]
+        tools_holder: list[Any] = [tools]
 
         # Keep tool-path system prefix and OpenAI tools list in sync with MemoryStore scope
         # after each tool round (same idea as sync loop in turn.py after tool replies).
         async def _after_tool_messages_appended(
             messages_with_tool_results: list[dict[str, Any]],
         ) -> None:
-            nonlocal tools, appended_capture_from_len
-            appended_turn_msgs.extend(
-                messages_with_tool_results[appended_capture_from_len:]
-            )
-            appended_capture_from_len = len(messages_with_tool_results)
-            tools = refresh_companion_turn_prompt_stack(
-                store=memory_store,
-                messages=messages_with_tool_results,
-                track=companion_turn_track,
+            nonlocal tools
+            await _tool_bg_after_tool_messages_appended(
+                messages_with_tool_results=messages_with_tool_results,
+                memory_store=memory_store,
+                companion_turn_track=companion_turn_track,
                 runtime_context=runtime_context,
+                appended_turn_msgs=appended_turn_msgs,
+                appended_capture_from_len=appended_capture_holder,
+                tools_holder=tools_holder,
             )
-            appended_capture_from_len = len(messages_with_tool_results)
+            tools = tools_holder[0]
 
         try:
             loop_result = await resolve_openai_tool_call_loop_async(
@@ -770,68 +954,38 @@ async def run_tool_background_loop(
             )
             return
 
-        raw_final = _assistant_text_from_completion_response(
-            loop_result.response
-        )
+        rounds_used = round_state.rounds_used
+        active_round = round_state.active_round
+        total_tool_calls = round_state.total_tool_calls
         bg_ls_trace = langsmith_trace_id_from_completion(loop_result.response)
         bg_ls_llm_run = langsmith_llm_run_id_from_completion(
             loop_result.response
         )
-        tool_call_names = _extract_tool_call_names(appended_turn_msgs)
-        image_paths = _local_paths_from_tool_messages(loop_result.messages)
-        generation_deliver = _generation_tool_execution_deliver(
-            appended_turn_msgs,
+        (
+            display_text,
+            deliver_output_to_user,
+            output_to_user_flag,
+            should_push,
+            generation_deliver,
             tool_call_names,
             image_paths,
-        )
-        routing = resolve_tool_background_finish_envelope(
-            skip_finish_envelope_routing=skip_finish_envelope_routing,
-            client=resolved_client,
-            model=tool_api_id,
-            create_completion_sync=chat_completion_sync,
-            conversation_messages=list(loop_result.messages),
-            final_assistant_content=raw_final,
-            trace_id=trace_id,
-            langsmith_slice=langsmith_slice,
-        )
-        output_to_user_flag = routing.output_to_user
-        should_push = tool_background_should_deliver_to_user(
-            suppress_user_delivery=suppress_user_delivery,
-            generation_deliver=generation_deliver,
-            output_to_user=output_to_user_flag,
-        )
-        base_nl = (routing.user_facing_reply or "").strip()
-        significance_meta = envelope_to_assistant_metadata_dict(routing)
-        turn_recall = turn_recall_from_envelope(routing)
-        if output_to_user_flag and not base_nl:
-            filler = _tool_bg_nl_filler_from_appended_turn(appended_turn_msgs)
-            if filler:
-                base_nl = filler
-        from app.core.companion_harness.tools.companion_user_feedback import (
-            resolve_user_visible_feedback_display_text,
-        )
-
-        feedback_display = resolve_user_visible_feedback_display_text(
-            llm_reply=base_nl,
-            appended_turn_msgs=appended_turn_msgs,
-        )
-        # Local image paths now travel out-of-band on ToolOutputEvent.local_image_paths
-        # (REPL surfaces them as a banner). Body text stays NL-only for production clients.
-        deliver_output_to_user = output_to_user_flag
-        if feedback_display is not None:
-            display_text = feedback_display.display_text
-            if display_text.strip():
-                should_push = True
-                deliver_output_to_user = True
-        else:
-            display_text = base_nl
-        elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
-
-        transcript_body = build_tool_background_transcript_body(
-            display_text=display_text,
+            significance_meta,
+            turn_recall,
+            transcript_body,
+            base_nl_chars,
+        ) = _tool_bg_compute_delivery_and_transcript(
+            loop_result=loop_result,
             appended_turn_msgs=appended_turn_msgs,
             total_tool_calls=total_tool_calls,
+            skip_finish_envelope_routing=skip_finish_envelope_routing,
+            resolved_client=resolved_client,
+            tool_api_id=tool_api_id,
+            chat_completion_sync=chat_completion_sync,
+            trace_id=trace_id,
+            langsmith_slice=langsmith_slice,
+            suppress_user_delivery=suppress_user_delivery,
         )
+        elapsed_ms = int((time.perf_counter() - t0) * 1000.0)
 
         logger.debug(
             "repl.turn.bg policy_summary trace_id={} user_msg_uuid={} "
@@ -845,7 +999,7 @@ async def run_tool_background_loop(
             should_push,
             ",".join(tool_call_names),
             len(image_paths),
-            len(base_nl),
+            base_nl_chars,
             len(display_text),
             len(transcript_body),
         )
