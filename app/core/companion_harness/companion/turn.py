@@ -462,6 +462,90 @@ async def _run_companion_turn_agentic_loop_phase(
             companion_llm_runtime_event_bind_ctx.reset(llm_runtime_bind_token)
 
 
+@dataclass(frozen=True)
+class _CompanionTurnTranscriptFinalizeInput:
+    """Post-agentic-loop transcript rows (user tail, ai_private splice, assistant)."""
+
+    store: MemoryStore
+    track: CompanionTurnTrack
+    implicit_sign_on_turn: bool
+    inner_tick_turn: bool
+    in_turn_sync_persisted_transcript: bool
+    rel_tr: str
+    ts_user: datetime
+    user_msg_uuid: str
+    trace_id: str
+    tail_user_messages: tuple[Any, ...]
+    ai_private_splice_plan: Any
+    last_text: str
+    skip_final_transcript_assistant_row: bool
+    skip_proactive_assistant_transcript_row: bool
+    last_interim_assistant_msg_uuid: str | None
+    significance_meta: dict[str, Any] | None
+    turn_recall: str | None
+
+
+def _persist_companion_turn_transcript_after_agentic_loop(
+    finalize: _CompanionTurnTranscriptFinalizeInput,
+) -> tuple[str, str]:
+    assistant_msg_uuid = (
+        finalize.last_interim_assistant_msg_uuid
+        if finalize.last_interim_assistant_msg_uuid is not None
+        else str(uuid.uuid4())
+    )
+    if finalize.implicit_sign_on_turn:
+        sign_on_row: dict[str, Any] = {
+            "role": "user",
+            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
+            "ts": finalize.ts_user.isoformat(),
+            "uuid": finalize.user_msg_uuid,
+            "trace_id": finalize.trace_id,
+            "implicit_user_signed_on": True,
+        }
+        finalize.store.append_jsonl_record(finalize.rel_tr, sign_on_row)
+    elif not finalize.in_turn_sync_persisted_transcript:
+        append_turn_track_tail_user_transcript_rows(
+            finalize.store,
+            finalize.rel_tr,
+            tail_user_messages=finalize.tail_user_messages,
+            trace_id=finalize.trace_id,
+            track=finalize.track,
+        )
+    last_text = strip_leading_transcript_timestamp_prefixes(finalize.last_text)
+    persist_ai_private_splice_if_applicable(
+        AiPrivateSplicePersistInput(
+            store=finalize.store,
+            transcript_relative_path=finalize.rel_tr,
+            track=finalize.track,
+            splice_plan=finalize.ai_private_splice_plan,
+            user_msg_uuid=finalize.user_msg_uuid,
+            assistant_text=last_text,
+            skip_final_transcript_assistant_row=(
+                finalize.skip_final_transcript_assistant_row
+            ),
+        )
+    )
+    if (
+        not finalize.skip_final_transcript_assistant_row
+        and not finalize.skip_proactive_assistant_transcript_row
+    ):
+        append_transcript_assistant_row(
+            finalize.store,
+            finalize.rel_tr,
+            TranscriptAssistantRowBuildInput(
+                content=last_text,
+                uuid=assistant_msg_uuid,
+                reply_to=finalize.user_msg_uuid,
+                trace_id=finalize.trace_id,
+                source="inner_tick" if finalize.inner_tick_turn else "chat",
+                significance_perception=finalize.significance_meta,
+                turn_recall=finalize.turn_recall,
+            ),
+            ts=utc_iso_ts(),
+        )
+    return assistant_msg_uuid, last_text
+
+
 # TODO(companion-multimodal-user-turn): Phase 1c — ``user_turn: CompanionUserTurnInput`` — #3293
 # https://github.com/NascentCore/inty/issues/3293
 # through turn core; transcript user row uses ``user_turn.to_transcript_text()`` (caption
@@ -603,61 +687,27 @@ async def _run_companion_turn_core(
             track=track,
         )
     )
-    assistant_msg_uuid = (
-        last_interim_assistant_msg_uuid
-        if last_interim_assistant_msg_uuid is not None
-        else str(uuid.uuid4())
-    )
-    if implicit_sign_on_turn:
-        sign_on_row: dict[str, Any] = {
-            "role": "user",
-            "content": USER_SIGNED_ON_TRIGGER_USER_TEXT,
-            "ts": ts_user.isoformat(),
-            "uuid": user_msg_uuid,
-            "trace_id": trace_id,
-            "implicit_user_signed_on": True,
-        }
-        store.append_jsonl_record(rel_tr, sign_on_row)
-    elif not in_turn_sync_persisted_transcript:
-        append_turn_track_tail_user_transcript_rows(
-            store,
-            rel_tr,
-            tail_user_messages=tail_user_messages,
-            trace_id=trace_id,
-            track=track,
-        )
-    last_text = strip_leading_transcript_timestamp_prefixes(last_text)
-    persist_ai_private_splice_if_applicable(
-        AiPrivateSplicePersistInput(
+    assistant_msg_uuid, last_text = _persist_companion_turn_transcript_after_agentic_loop(
+        _CompanionTurnTranscriptFinalizeInput(
             store=store,
-            transcript_relative_path=rel_tr,
             track=track,
-            splice_plan=ai_private_splice_plan,
+            implicit_sign_on_turn=implicit_sign_on_turn,
+            inner_tick_turn=inner_tick_turn,
+            in_turn_sync_persisted_transcript=in_turn_sync_persisted_transcript,
+            rel_tr=rel_tr,
+            ts_user=ts_user,
             user_msg_uuid=user_msg_uuid,
-            assistant_text=last_text,
-            skip_final_transcript_assistant_row=(
-                skip_final_transcript_assistant_row
-            ),
+            trace_id=trace_id,
+            tail_user_messages=tail_user_messages,
+            ai_private_splice_plan=ai_private_splice_plan,
+            last_text=last_text,
+            skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
+            skip_proactive_assistant_transcript_row=skip_proactive_assistant_transcript_row,
+            last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+            significance_meta=significance_meta,
+            turn_recall=turn_recall,
         )
     )
-    if (
-        not skip_final_transcript_assistant_row
-        and not skip_proactive_assistant_transcript_row
-    ):
-        append_transcript_assistant_row(
-            store,
-            rel_tr,
-            TranscriptAssistantRowBuildInput(
-                content=last_text,
-                uuid=assistant_msg_uuid,
-                reply_to=user_msg_uuid,
-                trace_id=trace_id,
-                source="inner_tick" if inner_tick_turn else "chat",
-                significance_perception=significance_meta,
-                turn_recall=turn_recall,
-            ),
-            ts=utc_iso_ts(),
-        )
 
     logger.info(
         "run_turn done assistant_chars={} ms={:.0f} inty_trace_id={} user_msg_uuid={} "

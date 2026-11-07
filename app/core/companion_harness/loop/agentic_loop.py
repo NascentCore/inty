@@ -252,6 +252,78 @@ class _DomainToolBackgroundAppendSink:
         self._drainer = None
 
 
+@dataclass
+class _PromptPlanInterimAssistantState:
+    """Mutable capture for in-turn interim assistant rows during prompt-plan tool loop."""
+
+    round_index: int
+    langsmith_trace_acc: str
+    langsmith_llm_run_acc: str
+    skip_final_transcript_assistant_row: bool
+    last_interim_assistant_msg_uuid: str | None
+
+
+async def _prompt_plan_record_interim_assistant_message(
+    *,
+    message: Any,
+    state: _PromptPlanInterimAssistantState,
+    store: MemoryStore,
+    transcript_rel: str,
+    user_msg_uuid: str,
+    trace_id: str,
+    interim_output_sink,
+    emit_every_round: bool,
+) -> None:
+    state.round_index += 1
+    body = resolve_in_turn_assistant_visible_text(message)
+    if body is None:
+        had_tool_calls_early = bool(getattr(message, "tool_calls", None) or [])
+        if had_tool_calls_early:
+            logger.warning(
+                "in_turn_visible_text_missing trace_id={} round_index={}",
+                trace_id,
+                state.round_index,
+            )
+        return
+    had_tool_calls = bool(
+        (
+            message.get("tool_calls")
+            if isinstance(message, dict)
+            else getattr(message, "tool_calls", None)
+        )
+        or []
+    )
+    assistant_msg_uuid = str(uuid.uuid4())
+    store.append_jsonl_record(
+        transcript_rel,
+        {
+            "role": "assistant",
+            "content": body,
+            "ts": utc_iso_ts(),
+            "uuid": assistant_msg_uuid,
+            "reply_to": user_msg_uuid,
+            "source": "chat",
+            "trace_id": trace_id,
+        },
+    )
+    state.last_interim_assistant_msg_uuid = assistant_msg_uuid
+    if not had_tool_calls:
+        state.skip_final_transcript_assistant_row = True
+    if interim_output_sink is not None and (emit_every_round or had_tool_calls):
+        await interim_output_sink(
+            InTurnInterimOutput(
+                text=body,
+                user_msg_uuid=user_msg_uuid,
+                trace_id=trace_id,
+                langsmith_trace_id=state.langsmith_trace_acc,
+                langsmith_run_id=state.langsmith_llm_run_acc,
+                round_index=state.round_index,
+                had_tool_calls=had_tool_calls,
+                assistant_msg_uuid=assistant_msg_uuid,
+            )
+        )
+
+
 async def _run_prompt_plan_tool_loop(
     context: AgenticLoopContext,
     *,
@@ -343,71 +415,26 @@ async def _run_prompt_plan_tool_loop(
             if refreshed is not None:
                 loop_tools = refreshed
 
-    round_index = 0
-    skip_final_transcript_assistant_row = False
-    last_interim_assistant_msg_uuid: str | None = None
+    interim_state = _PromptPlanInterimAssistantState(
+        round_index=0,
+        langsmith_trace_acc=langsmith_trace_acc,
+        langsmith_llm_run_acc=langsmith_llm_run_acc,
+        skip_final_transcript_assistant_row=False,
+        last_interim_assistant_msg_uuid=None,
+    )
     emit_every_round = True
 
     async def _on_assistant_message(message: Any) -> None:
-        nonlocal round_index
-        nonlocal langsmith_trace_acc
-        nonlocal langsmith_llm_run_acc
-        nonlocal skip_final_transcript_assistant_row
-        nonlocal last_interim_assistant_msg_uuid
-        round_index += 1
-        body = resolve_in_turn_assistant_visible_text(message)
-        if body is None:
-            had_tool_calls_early = bool(
-                getattr(message, "tool_calls", None) or []
-            )
-            if had_tool_calls_early:
-                logger.warning(
-                    "in_turn_visible_text_missing trace_id={} round_index={}",
-                    trace_id,
-                    round_index,
-                )
-            return
-        had_tool_calls = bool(
-            (
-                message.get("tool_calls")
-                if isinstance(message, dict)
-                else getattr(message, "tool_calls", None)
-            )
-            or []
+        await _prompt_plan_record_interim_assistant_message(
+            message=message,
+            state=interim_state,
+            store=store,
+            transcript_rel=transcript_rel,
+            user_msg_uuid=user_msg_uuid,
+            trace_id=trace_id,
+            interim_output_sink=interim_output_sink,
+            emit_every_round=emit_every_round,
         )
-        ls_trace = langsmith_trace_acc
-        ls_run = langsmith_llm_run_acc
-        assistant_msg_uuid = str(uuid.uuid4())
-        store.append_jsonl_record(
-            transcript_rel,
-            {
-                "role": "assistant",
-                "content": body,
-                "ts": utc_iso_ts(),
-                "uuid": assistant_msg_uuid,
-                "reply_to": user_msg_uuid,
-                "source": "chat",
-                "trace_id": trace_id,
-            },
-        )
-        last_interim_assistant_msg_uuid = assistant_msg_uuid
-        if not had_tool_calls:
-            skip_final_transcript_assistant_row = True
-        if interim_output_sink is not None and (
-            emit_every_round or had_tool_calls
-        ):
-            await interim_output_sink(
-                InTurnInterimOutput(
-                    text=body,
-                    user_msg_uuid=user_msg_uuid,
-                    trace_id=trace_id,
-                    langsmith_trace_id=ls_trace,
-                    langsmith_run_id=ls_run,
-                    round_index=round_index,
-                    had_tool_calls=had_tool_calls,
-                    assistant_msg_uuid=assistant_msg_uuid,
-                )
-            )
 
     loop_result = await resolve_openai_tool_call_loop_async(
         response=initial_resp,
@@ -440,8 +467,8 @@ async def _run_prompt_plan_tool_loop(
         assistant_text=last_text,
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_llm_run_acc,
-        skip_final_transcript_assistant_row=skip_final_transcript_assistant_row,
-        last_interim_assistant_msg_uuid=last_interim_assistant_msg_uuid,
+        skip_final_transcript_assistant_row=interim_state.skip_final_transcript_assistant_row,
+        last_interim_assistant_msg_uuid=interim_state.last_interim_assistant_msg_uuid,
         loop_persisted_user_transcript=True,
     )
 
