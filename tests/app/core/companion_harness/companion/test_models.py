@@ -23,6 +23,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
 )
 from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
     load_template_seed_text,
 )
 from app.core.companion_harness.companion.scope import CompanionScope
@@ -175,9 +176,12 @@ def test_load_prompt_bundle_reads_techno_core_and_living_sphere_from_store(
         scope=CompanionScope("models", "a", f"{tmp_path.name}-world"),
         repository=None,
     )
-    store.write_document(TECHNO_CORE_MD_REL, "# Techno core\ncustom techno\n")
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert paths.techno_core_md == TECHNO_CORE_MD_REL
+    assert paths.living_sphere_md == LIVING_SPHERE_MD_REL
+    store.write_document(paths.techno_core_md, "# Techno core\ncustom techno\n")
     store.write_document(
-        LIVING_SPHERE_MD_REL,
+        paths.living_sphere_md,
         "# Living sphere\ncustom living sphere\n",
     )
     bundle = load_prompt_bundle(store, meta=ContextMeta())
@@ -196,6 +200,15 @@ def test_load_prompt_bundle_loads_output_format_from_package_template(
     expected = load_template_seed_text(OUTPUT_FORMAT_IM_DM_MD_REL).strip()
     assert bundle.output_format_im_dm_md == expected
     assert "Output format" in bundle.output_format_im_dm_md
+
+
+def test_load_prompt_bundle_optional_template_slices_use_scope_accessors() -> None:
+    paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    assert paths.tools_md == TOOLS_MD_REL
+    assert paths.harness_md == HARNESS_MD_REL
+    assert paths.about_md == ABOUT_MD_REL
+    assert paths.significance_perception_md == SIGNIFICANCE_PERCEPTION_MD_REL
+    assert paths.output_format_im_dm_md == OUTPUT_FORMAT_IM_DM_MD_REL
 
 
 def test_context_meta_defaults() -> None:

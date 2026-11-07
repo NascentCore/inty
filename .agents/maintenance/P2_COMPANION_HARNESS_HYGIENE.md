@@ -709,7 +709,7 @@ Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4086 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov7-184`)
 
-- [ ] **HYGIENE-2026-184** ruff RUF046: `companion/proactive_chat.py` — `_format_elapsed_since` drop redundant `int()` around `round`. Claimed `cursor/agent-maintenance-tasks-nov7-184`.
-- [ ] **HYGIENE-2026-185** ruff TRY004: `companion/schedule_queue.py` — `TypeError` for non-object / non-array schedule JSON (not `ValueError`). Claimed `cursor/agent-maintenance-tasks-nov7-184`.
-- [ ] **HYGIENE-2026-579** #3413: `companion/models.py` — `load_prompt_bundle` techno/living optional reads via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`. Claimed `cursor/agent-maintenance-tasks-nov7-184`.
-- [ ] **HYGIENE-2026-580** #3413: `companion/models.py` — package-template optional slices (`tools_md`, `harness_md`, `about_md`, `significance_perception_md`, `output_format_im_dm_md`) via scope path accessors. Claimed `cursor/agent-maintenance-tasks-nov7-184`.
+- [x] **HYGIENE-2026-184** ruff RUF046: `companion/proactive_chat.py` — `_format_elapsed_since` drop redundant `int()` around `round`. Fixed in `cursor/agent-maintenance-tasks-nov7-184`.
+- [x] **HYGIENE-2026-185** ruff TRY004: `companion/schedule_queue.py` — `TypeError` for non-object / non-array schedule JSON (not `ValueError`). Fixed in `cursor/agent-maintenance-tasks-nov7-184`.
+- [x] **HYGIENE-2026-579** #3413: `companion/models.py` — `load_prompt_bundle` techno/living optional reads via `DEFAULT_MEMORY_STORE_SCOPE_PATHS`. Fixed in `cursor/agent-maintenance-tasks-nov7-184`.
+- [x] **HYGIENE-2026-580** #3413: `companion/models.py` — package-template optional slices (`tools_md`, `harness_md`, `about_md`, `significance_perception_md`, `output_format_im_dm_md`) via scope path accessors. Fixed in `cursor/agent-maintenance-tasks-nov7-184`.

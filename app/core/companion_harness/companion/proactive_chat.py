@@ -120,7 +120,7 @@ def _last_assistant_ts(msgs: list[ChatMessage]) -> datetime | None:
 
 
 def _format_elapsed_since(seconds: float) -> str:
-    s = max(0, int(round(seconds)))
+    s = max(0, round(seconds))
     if s < 60:
         return f"{s}s"
     if s < 3600:
