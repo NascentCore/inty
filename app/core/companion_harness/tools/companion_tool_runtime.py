@@ -299,7 +299,7 @@ def _parse_optional_max_chars(raw: Any) -> int | None:
     if raw is None:
         return None
     if isinstance(raw, bool):
-        raise ValueError("max_chars must be a positive integer or omitted")
+        raise TypeError("max_chars must be a positive integer or omitted")
     n: int
     if isinstance(raw, int):
         n = raw
