@@ -99,7 +99,7 @@ def _load_curator_state(store: MemoryStore) -> dict[str, object]:
         return {}
     loaded = json.loads(raw)
     if not isinstance(loaded, dict):
-        raise ValueError(f"{rel} must be a JSON object")
+        raise TypeError(f"{rel} must be a JSON object")
     return loaded
 
 
