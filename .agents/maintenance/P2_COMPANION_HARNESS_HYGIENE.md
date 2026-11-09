@@ -709,6 +709,6 @@ Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-fe97`)
 
-- [ ] **HYGIENE-2026-584** ruff TRY004: `memory/living_sphere_curator.py` — `TypeError` when curator state JSON is not an object (not `ValueError`).
-- [ ] **HYGIENE-2026-585** ruff SIM103: `companion/langsmith_parent_policy.py` — inline LangSmith env gate return.
-- [ ] **HYGIENE-2026-586** ruff PIE810: `tools/fal_z_image_tool.py` — merge duplicate `startswith` http(s) checks.
+- [x] **HYGIENE-2026-584** ruff TRY004: `memory/living_sphere_curator.py` — `TypeError` when curator state JSON is not an object (not `ValueError`). Fixed in `cursor/agent-maintenance-tasks-fe97`.
+- [x] **HYGIENE-2026-585** ruff SIM103: `companion/langsmith_parent_policy.py` — inline LangSmith env gate return. Fixed in `cursor/agent-maintenance-tasks-fe97`.
+- [x] **HYGIENE-2026-586** ruff PIE810: `tools/fal_z_image_tool.py` — merge duplicate `startswith` http(s) checks. Fixed in `cursor/agent-maintenance-tasks-fe97`.
