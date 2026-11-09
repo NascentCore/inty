@@ -30,9 +30,7 @@ def companion_langsmith_parent_run_allowed(
         return False
     if not langsmith_v2_enabled_in_config:
         return False
-    if langsmith_tracing_v2_env_raw.strip().lower() != "true":
-        return False
-    return True
+    return langsmith_tracing_v2_env_raw.strip().lower() == "true"
 
 
 def companion_turn_langsmith_parent_enabled_from_app_config() -> bool:
