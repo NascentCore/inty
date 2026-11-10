@@ -709,6 +709,6 @@ Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov10-587`)
 
-- [ ] **HYGIENE-2026-587** ruff SIM103: `companion/inner_tick_schedule.py` — `inner_tick_enabled_from_env` return disabled env check directly. Claimed in `cursor/agent-maintenance-tasks-nov10-587`.
-- [ ] **HYGIENE-2026-588** ruff PIE810: `tools/image_gate.py` — single `startswith` tuple for http(s) candidate URLs. Claimed in `cursor/agent-maintenance-tasks-nov10-587`.
-- [ ] **HYGIENE-2026-589** ruff PIE810: `memory/transcript_compaction.py` — single `startswith` tuple for compaction loop-detector prefixes. Claimed in `cursor/agent-maintenance-tasks-nov10-587`.
+- [x] **HYGIENE-2026-587** ruff SIM103: `companion/inner_tick_schedule.py` — `inner_tick_enabled_from_env` return disabled env check directly. Fixed in `cursor/agent-maintenance-tasks-nov10-587` / pull/4099.
+- [x] **HYGIENE-2026-588** ruff PIE810: `tools/image_gate.py` — single `startswith` tuple for http(s) candidate URLs. Fixed in `cursor/agent-maintenance-tasks-nov10-587` / pull/4099.
+- [x] **HYGIENE-2026-589** ruff PIE810: `memory/transcript_compaction.py` — single `startswith` tuple for compaction loop-detector prefixes. Fixed in `cursor/agent-maintenance-tasks-nov10-587` / pull/4099.

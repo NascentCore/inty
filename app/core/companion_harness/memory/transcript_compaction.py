@@ -481,8 +481,7 @@ def _extract_open_loops(*, user_texts: list[str]) -> list[str]:
                 continue
             if (
                 "please" in lowered
-                or lowered.startswith("can you")
-                or lowered.startswith("could you")
+                or lowered.startswith(("can you", "could you"))
             ):
                 loops.append(s)
     return _dedupe_keep_order(loops)
