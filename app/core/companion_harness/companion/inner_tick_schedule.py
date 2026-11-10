@@ -66,9 +66,7 @@ def inner_tick_enabled_from_env() -> bool:
     if raw is None or not str(raw).strip():
         return True
     s = str(raw).strip().lower()
-    if s in ("0", "false", "no", "off"):
-        return False
-    return True
+    return s not in ("0", "false", "no", "off")
 
 
 def inner_tick_poll_seconds() -> float:
