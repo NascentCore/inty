@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-11 scan (cron)
+
+Source: open PR overlap check (#4099 HYGIENE-587..589, #4097 584..586, #4095 581..583, #4092 184..185, #4089 182..183 — no overlap); ruff SIM103/PIE810/TRY004/ISC004/RUF046 on `app/core/companion_harness/`.
+
+Open PRs checked: #4099 (`cursor/agent-maintenance-tasks-nov10-587`), #4097 (`cursor/agent-maintenance-tasks-fe97`), #4095 (`cursor/agent-maintenance-tasks-nov8-581`), #4092 (`cursor/agent-maintenance-tasks-nov7-184`), #4089 (`cursor/agent-maintenance-tasks-73e6`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov11-590`)
+
+- [x] **HYGIENE-2026-590** ruff SIM103: `models.py` — `is_transcript_row_user_visible` return negated condition directly. Fixed in `cursor/agent-maintenance-tasks-nov11-590`.
+- [x] **HYGIENE-2026-591** ruff PIE810: `companion_tool_runtime.py` — `_latest_generated_image_http_url_from_index` http(s) `startswith` tuple. Fixed in `cursor/agent-maintenance-tasks-nov11-590`.
+- [x] **HYGIENE-2026-592** ruff PIE810: `companion_tool_runtime.py` — modify-image path resolution http(s) `startswith` tuple. Fixed in `cursor/agent-maintenance-tasks-nov11-590`.
