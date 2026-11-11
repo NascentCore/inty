@@ -293,12 +293,10 @@ def is_transcript_row_user_visible(row: ChatMessage) -> bool:
     """Filter manifest and synthetic proactive user rows from chat history / UI paths."""
     if is_ai_private_splice_manifest(row):
         return False
-    if (
+    return not (
         row.role == "user"
         and row.inner_tick_kind == InnerTickKind.PROACTIVE_CHAT
-    ):
-        return False
-    return True
+    )
 
 
 _OPTIONAL_DOC_MAX_CHARS = 64_000
