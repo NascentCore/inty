@@ -139,7 +139,7 @@ def _latest_generated_image_http_url_from_index(
 ) -> str | None:
     for row in reversed(list_image_asset_records(store)):
         u = str(row.get("gcs_http_url") or "").strip()
-        if u.startswith("http://") or u.startswith("https://"):
+        if u.startswith(("http://", "https://")):
             return u
     return None
 
@@ -777,7 +777,7 @@ async def _dispatch(
             asset = find_latest_asset_by_local_relative_path(store, path_s)
             if asset is not None:
                 u = str(asset.get("gcs_http_url") or "").strip()
-                if u.startswith("http://") or u.startswith("https://"):
+                if u.startswith(("http://", "https://")):
                     url_s = u
                 else:
                     return f"ERROR: source image in index has no http(s) URL for {path_s!r}"
