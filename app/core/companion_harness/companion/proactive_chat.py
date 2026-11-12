@@ -21,8 +21,8 @@ from datetime import UTC, datetime, timedelta
 from pydantic import BaseModel, Field
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 from .models import (
     ChatMessage,
@@ -192,8 +192,9 @@ def next_proactive_chat_wait_seconds(
     now: datetime | None = None,
 ) -> float:
     """Seconds until proactive chat may fire; <= 0 when due; large value when gated off."""
+    transcript_rel = DEFAULT_MEMORY_STORE_SCOPE_PATHS.transcript
     msgs = load_transcript_projection_from_store(
-        store, TRANSCRIPT_JSONL_REL, TranscriptProjection.FULL
+        store, transcript_rel, TranscriptProjection.FULL
     )
     if len(msgs) < config.min_transcript_lines:
         return _NEVER
