@@ -709,6 +709,6 @@ Open PRs checked: #4103 (`cursor/agent-maintenance-tasks-nov11-590`), #4099 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov12-593`)
 
-- [ ] **HYGIENE-2026-593** ruff I001: `companion/dreaming_observability.py` — sort/format import block.
-- [ ] **HYGIENE-2026-594** ruff I001: `companion/langsmith_turn_slice.py` — sort/format import block.
-- [ ] **HYGIENE-2026-595** ruff I001: `companion/manager_factory.py` — sort/format import block.
+- [x] **HYGIENE-2026-593** ruff I001: `companion/dreaming_observability.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov12-593` / pull/4106.
+- [x] **HYGIENE-2026-594** ruff I001: `companion/langsmith_turn_slice.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov12-593` / pull/4106.
+- [x] **HYGIENE-2026-595** ruff I001: `companion/manager_factory.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov12-593` / pull/4106.
