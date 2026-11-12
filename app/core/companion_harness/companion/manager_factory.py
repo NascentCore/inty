@@ -7,7 +7,6 @@ import json
 import os
 from functools import lru_cache
 
-from app.core.llms.client import CompanionLLMConfig
 from app.core.companion_harness.companion.manager import (
     CompanionConfig,
     CompanionManager,
@@ -19,6 +18,7 @@ from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
 from app.core.config import global_config_loaded_from_config_yaml
+from app.core.llms.client import CompanionLLMConfig
 from app.utils.models_catalog import GenAIModel, resolve_chat_text_model
 
 DEFAULT_COMPANION_WS_SESSION_SYSTEM_TEXT = (
