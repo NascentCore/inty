@@ -286,7 +286,7 @@ async def run_modify_image_z_image_turbo(
         )
     else:
         u = source_image_url.strip()
-        if not (u.startswith("https://") or u.startswith("http://")):
+        if not u.startswith(("https://", "http://")):
             return "ERROR: source_image_url must be an http(s) URL"
         image_url_for_fal = u
 
