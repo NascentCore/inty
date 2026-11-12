@@ -11,16 +11,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Self
 
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_RUNTIME_CHANNEL_METADATA_KEY,
     INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY,
     dreaming_consolidation_langsmith_extra,
     invocation_extra,
     tool_call_langsmith_extra,
-)
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
 )
 
 
