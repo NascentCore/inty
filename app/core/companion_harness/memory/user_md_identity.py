@@ -83,26 +83,35 @@ def list_unfilled_identity_labels(
     return tuple(label for label in labels if label in unfilled)
 
 
-def fill_user_md_identity_fields(
-    text: str,
-    field_values: dict[str, str],
+def _append_user_md_identity_section(
+    text: str, field_values: dict[str, str]
 ) -> str:
-    """Replace «身份信息» template slot lines; create missing lines when section exists."""
-    assert field_values
-    lines = text.splitlines()
-    if USER_PROFILE_SECTION not in lines:
-        block_lines = [
-            "",
-            USER_PROFILE_SECTION,
-            "",
-            *[
-                f"{_identity_line_prefix(label)}{value}"
-                for label, value in field_values.items()
-            ],
-        ]
-        return text.rstrip() + "\n".join(block_lines) + "\n"
+    block_lines = [
+        "",
+        USER_PROFILE_SECTION,
+        "",
+        *[
+            f"{_identity_line_prefix(label)}{value}"
+            for label, value in field_values.items()
+        ],
+    ]
+    return text.rstrip() + "\n".join(block_lines) + "\n"
 
-    section_idx = lines.index(USER_PROFILE_SECTION)
+
+def _identity_section_body_end_index(lines: list[str], section_idx: int) -> int:
+    insert_at = section_idx + 1
+    while insert_at < len(lines) and lines[insert_at].strip() == "":
+        insert_at += 1
+    while insert_at < len(lines) and not lines[insert_at].startswith("## "):
+        insert_at += 1
+    return insert_at
+
+
+def _patch_user_md_identity_section_lines(
+    lines: list[str],
+    section_idx: int,
+    field_values: dict[str, str],
+) -> list[str]:
     updated = set[str]()
     for i in range(section_idx + 1, len(lines)):
         if lines[i].startswith("## "):
@@ -115,19 +124,33 @@ def fill_user_md_identity_fields(
                 updated.add(label)
 
     missing = [label for label in field_values if label not in updated]
-    if missing:
-        insert_at = section_idx + 1
-        while insert_at < len(lines) and lines[insert_at].strip() == "":
-            insert_at += 1
-        while insert_at < len(lines) and not lines[insert_at].startswith("## "):
-            insert_at += 1
-        new_lines = [
-            f"{_identity_line_prefix(label)}{field_values[label]}"
-            for label in missing
-        ]
-        for offset, bullet in enumerate(new_lines):
-            lines.insert(insert_at + offset, bullet)
+    if not missing:
+        return lines
 
+    insert_at = _identity_section_body_end_index(lines, section_idx)
+    new_lines = [
+        f"{_identity_line_prefix(label)}{field_values[label]}"
+        for label in missing
+    ]
+    for offset, bullet in enumerate(new_lines):
+        lines.insert(insert_at + offset, bullet)
+    return lines
+
+
+def fill_user_md_identity_fields(
+    text: str,
+    field_values: dict[str, str],
+) -> str:
+    """Replace «身份信息» template slot lines; create missing lines when section exists."""
+    assert field_values
+    lines = text.splitlines()
+    if USER_PROFILE_SECTION not in lines:
+        return _append_user_md_identity_section(text, field_values)
+
+    section_idx = lines.index(USER_PROFILE_SECTION)
+    lines = _patch_user_md_identity_section_lines(
+        lines, section_idx, field_values
+    )
     return "\n".join(lines) + "\n"
 
 
