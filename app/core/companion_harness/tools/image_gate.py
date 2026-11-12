@@ -110,7 +110,7 @@ def generated_image_meta_from_asset_record(
         str(row.get("gcs_uri") or "").strip(),
         str(row.get("gcs_http_url") or "").strip(),
     ):
-        if candidate.startswith("http://") or candidate.startswith("https://"):
+        if candidate.startswith(("http://", "https://")):
             return {"image_url": candidate, **base}
     return None
 
