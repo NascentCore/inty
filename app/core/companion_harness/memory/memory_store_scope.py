@@ -55,21 +55,6 @@ from .memory_store_path_constants import (
 _MEMORY_PKG_DIR = Path(__file__).resolve().parent
 _TEMPLATES_DIR = _MEMORY_PKG_DIR / "templates"
 _PROMPTS_DIR = _MEMORY_PKG_DIR.parent / "companion" / "prompts"
-_PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
-    {
-        ABOUT_MD_REL,
-        AXIOM_MD_REL,
-        BOOTSTRAP_MD_REL,
-        BOOTSTRAP_TELEGRAM_PROFILE_MD_REL,
-        CHANNELS_MD_REL,
-        HARNESS_MD_REL,
-        INTY_MD_REL,
-        OUTPUT_FORMAT_IM_DM_MD_REL,
-        SAFETY_MD_REL,
-        TOOLS_MD_REL,
-        SIGNIFICANCE_PERCEPTION_MD_REL,
-    }
-)
 # TODO(static-prompt-slice-memstore): Split static prompt-slice seeds (HARNESS, TOOLS, …) from — #3506
 # mutable MemDoc seeds; persist static kinds in MemoryStore on init. #3506
 
@@ -290,6 +275,25 @@ class MemoryStoreScopePaths:
 
 
 DEFAULT_MEMORY_STORE_SCOPE_PATHS = MemoryStoreScopePaths()
+
+_PACKAGE_PROMPT_SEED_ACCESSOR_ATTRS: Final[tuple[str, ...]] = (
+    "about_md",
+    "axiom_md",
+    "bootstrap_md",
+    "bootstrap_telegram_profile_md",
+    "channels_md",
+    "harness_md",
+    "inty_md",
+    "output_format_im_dm_md",
+    "safety_md",
+    "tools_md",
+    "significance_perception_md",
+)
+
+_PACKAGE_PROMPT_SEED_FILES: Final[frozenset[str]] = frozenset(
+    getattr(DEFAULT_MEMORY_STORE_SCOPE_PATHS, attr)
+    for attr in _PACKAGE_PROMPT_SEED_ACCESSOR_ATTRS
+)
 
 _REQUIRED_FILES_ATTR = (
     "identity",
