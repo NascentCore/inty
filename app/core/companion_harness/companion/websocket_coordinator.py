@@ -21,28 +21,9 @@ from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
-from app.services.agentic_companion.session import (
-    Coordinator,
-    apply_inner_tick_coords,
-)
+from app.services.agentic_companion.session import Coordinator
 
 _ChatWsInflightTurnResult = TypeVar("_ChatWsInflightTurnResult")
-
-
-def apply_companion_ws_inner_tick_coords(
-    inner_tick_ctx: dict[str, Any],
-    *,
-    user_id: Any,
-    agent_id: str,
-    chat_id: Any,
-) -> None:
-    """Alias for :func:`apply_inner_tick_coords` (``chat_ws`` import path)."""
-    apply_inner_tick_coords(
-        inner_tick_ctx,
-        user_id=user_id,
-        agent_id=agent_id,
-        chat_id=chat_id,
-    )
 
 
 @dataclass
