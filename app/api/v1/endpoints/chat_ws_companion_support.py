@@ -14,14 +14,10 @@ from app.schemas.chat_websocket import (
     normalize_websocket_companion_message_id_uuid,
 )
 from app.services import chat_history_service
-from app.services.agentic_companion.ws_turn_support import (
-    companion_ai_meta_from_turn_result as _companion_ai_meta_from_turn_result,
-)
 
 __all__ = [
     "CompanionInferenceUpstreamHTTPException",
     "CompanionLLMInferenceBackendError",
-    "_companion_ai_meta_from_turn_result",
     "_companion_rejects_multimodal_user_turn",
     "_persist_companion_user_message_for_bg",
     "_require_websocket_companion_message_id_uuid",
