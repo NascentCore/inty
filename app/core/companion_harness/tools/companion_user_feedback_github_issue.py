@@ -147,8 +147,10 @@ def build_github_issue_body(snapshot: HarnessSnapshot) -> str:
             f"| vcs_revision | `{snapshot.vcs_revision}` |",
             "",
             "> Automated report from `companion_record_user_feedback` tool.",
-            "> Full harness snapshot in MemoryStore "
-            "`.companion_user_feedback.jsonl` (feedback_id above).",
+            (
+                "> Full harness snapshot in MemoryStore "
+                "`.companion_user_feedback.jsonl` (feedback_id above)."
+            ),
             "",
             "## Harness snapshot excerpt (GitHub body caps: transcript 2k, memory 500/doc)",
             "",

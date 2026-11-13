@@ -279,8 +279,10 @@ class ConversationCompactor:
             [
                 COMPACTION_SYSTEM_TAG,
                 f"turn={turn}",
-                "Long-term memory snapshot from compressed older dialogue. Prefer the "
-                "user's latest message when facts conflict.",
+                (
+                    "Long-term memory snapshot from compressed older dialogue. Prefer the "
+                    "user's latest message when facts conflict."
+                ),
                 "## Running Summary",
                 state.running_summary or "- (none)",
                 "## Semantic Memory",
