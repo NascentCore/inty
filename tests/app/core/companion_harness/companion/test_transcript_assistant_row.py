@@ -15,9 +15,11 @@ from app.core.companion_harness.companion.models import (
     load_transcript_from_store,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.memory_store_path_constants import (
-    TRANSCRIPT_JSONL_REL,
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 
 
 def test_build_transcript_assistant_row_omits_empty_optionals() -> None:
@@ -53,7 +55,7 @@ def test_append_transcript_assistant_row_roundtrips_chat_message(
     )
     append_transcript_assistant_row(
         store,
-        TRANSCRIPT_JSONL_REL,
+        _SCOPE.transcript,
         TranscriptAssistantRowBuildInput(
             content="reply",
             uuid="a1",
@@ -69,9 +71,9 @@ def test_append_transcript_assistant_row_roundtrips_chat_message(
         ),
         ts="2026-06-13T00:00:00+00:00",
     )
-    raw = json.loads(store.read_document(TRANSCRIPT_JSONL_REL).strip())
+    raw = json.loads(store.read_document(_SCOPE.transcript).strip())
     assert raw["turn_recall"] == "用户提到下周见面"
-    msgs = load_transcript_from_store(store, TRANSCRIPT_JSONL_REL)
+    msgs = load_transcript_from_store(store, _SCOPE.transcript)
     assert len(msgs) == 1
     assert msgs[0].turn_recall == "用户提到下周见面"
     assert msgs[0].significance_perception == {
