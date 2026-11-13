@@ -93,6 +93,29 @@ def _append_inner_tick_autonomy_contextual(
     out.append(_system_message(_get_inner_tick_autonomy_prompt_slice()))
 
 
+def _append_inner_tick_proactive_bootstrap_contextual(
+    out: list[dict[str, Any]],
+    ctx: TurnComposeContext,
+) -> None:
+    _append_directives(out, ctx)
+    _append_time_zone(out)
+    _append_proactive_clause(out)
+    out.append(_system_message(BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY))
+    if ctx.proactive_life_currents_block is not None:
+        out.append(_system_message(ctx.proactive_life_currents_block))
+
+
+def _append_inner_tick_proactive_settled_contextual(
+    out: list[dict[str, Any]],
+    ctx: TurnComposeContext,
+) -> None:
+    _append_experience_profile(out, ctx)
+    _append_directives(out, ctx)
+    _append_proactive_clause(out)
+    if ctx.proactive_life_currents_block is not None:
+        out.append(_system_message(ctx.proactive_life_currents_block))
+
+
 def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
     """Sole contextual-category orchestrator for all production tracks."""
     out: list[dict[str, Any]] = []
@@ -106,24 +129,9 @@ def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
         case CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT:
             match ctx.phase:
                 case Phase.BOOTSTRAP:
-                    _append_directives(out, ctx)
-                    _append_time_zone(out)
-                    _append_proactive_clause(out)
-                    out.append(
-                        _system_message(BOOTSTRAP_PROACTIVE_CONTEXTUAL_OVERLAY)
-                    )
-                    if ctx.proactive_life_currents_block is not None:
-                        out.append(
-                            _system_message(ctx.proactive_life_currents_block)
-                        )
+                    _append_inner_tick_proactive_bootstrap_contextual(out, ctx)
                 case Phase.SETTLED:
-                    _append_experience_profile(out, ctx)
-                    _append_directives(out, ctx)
-                    _append_proactive_clause(out)
-                    if ctx.proactive_life_currents_block is not None:
-                        out.append(
-                            _system_message(ctx.proactive_life_currents_block)
-                        )
+                    _append_inner_tick_proactive_settled_contextual(out, ctx)
         case CompanionTurnTrack.INNER_TICK_SCHEDULED:
             match ctx.phase:
                 case Phase.BOOTSTRAP:
@@ -131,9 +139,7 @@ def assemble_contextual_slices(ctx: TurnComposeContext) -> list[dict[str, Any]]:
                     _append_time_zone(out)
                     _append_proactive_clause(out)
                 case Phase.SETTLED:
-                    _append_experience_profile(out, ctx)
-                    _append_directives(out, ctx)
-                    _append_proactive_clause(out)
+                    _append_inner_tick_proactive_settled_contextual(out, ctx)
         case CompanionTurnTrack.INNER_TICK_MONOLOG:
             _append_inner_tick_monolog_contextual(out, ctx)
         case CompanionTurnTrack.INNER_TICK_AUTONOMY:
