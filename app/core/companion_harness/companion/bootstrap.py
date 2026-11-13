@@ -87,9 +87,11 @@ def build_bootstrap_tool_call_section() -> str:
             "- Bootstrap only done once",
             f"- Call **{CompanionToolName.MEMORY_STORE_READ_DOCUMENT.value}** to read persisted docs before updating",
             f"- Call **{CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT.value}** to update **{docs}** (full markdown body per path)",
-            f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user clarifies what companionship experience they want "
-            f"(e.g. `casual_chat`, `deep_conversation`, `roleplay`, `remote_romance`); optional `tone` (`warm` / `playful` / `cool` / `direct`). "
-            "Bond narrative stays in COMPANIONSHIP.md — do not ask the user for harness `context_mode` ids",
+            (
+                f"- Call **{CompanionToolName.COMPANION_SET_EXPERIENCE_PROFILE.value}** when the user clarifies what companionship experience they want "
+                f"(e.g. `casual_chat`, `deep_conversation`, `roleplay`, `remote_romance`); optional `tone` (`warm` / `playful` / `cool` / `direct`). "
+                "Bond narrative stays in COMPANIONSHIP.md — do not ask the user for harness `context_mode` ids"
+            ),
             f"- Call **{CompanionToolName.COMPANION_RECORD_USER_PROFILE.value}** optionally when the user confirms USER.md identity fields and DB analytics sync is desired (partial updates OK)",
             f"- Call **{CompanionToolName.COMPANION_BOOTSTRAP_USER_INTERACTIVE_COMPLETE.value}** to conclude bootstrap",
             "- 尽快收尾：已有对话足以写初稿时，先 **memory_store_write_document** 写 IDENTITY / STYLE / USER，再 complete；禁止跳过写入直接 complete",
