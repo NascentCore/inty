@@ -101,10 +101,10 @@ def _load_tasks(store: MemoryStore) -> list[ScheduleTask]:
         return []
     loaded = json.loads(raw_body)
     if not isinstance(loaded, dict):
-        raise ValueError("schedule tasks document must be a JSON object")
+        raise TypeError("schedule tasks document must be a JSON object")
     raw_tasks = loaded.get("tasks", [])
     if not isinstance(raw_tasks, list):
-        raise ValueError("schedule tasks: key 'tasks' must be an array")
+        raise TypeError("schedule tasks: key 'tasks' must be an array")
     return [ScheduleTask.from_dict(x) for x in raw_tasks]
 
 

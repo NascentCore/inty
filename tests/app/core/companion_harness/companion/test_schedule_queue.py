@@ -79,7 +79,7 @@ def test_schedule_queue_rejects_legacy_array_document(tmp_path: Path) -> None:
     )
     future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
     with pytest.raises(
-        ValueError,
+        TypeError,
         match="schedule tasks document must be a JSON object",
     ):
         add_schedule_task(store, exec_time_utc=future, task_text="new")
