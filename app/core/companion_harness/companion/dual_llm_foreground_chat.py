@@ -77,96 +77,146 @@ class DualLlmForegroundChatResult:
     langsmith_run_id: str
 
 
-async def run_dual_llm_foreground_chat(
+def _dual_llm_foreground_skip_result(
     fg_input: DualLlmForegroundChatInput,
 ) -> DualLlmForegroundChatResult:
-    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
+    """Monolog inner tick: skip envelope chat and force tool-path first round."""
+    logger.info(
+        "run_dual_llm_foreground_chat skip foreground envelope "
+        "trace_id={} foreground_scene={} model_chat={}",
+        fg_input.trace_id,
+        fg_input.foreground_scene,
+        fg_input.chat_model,
+    )
+    return DualLlmForegroundChatResult(
+        assistant_text="",
+        significance_meta=None,
+        turn_recall=None,
+        tool_msgs_for_bg=tuple(deepcopy(list(fg_input.tool_msgs))),
+        force_tools_first_round=True,
+        langsmith_trace_id=fg_input.langsmith_trace_id,
+        langsmith_run_id=fg_input.langsmith_run_id,
+    )
 
-    When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
-    ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,
-    parses the envelope, and appends the chat-track handoff assistant row to tool messages when
-    foreground text is non-empty.
-    """
+
+def _dual_llm_foreground_envelope_chat_sync(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> Any:
+    return fg_input.llm_client.chat_completion(
+        messages=chat_msgs,
+        model=fg_input.chat_model,
+        tools=None,
+        response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
+        scene=fg_input.foreground_scene,
+        langsmith_extra=fg_input.langsmith_slice.foreground_invocation_extra(
+            source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+            extra_metadata=None,
+        ),
+        high_reasoning=fg_input.high_reasoning,
+    )
+
+
+def _raise_dual_llm_foreground_envelope_timeout(
+    fg_input: DualLlmForegroundChatInput,
+    exc: TimeoutError,
+    timeout_sec: float,
+) -> None:
+    record_llm_inference_failure(
+        model=fg_input.chat_model.id_on_provider,
+        exc=exc,
+        foreground_timeout_sec=timeout_sec,
+    )
+    raise RuntimeError(
+        f"async chat front timed out after "
+        f"{timeout_sec:.0f}s "
+        f"(trace_id={fg_input.trace_id})"
+    ) from exc
+
+
+def _langsmith_ids_after_envelope_completion(
+    resp: Any,
+    langsmith_trace_acc: str,
+    langsmith_run_acc: str,
+) -> tuple[str, str]:
+    tid = langsmith_trace_id_from_completion(resp)
+    if tid:
+        langsmith_trace_acc = tid
+    ls_lr = langsmith_llm_run_id_from_completion(resp)
+    if ls_lr:
+        langsmith_run_acc = ls_lr
+    return langsmith_trace_acc, langsmith_run_acc
+
+
+async def _dual_llm_foreground_await_envelope_completion(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> tuple[Any, str, str]:
+    """Run sync envelope chat on a worker thread with timeout; return LangSmith ids."""
     langsmith_trace_acc = fg_input.langsmith_trace_id
     langsmith_run_acc = fg_input.langsmith_run_id
-
-    if fg_input.skip_foreground_envelope:
-        logger.info(
-            "run_dual_llm_foreground_chat skip foreground envelope "
-            "trace_id={} foreground_scene={} model_chat={}",
-            fg_input.trace_id,
-            fg_input.foreground_scene,
-            fg_input.chat_model,
-        )
-        return DualLlmForegroundChatResult(
-            assistant_text="",
-            significance_meta=None,
-            turn_recall=None,
-            tool_msgs_for_bg=tuple(deepcopy(list(fg_input.tool_msgs))),
-            force_tools_first_round=True,
-            langsmith_trace_id=langsmith_trace_acc,
-            langsmith_run_id=langsmith_run_acc,
-        )
-
-    chat_msgs = list(fg_input.chat_msgs)
-    t_api = time.perf_counter()
-    chat_model = fg_input.chat_model
     llm_client = fg_input.llm_client
-
-    def _chat_sync() -> Any:
-        return llm_client.chat_completion(
-            messages=chat_msgs,
-            model=chat_model,
-            tools=None,
-            response_format=DUAL_LLM_CHAT_RESPONSE_FORMAT,
-            scene=fg_input.foreground_scene,
-            langsmith_extra=fg_input.langsmith_slice.foreground_invocation_extra(
-                source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-                extra_metadata=None,
-            ),
-            high_reasoning=fg_input.high_reasoning,
-        )
+    timeout_sec = llm_client.config.async_chat_front_timeout_sec
 
     try:
         resp = await asyncio.wait_for(
-            asyncio.to_thread(_chat_sync),
-            timeout=llm_client.config.async_chat_front_timeout_sec,
+            asyncio.to_thread(
+                _dual_llm_foreground_envelope_chat_sync, fg_input, chat_msgs
+            ),
+            timeout=timeout_sec,
         )
-        tid = langsmith_trace_id_from_completion(resp)
-        if tid:
-            langsmith_trace_acc = tid
-        ls_lr = langsmith_llm_run_id_from_completion(resp)
-        if ls_lr:
-            langsmith_run_acc = ls_lr
     except TimeoutError as exc:
-        record_llm_inference_failure(
-            model=chat_model.id_on_provider,
-            exc=exc,
-            foreground_timeout_sec=llm_client.config.async_chat_front_timeout_sec,
-        )
-        raise RuntimeError(
-            f"async chat front timed out after "
-            f"{llm_client.config.async_chat_front_timeout_sec:.0f}s "
-            f"(trace_id={fg_input.trace_id})"
-        ) from exc
+        _raise_dual_llm_foreground_envelope_timeout(fg_input, exc, timeout_sec)
 
+    langsmith_trace_acc, langsmith_run_acc = _langsmith_ids_after_envelope_completion(
+        resp, langsmith_trace_acc, langsmith_run_acc
+    )
+    return resp, langsmith_trace_acc, langsmith_run_acc
+
+
+def _log_dual_llm_foreground_envelope_round(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+    t_api: float,
+) -> None:
     approx_ctx_chars = sum(len(str(m.get("content") or "")) for m in chat_msgs)
     logger.info(
         "run_dual_llm_foreground_chat llm_round={} model={} chat_completions_ms={:.0f} "
         "approx_ctx_chars={} async_chat_tool_background foreground_chat scene={}",
         1,
-        chat_model,
+        fg_input.chat_model,
         (time.perf_counter() - t_api) * 1000.0,
         approx_ctx_chars,
         fg_input.foreground_scene,
     )
+
+
+async def _invoke_dual_llm_foreground_chat_completion(
+    fg_input: DualLlmForegroundChatInput,
+    chat_msgs: list[dict[str, Any]],
+) -> tuple[Any, str, str]:
+    """One foreground chat completion; returns response and accumulated LangSmith ids."""
+    t_api = time.perf_counter()
+    resp, langsmith_trace_acc, langsmith_run_acc = (
+        await _dual_llm_foreground_await_envelope_completion(fg_input, chat_msgs)
+    )
+    _log_dual_llm_foreground_envelope_round(fg_input, chat_msgs, t_api)
+    return resp, langsmith_trace_acc, langsmith_run_acc
+
+
+def _dual_llm_foreground_result_from_response(
+    fg_input: DualLlmForegroundChatInput,
+    resp: Any,
+    langsmith_trace_acc: str,
+    langsmith_run_acc: str,
+) -> DualLlmForegroundChatResult:
+    """Parse envelope completion and build tool-path handoff messages."""
     msg = resp.choices[0].message
     dual_split = split_dual_llm_chat_branch_message(msg)
     assistant_text = dual_split.visible_text
     significance_meta = dual_split.significance_meta
     turn_recall = dual_split.turn_recall
-    fg_output_to_user = dual_split.output_to_user
-    if fg_output_to_user is False:
+    if dual_split.output_to_user is False:
         logger.warning(
             "run_dual_llm_foreground_chat envelope output_to_user=false "
             "trace_id={} (expected true for chat branch)",
@@ -178,13 +228,37 @@ async def run_dual_llm_foreground_chat(
         tool_msgs_for_bg.append(
             build_chat_track_handoff_assistant_message(fg_text=fg_text)
         )
-    force_tools_first_round = not bool(fg_text)
     return DualLlmForegroundChatResult(
         assistant_text=assistant_text,
         significance_meta=significance_meta,
         turn_recall=turn_recall,
         tool_msgs_for_bg=tuple(tool_msgs_for_bg),
-        force_tools_first_round=force_tools_first_round,
+        force_tools_first_round=not bool(fg_text),
         langsmith_trace_id=langsmith_trace_acc,
         langsmith_run_id=langsmith_run_acc,
+    )
+
+
+async def run_dual_llm_foreground_chat(
+    fg_input: DualLlmForegroundChatInput,
+) -> DualLlmForegroundChatResult:
+    """Run foreground dual-LLM envelope chat or skip (monolog inner tick).
+
+    When ``skip_foreground_envelope`` is true, returns empty foreground text and deep-copied
+    ``tool_msgs`` with ``force_tools_first_round=True``. Otherwise performs one chat completion,
+    parses the envelope, and appends the chat-track handoff assistant row to tool messages when
+    foreground text is non-empty.
+    """
+    if fg_input.skip_foreground_envelope:
+        return _dual_llm_foreground_skip_result(fg_input)
+
+    chat_msgs = list(fg_input.chat_msgs)
+    resp, langsmith_trace_acc, langsmith_run_acc = (
+        await _invoke_dual_llm_foreground_chat_completion(fg_input, chat_msgs)
+    )
+    return _dual_llm_foreground_result_from_response(
+        fg_input,
+        resp,
+        langsmith_trace_acc,
+        langsmith_run_acc,
     )
