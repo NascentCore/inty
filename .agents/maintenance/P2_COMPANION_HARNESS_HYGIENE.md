@@ -709,6 +709,6 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4103 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov13-596`)
 
-- [ ] **HYGIENE-2026-596** ruff I001: `companion/dual_llm_message_stacks.py` — sort/format import block.
-- [ ] **HYGIENE-2026-597** ruff I001: `companion/inner_tick_kind.py` — sort/format import block.
-- [ ] **HYGIENE-2026-598** ruff I001: `companion/inner_tick_schedule.py` — sort/format import block.
+- [x] **HYGIENE-2026-596** ruff I001: `companion/dual_llm_message_stacks.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov13-596` / pull/4109.
+- [x] **HYGIENE-2026-597** ruff I001: `companion/inner_tick_kind.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov13-596` / pull/4109.
+- [x] **HYGIENE-2026-598** ruff I001: `companion/inner_tick_schedule.py` — sort/format import block. Fixed in `cursor/agent-maintenance-tasks-nov13-596` / pull/4109.
