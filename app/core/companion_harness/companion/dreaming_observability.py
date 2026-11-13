@@ -107,6 +107,76 @@ def dreaming_batch_langsmith_scope(
         yield None, langsmith_slice
 
 
+def _dreaming_batch_langsmith_parent_success_outputs(
+    *,
+    outcome: DreamingBatchOutcome,
+    candidate: DreamingCandidate,
+    ls_trace_id: str,
+    ls_run_id: str,
+) -> dict[str, Any]:
+    return {
+        "inner_tick_activity": InnerTickActivity.DREAMING.value,
+        "outcome": outcome.value,
+        "row_count": len(candidate.rows),
+        "boundary_uuid": candidate.boundary_uuid,
+        "langsmith_trace_id": ls_trace_id,
+        "langsmith_run_id": ls_run_id,
+    }
+
+
+def _end_dreaming_batch_langsmith_parent_run(
+    *,
+    langsmith_root_run: Any | None,
+    outcome: DreamingBatchOutcome,
+    candidate: DreamingCandidate,
+    ls_trace_id: str,
+    ls_run_id: str,
+    batch_error: str | None,
+) -> None:
+    from app.core.companion_harness.companion.llm_chat_runtime import (
+        end_companion_turn_root_run_safe,
+    )
+
+    if batch_error is not None:
+        end_companion_turn_root_run_safe(
+            langsmith_root_run,
+            error=batch_error,
+            ls_end_source="dreaming_batch_failed",
+        )
+        return
+    end_companion_turn_root_run_safe(
+        langsmith_root_run,
+        outputs=_dreaming_batch_langsmith_parent_success_outputs(
+            outcome=outcome,
+            candidate=candidate,
+            ls_trace_id=ls_trace_id,
+            ls_run_id=ls_run_id,
+        ),
+        ls_end_source="dreaming_batch",
+    )
+
+
+def _log_dreaming_batch_observed(
+    *,
+    session: CompanionSession,
+    inty_trace_id: str,
+    outcome: DreamingBatchOutcome,
+    candidate: DreamingCandidate,
+    ls_trace_id: str,
+) -> None:
+    logger.info(
+        "companion_dreaming batch_observed user={} agent={} chat={} outcome={} "
+        "rows={} trace_id={} langsmith_trace_id={}",
+        session.user_id,
+        session.companion_id,
+        session.chat_id,
+        outcome.value,
+        len(candidate.rows),
+        inty_trace_id,
+        ls_trace_id,
+    )
+
+
 def record_dreaming_batch_observability(
     *,
     session: CompanionSession,
@@ -121,7 +191,6 @@ def record_dreaming_batch_observability(
     from app.core.companion_harness.companion.llm_chat_runtime import (
         companion_turn_langsmith_parent_run_id_str,
         companion_turn_langsmith_parent_trace_id_str,
-        end_companion_turn_root_run_safe,
     )
 
     ls_trace_id = companion_turn_langsmith_parent_trace_id_str(
@@ -139,35 +208,20 @@ def record_dreaming_batch_observability(
             langsmith_run_id=ls_run_id,
         ),
     )
-    if batch_error is not None:
-        end_companion_turn_root_run_safe(
-            langsmith_root_run,
-            error=batch_error,
-            ls_end_source="dreaming_batch_failed",
-        )
-    else:
-        end_companion_turn_root_run_safe(
-            langsmith_root_run,
-            outputs={
-                "inner_tick_activity": InnerTickActivity.DREAMING.value,
-                "outcome": outcome.value,
-                "row_count": len(candidate.rows),
-                "boundary_uuid": candidate.boundary_uuid,
-                "langsmith_trace_id": ls_trace_id,
-                "langsmith_run_id": ls_run_id,
-            },
-            ls_end_source="dreaming_batch",
-        )
-    logger.info(
-        "companion_dreaming batch_observed user={} agent={} chat={} outcome={} "
-        "rows={} trace_id={} langsmith_trace_id={}",
-        session.user_id,
-        session.companion_id,
-        session.chat_id,
-        outcome.value,
-        len(candidate.rows),
-        inty_trace_id,
-        ls_trace_id,
+    _end_dreaming_batch_langsmith_parent_run(
+        langsmith_root_run=langsmith_root_run,
+        outcome=outcome,
+        candidate=candidate,
+        ls_trace_id=ls_trace_id,
+        ls_run_id=ls_run_id,
+        batch_error=batch_error,
+    )
+    _log_dreaming_batch_observed(
+        session=session,
+        inty_trace_id=inty_trace_id,
+        outcome=outcome,
+        candidate=candidate,
+        ls_trace_id=ls_trace_id,
     )
     # TODO(dreaming-completion-notify): #3744 — on CHECKPOINT_SAVED, set scope dreaming
     # completion Event (see scope_inner_tick_state) for in-process waiters.
