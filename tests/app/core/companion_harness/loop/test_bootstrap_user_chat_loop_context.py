@@ -18,6 +18,9 @@ from app.core.companion_harness.prompt_builder import (
     PromptMessageRole,
     PromptPlan,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
 from app.core.companion_harness.tools.companion_tool_definitions import (
     MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP,
 )
@@ -85,6 +88,16 @@ def test_bootstrap_loop_context_uses_bootstrap_track_and_allowlist() -> None:
     )
 
     execution = context.execution
+    scope_paths = DEFAULT_MEMORY_STORE_SCOPE_PATHS
+    scope_bootstrap_writes = frozenset(
+        {
+            scope_paths.companionship_md,
+            scope_paths.identity,
+            scope_paths.style_md,
+            scope_paths.user_md,
+        }
+    )
+    assert execution.write_allowlist == scope_bootstrap_writes
     assert (
         execution.write_allowlist
         == MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST_BOOTSTRAP
