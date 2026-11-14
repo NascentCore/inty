@@ -133,9 +133,11 @@ def next_inner_tick_wait_seconds(
     now = now_monotonic if now_monotonic is not None else time.monotonic()
     msgs = _monolog_transcript_messages(store)
     line_count = len(msgs)
-    if last_monolog_transcript_line_count is not None:
-        if line_count <= last_monolog_transcript_line_count:
-            return _DISABLED_INNER_TICK_WAIT_SEC
+    if (
+        last_monolog_transcript_line_count is not None
+        and line_count <= last_monolog_transcript_line_count
+    ):
+        return _DISABLED_INNER_TICK_WAIT_SEC
 
     if overrides is not None and overrides.min_transcript_msgs is not None:
         min_lines = overrides.min_transcript_msgs

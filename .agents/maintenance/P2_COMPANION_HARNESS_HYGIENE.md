@@ -709,6 +709,6 @@ Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov14-599`)
 
-- [ ] **HYGIENE-2026-599** ruff FURB192: `schedule_queue.py` — `min` instead of `sorted(...)[0]` for earliest due task.
-- [ ] **HYGIENE-2026-600** ruff SIM102: `inner_tick_schedule.py` — single `if` for monolog transcript line-count gate.
-- [ ] **HYGIENE-2026-601** ruff PIE807: `test_prompt_stack_tools_for_turn.py` — `list` instead of `lambda: []` in parametrize.
+- [x] **HYGIENE-2026-599** ruff FURB192: `schedule_queue.py` — `min` instead of `sorted(...)[0]` for earliest due task. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.
+- [x] **HYGIENE-2026-600** ruff SIM102: `inner_tick_schedule.py` — single `if` for monolog transcript line-count gate. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.
+- [x] **HYGIENE-2026-601** ruff PIE807: `test_prompt_stack_tools_for_turn.py` — `list` instead of `lambda: []` in parametrize. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.
