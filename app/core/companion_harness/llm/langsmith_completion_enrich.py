@@ -18,6 +18,25 @@ def reset_wrapped_llm_run_id_for_completion_attempt() -> None:
     _LS_WRAPPED_LLM_RUN_ID.set("")
 
 
+def _capture_wrapped_llm_run_id_from_trace_container_end(
+    container: Any,
+    *,
+    outputs_processor: Any,
+) -> None:
+    """Best-effort: stash wrap_openai child LLM run id from LangSmith container end."""
+    if outputs_processor is None or not isinstance(container, dict):
+        return
+    nr = container.get("new_run")
+    if nr is None or getattr(nr, "run_type", None) != "llm":
+        return
+    rid = getattr(nr, "id", None)
+    if rid is None:
+        return
+    run_id = str(rid).strip()
+    if run_id:
+        _LS_WRAPPED_LLM_RUN_ID.set(run_id)
+
+
 def _ensure_langsmith_handle_container_end_patch() -> None:
     """Capture wrap_openai LLM RunTree id from the trace container (not get_current_run_tree)."""
     global _LS_HANDLE_CONTAINER_END_PATCHED
@@ -35,19 +54,10 @@ def _ensure_langsmith_handle_container_end_patch() -> None:
             outputs_processor: Any = None,
         ) -> None:
             try:
-                if outputs_processor is not None and isinstance(
-                    container, dict
-                ):
-                    nr = container.get("new_run")
-                    if (
-                        nr is not None
-                        and getattr(nr, "run_type", None) == "llm"
-                    ):
-                        rid = getattr(nr, "id", None)
-                        if rid is not None:
-                            s = str(rid).strip()
-                            if s:
-                                _LS_WRAPPED_LLM_RUN_ID.set(s)
+                _capture_wrapped_llm_run_id_from_trace_container_end(
+                    container,
+                    outputs_processor=outputs_processor,
+                )
             except Exception as exc:
                 logger.debug(
                     "langsmith wrapped llm run id capture skipped: {}", exc
