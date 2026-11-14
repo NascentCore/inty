@@ -27,9 +27,9 @@ from app.core.companion_harness.tools.companion_tool_runtime import (
             CompanionTurnTrack.USER_CHAT_BOOTSTRAP,
             build_openai_bootstrap_track_tools,
         ),
-        (CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING, lambda: []),
-        (CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT, lambda: []),
-        (CompanionTurnTrack.INNER_TICK_SCHEDULED, lambda: []),
+        (CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING, list),
+        (CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT, list),
+        (CompanionTurnTrack.INNER_TICK_SCHEDULED, list),
         (
             CompanionTurnTrack.INNER_TICK_MONOLOG,
             build_openai_repl_tools_inner_tick,

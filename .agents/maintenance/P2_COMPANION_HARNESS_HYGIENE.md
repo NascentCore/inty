@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-14 scan (cron)
+
+Source: open PR overlap check (#4089 HYGIENE-182..183; #4092 184..185 + 579..580; #4095 581..583; #4097 584..586; #4099 587..589; #4103 590..592; #4106/#4109 593..598 I001 — no overlap); ruff FURB192/SIM102/PIE807 on `app/core/companion_harness/` + tests.
+
+Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/agent-maintenance-tasks-nov7-184`), #4095 (`cursor/agent-maintenance-tasks-nov8-581`), #4097 (`cursor/agent-maintenance-tasks-fe97`), #4099 (`cursor/agent-maintenance-tasks-nov10-587`), #4103 (`cursor/agent-maintenance-tasks-nov11-590`), #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cursor/agent-maintenance-tasks-nov13-596`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov14-599`)
+
+- [x] **HYGIENE-2026-599** ruff FURB192: `schedule_queue.py` — `min` instead of `sorted(...)[0]` for earliest due task. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.
+- [x] **HYGIENE-2026-600** ruff SIM102: `inner_tick_schedule.py` — single `if` for monolog transcript line-count gate. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.
+- [x] **HYGIENE-2026-601** ruff PIE807: `test_prompt_stack_tools_for_turn.py` — `list` instead of `lambda: []` in parametrize. Fixed in `cursor/agent-maintenance-tasks-nov14-599`.

@@ -184,16 +184,14 @@ def _pick_next_due_task(
             due.append((t, ready_at))
     if not due:
         return None
-    return sorted(
+    return min(
         due,
         key=lambda x: (
             x[1],
             x[0].created_at_utc,
             x[0].id,
         ),
-    )[
-        0
-    ][0]
+    )[0]
 
 
 def next_due_task_for_execution(store: MemoryStore) -> ScheduleTask | None:
