@@ -114,7 +114,7 @@ def empty_memory_store_for_compose() -> MemoryStore:
 
 
 def default_runtime_context_for_compose() -> TurnRuntimeContext:
-    """Default gateway context for legacy paths without channel signals."""
+    """Default App-WS gateway context when track compose has no live channel signals."""
     return TurnRuntimeContext(
         channel=ChannelKind.APP_WS,
         implicit_signal_bundle=None,
