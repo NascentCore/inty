@@ -6,8 +6,7 @@ the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
 
 Structured rows: ``AiPrivateThought`` (``uuid``, ``ts``, ``text``, optional ``after_user_msg_uuid``).
 Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (append-only).
-Kernel monolog inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
-``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling).
+Kernel monolog inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``.
 """
 
 from __future__ import annotations
