@@ -35,6 +35,7 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     USER_MD_REL,
 )
 from app.core.companion_harness.tools.tool_background import (
+    _ToolBackgroundLoopKickoffInputs,
     _initial_tool_bg_completion_with_fallbacks,
     run_tool_background_loop,
 )
@@ -170,27 +171,29 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
     await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],
-        tool_model=resolve_chat_text_model("m/tool"),
-        user_msg_uuid="uuid-bg",
-        trace_id="trace-bg",
-        tools=[],
-        on_event=lambda _event: None,
-        execute_tool_call_fn=fake_execute_tool_call,
         client=object(),
-        chat_completion_sync=fake_sync,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        llm_round_timeout_sec=1.0,
-        runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.TELEGRAM,
-            implicit_signal_bundle=None,
-        ),
-        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
-            TurnRuntimeContext(
+        kickoff_inputs=_ToolBackgroundLoopKickoffInputs(
+            tool_model=resolve_chat_text_model("m/tool"),
+            user_msg_uuid="uuid-bg",
+            trace_id="trace-bg",
+            tools=[],
+            on_event=lambda _event: None,
+            execute_tool_call_fn=fake_execute_tool_call,
+            chat_completion_sync=fake_sync,
+            companion_turn_track=CompanionTurnTrack.USER_CHAT,
+            llm_round_timeout_sec=1.0,
+            runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.TELEGRAM,
                 implicit_signal_bundle=None,
-            )
+            ),
+            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+                TurnRuntimeContext(
+                    channel=ChannelKind.TELEGRAM,
+                    implicit_signal_bundle=None,
+                )
+            ),
+            force_tools_first_round=False,
         ),
-        force_tools_first_round=False,
     )
 
     assert len(sync_calls) >= 2
@@ -250,27 +253,29 @@ async def test_run_background_tool_loop_initial_round_timeout_returns(
     await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],
-        tool_model=resolve_chat_text_model("m/tool"),
-        user_msg_uuid="uuid-bg-timeout",
-        trace_id="trace-bg-timeout",
-        tools=[],
-        on_event=events.append,
-        execute_tool_call_fn=fake_execute_tool_call,
         client=object(),
-        chat_completion_sync=slow_sync,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        llm_round_timeout_sec=0.01,
-        runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
-            implicit_signal_bundle=None,
-        ),
-        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
-            TurnRuntimeContext(
+        kickoff_inputs=_ToolBackgroundLoopKickoffInputs(
+            tool_model=resolve_chat_text_model("m/tool"),
+            user_msg_uuid="uuid-bg-timeout",
+            trace_id="trace-bg-timeout",
+            tools=[],
+            on_event=events.append,
+            execute_tool_call_fn=fake_execute_tool_call,
+            chat_completion_sync=slow_sync,
+            companion_turn_track=CompanionTurnTrack.USER_CHAT,
+            llm_round_timeout_sec=0.01,
+            runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
-            )
+            ),
+            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+                TurnRuntimeContext(
+                    channel=ChannelKind.APP_WS,
+                    implicit_signal_bundle=None,
+                )
+            ),
+            force_tools_first_round=False,
         ),
-        force_tools_first_round=False,
     )
 
     assert sync_calls == 1
@@ -320,27 +325,29 @@ async def test_run_background_tool_loop_continue_round_timeout_returns(
     await run_tool_background_loop(
         memory_store=store,
         request_messages=[{"role": "user", "content": "hi"}],
-        tool_model=resolve_chat_text_model("m/tool"),
-        user_msg_uuid="uuid-bg-continue-timeout",
-        trace_id="trace-bg-continue-timeout",
-        tools=[],
-        on_event=events.append,
-        execute_tool_call_fn=fake_execute_tool_call,
         client=object(),
-        chat_completion_sync=fake_sync,
-        companion_turn_track=CompanionTurnTrack.USER_CHAT,
-        llm_round_timeout_sec=0.01,
-        runtime_context=TurnRuntimeContext(
-            channel=ChannelKind.APP_WS,
-            implicit_signal_bundle=None,
-        ),
-        langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
-            TurnRuntimeContext(
+        kickoff_inputs=_ToolBackgroundLoopKickoffInputs(
+            tool_model=resolve_chat_text_model("m/tool"),
+            user_msg_uuid="uuid-bg-continue-timeout",
+            trace_id="trace-bg-continue-timeout",
+            tools=[],
+            on_event=events.append,
+            execute_tool_call_fn=fake_execute_tool_call,
+            chat_completion_sync=fake_sync,
+            companion_turn_track=CompanionTurnTrack.USER_CHAT,
+            llm_round_timeout_sec=0.01,
+            runtime_context=TurnRuntimeContext(
                 channel=ChannelKind.APP_WS,
                 implicit_signal_bundle=None,
-            )
+            ),
+            langsmith_slice=CompanionTurnLangsmithSlice.from_runtime_context(
+                TurnRuntimeContext(
+                    channel=ChannelKind.APP_WS,
+                    implicit_signal_bundle=None,
+                )
+            ),
+            force_tools_first_round=False,
         ),
-        force_tools_first_round=False,
     )
 
     assert sync_calls == 2

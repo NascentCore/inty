@@ -749,45 +749,65 @@ INNER_TICK_AUTONOMY_TOOL_NAMES: tuple[CompanionToolName, ...] = (
 _EMPTY_DESCRIPTION_OVERRIDES: dict[CompanionToolName, str] = {}
 
 
-def _repl_description_overrides() -> dict[CompanionToolName, str]:
-    allowlist_csv = ", ".join(sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST))
+def _repl_description_memory_store_list_paths() -> str:
+    return (
+        "List immediate children under the MemoryStore scope root. "
+        "Use empty relative_path for the scope root. "
+        "Directory names end with /. Backing store is MemoryStore; listing is derived from stored paths, "
+        "not a host filesystem scan. Prefer memory_store_read_document when the path is known; list mainly "
+        "when you need sibling names or layout before reading."
+    )
+
+
+def _repl_description_memory_store_read_document() -> str:
     cap = MEMORY_STORE_READ_DOCUMENT_MAX_CHARS_CAP
+    return (
+        "Read a UTF-8 document from MemoryStore for self-orientation (profile docs, "
+        "context.json, memory/*) or before editing allowed root markdown files. "
+        f"Optional max_chars (1..{cap}) returns only a prefix of the file to avoid huge tool results; omit for full file. "
+        "transcript.jsonl can be very large—prefer the conversation already in the message "
+        "history; if you must read it via this tool from the persisted store, always pass max_chars."
+    )
+
+
+def _repl_description_memory_store_write_document() -> str:
+    allowlist_csv = ", ".join(sorted(MEMORY_STORE_WRITE_DOCUMENT_ALLOWLIST))
+    return (
+        "Create or overwrite a UTF-8 logical document in MemoryStore. "
+        f"Only these root files are writable via this tool: {allowlist_csv}. "
+        "When the user explicitly asks to change how you relate, boundaries, or "
+        "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
+        "then write the full updated content. Do not use for transcript.jsonl or context.json. "
+        "When the user complains about companion mistakes or asks to file feedback/GitHub "
+        "issues, call companion_record_user_feedback instead of editing USER.md."
+    )
+
+
+def _repl_description_companion_record_user_feedback() -> str:
+    return (
+        "File structured user complaint (bug report) and queue a GitHub issue. "
+        "When the user names this tool or asks to submit a GitHub issue, you MUST call "
+        "this tool—do not substitute memory_store_write_document or update_user_md. "
+        "Call with complaint_summary and complaint_category after reassuring the user in chat."
+    )
+
+
+def _repl_description_schedule_task() -> str:
+    return (
+        "Persist a timed reminder task into the durable local schedule queue. "
+        "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
+        "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
+        "(prefer UTC)."
+    )
+
+
+def _repl_description_overrides() -> dict[CompanionToolName, str]:
     return {
-        CompanionToolName.MEMORY_STORE_LIST_PATHS: (
-            "List immediate children under the MemoryStore scope root. "
-            "Use empty relative_path for the scope root. "
-            "Directory names end with /. Backing store is MemoryStore; listing is derived from stored paths, "
-            "not a host filesystem scan. Prefer memory_store_read_document when the path is known; list mainly "
-            "when you need sibling names or layout before reading."
-        ),
-        CompanionToolName.MEMORY_STORE_READ_DOCUMENT: (
-            "Read a UTF-8 document from MemoryStore for self-orientation (profile docs, "
-            "context.json, memory/*) or before editing allowed root markdown files. "
-            f"Optional max_chars (1..{cap}) returns only a prefix of the file to avoid huge tool results; omit for full file. "
-            "transcript.jsonl can be very large—prefer the conversation already in the message "
-            "history; if you must read it via this tool from the persisted store, always pass max_chars."
-        ),
-        CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT: (
-            "Create or overwrite a UTF-8 logical document in MemoryStore. "
-            f"Only these root files are writable via this tool: {allowlist_csv}. "
-            "When the user explicitly asks to change how you relate, boundaries, or "
-            "persistent preferences, read the current file first (e.g. SOUL.md, STYLE.md, USER.md), "
-            "then write the full updated content. Do not use for transcript.jsonl or context.json. "
-            "When the user complains about companion mistakes or asks to file feedback/GitHub "
-            "issues, call companion_record_user_feedback instead of editing USER.md."
-        ),
-        CompanionToolName.COMPANION_RECORD_USER_FEEDBACK: (
-            "File structured user complaint (bug report) and queue a GitHub issue. "
-            "When the user names this tool or asks to submit a GitHub issue, you MUST call "
-            "this tool—do not substitute memory_store_write_document or update_user_md. "
-            "Call with complaint_summary and complaint_category after reassuring the user in chat."
-        ),
-        CompanionToolName.SCHEDULE_TASK: (
-            "Persist a timed reminder task into the durable local schedule queue. "
-            "Use only when user explicitly requests a reminder/timer/alarm at a future time. "
-            "You must pass an absolute ISO8601 timestamp with timezone offset in exec_time_utc "
-            "(prefer UTC)."
-        ),
+        CompanionToolName.MEMORY_STORE_LIST_PATHS: _repl_description_memory_store_list_paths(),
+        CompanionToolName.MEMORY_STORE_READ_DOCUMENT: _repl_description_memory_store_read_document(),
+        CompanionToolName.MEMORY_STORE_WRITE_DOCUMENT: _repl_description_memory_store_write_document(),
+        CompanionToolName.COMPANION_RECORD_USER_FEEDBACK: _repl_description_companion_record_user_feedback(),
+        CompanionToolName.SCHEDULE_TASK: _repl_description_schedule_task(),
     }
 
 
