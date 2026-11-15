@@ -12,7 +12,9 @@ import ast
 from pathlib import Path
 from typing import Final
 
-from app.core.companion_harness.memory import memory_store_path_constants as _memdoc_path_constants
+from app.core.companion_harness.memory import (
+    memory_store_path_constants as _memdoc_path_constants,
+)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TOOL_BACKGROUND_JSONL_REL,
     TRANSCRIPT_INNER_TICK_JSONL_REL,
