@@ -20,7 +20,9 @@ from loguru import logger
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
     SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
 )
+from app.core.llms.client import LlmClient
 from app.utils.models_catalog import GenAIModel
+
 from .dual_llm_chat_branch_envelope import (
     DUAL_LLM_CHAT_RESPONSE_FORMAT,
     split_dual_llm_chat_branch_message,
@@ -30,7 +32,6 @@ from .llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.llms.client import LlmClient
 from .llm_runtime_events import record_llm_inference_failure
 
 CHAT_TRACK_RESPONSE_MESSAGE_TITLE = "## Response from the chat track"
