@@ -13,26 +13,26 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.companion_harness.llm.langsmith_completion_enrich import (
-    langsmith_llm_run_id_from_completion,
-    langsmith_trace_id_from_completion,
+from app.core.companion_harness.companion.inner_tick_kind import (
+    inner_tick_kind_for_track,
+    inner_tick_spec,
 )
 from app.core.companion_harness.companion.langsmith_parent_policy import (
     companion_turn_langsmith_parent_enabled_from_app_config,
+)
+from app.core.companion_harness.companion.langsmith_turn_slice import (
+    CompanionTurnLangsmithSlice,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
     InnerTickActivity,
 )
-from app.core.companion_harness.companion.langsmith_turn_slice import (
-    CompanionTurnLangsmithSlice,
-)
 from app.core.companion_harness.companion.turn_track import (
     langsmith_inty_turn_lane_for_companion_track,
 )
-from app.core.companion_harness.companion.inner_tick_kind import (
-    inner_tick_kind_for_track,
-    inner_tick_spec,
+from app.core.companion_harness.llm.langsmith_completion_enrich import (
+    langsmith_llm_run_id_from_completion,
+    langsmith_trace_id_from_completion,
 )
 from app.utils.models_catalog import (
     GenAIModel,
