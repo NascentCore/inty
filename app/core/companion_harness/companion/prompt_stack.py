@@ -250,6 +250,46 @@ def companion_turn_tools_and_system_messages(
     return tools_for_turn, system_messages
 
 
+def _companion_system_messages_for_mid_turn_refresh(
+    *,
+    track: CompanionTurnTrack,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    store: MemoryStore,
+) -> list[dict[str, Any]]:
+    """Leading system stack for mid-turn refresh on tool-capable tracks only."""
+    match track:
+        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
+            raise RuntimeError(
+                "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
+                "refresh_single_llm_bootstrap_chat_prompt_prefix"
+            )
+        case (
+            CompanionTurnTrack.INNER_TICK_MONOLOG
+            | CompanionTurnTrack.INNER_TICK_AUTONOMY
+        ):
+            return _async_tool_system_messages_for_track(
+                track=track,
+                bundle=bundle,
+                context=context,
+                store=store,
+            )
+        case CompanionTurnTrack.USER_CHAT:
+            return build_system_messages_for_tool_track(
+                bundle,
+                context,
+            )
+        case (
+            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
+            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
+            | CompanionTurnTrack.INNER_TICK_SCHEDULED
+        ):
+            raise RuntimeError(
+                "refresh_companion_turn_prompt_stack unsupported track="
+                f"{track.value}"
+            )
+
+
 def refresh_companion_turn_prompt_stack(
     *,
     store: MemoryStore,
@@ -277,36 +317,12 @@ def refresh_companion_turn_prompt_stack(
         track=track,
         implicit_user_signed_on_turn=implicit_user_signed_on_turn,
     )
-    match track:
-        case CompanionTurnTrack.USER_CHAT_BOOTSTRAP:
-            raise RuntimeError(
-                "USER_CHAT_BOOTSTRAP mid-turn refresh must use "
-                "refresh_single_llm_bootstrap_chat_prompt_prefix"
-            )
-        case (
-            CompanionTurnTrack.INNER_TICK_MONOLOG
-            | CompanionTurnTrack.INNER_TICK_AUTONOMY
-        ):
-            refreshed = _async_tool_system_messages_for_track(
-                track=track,
-                bundle=bundle,
-                context=context,
-                store=store,
-            )
-        case CompanionTurnTrack.USER_CHAT:
-            refreshed = build_system_messages_for_tool_track(
-                bundle,
-                context,
-            )
-        case (
-            CompanionTurnTrack.IMPLICIT_SIGN_ON_GREETING
-            | CompanionTurnTrack.INNER_TICK_PROACTIVE_CHAT
-            | CompanionTurnTrack.INNER_TICK_SCHEDULED
-        ):
-            raise RuntimeError(
-                "refresh_companion_turn_prompt_stack unsupported track="
-                f"{track.value}"
-            )
+    refreshed = _companion_system_messages_for_mid_turn_refresh(
+        track=track,
+        bundle=bundle,
+        context=context,
+        store=store,
+    )
     refreshed = append_runtime_output_format_system_message(
         system_messages=refreshed,
         bundle=bundle,
