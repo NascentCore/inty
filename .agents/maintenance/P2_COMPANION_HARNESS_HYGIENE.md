@@ -709,6 +709,6 @@ Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov15-602`)
 
-- [ ] **HYGIENE-2026-602** ruff I001: `dual_llm_foreground_chat.py` — isort import block.
-- [ ] **HYGIENE-2026-603** ruff I001: `lifecycle_invariants.py` — isort import block.
-- [ ] **HYGIENE-2026-604** ruff I001: `llm_chat_runtime.py` — isort import block.
+- [x] **HYGIENE-2026-602** ruff I001: `dual_llm_foreground_chat.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
+- [x] **HYGIENE-2026-603** ruff I001: `lifecycle_invariants.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
+- [x] **HYGIENE-2026-604** ruff I001: `llm_chat_runtime.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
