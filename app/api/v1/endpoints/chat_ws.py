@@ -45,8 +45,8 @@ from app.core.companion_harness.companion.websocket_coordinator import (
     ChatWsInflightShutdownRegistry,
     ChatWsInflightTurnTracker,
     CompanionWebSocketCoordinator,
-    apply_companion_ws_inner_tick_coords,
 )
+from app.services.agentic_companion.session import apply_inner_tick_coords
 from app.core.model_selection import select_chat_model
 from app.models.user import User
 from app.models.agentic_companion_queue import AgenticCompanionInputQueueRow
@@ -1013,7 +1013,7 @@ async def _agent_chat_ws_completions_impl(
                         ),
                     )
                     if companion_ws_inner_tick_ctx is not None:
-                        apply_companion_ws_inner_tick_coords(
+                        apply_inner_tick_coords(
                             companion_ws_inner_tick_ctx,
                             user_id=current_user.id,
                             agent_id=agent_id,
@@ -1121,7 +1121,7 @@ async def _agent_chat_ws_completions_impl(
                                 chat_history_user_row_id=companion_user_row_id,
                             )
                             if companion_ws_inner_tick_ctx is not None:
-                                apply_companion_ws_inner_tick_coords(
+                                apply_inner_tick_coords(
                                     companion_ws_inner_tick_ctx,
                                     user_id=current_user.id,
                                     agent_id=agent_id,
@@ -1170,7 +1170,7 @@ async def _agent_chat_ws_completions_impl(
                                 detail="Chat returned no content",
                             )
                         if companion_ws_inner_tick_ctx is not None:
-                            apply_companion_ws_inner_tick_coords(
+                            apply_inner_tick_coords(
                                 companion_ws_inner_tick_ctx,
                                 user_id=current_user.id,
                                 agent_id=agent_id,
