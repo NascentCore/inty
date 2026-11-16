@@ -111,6 +111,31 @@ def transcript_tail_message_uuid(store: MemoryStore) -> str | None:
     return str(tail_uuid).strip()
 
 
+def _inner_tick_schedule_globally_enabled(
+    overrides: InnerTickScheduleOverrides | None,
+) -> bool:
+    enabled = inner_tick_enabled_from_env()
+    if overrides is not None and overrides.enabled is not None:
+        enabled = overrides.enabled
+    return enabled
+
+
+def _inner_tick_wait_after_min_gap(
+    *,
+    last_inner_fire_monotonic: float | None,
+    now: float,
+    min_gap: float,
+    poll: float,
+) -> float:
+    if last_inner_fire_monotonic is None:
+        return 0.0
+    elapsed = now - last_inner_fire_monotonic
+    remain = min_gap - elapsed
+    if remain <= 0.0:
+        return 0.0
+    return min(remain, poll)
+
+
 def next_inner_tick_wait_seconds(
     store: MemoryStore,
     *,
@@ -119,10 +144,7 @@ def next_inner_tick_wait_seconds(
     now_monotonic: float | None = None,
     overrides: InnerTickScheduleOverrides | None = None,
 ) -> float:
-    enabled = inner_tick_enabled_from_env()
-    if overrides is not None and overrides.enabled is not None:
-        enabled = overrides.enabled
-    if not enabled:
+    if not _inner_tick_schedule_globally_enabled(overrides):
         return _DISABLED_INNER_TICK_WAIT_SEC
 
     if not load_context_meta(
@@ -160,10 +182,9 @@ def next_inner_tick_wait_seconds(
     if overrides is not None and overrides.min_gap_seconds is not None:
         min_gap = overrides.min_gap_seconds
 
-    if last_inner_fire_monotonic is None:
-        return 0.0
-    elapsed = now - last_inner_fire_monotonic
-    remain = min_gap - elapsed
-    if remain <= 0.0:
-        return 0.0
-    return min(remain, poll)
+    return _inner_tick_wait_after_min_gap(
+        last_inner_fire_monotonic=last_inner_fire_monotonic,
+        now=now,
+        min_gap=min_gap,
+        poll=poll,
+    )

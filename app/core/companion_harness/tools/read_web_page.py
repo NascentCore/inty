@@ -148,22 +148,15 @@ def _append_memory_block(
     store.write_document(MEMORY_MD_REL, merged)
 
 
-def run_read_web_page_sync(
-    store: MemoryStore,
-    *,
-    url: str,
-    max_bullets: int | None = None,
-) -> str:
+def _fetch_public_html_for_read_web_page(url: str) -> tuple[str, str] | str:
+    """Download and decode a public HTML document, or return an ``ERROR: …`` string."""
     err = _validate_public_http_url(url)
     if err:
         return f"ERROR: {err}"
-
-    n = max_bullets if max_bullets is not None else _DEFAULT_BULLETS
-    n = max(_MIN_BULLETS, min(n, _MAX_BULLETS_CAP))
-
+    normalized = url.strip()
     try:
         r = requests.get(
-            url.strip(),
+            normalized,
             timeout=30.0,
             headers={"User-Agent": _USER_AGENT},
             allow_redirects=True,
@@ -180,7 +173,7 @@ def run_read_web_page_sync(
         )
 
     ctype = (r.headers.get("Content-Type") or "").lower()
-    looks_html = "html" in ctype or url.lower().rstrip("/").endswith(
+    looks_html = "html" in ctype or normalized.lower().rstrip("/").endswith(
         (".html", ".htm")
     )
     if not looks_html:
@@ -193,6 +186,22 @@ def run_read_web_page_sync(
         html = raw.decode(enc, errors="replace")
     except LookupError:
         html = raw.decode("utf-8", errors="replace")
+    return normalized, html
+
+
+def run_read_web_page_sync(
+    store: MemoryStore,
+    *,
+    url: str,
+    max_bullets: int | None = None,
+) -> str:
+    fetched = _fetch_public_html_for_read_web_page(url)
+    if isinstance(fetched, str):
+        return fetched
+
+    normalized_url, html = fetched
+    n = max_bullets if max_bullets is not None else _DEFAULT_BULLETS
+    n = max(_MIN_BULLETS, min(n, _MAX_BULLETS_CAP))
 
     title, body = _html_to_text(html)
     bullets = _paragraphs_and_sentences(body, n)
@@ -203,14 +212,14 @@ def run_read_web_page_sync(
 
     try:
         _append_memory_block(
-            store, url=url.strip(), title=title, bullets=bullets
+            store, url=normalized_url, title=title, bullets=bullets
         )
     except OSError as exc:
         return f"ERROR: could not write MEMORY.md: {exc}"
 
     memory_note = f"Memory: appended this snapshot to `{MEMORY_MD_REL}`."
     return _build_summary_markdown(
-        title, bullets, url.strip(), memory_note=memory_note
+        title, bullets, normalized_url, memory_note=memory_note
     )
 
 
