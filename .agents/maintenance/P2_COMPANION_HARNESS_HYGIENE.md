@@ -721,6 +721,6 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov16-605`)
 
-- [ ] **HYGIENE-2026-605** ruff I001: `llm_runtime_events.py` — isort import block.
-- [ ] **HYGIENE-2026-606** ruff I001: `manager.py` — isort import block.
-- [ ] **HYGIENE-2026-607** ruff I001: `proactive_chat.py` — isort import block.
+- [x] **HYGIENE-2026-605** ruff I001: `llm_runtime_events.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+- [x] **HYGIENE-2026-606** ruff I001: `manager.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+- [x] **HYGIENE-2026-607** ruff I001: `proactive_chat.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
