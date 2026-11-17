@@ -16,18 +16,21 @@ import threading
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.agentic_companion.output_queue import (
+    OutputQueue,
+    get_output_queue_for_scope,
+)
+from app.core.agentic_companion.types import (
+    UserMessageBatch,
+    synthetic_user_message_batch,
+)
+from app.core.companion_harness.agent_channel.scope import AgentScope
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.experience_profile.context_mode import (
     ExperienceContextMode,
-)
-from app.living_sphere.seeding import ensure_living_sphere_seeded
-from app.techno_core.seeding import ensure_techno_core_seeded
-
-from .langsmith_parent_policy import (
-    companion_turn_langsmith_parent_enabled_from_app_config,
-)
-from app.core.llms.client import CompanionLLMConfig, LlmClient
-from app.core.companion_harness.memory.transcript_compaction import (
-    CompactionConfig,
 )
 from app.core.companion_harness.memory.memory_registry import (
     MEMORY_STORE_REGISTRY_REQUIRES_DSN,
@@ -37,18 +40,27 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CONTEXT_JSON_REL,
 )
-from .models import CompanionTurnResult, CompanionTurnTrack
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
+from app.core.companion_harness.memory.memory_store_scope import (
+    ensure_minimal_documents_in_store,
+    is_scope_initialized_in_store,
 )
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig,
+)
+from app.core.llms.client import CompanionLLMConfig, LlmClient
+from app.living_sphere.seeding import ensure_living_sphere_seeded
+from app.techno_core.seeding import ensure_techno_core_seeded
+
+from .langsmith_parent_policy import (
+    companion_turn_langsmith_parent_enabled_from_app_config,
+)
+from .models import CompanionTurnResult, CompanionTurnTrack
 from .scope import CompanionScope
 from .scope_turn_lock import (
     ScopeTurnLock,
     get_scope_tool_bg_idle,
     get_scope_turn_lock,
 )
-from .turn_deps import CompanionTurnDeps
 from .turn import (
     run_companion_implicit_sign_on_greeting_turn,
     run_companion_inner_tick_monolog_turn,
@@ -57,19 +69,7 @@ from .turn import (
     run_companion_user_chat_turn,
     run_inner_tick_autonomy,
 )
-from app.core.companion_harness.memory.memory_store_scope import (
-    ensure_minimal_documents_in_store,
-    is_scope_initialized_in_store,
-)
-from app.core.companion_harness.agent_channel.scope import AgentScope
-from app.core.agentic_companion.output_queue import (
-    OutputQueue,
-    get_output_queue_for_scope,
-)
-from app.core.agentic_companion.types import (
-    UserMessageBatch,
-    synthetic_user_message_batch,
-)
+from .turn_deps import CompanionTurnDeps
 
 
 class CompanionConfig(BaseModel):

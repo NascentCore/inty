@@ -24,6 +24,7 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
+
 from .models import (
     ChatMessage,
     InnerTickKind,

@@ -12,10 +12,11 @@ from typing import Any, Literal
 from loguru import logger
 
 from app.core.companion_harness.memory.memory_store import MemoryStore
-from .utc import parse_utc_iso_ts, utc_iso_ts
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+
+from .utc import parse_utc_iso_ts, utc_iso_ts
 
 ScheduleTaskStatus = Literal["pending", "fired"]
 

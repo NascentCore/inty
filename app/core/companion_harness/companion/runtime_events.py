@@ -27,10 +27,10 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     COMPANION_RUNTIME_EVENTS_JSONL_REL,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .utc import utc_iso_ts
 

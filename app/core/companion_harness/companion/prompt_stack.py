@@ -24,36 +24,37 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_tool_track,
+    weixin_clawbot_contact_alias_system_message,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,
     build_openai_repl_tools,
     build_openai_repl_tools_inner_tick,
     build_openai_repl_tools_inner_tick_autonomy,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.prompting.bundle import PromptBundle
+
+from .implicit_signal_messages import implicit_user_signed_on_chat_turn
+from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .models import (
     CompanionTurnTrack,
     ContextMeta,
     load_context_meta,
     load_prompt_bundle,
 )
-from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
-from .implicit_signal_messages import implicit_user_signed_on_chat_turn
 from .runtime_channel import (
     ChannelKind,
     TurnRuntimeContext,
     is_im_runtime_channel,
-)
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
-)
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_tool_track,
-    weixin_clawbot_contact_alias_system_message,
-)
-from app.core.companion_harness.loop.runtime_system_clauses import (
-    append_configured_fixed_reply_language_system_messages,
 )
 
 

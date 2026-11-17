@@ -700,3 +700,39 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-15 scan (cron)
+
+Source: open PR overlap check (#4089–#4112 maintenance + #4112 HYGIENE-599..601); ruff I001 on harness modules not yet covered by open import-sort PRs.
+
+Open PRs checked: #4089 (`cursor/agent-maintenance-tasks-73e6`), #4092 (`cursor/agent-maintenance-tasks-nov7-184`), #4095 (`cursor/agent-maintenance-tasks-nov8-581`), #4097 (`cursor/agent-maintenance-tasks-fe97`), #4099 (`cursor/agent-maintenance-tasks-nov10-587`), #4103 (`cursor/agent-maintenance-tasks-nov11-590`), #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cursor/agent-maintenance-tasks-nov13-596`), #4112 (`cursor/agent-maintenance-tasks-nov14-599`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov15-602`)
+
+- [x] **HYGIENE-2026-602** ruff I001: `dual_llm_foreground_chat.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
+- [x] **HYGIENE-2026-603** ruff I001: `lifecycle_invariants.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
+- [x] **HYGIENE-2026-604** ruff I001: `llm_chat_runtime.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov15-602`.
+
+## 2026-11-16 scan (cron)
+
+Source: open PR overlap check (#4106–#4115 I001 batches); ruff I001 on remaining harness modules not covered by open import-sort PRs.
+
+Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cursor/agent-maintenance-tasks-nov13-596`), #4112 (`cursor/agent-maintenance-tasks-nov14-599`), #4115 (`cursor/agent-maintenance-tasks-nov15-602`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov16-605`)
+
+- [x] **HYGIENE-2026-605** ruff I001: `llm_runtime_events.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+- [x] **HYGIENE-2026-606** ruff I001: `manager.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+- [x] **HYGIENE-2026-607** ruff I001: `proactive_chat.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+
+## 2026-11-17 scan (cron)
+
+Source: open PR overlap check (#4106–#4118 I001 batches); ruff I001 on harness companion modules not covered by open import-sort PRs.
+
+Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cursor/agent-maintenance-tasks-nov13-596`), #4115 (`cursor/agent-maintenance-tasks-nov15-602`), #4118 (`cursor/agent-maintenance-tasks-nov16-605`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov17-608`)
+
+- [x] **HYGIENE-2026-608** ruff I001: `prompt_stack.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
+- [x] **HYGIENE-2026-609** ruff I001: `runtime_events.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
+- [x] **HYGIENE-2026-610** ruff I001: `schedule_queue.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
