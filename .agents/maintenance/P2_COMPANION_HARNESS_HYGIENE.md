@@ -733,6 +733,6 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov17-608`)
 
-- [ ] **HYGIENE-2026-608** ruff I001: `prompt_stack.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
-- [ ] **HYGIENE-2026-609** ruff I001: `runtime_events.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
-- [ ] **HYGIENE-2026-610** ruff I001: `schedule_queue.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
+- [x] **HYGIENE-2026-608** ruff I001: `prompt_stack.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
+- [x] **HYGIENE-2026-609** ruff I001: `runtime_events.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
+- [x] **HYGIENE-2026-610** ruff I001: `schedule_queue.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov17-608` / pull/4121.
