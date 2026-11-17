@@ -724,3 +724,15 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cu
 - [x] **HYGIENE-2026-605** ruff I001: `llm_runtime_events.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
 - [x] **HYGIENE-2026-606** ruff I001: `manager.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
 - [x] **HYGIENE-2026-607** ruff I001: `proactive_chat.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov16-605`.
+
+## 2026-11-17 scan (cron)
+
+Source: open PR overlap check (#4106–#4118 I001 batches); ruff I001 on harness companion modules not covered by open import-sort PRs.
+
+Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cursor/agent-maintenance-tasks-nov13-596`), #4115 (`cursor/agent-maintenance-tasks-nov15-602`), #4118 (`cursor/agent-maintenance-tasks-nov16-605`) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov17-608`)
+
+- [ ] **HYGIENE-2026-608** ruff I001: `prompt_stack.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
+- [ ] **HYGIENE-2026-609** ruff I001: `runtime_events.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
+- [ ] **HYGIENE-2026-610** ruff I001: `schedule_queue.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov17-608`.
