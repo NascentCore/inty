@@ -16,13 +16,11 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.core.companion_harness.companion.scope import CompanionScope
 
 
-def test_get_ai_private_jsonl_extracts_text_field(tmp_path: Path) -> None:
+def test_get_ai_private_jsonl_injects_unsurfaced_thought_text(tmp_path: Path) -> None:
     sc = CompanionScope("ap", "a", f"jl-{tmp_path.name}")
     store = MemoryStore(scope=sc, repository=None)
-    store.write_document(
-        AI_PRIVATE_JSONL_REL,
-        '{"text": "first note"}\n{"content": "second"}\n',
-    )
+    append_ai_private_thought(store, text="first note", after_user_msg_uuid=None)
+    append_ai_private_thought(store, text="second", after_user_msg_uuid=None)
     out = get_ai_private_jsonl_text_for_prompt(store)
     assert out == "first note\nsecond"
 

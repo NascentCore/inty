@@ -6,8 +6,7 @@ the environment lives in ``LIFE_CURRENTS.md`` (AUTONOMY track).
 
 Structured rows: ``AiPrivateThought`` (``uuid``, ``ts``, ``text``, optional ``after_user_msg_uuid``).
 Surfaced consumption appends marker rows ``{kind: surfaced, ref_uuid, ts}`` (append-only).
-Kernel monolog inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``;
-``get_ai_private_text_for_prompt`` remains for ``ai_private.md`` only (tests, tooling).
+Kernel monolog inner-tick turns load history via ``get_ai_private_jsonl_text_for_prompt``.
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.core.companion_harness.companion.transcript_anchor import (
     parse_transcript_row_ts as parse_transcript_datetime,
@@ -72,24 +71,12 @@ def _clip_chars(s: str, cap: int) -> str:
     return s[: cap - 1] + "..."
 
 
-def _format_ai_private_jsonl_object(obj: dict[str, Any]) -> str:
-    for key in ("text", "content", "note", "body"):
-        v = obj.get(key)
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    try:
-        return json.dumps(obj, ensure_ascii=False)
-    except TypeError:
-        return str(obj)
-
-
 def _parse_ai_private_jsonl_objects(
     raw: str,
-) -> tuple[list[AiPrivateThought], set[str], list[str]]:
-    """Return (thoughts, surfaced_uuids, legacy_prompt_lines)."""
+) -> tuple[list[AiPrivateThought], set[str]]:
+    """Return structured thoughts and surfaced thought uuids from ``ai_private.jsonl``."""
     thoughts: list[AiPrivateThought] = []
     surfaced: set[str] = set()
-    legacy_lines: list[str] = []
     for i, line in enumerate(raw.splitlines(), start=1):
         line = line.strip()
         if not line:
@@ -100,44 +87,25 @@ def _parse_ai_private_jsonl_objects(
             logger.warning("ai_private.jsonl skipped invalid JSON line {}", i)
             continue
         if not isinstance(obj, dict):
-            legacy_lines.append(json.dumps(obj, ensure_ascii=False))
+            logger.warning("ai_private.jsonl skipped non-object JSON line {}", i)
             continue
         if obj.get("kind") == AI_PRIVATE_SURFACED_KIND:
             ref = obj.get("ref_uuid")
             if isinstance(ref, str) and ref.strip():
                 surfaced.add(ref.strip())
             continue
-        raw_uuid = obj.get("uuid")
-        raw_ts = obj.get("ts")
-        text = obj.get("text")
-        if isinstance(text, str) and text.strip():
-            text = text.strip()
-        else:
-            legacy_text = _format_ai_private_jsonl_object(obj)
-            if legacy_text and not (
-                isinstance(raw_uuid, str) and isinstance(raw_ts, str)
-            ):
-                legacy_lines.append(legacy_text)
-                continue
-            text = legacy_text if legacy_text else ""
-        if isinstance(raw_uuid, str) and isinstance(raw_ts, str) and text:
-            after = obj.get("after_user_msg_uuid")
-            after_uuid = (
-                after.strip()
-                if isinstance(after, str) and after.strip()
-                else None
+        try:
+            thought = AiPrivateThought.model_validate(obj)
+        except ValidationError:
+            logger.warning(
+                "ai_private.jsonl skipped non-structured thought line {}", i
             )
-            thoughts.append(
-                AiPrivateThought(
-                    uuid=raw_uuid.strip(),
-                    ts=raw_ts.strip(),
-                    text=text,
-                    after_user_msg_uuid=after_uuid,
-                )
-            )
-        elif text:
-            legacy_lines.append(text)
-    return thoughts, surfaced, legacy_lines
+            continue
+        if not thought.text.strip():
+            logger.warning("ai_private.jsonl skipped empty thought line {}", i)
+            continue
+        thoughts.append(thought)
+    return thoughts, surfaced
 
 
 def load_ai_private_thoughts(store: MemoryStore) -> list[AiPrivateThought]:
@@ -145,7 +113,7 @@ def load_ai_private_thoughts(store: MemoryStore) -> list[AiPrivateThought]:
     raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
     if not raw or not raw.strip():
         return []
-    thoughts, surfaced, _legacy = _parse_ai_private_jsonl_objects(raw)
+    thoughts, surfaced = _parse_ai_private_jsonl_objects(raw)
     return [t for t in thoughts if t.uuid not in surfaced]
 
 
@@ -154,7 +122,7 @@ def load_ai_private_index(store: MemoryStore) -> dict[str, AiPrivateThought]:
     raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
     if not raw or not raw.strip():
         return {}
-    thoughts, _surfaced, _legacy = _parse_ai_private_jsonl_objects(raw)
+    thoughts, _surfaced = _parse_ai_private_jsonl_objects(raw)
     return {t.uuid: t for t in thoughts}
 
 
@@ -213,16 +181,15 @@ def select_unsurfaced_thoughts_after_anchor(
 def get_ai_private_jsonl_text_for_prompt(
     store: MemoryStore, *, max_chars: int = AI_PRIVATE_INJECT_MAX_CHARS
 ) -> str:
-    """Plain lines for MONOLOG system injection (unsurfaced + legacy rows)."""
+    """Plain lines for MONOLOG system injection (unsurfaced structured thoughts)."""
     raw = store.read_document_if_exists(AI_PRIVATE_JSONL_REL)
     if not raw or not raw.strip():
         return ""
-    thoughts, surfaced, legacy_lines = _parse_ai_private_jsonl_objects(raw)
+    thoughts, surfaced = _parse_ai_private_jsonl_objects(raw)
     lines_out: list[str] = []
     for t in thoughts:
         if t.uuid in surfaced:
             continue
         lines_out.append(t.text)
-    lines_out.extend(legacy_lines)
     merged = "\n".join(lines_out)
     return _clip_chars(merged, max_chars)
