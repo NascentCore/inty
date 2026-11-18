@@ -12,6 +12,8 @@ from app.core.companion_harness.companion.ai_private_prompt import (
     AiPrivateThought,
     load_ai_private_index,
     mark_ai_private_surfaced,
+)
+from app.core.companion_harness.companion.ai_private_prompt import (
     select_unsurfaced_thoughts_after_anchor as load_unsurfaced_after_ts,
 )
 from app.core.companion_harness.companion.models import (
