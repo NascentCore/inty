@@ -20,16 +20,16 @@ import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
+)
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.transcript_compaction import (
     CompactionConfig as TranscriptCompactionConfig,
 )
-
 from app.core.llms.client import LlmClient
+
 from .langsmith_turn_slice import CompanionTurnLangsmithSlice
-from app.core.companion_harness.companion.runtime_channel import (
-    TurnRuntimeContext,
-)
 
 if TYPE_CHECKING:
     from app.core.agentic_companion.output_queue import (

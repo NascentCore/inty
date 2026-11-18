@@ -16,9 +16,10 @@ from app.core.companion_harness.loop.config import (
     BatchUserMessagesLlmCallMode,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
+
+from .implicit_signal_messages import USER_SIGNED_ON_TRIGGER_USER_TEXT
 from .inner_tick_kind import inner_tick_kind_for_track
 from .models import CompanionTurnTrack
-from .implicit_signal_messages import USER_SIGNED_ON_TRIGGER_USER_TEXT
 from .transcript_user_row import (
     TranscriptUserRowBuildInput,
     append_transcript_user_row,
