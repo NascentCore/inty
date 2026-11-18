@@ -16,10 +16,7 @@ from app.schemas.chat_websocket import (
     ChatWsGeneratedImageMeta,
     dump_chat_ws_companion_wire_meta,
 )
-from app.core.agentic_companion.output_queue import (
-    ReadyOutputMessage,
-)
-from app.core.agentic_companion.types import WireAssistantSource
+from app.core.agentic_companion.output_queue import ReadyOutputMessage
 
 
 def image_asset_baseline_for_scope_store(store) -> int:
