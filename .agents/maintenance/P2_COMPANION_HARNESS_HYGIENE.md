@@ -709,6 +709,6 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov18-611`)
 
-- [ ] **HYGIENE-2026-611** ruff I001: `transcript_ai_private.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov18-611`.
-- [ ] **HYGIENE-2026-612** ruff I001: `turn_deps.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov18-611`.
-- [ ] **HYGIENE-2026-613** ruff I001: `turn_tail_user.py` — isort import block. Claimed in `cursor/agent-maintenance-tasks-nov18-611`.
+- [x] **HYGIENE-2026-611** ruff I001: `transcript_ai_private.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov18-611` / pull/4123.
+- [x] **HYGIENE-2026-612** ruff I001: `turn_deps.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov18-611` / pull/4123.
+- [x] **HYGIENE-2026-613** ruff I001: `turn_tail_user.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov18-611` / pull/4123.
