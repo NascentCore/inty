@@ -37,9 +37,6 @@ from app.core.companion_harness.loop.context import (
 from app.core.companion_harness.loop.track_loop_input import (
     CompanionTurnLoopInput,
 )
-from app.core.companion_harness.prompting.track_composer import (
-    TrackPromptComposer,
-)
 from app.core.companion_harness.loop.track_policy import (
     build_loop_execution_policy,
 )
@@ -49,6 +46,9 @@ from app.core.companion_harness.prompt_builder import (
     prompt_messages_to_openai_dicts,
     refresh_single_llm_bootstrap_chat_prompt_prefix,
     refresh_single_llm_user_chat_prompt_prefix,
+)
+from app.core.companion_harness.prompting.track_composer import (
+    TrackPromptComposer,
 )
 
 _TRACK_COMPOSER = TrackPromptComposer()
