@@ -809,7 +809,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
     )
 
     async def _fake_tool_loop(**kwargs):  # type: ignore[no-untyped-def]
-        kwargs["on_event"](
+        kwargs["kickoff_inputs"].on_event(
             ToolOutputEvent(
                 scope_registry_key="k",
                 memory_store=_loop_store(),
@@ -874,7 +874,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
     )
 
     async def _fake_tool_loop(**kwargs):  # type: ignore[no-untyped-def]
-        kwargs["on_event"](
+        kwargs["kickoff_inputs"].on_event(
             ToolOutputEvent(
                 scope_registry_key="k",
                 memory_store=_loop_store(),
