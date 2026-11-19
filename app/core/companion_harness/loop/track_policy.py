@@ -11,12 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
+    BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
+)
 from app.core.companion_harness.companion.inner_tick_kind import (
     inner_tick_kind_for_track,
     inner_tick_spec,
-)
-from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
-    BOOTSTRAP_SYNC_MAX_TOOL_ROUNDS,
 )
 from app.core.companion_harness.companion.models import CompanionTurnTrack
 from app.core.companion_harness.companion.turn_pipeline import (
