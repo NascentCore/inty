@@ -8,7 +8,9 @@ from typing import Any
 from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
     parse_dual_llm_chat_envelope_json,
 )
-from app.core.companion_harness.companion.models import user_visible_assistant_text
+from app.core.companion_harness.companion.models import (
+    user_visible_assistant_text,
+)
 
 
 def _message_field(message: Any, field_name: str) -> Any:
