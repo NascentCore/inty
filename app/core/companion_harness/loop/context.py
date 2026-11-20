@@ -26,9 +26,6 @@ from app.core.agentic_companion.types import (
     AgenticLoopInputBatch,
     UserMessageBatch,
 )
-from app.core.companion_harness.companion.turn_tail_user import (
-    TurnTailUserMessage,
-)
 from app.core.companion_harness.companion.langsmith_turn_slice import (
     CompanionTurnLangsmithSlice,
 )
@@ -38,6 +35,9 @@ from app.core.companion_harness.companion.models import (
 )
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
 )
 from app.core.companion_harness.loop.track_policy import LoopExecutionPolicy
 from app.core.companion_harness.prompt_builder import (

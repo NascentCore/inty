@@ -709,6 +709,6 @@ Open PRs checked: #4106 (`cursor/agent-maintenance-tasks-nov12-593`), #4109 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov20-617`)
 
-- [ ] **HYGIENE-2026-617** ruff I001: `loop/agentic_loop.py` — isort import block. Claimed `cursor/agent-maintenance-tasks-nov20-617`.
-- [ ] **HYGIENE-2026-618** ruff I001: `loop/context.py` — isort import block. Claimed `cursor/agent-maintenance-tasks-nov20-617`.
-- [ ] **HYGIENE-2026-619** ruff I001: `companion/models.py` — isort import block. Claimed `cursor/agent-maintenance-tasks-nov20-617`.
+- [x] **HYGIENE-2026-617** ruff I001: `loop/agentic_loop.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov20-617` / pull/4129.
+- [x] **HYGIENE-2026-618** ruff I001: `loop/context.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov20-617` / pull/4129.
+- [x] **HYGIENE-2026-619** ruff I001: `companion/models.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov20-617` / pull/4129.
