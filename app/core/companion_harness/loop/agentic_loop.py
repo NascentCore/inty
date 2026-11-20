@@ -17,8 +17,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
-
 from app.core.agentic_companion.output_queue import (
     OutputQueue,
     OutputQueueAppendInput,
@@ -30,6 +28,10 @@ from app.core.agentic_companion.types import (
     UserMessageBatch,
     WireAssistantSource,
 )
+from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
+    DUAL_LLM_CHAT_RESPONSE_FORMAT,
+    split_dual_llm_chat_branch_message,
+)
 from app.core.companion_harness.companion.dual_llm_foreground_chat import (
     DualLlmForegroundChatInput,
     run_dual_llm_foreground_chat,
@@ -37,23 +39,12 @@ from app.core.companion_harness.companion.dual_llm_foreground_chat import (
 from app.core.companion_harness.companion.in_turn_sync_tool_loop import (
     InTurnSyncToolLoopResult,
 )
-from app.core.companion_harness.companion.turn_tail_user import (
-    append_turn_track_tail_user_transcript_rows,
-)
 from app.core.companion_harness.companion.llm_chat_runtime import (
     langsmith_llm_run_id_from_completion,
     langsmith_trace_id_from_completion,
 )
-from app.core.llms.client import (
-    AsyncLlmClient,
-    LlmClient,
-)
 from app.core.companion_harness.companion.message_format import (
     openai_assistant_message_dict,
-)
-from app.core.companion_harness.companion.dual_llm_chat_branch_envelope import (
-    DUAL_LLM_CHAT_RESPONSE_FORMAT,
-    split_dual_llm_chat_branch_message,
 )
 from app.core.companion_harness.companion.models import (
     CompanionTurnTrack,
@@ -66,6 +57,9 @@ from app.core.companion_harness.companion.proactive_chat_envelope import (
 from app.core.companion_harness.companion.turn_routes import (
     InTurnInterimOutput,
 )
+from app.core.companion_harness.companion.turn_tail_user import (
+    append_turn_track_tail_user_transcript_rows,
+)
 from app.core.companion_harness.companion.utc import utc_iso_ts
 from app.core.companion_harness.loop.in_turn_visible_text import (
     resolve_in_turn_assistant_visible_text,
@@ -76,7 +70,13 @@ from app.core.companion_harness.prompt_builder import (
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call,
+)
+from app.core.companion_harness.tools.companion_tool_runtime import (
     execute_tool_call as repl_execute_tool_call,
+)
+from app.core.companion_harness.tools.image_gate import (
+    generated_image_meta_from_asset_record,
+    list_image_asset_records,
 )
 from app.core.companion_harness.tools.runtime import (
     insert_openai_system_message,
@@ -86,9 +86,10 @@ from app.core.companion_harness.tools.tool_background import (
     ToolOutputEvent,
     run_tool_background_loop,
 )
-from app.core.companion_harness.tools.image_gate import (
-    generated_image_meta_from_asset_record,
-    list_image_asset_records,
+from app.core.config import global_config_loaded_from_config_yaml
+from app.core.llms.client import (
+    AsyncLlmClient,
+    LlmClient,
 )
 
 from .context import AgenticLoopContext, AgenticLoopOutput

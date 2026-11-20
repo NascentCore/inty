@@ -25,14 +25,6 @@ from app.core.companion_harness.experience_profile.experience_directives import 
     context_mode_for_session_intent,
     repair_context_json_dict,
 )
-from app.core.companion_harness.prompting.bundle import PromptBundle
-
-from .utc import local_date_str
-from app.core.companion_harness.memory.memory_store_scope import (
-    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
-    ensure_template_seeded_core_documents_in_store,
-    load_template_seed_text,
-)
 from app.core.companion_harness.memory.memory_store_path_constants import (
     ABOUT_MD_REL,
     CHANNELS_MD_REL,
@@ -52,6 +44,14 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+    ensure_template_seeded_core_documents_in_store,
+    load_template_seed_text,
+)
+from app.core.companion_harness.prompting.bundle import PromptBundle
+
+from .utc import local_date_str
 
 if TYPE_CHECKING:
     from app.core.companion_harness.memory.memory_store import MemoryStore
