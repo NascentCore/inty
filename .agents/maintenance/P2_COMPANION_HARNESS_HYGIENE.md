@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-21 scan (cron)
+
+Source: open PR overlap check (#4106–#4129 companion/loop I001 batches); ruff I001 on `prompting/contextual.py`, `prompting/template.py`, and `prompting/track_composer.py` not covered by open import-sort PRs.
+
+Open PRs checked: #4129 (`cursor/agent-maintenance-tasks-nov20-617`), #4126 (`cursor/agent-maintenance-tasks-nov19-614`), #4123 (`cursor/agent-maintenance-tasks-nov18-611`), #4121 (`cursor/agent-maintenance-tasks-nov17-608`), #4130 (`cursor/companion-harness-cleanup-6de0` — TurnComposeContext bridge, no overlap) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov21-620`)
+
+- [x] **HYGIENE-2026-620** ruff I001: `prompting/contextual.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
+- [x] **HYGIENE-2026-621** ruff I001: `prompting/template.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
+- [x] **HYGIENE-2026-622** ruff I001: `prompting/track_composer.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
