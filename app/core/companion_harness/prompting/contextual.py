@@ -19,7 +19,10 @@ from app.core.companion_harness.experience_profile.context_mode import (
 from app.core.companion_harness.experience_profile.experience_directives import (
     experience_directives_system_clause,
 )
-from app.core.companion_harness.prompting.compose_context import TurnComposeContext
+from app.core.companion_harness.prompting.compose_context import (
+    TurnComposeContext,
+)
+from app.core.companion_harness.prompting.phase import Phase
 from app.core.companion_harness.prompting.system_messages import (
     _about_operator_guidance_system_messages,
     _get_inner_tick_autonomy_prompt_slice,
@@ -29,7 +32,6 @@ from app.core.companion_harness.prompting.system_messages import (
     _proactive_chat_clause,
     _system_message,
 )
-from app.core.companion_harness.prompting.phase import Phase
 
 
 def _append_directives(

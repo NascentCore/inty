@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from jinja2 import StrictUndefined, Template as Jinja2Template
+from jinja2 import StrictUndefined
+from jinja2 import Template as Jinja2Template
 
 
 @dataclass(frozen=True)

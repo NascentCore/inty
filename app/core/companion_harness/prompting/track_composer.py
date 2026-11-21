@@ -10,7 +10,9 @@ from app.core.companion_harness.prompt_builder import (
     PromptPlan,
     openai_dialogue_dicts_to_prompt_messages,
 )
-from app.core.companion_harness.prompting.compose_context import TurnComposeContext
+from app.core.companion_harness.prompting.compose_context import (
+    TurnComposeContext,
+)
 
 
 class TrackPromptComposer:

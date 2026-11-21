@@ -709,6 +709,6 @@ Open PRs checked: #4129 (`cursor/agent-maintenance-tasks-nov20-617`), #4126 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov21-620`)
 
-- [ ] **HYGIENE-2026-620** ruff I001: `prompting/contextual.py` — isort import block.
-- [ ] **HYGIENE-2026-621** ruff I001: `prompting/template.py` — isort import block.
-- [ ] **HYGIENE-2026-622** ruff I001: `prompting/track_composer.py` — isort import block.
+- [x] **HYGIENE-2026-620** ruff I001: `prompting/contextual.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
+- [x] **HYGIENE-2026-621** ruff I001: `prompting/template.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
+- [x] **HYGIENE-2026-622** ruff I001: `prompting/track_composer.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov21-620` / pull/4131.
