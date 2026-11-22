@@ -9,11 +9,11 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     LIVING_SPHERE_MD_REL,
     LIVING_SPHERE_UPDATES_JSONL_REL,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )

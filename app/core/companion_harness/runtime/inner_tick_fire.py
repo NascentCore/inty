@@ -18,6 +18,9 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.agentic_companion.output_queue import (
+    OutputQueue,
+)
 from app.core.companion_harness.companion.inner_tick_kind import (
     InnerTickKind,
     inner_tick_spec,
@@ -49,9 +52,6 @@ from app.core.companion_harness.companion.schedule_queue import (
     mark_task_retry,
     next_due_task_for_execution,
     scheduled_task_synthetic_user_text,
-)
-from app.core.agentic_companion.output_queue import (
-    OutputQueue,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.config import global_config_loaded_from_config_yaml
