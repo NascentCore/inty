@@ -615,12 +615,12 @@ class AgenticLoop:
         *,
         store: MemoryStore,
         llm_client: AsyncLlmClient,
-        legacy_llm_client: LlmClient,
+        sync_llm_client: LlmClient,
     ) -> None:
         """Bind stable agent dependencies used across loop runs."""
         self.store = store
         self.llm_client = llm_client
-        self.legacy_llm_client = legacy_llm_client
+        self.sync_llm_client = sync_llm_client
 
     async def run_single_llm_turn(
         self, *, context: AgenticLoopContext
@@ -696,7 +696,7 @@ class AgenticLoop:
             store=self.store,
             image_asset_baseline=len(list_image_asset_records(self.store)),
         )
-        llm_client = self.legacy_llm_client
+        llm_client = self.sync_llm_client
         execution = context.execution
         chat_msgs = list(context.dual_llm_chat_msgs)
         tool_msgs = list(context.dual_llm_tool_msgs)
