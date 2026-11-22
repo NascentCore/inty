@@ -360,7 +360,7 @@ async def test_autonomy_tool_loop_never_appends_visible_output() -> None:
         result = await AgenticLoop(
             store=store,
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_single_llm_turn(context=context)
 
     assert captured_sinks == [None]
