@@ -709,6 +709,6 @@ Open PRs checked: #4131 (`cursor/agent-maintenance-tasks-nov21-620`), #4129 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov22-623`)
 
-- [ ] **HYGIENE-2026-623** ruff I001: `memory/client_time_from_memory_store.py` — isort import block. claimed `cursor/agent-maintenance-tasks-nov22-623`.
-- [ ] **HYGIENE-2026-624** ruff I001: `memory/living_sphere_curator.py` — isort import block. claimed `cursor/agent-maintenance-tasks-nov22-623`.
-- [ ] **HYGIENE-2026-625** ruff I001: `runtime/inner_tick_fire.py` — isort import block. claimed `cursor/agent-maintenance-tasks-nov22-623`.
+- [x] **HYGIENE-2026-623** ruff I001: `memory/client_time_from_memory_store.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov22-623` / pull/4133.
+- [x] **HYGIENE-2026-624** ruff I001: `memory/living_sphere_curator.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov22-623` / pull/4133.
+- [x] **HYGIENE-2026-625** ruff I001: `runtime/inner_tick_fire.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov22-623` / pull/4133.
