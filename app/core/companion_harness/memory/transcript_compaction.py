@@ -137,44 +137,89 @@ class ConversationCompactor:
     def state(self) -> CompactionState:
         return self._state
 
-    def maybe_compact(
-        self, *, messages: list[dict[str, Any]], turn: int
+    def _maybe_compact_no_op_outcome(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        before_chars: int,
+        reason: str,
     ) -> CompactionOutcome:
-        before_chars = estimate_messages_chars(messages)
-        if before_chars <= self._config.max_context_chars:
-            return CompactionOutcome(
-                messages=messages,
-                state=self._state,
-                did_compact=False,
-                reason="under_budget",
-                approx_chars_before=before_chars,
-                approx_chars_after=before_chars,
-            )
+        return CompactionOutcome(
+            messages=messages,
+            state=self._state,
+            did_compact=False,
+            reason=reason,
+            approx_chars_before=before_chars,
+            approx_chars_after=before_chars,
+        )
 
+    def _partition_messages_for_compaction(
+        self, messages: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
         system_messages = [
             m
             for m in messages
             if m.get("role") == "system" and not _is_compaction_message(m)
         ]
         dialogue_messages = [m for m in messages if m.get("role") != "system"]
-        if len(dialogue_messages) <= self._config.keep_recent_messages:
-            return CompactionOutcome(
-                messages=messages,
-                state=self._state,
-                did_compact=False,
-                reason="not_enough_dialogue",
-                approx_chars_before=before_chars,
-                approx_chars_after=before_chars,
-            )
-
         old_dialogue = dialogue_messages[: -self._config.keep_recent_messages]
         recent_dialogue = dialogue_messages[
             -self._config.keep_recent_messages :
         ]
+        return system_messages, old_dialogue, recent_dialogue
+
+    def maybe_compact(
+        self, *, messages: list[dict[str, Any]], turn: int
+    ) -> CompactionOutcome:
+        before_chars = estimate_messages_chars(messages)
+        if before_chars <= self._config.max_context_chars:
+            return self._maybe_compact_no_op_outcome(
+                messages=messages,
+                before_chars=before_chars,
+                reason="under_budget",
+            )
+
+        system_messages, old_dialogue, recent_dialogue = (
+            self._partition_messages_for_compaction(messages)
+        )
+        dialogue_count = len(old_dialogue) + len(recent_dialogue)
+        if dialogue_count <= self._config.keep_recent_messages:
+            return self._maybe_compact_no_op_outcome(
+                messages=messages,
+                before_chars=before_chars,
+                reason="not_enough_dialogue",
+            )
 
         next_state = self._absorb_old_dialogue(
             old_dialogue=old_dialogue, turn=turn
         )
+        compacted_messages, after_chars = self._shrink_dialogue_with_compaction(
+            system_messages=system_messages,
+            recent_dialogue=recent_dialogue,
+            next_state=next_state,
+            turn=turn,
+            before_chars=before_chars,
+        )
+        self._state = next_state
+
+        return CompactionOutcome(
+            messages=compacted_messages,
+            state=next_state,
+            did_compact=True,
+            reason="over_budget_compacted",
+            approx_chars_before=before_chars,
+            approx_chars_after=after_chars,
+        )
+
+    def _shrink_dialogue_with_compaction(
+        self,
+        *,
+        system_messages: list[dict[str, Any]],
+        recent_dialogue: list[dict[str, Any]],
+        next_state: CompactionState,
+        turn: int,
+        before_chars: int,
+    ) -> tuple[list[dict[str, Any]], int]:
         memory_msg = {
             "role": "system",
             "content": self._build_compaction_system_prompt(
@@ -199,16 +244,7 @@ class ConversationCompactor:
         if after_chars >= before_chars:
             compacted_messages = [*system_messages, *recent_dialogue]
             after_chars = estimate_messages_chars(compacted_messages)
-        self._state = next_state
-
-        return CompactionOutcome(
-            messages=compacted_messages,
-            state=next_state,
-            did_compact=True,
-            reason="over_budget_compacted",
-            approx_chars_before=before_chars,
-            approx_chars_after=after_chars,
-        )
+        return compacted_messages, after_chars
 
     def _absorb_old_dialogue(
         self, *, old_dialogue: list[dict[str, Any]], turn: int
