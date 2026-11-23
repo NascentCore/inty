@@ -709,6 +709,6 @@ Open PRs checked: #4133 (`cursor/agent-maintenance-tasks-nov22-623`), #4131 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov23-626`)
 
-- [ ] **HYGIENE-2026-626** ruff I001: `prompt_builder.py` — isort import block.
-- [ ] **HYGIENE-2026-627** ruff I001: `prompting/tracks.py` — isort import block.
-- [ ] **HYGIENE-2026-628** ruff I001: `tools/runtime.py` — isort import block.
+- [x] **HYGIENE-2026-626** ruff I001: `prompt_builder.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov23-626` / pull/4135.
+- [x] **HYGIENE-2026-627** ruff I001: `prompting/tracks.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov23-626` / pull/4135.
+- [x] **HYGIENE-2026-628** ruff I001: `tools/runtime.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov23-626` / pull/4135.
