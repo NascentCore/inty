@@ -295,7 +295,7 @@ async def test_agentic_loop_appends_each_non_empty_assistant_output() -> None:
         result = await AgenticLoop(
             store=store,
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_single_llm_turn(context=context)
 
     assert result.output_message_ids == ("msg-a", "msg-b")
@@ -348,7 +348,7 @@ async def test_agentic_loop_skips_empty_assistant_output() -> None:
         result = await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_single_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
@@ -392,7 +392,7 @@ async def test_agentic_loop_skips_silent_assistant_output() -> None:
         result = await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_single_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
@@ -449,7 +449,7 @@ async def test_agentic_loop_uses_prompt_plan_path_when_set() -> None:
         result = await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_single_llm_turn(context=context)
 
     prompt_plan_mock.assert_awaited_once()
@@ -758,7 +758,7 @@ async def test_dual_llm_user_turn_injects_reply_language_clause() -> None:
         await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_dual_llm_turn(context=context)
 
     fg_input = foreground_mock.await_args.args[0]
@@ -836,7 +836,7 @@ async def test_dual_llm_user_turn_appends_foreground_and_tool_leg() -> None:
         result = await AgenticLoop(
             store=store,
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_dual_llm_turn(context=context)
 
     assert result.output_message_ids == ("msg-fg", "msg-tool")
@@ -900,7 +900,7 @@ async def test_dual_llm_user_turn_skips_output_to_user_false() -> None:
         result = await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_dual_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
@@ -942,7 +942,7 @@ async def test_dual_llm_user_turn_skips_silent_foreground_output() -> None:
         result = await AgenticLoop(
             store=_loop_store(),
             llm_client=MagicMock(),
-            legacy_llm_client=MagicMock(),
+            sync_llm_client=MagicMock(),
         ).run_dual_llm_turn(context=context)
 
     domain.append_visible_message.assert_not_awaited()
