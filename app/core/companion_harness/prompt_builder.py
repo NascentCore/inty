@@ -24,6 +24,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from app.core.companion_harness.companion.dual_llm_message_stacks import (
+    replace_leading_system_messages_multi,
+)
 from app.core.companion_harness.companion.models import (
     ChatMessage,
     CompanionTurnTrack,
@@ -36,15 +39,40 @@ from app.core.companion_harness.companion.prompt_stack import (
     replace_leading_system_messages_inplace,
     weixin_clawbot_contact_alias_system_message,
 )
-from app.core.companion_harness.companion.dual_llm_message_stacks import (
-    replace_leading_system_messages_multi,
+from app.core.companion_harness.companion.runtime_channel import (
+    ChannelKind,
+    TurnRuntimeContext,
 )
+from app.core.companion_harness.companion.transcript_ai_private import (
+    AiPrivateThought,
+)
+from app.core.companion_harness.companion.turn_pipeline import (
+    _companion_user_time_context_system_for_llm,
+)
+from app.core.companion_harness.companion.turn_tail_user import (
+    TurnTailUserMessage,
+    tail_user_message_contents_for_llm,
+)
+from app.core.companion_harness.companion.utc import (
+    transcript_message_content_for_llm,
+)
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+    apply_debug_github_disclosure_runtime_clause,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.memory.transcript_compaction import (
+    transcript_rows_to_openai_dialogue,
+)
+from app.core.companion_harness.prompting.bundle import PromptBundle
 from app.core.companion_harness.prompting.compose_context import (
     TurnComposeContext,
     build_turn_compose_context,
     empty_memory_store_for_compose,
 )
-from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
+from app.core.companion_harness.prompting.contextual import (
+    assemble_contextual_slices,
+)
 from app.core.companion_harness.prompting.leg_kind import PromptLegKind
 from app.core.companion_harness.prompting.phase import (
     Phase,
@@ -72,32 +100,6 @@ from app.core.companion_harness.prompting.tracks import (
     _output_settled_single_llm_system_messages,
     _persona_bootstrap_user_turn_system_messages,
     _persona_settled_user_turn_system_messages,
-)
-from app.core.companion_harness.companion.runtime_channel import (
-    ChannelKind,
-    TurnRuntimeContext,
-)
-from app.core.companion_harness.companion.turn_pipeline import (
-    _companion_user_time_context_system_for_llm,
-)
-from app.core.companion_harness.companion.turn_tail_user import (
-    TurnTailUserMessage,
-    tail_user_message_contents_for_llm,
-)
-from app.core.companion_harness.companion.transcript_ai_private import (
-    AiPrivateThought,
-)
-from app.core.companion_harness.companion.utc import (
-    transcript_message_content_for_llm,
-)
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.memory.transcript_compaction import (
-    transcript_rows_to_openai_dialogue,
-)
-from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.loop.runtime_system_clauses import (
-    append_configured_fixed_reply_language_system_messages,
-    apply_debug_github_disclosure_runtime_clause,
 )
 from app.core.companion_harness.tools.companion_tool_runtime import (
     build_openai_bootstrap_track_tools,

@@ -11,12 +11,28 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.companion_harness.companion.models import ContextMeta
 from app.core.companion_harness.companion.bootstrap import (
     build_bootstrap_tool_call_section,
     build_interactive_bootstrap_template_reference_parts,
     load_bootstrap_spec_text,
 )
+from app.core.companion_harness.companion.models import ContextMeta
+from app.core.companion_harness.experience_profile.context_mode import (
+    experience_profile_injects_private_memory,
+)
+from app.core.companion_harness.memory.memory_taxonomy import (
+    COMPANIONSHIP_SYSTEM_HEADING,
+    MEMORY_SYSTEM_HEADING_DAILY_GIST,
+    MEMORY_SYSTEM_HEADING_SEMANTIC,
+)
+from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.compose_context import (
+    turn_compose_context_for_user_turn_chat_leg,
+)
+from app.core.companion_harness.prompting.contextual import (
+    assemble_contextual_slices,
+)
+from app.core.companion_harness.prompting.phase import Phase
 from app.core.companion_harness.prompting.system_messages import (
     _auxiliary_system_messages,
     _doctrine_system_messages,
@@ -27,20 +43,6 @@ from app.core.companion_harness.prompting.system_messages import (
     _output_contract_text_with_tools,
     _system_message,
 )
-from app.core.companion_harness.experience_profile.context_mode import (
-    experience_profile_injects_private_memory,
-)
-from app.core.companion_harness.memory.memory_taxonomy import (
-    COMPANIONSHIP_SYSTEM_HEADING,
-    MEMORY_SYSTEM_HEADING_DAILY_GIST,
-    MEMORY_SYSTEM_HEADING_SEMANTIC,
-)
-from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.contextual import assemble_contextual_slices
-from app.core.companion_harness.prompting.compose_context import (
-    turn_compose_context_for_user_turn_chat_leg,
-)
-from app.core.companion_harness.prompting.phase import Phase
 
 
 def _require_settled_phase(phase: Phase) -> None:
