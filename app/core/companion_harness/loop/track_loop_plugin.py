@@ -107,7 +107,7 @@ def _agentic_loop(prepared: CompanionTurnLoopInput) -> AgenticLoop:
     return AgenticLoop(
         store=prepared.store,
         llm_client=prepared.llm_client.async_llm_client,
-        legacy_llm_client=prepared.llm_client,
+        sync_llm_client=prepared.llm_client,
     )
 
 
