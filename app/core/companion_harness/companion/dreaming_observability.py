@@ -8,9 +8,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import StrEnum
-from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
