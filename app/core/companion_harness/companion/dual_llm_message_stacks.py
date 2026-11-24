@@ -8,23 +8,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.companion_harness.memory.memory_store import MemoryStore
-from app.core.companion_harness.loop.runtime_system_clauses import (
-    append_configured_fixed_reply_language_system_messages,
-)
-from app.core.companion_harness.prompting.bundle import PromptBundle
-from app.core.companion_harness.prompting.tracks import (
-    build_settled_user_turn_dual_chat_leg_system_messages,
-)
-from .models import ContextMeta, InnerTickActivity
-from .inner_tick_kind import InnerTickKind, inner_tick_spec
-from .prompt_stack import append_runtime_output_format_system_message
-from app.core.companion_harness.prompting.system_messages import (
-    build_system_messages_for_tool_track,
-)
 from app.core.companion_harness.companion.runtime_channel import (
     TurnRuntimeContext,
 )
+from app.core.companion_harness.loop.runtime_system_clauses import (
+    append_configured_fixed_reply_language_system_messages,
+)
+from app.core.companion_harness.memory.memory_store import MemoryStore
+from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.companion_harness.prompting.system_messages import (
+    build_system_messages_for_tool_track,
+)
+from app.core.companion_harness.prompting.tracks import (
+    build_settled_user_turn_dual_chat_leg_system_messages,
+)
+
+from .inner_tick_kind import InnerTickKind, inner_tick_spec
+from .models import ContextMeta, InnerTickActivity
+from .prompt_stack import append_runtime_output_format_system_message
 
 
 def replace_leading_system_messages_multi(

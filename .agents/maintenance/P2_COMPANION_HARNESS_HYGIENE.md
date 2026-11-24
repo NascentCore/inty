@@ -709,6 +709,6 @@ Open PRs checked: #4135 (`cursor/agent-maintenance-tasks-nov23-626`), #4133 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov24-629`)
 
-- [ ] **HYGIENE-2026-629** ruff I001: `companion/dreaming_observability.py` — isort import block.
-- [ ] **HYGIENE-2026-630** ruff I001: `companion/dual_llm_message_stacks.py` — isort import block.
-- [ ] **HYGIENE-2026-631** ruff I001: `companion/inner_tick_kind.py` — isort import block.
+- [x] **HYGIENE-2026-629** ruff I001: `companion/dreaming_observability.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov24-629` / pull/4138.
+- [x] **HYGIENE-2026-630** ruff I001: `companion/dual_llm_message_stacks.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov24-629` / pull/4138.
+- [x] **HYGIENE-2026-631** ruff I001: `companion/inner_tick_kind.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov24-629` / pull/4138.
