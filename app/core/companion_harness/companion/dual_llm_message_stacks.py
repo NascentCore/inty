@@ -40,19 +40,15 @@ def replace_leading_system_messages_multi(
     return [*system_messages, *messages[stack_depth:]]
 
 
-def dual_llm_system_message_variants(
+def _dual_llm_tool_leg_base_system_messages(
     *,
     store: MemoryStore,
     bundle: PromptBundle,
     context: ContextMeta,
     inner_tick_turn: bool,
     route_inner_activity: InnerTickActivity,
-    runtime_context: TurnRuntimeContext,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Foreground ``chat_track`` vs tool-path stacks for dual-LLM ``USER_CHAT``.
-
-    Implicit sign-on rounds never reach this helper (greeting track uses its own stack).
-    """
+) -> list[dict[str, Any]]:
+    """Tool-path system stack before runtime output-format and language clauses."""
     if (
         inner_tick_turn
         and route_inner_activity != InnerTickActivity.PROACTIVE_CHAT
@@ -69,27 +65,56 @@ def dual_llm_system_message_variants(
                 )
         builder = spec.async_tool_prompt_builder
         assert builder is not None
-        tool_system_msgs = builder(bundle, context, store)
-    else:
-        tool_system_msgs = build_system_messages_for_tool_track(bundle, context)
-    chat_system_msgs = build_settled_user_turn_dual_chat_leg_system_messages(
+        return builder(bundle, context, store)
+    return build_system_messages_for_tool_track(bundle, context)
+
+
+def _dual_llm_leg_system_messages_with_runtime_clauses(
+    *,
+    base_system_messages: list[dict[str, Any]],
+    bundle: PromptBundle,
+    runtime_context: TurnRuntimeContext,
+) -> list[dict[str, Any]]:
+    with_output = append_runtime_output_format_system_message(
+        system_messages=base_system_messages,
+        bundle=bundle,
+        runtime_context=runtime_context,
+    )
+    return append_configured_fixed_reply_language_system_messages(with_output)
+
+
+def dual_llm_system_message_variants(
+    *,
+    store: MemoryStore,
+    bundle: PromptBundle,
+    context: ContextMeta,
+    inner_tick_turn: bool,
+    route_inner_activity: InnerTickActivity,
+    runtime_context: TurnRuntimeContext,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Foreground ``chat_track`` vs tool-path stacks for dual-LLM ``USER_CHAT``.
+
+    Implicit sign-on rounds never reach this helper (greeting track uses its own stack).
+    """
+    tool_base = _dual_llm_tool_leg_base_system_messages(
+        store=store,
+        bundle=bundle,
+        context=context,
+        inner_tick_turn=inner_tick_turn,
+        route_inner_activity=route_inner_activity,
+    )
+    chat_base = build_settled_user_turn_dual_chat_leg_system_messages(
         bundle,
         context,
     )
-    tool_system_msgs = append_runtime_output_format_system_message(
-        system_messages=tool_system_msgs,
+    tool_system_msgs = _dual_llm_leg_system_messages_with_runtime_clauses(
+        base_system_messages=tool_base,
         bundle=bundle,
         runtime_context=runtime_context,
     )
-    chat_system_msgs = append_runtime_output_format_system_message(
-        system_messages=chat_system_msgs,
+    chat_system_msgs = _dual_llm_leg_system_messages_with_runtime_clauses(
+        base_system_messages=chat_base,
         bundle=bundle,
         runtime_context=runtime_context,
-    )
-    tool_system_msgs = append_configured_fixed_reply_language_system_messages(
-        tool_system_msgs
-    )
-    chat_system_msgs = append_configured_fixed_reply_language_system_messages(
-        chat_system_msgs
     )
     return tool_system_msgs, chat_system_msgs

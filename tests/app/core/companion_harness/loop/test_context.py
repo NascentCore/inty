@@ -18,6 +18,7 @@ from app.core.companion_harness.loop.config import (
     resolved_user_turn_llm_loop_mode,
 )
 from app.core.companion_harness.loop.context import (
+    _SettledDualLlmUserChatLoopVariantWire,
     build_settled_dual_llm_user_chat_loop_context,
     build_settled_user_chat_loop_context,
 )
@@ -56,15 +57,17 @@ def test_settled_dual_llm_context_packages_prebuilt_stacks() -> None:
 
     context = build_settled_dual_llm_user_chat_loop_context(
         **base_user_chat_loop_builder_kwargs(),
-        dual_llm_chat_msgs=chat_msgs,
-        dual_llm_tool_msgs=tool_msgs,
-        prompt_bundle=PromptBundle(
-            identity="",
-            soul="",
-            user_md="",
-            memory_md="",
+        dual_llm_variant=_SettledDualLlmUserChatLoopVariantWire(
+            context_meta=ContextMeta(),
+            dual_llm_chat_msgs=chat_msgs,
+            dual_llm_tool_msgs=tool_msgs,
+            prompt_bundle=PromptBundle(
+                identity="",
+                soul="",
+                user_md="",
+                memory_md="",
+            ),
         ),
-        context_meta=ContextMeta(),
         execution=loop_execution_for_track(
             track=CompanionTurnTrack.USER_CHAT,
             user_text="hi",

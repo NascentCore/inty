@@ -66,6 +66,57 @@ def list_image_asset_records(store: MemoryStore) -> list[dict[str, Any]]:
     return out
 
 
+def _generated_image_dimension_base(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "width": row.get("width"),
+        "height": row.get("height"),
+        "format": "png",
+    }
+
+
+def _generated_image_meta_with_url(
+    image_url: str, base: dict[str, Any]
+) -> dict[str, Any]:
+    assert image_url
+    return {"image_url": image_url, **base}
+
+
+def _generated_image_meta_for_fake_gcs_row(
+    row: dict[str, Any], base: dict[str, Any]
+) -> dict[str, Any] | None:
+    http_u = str(row.get("gcs_http_url") or "").strip()
+    if not http_u:
+        return None
+    return _generated_image_meta_with_url(http_u, base)
+
+
+def _resolve_generated_image_gcs_uri(row: dict[str, Any]) -> str:
+    from app.external_services.gcs import gs_uri_from_storage_reference_url
+
+    gcs_uri = str(row.get("gcs_uri") or "").strip()
+    if gcs_uri.startswith("gs://"):
+        return gcs_uri
+    ref = str(row.get("gcs_http_url") or "").strip()
+    if not ref:
+        return gcs_uri
+    mapped = gs_uri_from_storage_reference_url(ref)
+    if mapped:
+        return mapped
+    return gcs_uri
+
+
+def _generated_image_meta_from_http_fallback(
+    row: dict[str, Any], base: dict[str, Any]
+) -> dict[str, Any] | None:
+    for candidate in (
+        str(row.get("gcs_uri") or "").strip(),
+        str(row.get("gcs_http_url") or "").strip(),
+    ):
+        if candidate.startswith("http://") or candidate.startswith("https://"):
+            return _generated_image_meta_with_url(candidate, base)
+    return None
+
+
 def generated_image_meta_from_asset_record(
     row: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -80,39 +131,17 @@ def generated_image_meta_from_asset_record(
     ``file://...`` from ``Blob.public_url``), which we use as ``image_url`` when set.
     """
     from app.core.config import global_config_loaded_from_config_yaml
-    from app.external_services.gcs import gs_uri_from_storage_reference_url
 
-    w = row.get("width")
-    h = row.get("height")
-    base = {
-        "width": w,
-        "height": h,
-        "format": "png",
-    }
+    base = _generated_image_dimension_base(row)
 
     if global_config_loaded_from_config_yaml.gcs.use_fake_gcs:
-        http_u = str(row.get("gcs_http_url") or "").strip()
-        if http_u:
-            return {"image_url": http_u, **base}
+        return _generated_image_meta_for_fake_gcs_row(row, base)
 
-    gcs_uri = str(row.get("gcs_uri") or "").strip()
-    if not gcs_uri.startswith("gs://"):
-        ref = str(row.get("gcs_http_url") or "").strip()
-        if ref:
-            mapped = gs_uri_from_storage_reference_url(ref)
-            if mapped:
-                gcs_uri = mapped
-
+    gcs_uri = _resolve_generated_image_gcs_uri(row)
     if gcs_uri.startswith("gs://"):
-        return {"image_url": gcs_uri, **base}
+        return _generated_image_meta_with_url(gcs_uri, base)
 
-    for candidate in (
-        str(row.get("gcs_uri") or "").strip(),
-        str(row.get("gcs_http_url") or "").strip(),
-    ):
-        if candidate.startswith("http://") or candidate.startswith("https://"):
-            return {"image_url": candidate, **base}
-    return None
+    return _generated_image_meta_from_http_fallback(row, base)
 
 
 def generated_image_meta_from_index_slice(
