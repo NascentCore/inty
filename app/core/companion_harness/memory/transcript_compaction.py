@@ -628,6 +628,43 @@ def _trim_episodes(
     return ranked[:max_entries]
 
 
+def _semantic_memory_item_from_new_fact(
+    *,
+    key: str,
+    fact: str,
+    episode: MemoryEpisode,
+    turn: int,
+) -> SemanticMemoryItem:
+    return SemanticMemoryItem(
+        key=key,
+        fact=fact,
+        confidence=min(0.55 + episode.importance * 0.35, 0.98),
+        source_episode_ids=[episode.episode_id],
+        updated_turn=turn,
+    )
+
+
+def _semantic_memory_item_reinforced(
+    *,
+    key: str,
+    fact: str,
+    episode: MemoryEpisode,
+    current: SemanticMemoryItem,
+    turn: int,
+) -> SemanticMemoryItem:
+    merged_sources = _dedupe_keep_order(
+        [*current.source_episode_ids, episode.episode_id]
+    )
+    kept_fact = fact if len(fact) >= len(current.fact) else current.fact
+    return SemanticMemoryItem(
+        key=key,
+        fact=kept_fact,
+        confidence=min(current.confidence + 0.08, 0.99),
+        source_episode_ids=merged_sources,
+        updated_turn=turn,
+    )
+
+
 def _merge_semantic_memory(
     *,
     existing: list[SemanticMemoryItem],
@@ -643,23 +680,19 @@ def _merge_semantic_memory(
             key = _semantic_key(fact)
             current = by_key.get(key)
             if current is None:
-                by_key[key] = SemanticMemoryItem(
+                by_key[key] = _semantic_memory_item_from_new_fact(
                     key=key,
                     fact=fact,
-                    confidence=min(0.55 + episode.importance * 0.35, 0.98),
-                    source_episode_ids=[episode.episode_id],
-                    updated_turn=turn,
+                    episode=episode,
+                    turn=turn,
                 )
                 continue
-            merged_sources = _dedupe_keep_order(
-                [*current.source_episode_ids, episode.episode_id]
-            )
-            by_key[key] = SemanticMemoryItem(
+            by_key[key] = _semantic_memory_item_reinforced(
                 key=key,
-                fact=fact if len(fact) >= len(current.fact) else current.fact,
-                confidence=min(current.confidence + 0.08, 0.99),
-                source_episode_ids=merged_sources,
-                updated_turn=turn,
+                fact=fact,
+                episode=episode,
+                current=current,
+                turn=turn,
             )
     merged = sorted(
         by_key.values(),
