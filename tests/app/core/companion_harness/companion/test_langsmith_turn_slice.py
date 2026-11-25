@@ -14,8 +14,7 @@ from app.core.companion_harness.llm.langsmith_invocation_extra import (
     INTY_LLM_SOURCE_METADATA_KEY,
     INTY_RUNTIME_CHANNEL_METADATA_KEY,
     INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY,
-    SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
-    SOURCE_TOOL_BACKGROUND_INITIAL,
+    LangsmithLlmSource,
 )
 
 
@@ -46,13 +45,13 @@ def test_foreground_invocation_extra_merges_channel_and_source() -> None:
         LangsmithChannelSource.SCOPE_REGISTRY,
     )
     extra = slice_.foreground_invocation_extra(
-        source=SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE,
+        source=LangsmithLlmSource.FOREGROUND_DUAL_LLM_ENVELOPE,
         extra_metadata=None,
     )
     meta = extra["metadata"]
     assert (
         meta[INTY_LLM_SOURCE_METADATA_KEY]
-        == SOURCE_FOREGROUND_DUAL_LLM_ENVELOPE
+        == LangsmithLlmSource.FOREGROUND_DUAL_LLM_ENVELOPE
     )
     assert meta[INTY_RUNTIME_CHANNEL_METADATA_KEY] == "wechat_weixin"
     assert meta[INTY_RUNTIME_CHANNEL_SOURCE_METADATA_KEY] == "scope_registry"
@@ -61,10 +60,10 @@ def test_foreground_invocation_extra_merges_channel_and_source() -> None:
 def test_tool_call_extra_includes_channel_metadata() -> None:
     slice_ = CompanionTurnLangsmithSlice.app_default()
     extra = slice_.tool_call_extra(
-        phase_suffix=SOURCE_TOOL_BACKGROUND_INITIAL,
+        phase_suffix=LangsmithLlmSource.TOOL_BACKGROUND_INITIAL,
         extra_metadata=None,
     )
-    assert extra["name"] == SOURCE_TOOL_BACKGROUND_INITIAL
+    assert extra["name"] == LangsmithLlmSource.TOOL_BACKGROUND_INITIAL
     assert extra["metadata"][INTY_RUNTIME_CHANNEL_METADATA_KEY] == "app_ws"
 
 
