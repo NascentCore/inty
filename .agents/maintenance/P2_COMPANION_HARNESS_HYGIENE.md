@@ -709,6 +709,6 @@ Open PRs checked: #4138 (`cursor/agent-maintenance-tasks-nov24-629`), #4135 (`cu
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov25-632`)
 
-- [ ] **HYGIENE-2026-632** ruff I001: `companion/inner_tick_schedule.py` — isort import block.
-- [ ] **HYGIENE-2026-633** ruff I001: `companion/langsmith_turn_slice.py` — isort import block.
-- [ ] **HYGIENE-2026-634** ruff I001: `companion/manager_factory.py` — isort import block.
+- [x] **HYGIENE-2026-632** ruff I001: `companion/inner_tick_schedule.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov25-632` / pull/4140.
+- [x] **HYGIENE-2026-633** ruff I001: `companion/langsmith_turn_slice.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov25-632` / pull/4140.
+- [x] **HYGIENE-2026-634** ruff I001: `companion/manager_factory.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov25-632` / pull/4140.

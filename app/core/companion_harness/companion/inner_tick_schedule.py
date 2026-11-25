@@ -20,10 +20,11 @@ from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     TRANSCRIPT_JSONL_REL,
 )
+
 from .models import (
     ChatMessage,
-    load_context_meta,
     TranscriptProjection,
+    load_context_meta,
     load_transcript_projection_from_store,
     transcript_without_trailing_presence_signals,
 )
