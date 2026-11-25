@@ -21,8 +21,7 @@ from app.core.companion_harness.companion.runtime_channel import (
 )
 from app.core.companion_harness.companion.scope import CompanionScope
 from app.core.companion_harness.llm.langsmith_invocation_extra import (
-    SOURCE_TOOL_BACKGROUND_CONTINUE,
-    SOURCE_TOOL_BACKGROUND_INITIAL,
+    LangsmithLlmSource,
 )
 from app.utils.models_catalog import resolve_chat_text_model
 from app.core.companion_harness.memory.memory_store import MemoryStore
@@ -114,7 +113,7 @@ def test_initial_tool_bg_completion_sync_receives_telegram_channel() -> None:
 
     assert len(sync_calls) == 1
     extra = sync_calls[0]["langsmith_extra"]
-    assert extra["name"] == SOURCE_TOOL_BACKGROUND_INITIAL
+    assert extra["name"] == LangsmithLlmSource.TOOL_BACKGROUND_INITIAL
     assert extra["metadata"]["inty_runtime_channel"] == "telegram"
     assert extra["metadata"]["inty_runtime_channel_source"] == "explicit_turn"
 
@@ -196,12 +195,12 @@ async def test_run_background_tool_loop_continue_sync_receives_telegram_channel(
     assert len(sync_calls) >= 2
     initial_extra = sync_calls[0]["langsmith_extra"]
     assert initial_extra is not None
-    assert initial_extra["name"] == SOURCE_TOOL_BACKGROUND_INITIAL
+    assert initial_extra["name"] == LangsmithLlmSource.TOOL_BACKGROUND_INITIAL
     assert initial_extra["metadata"]["inty_runtime_channel"] == "telegram"
 
     continue_extra = sync_calls[1]["langsmith_extra"]
     assert continue_extra is not None
-    assert continue_extra["name"] == SOURCE_TOOL_BACKGROUND_CONTINUE
+    assert continue_extra["name"] == LangsmithLlmSource.TOOL_BACKGROUND_CONTINUE
     assert continue_extra["metadata"]["inty_runtime_channel"] == "telegram"
     assert (
         continue_extra["metadata"]["inty_runtime_channel_source"]
