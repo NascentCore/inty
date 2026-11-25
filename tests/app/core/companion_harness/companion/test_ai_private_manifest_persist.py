@@ -24,14 +24,17 @@ from app.core.companion_harness.loop.config import UserTurnLlmLoopMode
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_path_constants import (
     CHANNELS_MD_REL,
-    CONTEXT_JSON_REL,
     IDENTITY_MD_REL,
     MEMORY_MD_REL,
     SOUL_MD_REL,
     STYLE_MD_REL,
-    TRANSCRIPT_JSONL_REL,
     USER_MD_REL,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+
+_SCOPE = DEFAULT_MEMORY_STORE_SCOPE_PATHS
 from tests.app.core.companion_harness.companion.companion_scripted_llm import (
     SettledUserChatScriptScenario,
     build_scripted_settled_user_chat_script,
@@ -58,9 +61,9 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
         CHANNELS_MD_REL,
     ):
         store.write_document(rel, f"{rel}\n")
-    store.write_document(CONTEXT_JSON_REL, '{"context_mode":"intimate"}\n')
+    store.write_document(_SCOPE.context_json, '{"context_mode":"intimate"}\n')
     store.append_jsonl_record(
-        TRANSCRIPT_JSONL_REL,
+        _SCOPE.transcript,
         {
             "role": "user",
             "content": "earlier",
@@ -88,7 +91,7 @@ async def test_successful_user_chat_persists_manifest_and_surfaces(
     assert built.expected_foreground_reply is not None
     assert result.assistant_text == built.expected_foreground_reply
     assert load_ai_private_thoughts(store) == []
-    body = store.read_document(TRANSCRIPT_JSONL_REL)
+    body = store.read_document(_SCOPE.transcript)
     lines = [json.loads(line) for line in body.strip().splitlines()]
     manifest_rows = [
         row
