@@ -44,16 +44,14 @@ companion_llm_runtime_event_bind_ctx: contextvars.ContextVar[
 ] = contextvars.ContextVar("companion_llm_runtime_event_bind_ctx", default=None)
 
 
-def record_llm_inference_failure(
+def _llm_inference_failure_runtime_record(
     *,
+    bind: LlmRuntimeEventBind,
     model: str,
     exc: BaseException,
-    foreground_timeout_sec: float | None = None,
-) -> None:
-    """Append ``kind=llm_inference_failure`` when bind is set; swallow store errors."""
-    bind = companion_llm_runtime_event_bind_ctx.get()
-    if bind is None:
-        return
+    foreground_timeout_sec: float | None,
+) -> dict[str, Any]:
+    """Build one ``llm_inference_failure`` runtime JSONL record from bind + exception."""
     detail = str(exc).strip() or type(exc).__name__
     if len(detail) > 2000:
         detail = detail[:1997] + "..."
@@ -76,6 +74,25 @@ def record_llm_inference_failure(
         record["client_message_en"] = exc.client_message_en
         if exc.provider_http_status is not None:
             record["provider_http_status"] = exc.provider_http_status
+    return record
+
+
+def record_llm_inference_failure(
+    *,
+    model: str,
+    exc: BaseException,
+    foreground_timeout_sec: float | None = None,
+) -> None:
+    """Append ``kind=llm_inference_failure`` when bind is set; swallow store errors."""
+    bind = companion_llm_runtime_event_bind_ctx.get()
+    if bind is None:
+        return
+    record = _llm_inference_failure_runtime_record(
+        bind=bind,
+        model=model,
+        exc=exc,
+        foreground_timeout_sec=foreground_timeout_sec,
+    )
 
     try:
         append_runtime_event(bind.memory_store, record)

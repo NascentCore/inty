@@ -35,11 +35,7 @@ def _format_items(items: list[dict[str, Any]]) -> str:
     return "\n\n".join(lines)
 
 
-def run_google_web_search_sync(*, query: str, num_results: int | None) -> str:
-    q = query.strip()
-    if not q:
-        return "ERROR: query must be non-empty"
-
+def _google_cse_credentials_or_error() -> tuple[str, str] | str:
     key = _env_api_key()
     cx = _env_cx()
     if not key or not cx:
@@ -47,11 +43,44 @@ def run_google_web_search_sync(*, query: str, num_results: int | None) -> str:
             "ERROR: set GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID "
             "(Google Cloud Custom Search API + Programmable Search Engine cx)"
         )
+    return key, cx
 
+
+def _google_cse_query_and_num_or_error(
+    *, query: str, num_results: int | None
+) -> tuple[str, int] | str:
+    q = query.strip()
+    if not q:
+        return "ERROR: query must be non-empty"
     n = num_results if num_results is not None else 10
     if n < 1:
         return "ERROR: num_results must be at least 1"
-    n = min(n, _MAX_NUM)
+    return q, min(n, _MAX_NUM)
+
+
+def _google_cse_dict_items_from_response(data: dict[str, Any]) -> list[dict[str, Any]] | str:
+    items = data.get("items")
+    if not isinstance(items, list) or len(items) == 0:
+        return "(no results)"
+    normalized: list[dict[str, Any]] = []
+    for raw in items:
+        if isinstance(raw, dict):
+            normalized.append(raw)
+    if not normalized:
+        return "(no results)"
+    return normalized
+
+
+def run_google_web_search_sync(*, query: str, num_results: int | None) -> str:
+    creds = _google_cse_credentials_or_error()
+    if isinstance(creds, str):
+        return creds
+    key, cx = creds
+
+    qn = _google_cse_query_and_num_or_error(query=query, num_results=num_results)
+    if isinstance(qn, str):
+        return qn
+    q, n = qn
 
     try:
         data = http_get_json(
@@ -62,18 +91,10 @@ def run_google_web_search_sync(*, query: str, num_results: int | None) -> str:
     except Exception as exc:
         return f"ERROR: Google CSE request failed: {exc}"
 
-    items = data.get("items")
-    if not isinstance(items, list) or len(items) == 0:
-        return "(no results)"
-
-    normalized: list[dict[str, Any]] = []
-    for raw in items:
-        if isinstance(raw, dict):
-            normalized.append(raw)
-    if not normalized:
-        return "(no results)"
-
-    return _format_items(normalized)
+    items = _google_cse_dict_items_from_response(data)
+    if isinstance(items, str):
+        return items
+    return _format_items(items)
 
 
 async def run_google_web_search(*, query: str, num_results: int | None) -> str:
