@@ -705,10 +705,10 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 
 Source: open PR overlap check (#4115–#4140 I001 batches, #4141 compose bridge — no harness overlap on tools I001); ruff I001 on `companion/turn.py`, `companion/turn_pipeline.py`, and `prompting/system_messages.py` not covered by open import-sort PRs.
 
-Open PRs checked: #4140 (`cursor/agent-maintenance-tasks-nov25-632`), #4138 (`cursor/agent-maintenance-tasks-nov24-629`), #4135 (`cursor/agent-maintenance-tasks-nov23-626`), #4133 (`cursor/agent-maintenance-tasks-nov22-623`), #4131 (`cursor/agent-maintenance-tasks-nov21-620`), #4129 (`cursor/agent-maintenance-tasks-nov20-617`), #4126 (`cursor/agent-maintenance-tasks-nov19-614`), #4123 (`cursor/agent-maintenance-tasks-nov18-611`), #4121 (`cursor/agent-maintenance-tasks-nov17-608`), #4118 (`cursor/agent-maintenance-tasks-nov16-605`), #4115 (`cursor/agent-maintenance-tasks-nov15-602`), #4141 (`cursor/...` compose bridge) — no overlap with tasks below.
+Open PRs checked: #4140 (`cursor/agent-maintenance-tasks-nov25-632`), #4138 (`cursor/agent-maintenance-tasks-nov24-629`), #4135 (`cursor/agent-maintenance-tasks-nov23-626`), #4133 (`cursor/agent-maintenance-tasks-nov22-623`), #4131 (`cursor/agent-maintenance-tasks-nov21-620`), #4129 (`cursor/agent-maintenance-tasks-nov20-617`), #4126 (`cursor/agent-maintenance-tasks-nov19-614`), #4123 (`cursor/agent-maintenance-tasks-nov18-611`), #4121 (`cursor/agent-maintenance-tasks-nov17-608`), #4118 (`cursor/agent-maintenance-tasks-nov16-605`), #4115 (`cursor/agent-maintenance-tasks-nov15-602`), #4141 (`cursor/companion-harness-stale-cleanup-nov26` compose bridge) — no overlap with tasks below.
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov26-635`)
 
-- [ ] **HYGIENE-2026-635** ruff I001: `companion/turn.py` — isort import block.
-- [ ] **HYGIENE-2026-636** ruff I001: `companion/turn_pipeline.py` — isort import blocks (module + inline).
-- [ ] **HYGIENE-2026-637** ruff I001: `prompting/system_messages.py` — isort import block.
+- [x] **HYGIENE-2026-635** ruff I001: `companion/turn.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov26-635` / pull/4142.
+- [x] **HYGIENE-2026-636** ruff I001: `companion/turn_pipeline.py` — isort import blocks (module + inline). Fixed in `cursor/agent-maintenance-tasks-nov26-635` / pull/4142.
+- [x] **HYGIENE-2026-637** ruff I001: `prompting/system_messages.py` — isort import block. Fixed in `cursor/agent-maintenance-tasks-nov26-635` / pull/4142.

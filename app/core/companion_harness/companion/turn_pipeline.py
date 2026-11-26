@@ -16,24 +16,33 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.config import (
-    global_config_loaded_from_config_yaml as _global_config,
-)
-from app.schemas.implicit_signals import ImplicitSignalBundle
-
-from .proactive_chat import (
-    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
-    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
-)
-from .turn_tail_user import (
-    TurnTailUserMessage,
-    append_tail_user_messages_for_llm,
+from app.core.companion_harness.companion.runtime_channel import (
+    TurnRuntimeContext,
 )
 from app.core.companion_harness.memory.memory_store import MemoryStore
 from app.core.companion_harness.memory.memory_store_scope import (
     DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
+from app.core.companion_harness.memory.transcript_compaction import (
+    CompactionConfig as TranscriptCompactionConfig,
+)
+from app.core.companion_harness.memory.transcript_compaction import (
+    ConversationCompactor,
+    load_compaction_state_from_store,
+    save_compaction_state_to_store,
+    transcript_compaction_meta_from_outcome,
+)
 from app.core.companion_harness.prompting.bundle import PromptBundle
+from app.core.config import (
+    global_config_loaded_from_config_yaml as _global_config,
+)
+from app.schemas.implicit_signals import ImplicitSignalBundle
+
+from .ai_private_prompt import AiPrivateThought
+from .dreaming import (
+    apply_dreaming_checkpoint_to_prompt_rows,
+    load_dreaming_state,
+)
 from .inner_tick_kind import inner_tick_kind_for_track, inner_tick_spec
 from .models import (
     INNER_TICK_SYNTHETIC_USER_TEXT,
@@ -48,28 +57,21 @@ from .models import (
     load_prompt_bundle,
     transcript_for_llm_turn,
 )
-from app.core.companion_harness.companion.runtime_channel import (
-    TurnRuntimeContext,
-)
-from .dreaming import (
-    apply_dreaming_checkpoint_to_prompt_rows,
-    load_dreaming_state,
+from .proactive_chat import (
+    PROACTIVE_CHAT_SYNTHETIC_SYSTEM_MESSAGE,
+    PROACTIVE_CHAT_TRANSCRIPT_USER_MARKER,
 )
 from .prompt_stack import (
     companion_tools_for_turn,
     companion_turn_tools_and_system_messages,
 )
-from app.core.companion_harness.memory.transcript_compaction import (
-    CompactionConfig as TranscriptCompactionConfig,
-    ConversationCompactor,
-    load_compaction_state_from_store,
-    save_compaction_state_to_store,
-    transcript_compaction_meta_from_outcome,
-)
-from .ai_private_prompt import AiPrivateThought
 from .transcript_ai_private import (
     track_uses_ai_private_splice,
     transcript_window_to_llm_dialogue,
+)
+from .turn_tail_user import (
+    TurnTailUserMessage,
+    append_tail_user_messages_for_llm,
 )
 from .user_time_context_llm_slice import (
     build_companion_user_time_context_system_content,
@@ -253,12 +255,14 @@ def build_companion_turn_prompt_plan(
             from app.core.companion_harness.prompting.compose_context import (
                 build_turn_compose_context,
             )
-            from app.core.companion_harness.prompting.leg_kind import PromptLegKind
-            from app.core.companion_harness.prompting.track_composer import (
-                TrackPromptComposer,
+            from app.core.companion_harness.prompting.leg_kind import (
+                PromptLegKind,
             )
             from app.core.companion_harness.prompting.phase import (
                 resolve_phase_for_compose,
+            )
+            from app.core.companion_harness.prompting.track_composer import (
+                TrackPromptComposer,
             )
 
             assert tail_user_messages
