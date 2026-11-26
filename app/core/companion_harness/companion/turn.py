@@ -42,14 +42,50 @@ from typing import Any
 
 from loguru import logger
 
-from app.core.config import global_config_loaded_from_config_yaml
+from app.core.agentic_companion.types import (
+    synthetic_user_message_batch,
+    user_message_batch_is_agent_initiated_synthetic,
+)
+from app.core.companion_harness.companion.bootstrap import (
+    interactive_bootstrap_active,
+)
+from app.core.companion_harness.loop.config import (
+    resolved_user_turn_batch_messages_llm_call_mode,
+)
+from app.core.companion_harness.loop.track_loop_input import (
+    CompanionTurnLoopInput,
+)
+from app.core.companion_harness.loop.track_loop_plugin import (
+    resolve_agentic_loop,
+)
 from app.core.companion_harness.memory.client_time_from_memory_store import (
     resolve_client_time,
 )
+from app.core.companion_harness.memory.memory_store_scope import (
+    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
+)
+from app.core.config import global_config_loaded_from_config_yaml
 from app.schemas.implicit_signals import ImplicitSignalBundle
+
+from .implicit_signal_messages import (
+    USER_SIGNED_ON_TRIGGER_USER_TEXT,
+    implicit_user_signed_on_chat_turn,
+)
+from .inner_tick_schedule import transcript_tail_message_uuid
+from .llm_chat_runtime import (
+    companion_turn_langsmith_parent_trace_id_str,
+    create_companion_turn_root_run,
+    end_companion_turn_root_run_safe,
+)
 from .llm_runtime_events import (
     LlmRuntimeEventBind,
     companion_llm_runtime_event_bind_ctx,
+)
+from .models import (
+    CompanionTurnResult,
+    CompanionTurnTrack,
+    load_context_meta,
+    transcript_relative_path_for_turn_persistence,
 )
 from .proactive_chat import build_proactive_chat_transcript_user_marker
 from .transcript_ai_private import (
@@ -59,31 +95,9 @@ from .transcript_ai_private import (
     persist_ai_private_splice_if_applicable,
     track_uses_ai_private_splice,
 )
-from app.core.companion_harness.companion.bootstrap import (
-    interactive_bootstrap_active,
-)
-from .models import (
-    CompanionTurnTrack,
-    CompanionTurnResult,
-    load_context_meta,
-    transcript_relative_path_for_turn_persistence,
-)
-from app.core.companion_harness.loop.track_loop_input import (
-    CompanionTurnLoopInput,
-)
-from app.core.companion_harness.loop.track_loop_plugin import (
-    resolve_agentic_loop,
-)
-from app.core.agentic_companion.types import (
-    synthetic_user_message_batch,
-    user_message_batch_is_agent_initiated_synthetic,
-)
-from app.core.companion_harness.loop.config import (
-    resolved_user_turn_batch_messages_llm_call_mode,
-)
-from .turn_track import (
-    companion_turn_track_skips_empty_proactive_assistant_row,
-    companion_turn_track_syncs_transcript_in_agentic_loop,
+from .transcript_assistant_row import (
+    TranscriptAssistantRowBuildInput,
+    append_transcript_assistant_row,
 )
 from .turn_deps import CompanionTurnDeps
 from .turn_pipeline import (
@@ -95,27 +109,14 @@ from .turn_tail_user import (
     append_turn_track_tail_user_transcript_rows,
     resolve_turn_tail_user_messages,
 )
-from .transcript_assistant_row import (
-    TranscriptAssistantRowBuildInput,
-    append_transcript_assistant_row,
+from .turn_track import (
+    companion_turn_track_skips_empty_proactive_assistant_row,
+    companion_turn_track_syncs_transcript_in_agentic_loop,
 )
 from .utc import (
     strip_leading_transcript_timestamp_prefixes,
     utc_iso_ts,
     utc_now,
-)
-from .implicit_signal_messages import (
-    USER_SIGNED_ON_TRIGGER_USER_TEXT,
-    implicit_user_signed_on_chat_turn,
-)
-from .inner_tick_schedule import transcript_tail_message_uuid
-from .llm_chat_runtime import (
-    companion_turn_langsmith_parent_trace_id_str,
-    create_companion_turn_root_run,
-    end_companion_turn_root_run_safe,
-)
-from app.core.companion_harness.memory.memory_store_scope import (
-    DEFAULT_MEMORY_STORE_SCOPE_PATHS,
 )
 
 
