@@ -125,7 +125,7 @@ AwakeTurn vs DreamingBatch memory-phase split is enforced in code; see Invariant
 - **Memory phase invariants** — AwakeTurn only appends transcript and tool side effects; MemDoc batch curation runs in DreamingBatch only. Canonical definitions: [companion/turn_invariants.py](/app/core/companion_harness/companion/turn_invariants.py), [companion/lifecycle_invariants.py](/app/core/companion_harness/companion/lifecycle_invariants.py), [companion/AGENTS.md](/app/core/companion_harness/companion/AGENTS.md).
 - **Turn-lock contract** — scope serialization via CompanionSession.turn_lock; runtime batch orchestrators assume the lock is already held. See [runtime/__init__.py](/app/core/companion_harness/runtime/__init__.py).
 - **Where detail lives** — package intent in `__init__.py`; module and file behavior in module/file docstrings. Do not duplicate that catalog here.
-- **Refactor residue (do not build into)** — empty or placeholder dirs: contracts/, official_helper/, loop/one_llm/, loop/two_llm/, loop/parity/, companion/autonomy/ (AGENTS.md only). Prefer the flat modules in companion/ and loop/ until reorg lands (#3409).
+- **Refactor residue (do not build into)** — empty or placeholder dirs that may still appear in older branches: contracts/, official_helper/, loop/one_llm/, loop/two_llm/, loop/parity/. Prefer the flat modules in companion/ and loop/ until reorg lands (#3409).
 
 ## See also
 
