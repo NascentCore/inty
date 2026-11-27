@@ -74,38 +74,56 @@ def _html_to_text(html: str) -> tuple[str, str]:
 
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?。！？])\s+")
+_CHUNK_CAP_MULTIPLIER = 3
+_MAX_PARAGRAPH_CHARS = 500
+_MIN_SENTENCE_CHARS = 15
+_MIN_BULLET_CHARS = 20
+_DEDUPE_KEY_CHARS = 240
 
 
-def _paragraphs_and_sentences(body: str, max_bullets: int) -> list[str]:
-    if not body.strip():
-        return []
+def _sentence_chunks_from_paragraph(paragraph: str) -> list[str]:
+    parts = [s.strip() for s in _SENT_SPLIT.split(paragraph) if s.strip()]
+    return [s for s in parts if len(s) > _MIN_SENTENCE_CHARS]
+
+
+def _raw_chunks_from_body_paragraphs(body: str, chunk_cap: int) -> list[str]:
     chunks: list[str] = []
     paras = [p.strip() for p in re.split(r"\n\s*\n+", body) if p.strip()]
     for p in paras:
-        if len(chunks) >= max_bullets * 3:
+        if len(chunks) >= chunk_cap:
             break
-        if len(p) <= 500:
+        if len(p) <= _MAX_PARAGRAPH_CHARS:
             chunks.append(p)
-        else:
-            parts = [s.strip() for s in _SENT_SPLIT.split(p) if s.strip()]
-            for s in parts:
-                if len(chunks) >= max_bullets * 3:
-                    break
-                if len(s) > 15:
-                    chunks.append(s)
+            continue
+        for s in _sentence_chunks_from_paragraph(p):
+            if len(chunks) >= chunk_cap:
+                break
+            chunks.append(s)
+    return chunks
+
+
+def _dedupe_chunks_to_bullets(chunks: list[str], max_bullets: int) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for c in chunks:
-        key = c[:240]
+        key = c[:_DEDUPE_KEY_CHARS]
         if key in seen:
             continue
         seen.add(key)
-        if len(c) < 20:
+        if len(c) < _MIN_BULLET_CHARS:
             continue
         out.append(c)
         if len(out) >= max_bullets:
             break
     return out
+
+
+def _paragraphs_and_sentences(body: str, max_bullets: int) -> list[str]:
+    if not body.strip():
+        return []
+    chunk_cap = max_bullets * _CHUNK_CAP_MULTIPLIER
+    chunks = _raw_chunks_from_body_paragraphs(body, chunk_cap)
+    return _dedupe_chunks_to_bullets(chunks, max_bullets)
 
 
 def _build_summary_markdown(

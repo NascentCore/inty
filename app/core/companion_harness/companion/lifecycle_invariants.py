@@ -91,12 +91,10 @@ def parse_module_ast(relative_path: str) -> ast.Module:
     return ast.parse(source, filename=relative_path)
 
 
-def module_source_contains_forbidden_import(
-    relative_path: str,
-    *,
+def _forbidden_import_hits(
+    tree: ast.Module,
     forbidden_substrings: frozenset[str],
 ) -> list[str]:
-    tree = parse_module_ast(relative_path)
     hits: list[str] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Import):
@@ -113,6 +111,15 @@ def module_source_contains_forbidden_import(
             if sub in mod:
                 hits.append(f"from {mod} import ...")
     return hits
+
+
+def module_source_contains_forbidden_import(
+    relative_path: str,
+    *,
+    forbidden_substrings: frozenset[str],
+) -> list[str]:
+    tree = parse_module_ast(relative_path)
+    return _forbidden_import_hits(tree, forbidden_substrings)
 
 
 def module_calls_named(relative_path: str, name: str) -> bool:
@@ -173,6 +180,22 @@ def append_jsonl_literal_paths(relative_path: str) -> list[str]:
     return paths
 
 
+def _module_references_named_symbol(tree: ast.Module, name: str) -> bool:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            for alias in node.names:
+                if alias.name == name:
+                    return True
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id == name:
+            return True
+        if isinstance(func, ast.Attribute) and func.attr == name:
+            return True
+    return False
+
+
 def app_py_files_importing_or_calling(name: str) -> list[str]:
     """app/**/*.py files that import or call ``name`` (not docstring mentions)."""
     app_dir = repo_root() / "app"
@@ -180,18 +203,6 @@ def app_py_files_importing_or_calling(name: str) -> list[str]:
     for path in sorted(app_dir.rglob("*.py")):
         rel = path.relative_to(repo_root()).as_posix()
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module:
-                for alias in node.names:
-                    if alias.name == name:
-                        hits.append(rel)
-                        break
-            if isinstance(node, ast.Call):
-                func = node.func
-                if isinstance(func, ast.Name) and func.id == name:
-                    hits.append(rel)
-                    break
-                if isinstance(func, ast.Attribute) and func.attr == name:
-                    hits.append(rel)
-                    break
+        if _module_references_named_symbol(tree, name):
+            hits.append(rel)
     return sorted(set(hits))
