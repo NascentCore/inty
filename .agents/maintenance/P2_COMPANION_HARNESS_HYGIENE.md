@@ -709,6 +709,6 @@ Open PRs checked: #4142 (`cursor/agent-maintenance-tasks-nov26-635`), #4140, #41
 
 ### Claimed (in progress — `cursor/agent-maintenance-tasks-nov27-638`)
 
-- [ ] **HYGIENE-2026-638** `tools/companion_tool_definitions.py`: ruff I001 import sort.
-- [ ] **HYGIENE-2026-639** `tools/read_web_page.py`: ruff I001 import sort.
-- [ ] **HYGIENE-2026-640** `tools/fal_z_image_tool.py`: ruff I001 import sort.
+- [x] **HYGIENE-2026-638** `tools/companion_tool_definitions.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.
+- [x] **HYGIENE-2026-639** `tools/read_web_page.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.
+- [x] **HYGIENE-2026-640** `tools/fal_z_image_tool.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.

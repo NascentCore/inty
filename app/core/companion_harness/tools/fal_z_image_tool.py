@@ -15,16 +15,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 from app.core.companion_harness.companion.env_flags import env_flag_enabled
 from app.core.companion_harness.companion.utc import utc_iso_ts
+from app.core.companion_harness.memory.memory_store import MemoryStore
 
 from .image_gate import (
     append_image_asset_record,
     find_latest_asset_by_local_relative_path,
     relative_path_under_workspace,
 )
-from app.core.companion_harness.memory.memory_store import MemoryStore
 
 _DEFAULT_IMAGE_SIZE = "portrait_4_3"
 MAX_NUM_IMAGES_PER_CALL = 4

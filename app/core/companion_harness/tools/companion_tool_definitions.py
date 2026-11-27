@@ -48,10 +48,10 @@ from app.core.companion_harness.memory.memory_store_path_constants import (
 from app.core.companion_harness.tools.openai_tools_prepare import (
     openai_function_tool,
 )
-from app.schemas.user import UserAgeGroup
 from app.living_sphere.models import (
     LIVING_SPHERE_RECORD_UPDATE_TOOL_NAME,
 )
+from app.schemas.user import UserAgeGroup
 from app.techno_core.models import (
     TECHNO_CORE_RECORD_EVENT_TOOL_NAME,
 )
