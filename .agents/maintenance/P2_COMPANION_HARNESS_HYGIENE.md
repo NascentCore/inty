@@ -700,3 +700,15 @@ Open PRs checked: #3834 (`cursor/phase-2-tracksystemrecipe-b95a`), #3837 (`curso
 - [x] **HYGIENE-2026-179** `companion/test_lifecycle_invariants.py` — assert `AWAKE_TURN_ALLOWED_APPEND_JSONL` + `AWAKE_TURN_TOOL_BACKGROUND_LOG_JSONL` match `DEFAULT_MEMORY_STORE_SCOPE_PATHS` transcript/tool-background accessors. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-180** `memory/test_memory_store_scope.py` — assert doctrine getters (`get_imate_axiom_system_text` / `get_inty_facts_system_text` / `get_safety_system_text`) match `load_template_seed_text` for canonical `*_MD_REL` paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
 - [x] **HYGIENE-2026-181** `memory/test_memory_store_document_mapping.py` — assert `_REL_TO_KIND` mapped static paths match `MemoryStoreScopePaths` accessor rel paths. Fixed in `cursor/agent-maintenance-tasks-d3c7` / pull/3868.
+
+## 2026-11-27 scan (cron)
+
+Source: open PR overlap check (#4142 `turn.py` / `turn_pipeline.py` / `system_messages.py` I001 — no overlap); ruff I001 on `app/core/companion_harness/tools/` modules not claimed by open maintenance PRs.
+
+Open PRs checked: #4142 (`cursor/agent-maintenance-tasks-nov26-635`), #4140, #4138, #4131, #4133 (`runtime.py` only in tools/) — no overlap with tasks below.
+
+### Claimed (in progress — `cursor/agent-maintenance-tasks-nov27-638`)
+
+- [x] **HYGIENE-2026-638** `tools/companion_tool_definitions.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.
+- [x] **HYGIENE-2026-639** `tools/read_web_page.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.
+- [x] **HYGIENE-2026-640** `tools/fal_z_image_tool.py`: ruff I001 import sort. Fixed in `cursor/agent-maintenance-tasks-nov27-638` / pull/4145.
