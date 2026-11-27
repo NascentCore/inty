@@ -68,6 +68,17 @@ def companion_runtime_config_fingerprint() -> str:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:32]
 
 
+def _async_chat_front_timeout_sec_from_env() -> float:
+    timeout_raw = os.getenv(
+        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC",
+        "600",
+    ).strip()
+    try:
+        return float(timeout_raw) if timeout_raw else 600.0
+    except ValueError:
+        return 600.0
+
+
 def companion_config_for_resolved_model(
     resolved_chat_model: GenAIModel,
     resolved_tool_model: GenAIModel,
@@ -76,14 +87,7 @@ def companion_config_for_resolved_model(
     cfg = global_config_loaded_from_config_yaml
     harness = cfg.agent.companion_harness
     api_key = cfg.agent.chat_llm_api_key or cfg.agent.api_key
-    timeout_raw = os.getenv(
-        "INTY_V2_PROTO_ASYNC_CHAT_FRONT_TIMEOUT_SEC",
-        "600",
-    ).strip()
-    try:
-        async_chat_timeout = float(timeout_raw) if timeout_raw else 600.0
-    except ValueError:
-        async_chat_timeout = 600.0
+    async_chat_timeout = _async_chat_front_timeout_sec_from_env()
     chat_m = resolved_chat_model
     tool_m = resolved_tool_model
     llm = CompanionLLMConfig(

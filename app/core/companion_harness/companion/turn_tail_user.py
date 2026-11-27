@@ -62,6 +62,32 @@ def _joined_input_batch_text(input_batch: AgenticLoopInputBatch) -> str:
     return "\n".join(parts)
 
 
+def _tail_user_messages_from_input_batch(
+    *,
+    mode: BatchUserMessagesLlmCallMode,
+    input_batch: AgenticLoopInputBatch,
+) -> tuple[TurnTailUserMessage, ...]:
+    """Map one input batch to tail rows per batch-user LLM call mode."""
+    match mode:
+        case BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE:
+            return (
+                TurnTailUserMessage(
+                    message_id=input_batch.primary_user_msg_uuid,
+                    text=_joined_input_batch_text(input_batch),
+                    received_at_utc=input_batch.messages[-1].received_at_utc,
+                ),
+            )
+        case _:
+            return tuple(
+                TurnTailUserMessage(
+                    message_id=msg.message_id,
+                    text=msg.text,
+                    received_at_utc=msg.received_at_utc,
+                )
+                for msg in input_batch.messages
+            )
+
+
 def resolve_turn_tail_user_messages(
     *,
     mode: BatchUserMessagesLlmCallMode,
@@ -86,22 +112,10 @@ def resolve_turn_tail_user_messages(
                 user_msg_uuid=user_msg_uuid,
             ),
         )
-    elif mode == BatchUserMessagesLlmCallMode.JOIN_TO_ONE_USER_MESSAGE:
-        tail = (
-            TurnTailUserMessage(
-                message_id=input_batch.primary_user_msg_uuid,
-                text=_joined_input_batch_text(input_batch),
-                received_at_utc=input_batch.messages[-1].received_at_utc,
-            ),
-        )
     else:
-        tail = tuple(
-            TurnTailUserMessage(
-                message_id=msg.message_id,
-                text=msg.text,
-                received_at_utc=msg.received_at_utc,
-            )
-            for msg in input_batch.messages
+        tail = _tail_user_messages_from_input_batch(
+            mode=mode,
+            input_batch=input_batch,
         )
 
     if implicit_sign_on_turn:

@@ -92,11 +92,14 @@ class SqlAlchemyMemoryRepository:
 
         return sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion
 
-    def read_document(self, *, relative_path: str) -> MemoryRecord | None:
-        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
-            self._orm()
-        )
-        kind, cal = parse_memory_store_relative_path(relative_path)
+    def _latest_document_version_filters(
+        self,
+        *,
+        CompanionMemoryDocumentVersion: Any,
+        sql_and: Any,
+        kind: CompanionMemoryDocumentKind,
+        calendar_date: Any,
+    ) -> list[Any]:
         filters = [
             sql_and(
                 CompanionMemoryDocumentVersion.user_id == self._user_id,
@@ -106,12 +109,42 @@ class SqlAlchemyMemoryRepository:
             ),
             CompanionMemoryDocumentVersion.document_kind == kind.value,
         ]
-        if cal is None:
+        if calendar_date is None:
             filters.append(
                 CompanionMemoryDocumentVersion.calendar_date.is_(None)
             )
         else:
-            filters.append(CompanionMemoryDocumentVersion.calendar_date == cal)
+            filters.append(
+                CompanionMemoryDocumentVersion.calendar_date == calendar_date
+            )
+        return filters
+
+    @staticmethod
+    def _memory_record_from_version_row(
+        row: Any,
+        *,
+        relative_path: str,
+    ) -> MemoryRecord:
+        created_at = row.created_at.isoformat() if row.created_at else ""
+        return MemoryRecord(
+            record_uuid=str(row.record_uuid),
+            sequence_id=int(row.sequence_id),
+            relative_path=relative_path,
+            content=str(row.content),
+            created_at=created_at,
+        )
+
+    def read_document(self, *, relative_path: str) -> MemoryRecord | None:
+        sql_and, sql_select, SessionLocal, CompanionMemoryDocumentVersion = (
+            self._orm()
+        )
+        kind, cal = parse_memory_store_relative_path(relative_path)
+        filters = self._latest_document_version_filters(
+            CompanionMemoryDocumentVersion=CompanionMemoryDocumentVersion,
+            sql_and=sql_and,
+            kind=kind,
+            calendar_date=cal,
+        )
         stmt = (
             sql_select(CompanionMemoryDocumentVersion)
             .where(sql_and(*filters))
@@ -122,13 +155,8 @@ class SqlAlchemyMemoryRepository:
             row = session.scalars(stmt).first()
         if row is None:
             return None
-        created_at = row.created_at.isoformat() if row.created_at else ""
-        return MemoryRecord(
-            record_uuid=str(row.record_uuid),
-            sequence_id=int(row.sequence_id),
-            relative_path=relative_path,
-            content=str(row.content),
-            created_at=created_at,
+        return self._memory_record_from_version_row(
+            row, relative_path=relative_path
         )
 
     def list_all_relative_paths(self) -> list[str]:

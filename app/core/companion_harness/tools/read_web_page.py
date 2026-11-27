@@ -74,38 +74,56 @@ def _html_to_text(html: str) -> tuple[str, str]:
 
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?。！？])\s+")
+_CHUNK_CAP_MULTIPLIER = 3
+_MAX_PARAGRAPH_CHARS = 500
+_MIN_SENTENCE_CHARS = 15
+_MIN_BULLET_CHARS = 20
+_DEDUPE_KEY_CHARS = 240
 
 
-def _paragraphs_and_sentences(body: str, max_bullets: int) -> list[str]:
-    if not body.strip():
-        return []
+def _sentence_chunks_from_paragraph(paragraph: str) -> list[str]:
+    parts = [s.strip() for s in _SENT_SPLIT.split(paragraph) if s.strip()]
+    return [s for s in parts if len(s) > _MIN_SENTENCE_CHARS]
+
+
+def _raw_chunks_from_body_paragraphs(body: str, chunk_cap: int) -> list[str]:
     chunks: list[str] = []
     paras = [p.strip() for p in re.split(r"\n\s*\n+", body) if p.strip()]
     for p in paras:
-        if len(chunks) >= max_bullets * 3:
+        if len(chunks) >= chunk_cap:
             break
-        if len(p) <= 500:
+        if len(p) <= _MAX_PARAGRAPH_CHARS:
             chunks.append(p)
-        else:
-            parts = [s.strip() for s in _SENT_SPLIT.split(p) if s.strip()]
-            for s in parts:
-                if len(chunks) >= max_bullets * 3:
-                    break
-                if len(s) > 15:
-                    chunks.append(s)
+            continue
+        for s in _sentence_chunks_from_paragraph(p):
+            if len(chunks) >= chunk_cap:
+                break
+            chunks.append(s)
+    return chunks
+
+
+def _dedupe_chunks_to_bullets(chunks: list[str], max_bullets: int) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for c in chunks:
-        key = c[:240]
+        key = c[:_DEDUPE_KEY_CHARS]
         if key in seen:
             continue
         seen.add(key)
-        if len(c) < 20:
+        if len(c) < _MIN_BULLET_CHARS:
             continue
         out.append(c)
         if len(out) >= max_bullets:
             break
     return out
+
+
+def _paragraphs_and_sentences(body: str, max_bullets: int) -> list[str]:
+    if not body.strip():
+        return []
+    chunk_cap = max_bullets * _CHUNK_CAP_MULTIPLIER
+    chunks = _raw_chunks_from_body_paragraphs(body, chunk_cap)
+    return _dedupe_chunks_to_bullets(chunks, max_bullets)
 
 
 def _build_summary_markdown(
@@ -148,22 +166,12 @@ def _append_memory_block(
     store.write_document(MEMORY_MD_REL, merged)
 
 
-def run_read_web_page_sync(
-    store: MemoryStore,
-    *,
-    url: str,
-    max_bullets: int | None = None,
-) -> str:
-    err = _validate_public_http_url(url)
-    if err:
-        return f"ERROR: {err}"
-
-    n = max_bullets if max_bullets is not None else _DEFAULT_BULLETS
-    n = max(_MIN_BULLETS, min(n, _MAX_BULLETS_CAP))
-
+def _read_web_page_http_response_or_error(
+    normalized: str,
+) -> tuple[bytes, str, str | None] | str:
     try:
         r = requests.get(
-            url.strip(),
+            normalized,
             timeout=30.0,
             headers={"User-Agent": _USER_AGENT},
             allow_redirects=True,
@@ -171,28 +179,71 @@ def run_read_web_page_sync(
         r.raise_for_status()
     except requests.RequestException as exc:
         return f"ERROR: failed to fetch URL: {exc}"
-
     raw = r.content
     if len(raw) > _MAX_HTML_BYTES:
         return (
             f"ERROR: response body too large ({len(raw)} bytes); "
             f"max {_MAX_HTML_BYTES} bytes"
         )
-
     ctype = (r.headers.get("Content-Type") or "").lower()
-    looks_html = "html" in ctype or url.lower().rstrip("/").endswith(
+    return raw, ctype, r.encoding
+
+
+def _read_web_page_decode_html_or_error(
+    *,
+    normalized: str,
+    raw: bytes,
+    content_type: str,
+    response_encoding: str | None,
+) -> str:
+    looks_html = "html" in content_type or normalized.lower().rstrip("/").endswith(
         (".html", ".htm")
     )
     if not looks_html:
         sample = raw[:500].decode("utf-8", errors="replace").lower()
         if "<html" not in sample and "<!doctype" not in sample:
             return "ERROR: response does not look like HTML"
-
-    enc = r.encoding or "utf-8"
+    enc = response_encoding or "utf-8"
     try:
-        html = raw.decode(enc, errors="replace")
+        return raw.decode(enc, errors="replace")
     except LookupError:
-        html = raw.decode("utf-8", errors="replace")
+        return raw.decode("utf-8", errors="replace")
+
+
+def _fetch_public_html_for_read_web_page(url: str) -> tuple[str, str] | str:
+    """Download and decode a public HTML document, or return an ``ERROR: …`` string."""
+    err = _validate_public_http_url(url)
+    if err:
+        return f"ERROR: {err}"
+    normalized = url.strip()
+    fetched = _read_web_page_http_response_or_error(normalized)
+    if isinstance(fetched, str):
+        return fetched
+    raw, ctype, response_encoding = fetched
+    html_or_err = _read_web_page_decode_html_or_error(
+        normalized=normalized,
+        raw=raw,
+        content_type=ctype,
+        response_encoding=response_encoding,
+    )
+    if html_or_err.startswith("ERROR:"):
+        return html_or_err
+    return normalized, html_or_err
+
+
+def run_read_web_page_sync(
+    store: MemoryStore,
+    *,
+    url: str,
+    max_bullets: int | None = None,
+) -> str:
+    fetched = _fetch_public_html_for_read_web_page(url)
+    if isinstance(fetched, str):
+        return fetched
+
+    normalized_url, html = fetched
+    n = max_bullets if max_bullets is not None else _DEFAULT_BULLETS
+    n = max(_MIN_BULLETS, min(n, _MAX_BULLETS_CAP))
 
     title, body = _html_to_text(html)
     bullets = _paragraphs_and_sentences(body, n)
@@ -203,14 +254,14 @@ def run_read_web_page_sync(
 
     try:
         _append_memory_block(
-            store, url=url.strip(), title=title, bullets=bullets
+            store, url=normalized_url, title=title, bullets=bullets
         )
     except OSError as exc:
         return f"ERROR: could not write MEMORY.md: {exc}"
 
     memory_note = f"Memory: appended this snapshot to `{MEMORY_MD_REL}`."
     return _build_summary_markdown(
-        title, bullets, url.strip(), memory_note=memory_note
+        title, bullets, normalized_url, memory_note=memory_note
     )
 
 
